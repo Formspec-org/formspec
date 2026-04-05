@@ -174,7 +174,10 @@ export {
   countDefinitionFields,
   dataTypeInfo,
   findComponentNodeById,
+  findComponentNodeByRef,
+  resolveLayoutSelectionNodeRef,
   flattenComponentTree,
+  isCircularComponentMove,
   getFieldTypeCatalog,
   humanizeFEL,
   isLayoutId,
@@ -203,6 +206,7 @@ export type {
 
 // ── Layout spatial + theme helpers ────────────────────────────────
 export {
+  componentTreeForLayout,
   hasTier3Content,
   setColumnSpan,
   setRowSpan,
@@ -214,7 +218,14 @@ export {
   setThemeOverride,
   clearThemeOverride,
 } from './layout-helpers.js';
-export type { CompNode, ContainerLayoutProps, EditableThemeProperty, NodeRef, PropertySource } from './layout-helpers.js';
+export type {
+  CompNode,
+  ContainerLayoutProps,
+  DataTableColumnSpec,
+  EditableThemeProperty,
+  NodeRef,
+  PropertySource,
+} from './layout-helpers.js';
 
 // ── Layout UI business logic helpers (extracted from Studio UI) ──────
 export {

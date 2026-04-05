@@ -1621,6 +1621,21 @@ export class Project {
       ...(warnings.length > 0 ? { warnings } : {}),
     };
   }
+
+  /** Set or clear a custom extension payload on a definition item. */
+  setItemExtension(path: string, extension: string, value: unknown): HelperResult {
+    this.core.dispatch({
+      type: 'definition.setItemExtension',
+      payload: { path, extension, value },
+    } as AnyCommand);
+    return {
+      summary: value === null
+        ? `Cleared item extension '${extension}' on '${path}'`
+        : `Set item extension '${extension}' on '${path}'`,
+      action: { helper: 'setItemExtension', params: { path, extension, value } },
+      affectedPaths: [path],
+    };
+  }
   // ── Move / Rename / Reorder ──
 
   /** Move item to a new parent or position. */
@@ -2507,6 +2522,21 @@ export class Project {
     };
   }
 
+  /** Set or clear the `$ref` for a group item. */
+  setGroupRef(path: string, ref: string | null, keyPrefix?: string): HelperResult {
+    this.core.dispatch({
+      type: 'definition.setGroupRef',
+      payload: { path, ref, ...(keyPrefix !== undefined ? { keyPrefix } : {}) },
+    } as AnyCommand);
+    return {
+      summary: ref === null
+        ? `Cleared group ref on '${path}'`
+        : `Set group ref on '${path}'`,
+      action: { helper: 'setGroupRef', params: { path, ref, keyPrefix } },
+      affectedPaths: [path],
+    };
+  }
+
   /** Set a component-level visual condition (`when`) on a bound item or layout node. */
   setComponentWhen(target: string, when: string | null): HelperResult {
     this.core.dispatch({
@@ -2904,6 +2934,47 @@ export class Project {
     };
   }
 
+  // ── Locale helpers ──
+
+  /** Set a localized string for the selected or explicit locale. */
+  setLocaleString(key: string, value: string, localeId?: string): HelperResult {
+    this.core.dispatch({
+      type: 'locale.setString',
+      payload: { localeId, key, value },
+    } as AnyCommand);
+    return {
+      summary: `Set locale string '${key}'`,
+      action: { helper: 'setLocaleString', params: { localeId, key, value } },
+      affectedPaths: [],
+    };
+  }
+
+  /** Remove a localized string for the selected or explicit locale. */
+  removeLocaleString(key: string, localeId?: string): HelperResult {
+    this.core.dispatch({
+      type: 'locale.removeString',
+      payload: { localeId, key },
+    } as AnyCommand);
+    return {
+      summary: `Removed locale string '${key}'`,
+      action: { helper: 'removeLocaleString', params: { localeId, key } },
+      affectedPaths: [],
+    };
+  }
+
+  /** Update a locale metadata property such as name, title, or description. */
+  setLocaleMetadata(property: string, value: unknown, localeId?: string): HelperResult {
+    this.core.dispatch({
+      type: 'locale.setMetadata',
+      payload: { localeId, property, value },
+    } as AnyCommand);
+    return {
+      summary: `Updated locale metadata '${property}'`,
+      action: { helper: 'setLocaleMetadata', params: { localeId, property, value } },
+      affectedPaths: [],
+    };
+  }
+
   // ── Theme Selector CRUD ──
 
   /** Add a theme selector rule. */
@@ -2946,6 +3017,54 @@ export class Project {
     return {
       summary: `Reordered theme selector ${index} ${direction}`,
       action: { helper: 'reorderThemeSelector', params: { index, direction } },
+      affectedPaths: [],
+    };
+  }
+
+  // ── Migration helpers ──
+
+  /** Ensure a migration descriptor exists for a source version. */
+  addMigration(fromVersion: string, description?: string): HelperResult {
+    this.core.dispatch({
+      type: 'definition.addMigration',
+      payload: { fromVersion, ...(description ? { description } : {}) },
+    } as AnyCommand);
+    return {
+      summary: `Added migration '${fromVersion}'`,
+      action: { helper: 'addMigration', params: { fromVersion, description } },
+      affectedPaths: [],
+    };
+  }
+
+  /** Add a field-map rule to a migration descriptor. */
+  addMigrationRule(params: {
+    fromVersion: string;
+    source: string;
+    target: string | null;
+    transform: string;
+    expression?: string;
+    insertIndex?: number;
+  }): HelperResult {
+    this.core.dispatch({
+      type: 'definition.addFieldMapRule',
+      payload: params,
+    } as AnyCommand);
+    return {
+      summary: `Added migration rule for '${params.fromVersion}'`,
+      action: { helper: 'addMigrationRule', params },
+      affectedPaths: [],
+    };
+  }
+
+  /** Remove a field-map rule from a migration descriptor. */
+  removeMigrationRule(fromVersion: string, index: number): HelperResult {
+    this.core.dispatch({
+      type: 'definition.deleteFieldMapRule',
+      payload: { fromVersion, index },
+    } as AnyCommand);
+    return {
+      summary: `Removed migration rule ${index} from '${fromVersion}'`,
+      action: { helper: 'removeMigrationRule', params: { fromVersion, index } },
       affectedPaths: [],
     };
   }
@@ -3271,6 +3390,33 @@ export class Project {
 
   // ── Component Tree Helpers ──
 
+  /** Add a component-tree node under an arbitrary parent ref. */
+  addComponentNode(
+    parent: { bind?: string; nodeId?: string },
+    component: string,
+    options?: { bind?: string; props?: Record<string, unknown>; insertIndex?: number },
+  ): HelperResult & { nodeRef?: { bind?: string; nodeId?: string } } {
+    const result = this.core.dispatch({
+      type: 'component.addNode',
+      payload: {
+        parent,
+        component,
+        ...(options?.bind !== undefined ? { bind: options.bind } : {}),
+        ...(options?.props !== undefined ? { props: options.props } : {}),
+        ...(options?.insertIndex !== undefined ? { insertIndex: options.insertIndex } : {}),
+      },
+    } as AnyCommand);
+    const nodeRef = (result as any)?.nodeRef as { bind?: string; nodeId?: string } | undefined;
+    const createdId = nodeRef?.nodeId ?? nodeRef?.bind;
+    return {
+      summary: `Added component node '${component}'`,
+      action: { helper: 'addComponentNode', params: { parent, component, options } },
+      affectedPaths: createdId ? [createdId] : [],
+      createdId,
+      nodeRef,
+    };
+  }
+
   /** Add a layout-only node to the component tree. */
   addLayoutNode(parentNodeId: string, component: string): HelperResult {
     const result = this.core.dispatch({
@@ -3541,6 +3687,7 @@ export class Project {
 
   /** Auto-generate mapping rules for every field in the form. */
   autoGenerateMappingRules(params: {
+    mappingId?: string;
     scopePath?: string;
     priority?: number;
     replace?: boolean;

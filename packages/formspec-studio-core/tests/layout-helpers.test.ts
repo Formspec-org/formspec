@@ -1,10 +1,14 @@
 /** @filedesc Tests for spatial and theme override helpers in layout-helpers. */
 import { describe, expect, it } from 'vitest';
 import { createProject } from '../src/project.js';
+import type { CompNode } from '../src/layout-helpers.js';
 import {
+  componentTreeForLayout,
   setColumnSpan,
   setRowSpan,
   setPadding,
+  setStyleProperty,
+  removeStyleProperty,
   getPropertySources,
   getEditableThemeProperties,
   setThemeOverride,
@@ -24,14 +28,14 @@ function makeProject() {
  * Get the component tree node bound to a given key.
  * Walks the full tree depth-first.
  */
-function findNode(project: ReturnType<typeof createProject>, bind: string): any {
-  const comp = project.component as any;
-  const root = comp?.tree;
+function findNode(project: ReturnType<typeof createProject>, bind: string): CompNode | undefined {
+  const root = componentTreeForLayout(project.component);
   if (!root) return undefined;
 
-  const stack = [root];
+  const stack: CompNode[] = [root];
   while (stack.length) {
     const node = stack.pop();
+    if (!node) continue;
     if (node.bind === bind) return node;
     for (const child of node.children ?? []) stack.push(child);
   }
@@ -45,11 +49,11 @@ describe('setColumnSpan', () => {
     const p = makeProject();
     const node = findNode(p, 'name');
     expect(node).toBeDefined();
-    const ref = { nodeId: node.nodeId ?? undefined, bind: 'name' };
+    const ref = { bind: 'name' };
 
     setColumnSpan(p, ref, 2);
 
-    const updated = findNode(p, 'name');
+    const updated = findNode(p, 'name')!;
     expect(updated.style?.gridColumn).toBe('span 2');
   });
 
@@ -57,14 +61,14 @@ describe('setColumnSpan', () => {
     const p = makeProject();
     const ref = { bind: 'name' };
     setColumnSpan(p, ref, 0);
-    expect(findNode(p, 'name').style?.gridColumn).toBe('span 1');
+    expect(findNode(p, 'name')?.style?.gridColumn).toBe('span 1');
   });
 
   it('clamps n > 12 to 12', () => {
     const p = makeProject();
     const ref = { bind: 'name' };
     setColumnSpan(p, ref, 13);
-    expect(findNode(p, 'name').style?.gridColumn).toBe('span 12');
+    expect(findNode(p, 'name')?.style?.gridColumn).toBe('span 12');
   });
 
   it('preserves existing style keys (does not clobber padding)', () => {
@@ -74,7 +78,7 @@ describe('setColumnSpan', () => {
     setPadding(p, ref, '16px');
     // Then set column span
     setColumnSpan(p, ref, 3);
-    const node = findNode(p, 'name');
+    const node = findNode(p, 'name')!;
     expect(node.style?.gridColumn).toBe('span 3');
     expect(node.style?.padding).toBe('16px');
   });
@@ -87,19 +91,19 @@ describe('setRowSpan', () => {
     const p = makeProject();
     const ref = { bind: 'name' };
     setRowSpan(p, ref, 2);
-    expect(findNode(p, 'name').style?.gridRow).toBe('span 2');
+    expect(findNode(p, 'name')?.style?.gridRow).toBe('span 2');
   });
 
   it('clamps n < 1 to 1', () => {
     const p = makeProject();
     setRowSpan(p, { bind: 'name' }, 0);
-    expect(findNode(p, 'name').style?.gridRow).toBe('span 1');
+    expect(findNode(p, 'name')?.style?.gridRow).toBe('span 1');
   });
 
   it('clamps n > 12 to 12', () => {
     const p = makeProject();
     setRowSpan(p, { bind: 'name' }, 15);
-    expect(findNode(p, 'name').style?.gridRow).toBe('span 12');
+    expect(findNode(p, 'name')?.style?.gridRow).toBe('span 12');
   });
 
   it('preserves existing style.gridColumn when setting gridRow', () => {
@@ -107,7 +111,7 @@ describe('setRowSpan', () => {
     const ref = { bind: 'name' };
     setColumnSpan(p, ref, 4);
     setRowSpan(p, ref, 2);
-    const node = findNode(p, 'name');
+    const node = findNode(p, 'name')!;
     expect(node.style?.gridColumn).toBe('span 4');
     expect(node.style?.gridRow).toBe('span 2');
   });
@@ -120,7 +124,7 @@ describe('setPadding', () => {
     const p = makeProject();
     const ref = { bind: 'name' };
     setPadding(p, ref, '8px');
-    expect(findNode(p, 'name').style?.padding).toBe('8px');
+    expect(findNode(p, 'name')?.style?.padding).toBe('8px');
   });
 
   it('preserves existing style.gridColumn when setting padding', () => {
@@ -128,9 +132,61 @@ describe('setPadding', () => {
     const ref = { bind: 'name' };
     setColumnSpan(p, ref, 3);
     setPadding(p, ref, '12px');
-    const node = findNode(p, 'name');
+    const node = findNode(p, 'name')!;
     expect(node.style?.padding).toBe('12px');
     expect(node.style?.gridColumn).toBe('span 3');
+  });
+});
+
+// ── setStyleProperty / removeStyleProperty ───────────────────────────
+
+describe('setStyleProperty', () => {
+  it('adds a style property to a field node', () => {
+    const p = makeProject();
+    setStyleProperty(p, { bind: 'name' }, 'color', 'red');
+    expect(findNode(p, 'name')?.style?.color).toBe('red');
+  });
+
+  it('adds a style property to a layout node', () => {
+    const p = makeProject();
+    const result = p.addLayoutNode('root', 'Card');
+    const nodeId = result.createdId!;
+    setStyleProperty(p, { nodeId }, 'padding', '8px');
+    // The node is a layout-only node; verify through the tree
+    const tree = componentTreeForLayout(p.component);
+    const layoutNode = tree?.children?.find((c) => c.nodeId === nodeId);
+    expect(layoutNode?.style?.padding).toBe('8px');
+  });
+});
+
+describe('removeStyleProperty', () => {
+  it('removes a style property from a field node', () => {
+    const p = makeProject();
+    const ref = { bind: 'name' };
+    setStyleProperty(p, ref, 'color', 'red');
+    setStyleProperty(p, ref, 'padding', '8px');
+    removeStyleProperty(p, ref, 'color');
+    const node = findNode(p, 'name')!;
+    expect(node.style?.color).toBeUndefined();
+    expect(node.style?.padding).toBe('8px');
+  });
+
+  it('removes a style property from a layout node', () => {
+    const p = makeProject();
+    const result = p.addLayoutNode('root', 'Card');
+    const nodeId = result.createdId!;
+    setStyleProperty(p, { nodeId }, 'padding', '8px');
+    setStyleProperty(p, { nodeId }, 'margin', '4px');
+    removeStyleProperty(p, { nodeId }, 'padding');
+    const tree = componentTreeForLayout(p.component);
+    const layoutNode = tree?.children?.find((c) => c.nodeId === nodeId);
+    expect(layoutNode?.style?.padding).toBeUndefined();
+    expect(layoutNode?.style?.margin).toBe('4px');
+  });
+
+  it('is a no-op when the property does not exist', () => {
+    const p = makeProject();
+    expect(() => removeStyleProperty(p, { bind: 'name' }, 'nonexistent')).not.toThrow();
   });
 });
 
@@ -145,11 +201,7 @@ describe('getPropertySources', () => {
 
   it('returns source from theme defaults (level 1)', () => {
     const p = makeProject();
-    // Set a theme default
-    p.core.dispatch({
-      type: 'theme.setDefaults',
-      payload: { property: 'labelPosition', value: 'top' },
-    } as any);
+    p.setThemeDefault('labelPosition', 'top');
 
     const sources = getPropertySources(p, 'name', 'labelPosition');
     expect(sources.length).toBeGreaterThan(0);
@@ -170,12 +222,7 @@ describe('getPropertySources', () => {
 
   it('returns multiple sources when multiple cascade levels have the property', () => {
     const p = makeProject();
-    // Default
-    p.core.dispatch({
-      type: 'theme.setDefaults',
-      payload: { property: 'labelPosition', value: 'top' },
-    } as any);
-    // Item override
+    p.setThemeDefault('labelPosition', 'top');
     p.setItemOverride('name', 'labelPosition', 'start');
 
     const sources = getPropertySources(p, 'name', 'labelPosition');
@@ -187,10 +234,7 @@ describe('getPropertySources', () => {
 
   it('returns sources in ascending level order (default before item-override)', () => {
     const p = makeProject();
-    p.core.dispatch({
-      type: 'theme.setDefaults',
-      payload: { property: 'labelPosition', value: 'top' },
-    } as any);
+    p.setThemeDefault('labelPosition', 'top');
     p.setItemOverride('name', 'labelPosition', 'start');
 
     const sources = getPropertySources(p, 'name', 'labelPosition');
@@ -200,15 +244,8 @@ describe('getPropertySources', () => {
 
   it('includes only selectors whose match.type matches itemType', () => {
     const p = makeProject();
-    // Add two selectors: one for 'field', one for 'display'
-    p.core.dispatch({
-      type: 'theme.addSelector',
-      payload: { match: { type: 'field' }, apply: { labelPosition: 'side' } },
-    } as any);
-    p.core.dispatch({
-      type: 'theme.addSelector',
-      payload: { match: { type: 'display' }, apply: { labelPosition: 'none' } },
-    } as any);
+    p.addThemeSelector({ type: 'field' }, { labelPosition: 'side' });
+    p.addThemeSelector({ type: 'display' }, { labelPosition: 'none' });
 
     const sources = getPropertySources(p, 'name', 'labelPosition', 'field');
     const selectorSources = sources.filter((s) => s.source === 'selector');
@@ -219,14 +256,8 @@ describe('getPropertySources', () => {
 
   it('includes only selectors whose match.dataType matches itemDataType', () => {
     const p = makeProject();
-    p.core.dispatch({
-      type: 'theme.addSelector',
-      payload: { match: { type: 'field', dataType: 'email' }, apply: { widget: 'EmailInput' } },
-    } as any);
-    p.core.dispatch({
-      type: 'theme.addSelector',
-      payload: { match: { type: 'field', dataType: 'text' }, apply: { widget: 'TextInput' } },
-    } as any);
+    p.addThemeSelector({ type: 'field', dataType: 'email' }, { widget: 'EmailInput' });
+    p.addThemeSelector({ type: 'field', dataType: 'text' }, { widget: 'TextInput' });
 
     // email field: only the email dataType selector should match
     const emailSources = getPropertySources(p, 'email', 'widget', 'field', 'email');
@@ -243,10 +274,7 @@ describe('getPropertySources', () => {
 
   it('includes selectors with no match criteria for any itemType', () => {
     const p = makeProject();
-    p.core.dispatch({
-      type: 'theme.addSelector',
-      payload: { match: {}, apply: { labelPosition: 'top' } },
-    } as any);
+    p.addThemeSelector({}, { labelPosition: 'top' });
 
     // Should match regardless of itemType since match has no type/dataType constraints
     const sources = getPropertySources(p, 'name', 'labelPosition', 'field');
@@ -258,10 +286,11 @@ describe('getPropertySources', () => {
 // ── getEditableThemeProperties ────────────────────────────────────────
 
 describe('getEditableThemeProperties', () => {
-  it('returns the fixed list of PresentationBlock-editable properties', () => {
+  it('returns typed descriptors for PresentationBlock-editable properties', () => {
     const p = makeProject();
     const props = getEditableThemeProperties(p, 'name');
-    expect(props).toEqual([
+    const propNames = props.map((d) => d.prop);
+    expect(propNames).toEqual([
       'labelPosition',
       'widget',
       'widgetConfig',
@@ -272,11 +301,19 @@ describe('getEditableThemeProperties', () => {
     ]);
   });
 
-  it('returns the same list regardless of itemKey', () => {
+  it('returns enum type with options for labelPosition', () => {
     const p = makeProject();
-    expect(getEditableThemeProperties(p, 'name')).toEqual(
-      getEditableThemeProperties(p, 'email'),
-    );
+    const props = getEditableThemeProperties(p, 'name');
+    const labelPos = props.find((d) => d.prop === 'labelPosition');
+    expect(labelPos?.type).toBe('enum');
+    expect(labelPos?.options).toEqual(['top', 'start', 'hidden']);
+  });
+
+  it('returns the same descriptors for fields with the same component', () => {
+    const p = makeProject();
+    const nameProps = getEditableThemeProperties(p, 'name').map((d) => d.prop);
+    const emailProps = getEditableThemeProperties(p, 'email').map((d) => d.prop);
+    expect(nameProps).toEqual(emailProps);
   });
 });
 
@@ -286,7 +323,7 @@ describe('setThemeOverride', () => {
   it('sets a per-item theme override via project.setItemOverride', () => {
     const p = makeProject();
     setThemeOverride(p, 'name', 'labelPosition', 'start');
-    const items = (p.state.theme as any)?.items ?? {};
+    const items = p.state.theme.items ?? {};
     expect(items['name']?.labelPosition).toBe('start');
   });
 
@@ -310,7 +347,7 @@ describe('clearThemeOverride', () => {
 
     clearThemeOverride(p, 'name', 'labelPosition');
 
-    const items = (p.state.theme as any)?.items ?? {};
+    const items = p.state.theme.items ?? {};
     expect(items['name']?.labelPosition).toBeUndefined();
     // Other overrides preserved
     expect(items['name']?.cssClass).toBe('highlight');

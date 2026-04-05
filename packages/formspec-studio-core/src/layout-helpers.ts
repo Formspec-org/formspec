@@ -1,8 +1,26 @@
 /** @filedesc Spatial and theme override helpers for the Layout workspace direct-manipulation canvas. */
+import type { ComponentDocument } from '@formspec-org/types';
 import type { HelperResult } from './helper-types.js';
 import type { Project } from './project.js';
 
-/** Canonical CompNode type for layout tree traversal and rendering. */
+/**
+ * DataTable `columns` entry shape (schema-aligned) — kept explicit so `CompNode` can accept both Grid
+ * `columns` (number|string) and DataTable column arrays without using `unknown`.
+ */
+export interface DataTableColumnSpec {
+  header: string;
+  bind: string;
+  min?: number;
+  max?: number;
+  step?: number;
+}
+
+/**
+ * Layout/component tree node for traversal and editing. Matches schema component objects (including
+ * numeric `gap` / `columns` where allowed) plus studio-only fields (`nodeId`, etc.). Intentionally not
+ * a schema union so every branch exposes optional `bind` / `children` for walks. No index signature,
+ * so document roots (`ComponentDocument.tree`) remain assignable (e.g. `CustomComponentRef`).
+ */
 export interface CompNode {
   component: string;
   bind?: string;
@@ -12,18 +30,37 @@ export interface CompNode {
   groupPath?: string;
   _layout?: boolean;
   children?: CompNode[];
-  // Layout props (from component tree node)
-  columns?: number;
-  gap?: string;
+  /** Grid: count or template string. DataTable: column definitions. */
+  columns?: number | string | DataTableColumnSpec[];
+  gap?: string | number;
+  rowGap?: string | number;
   direction?: string;
   wrap?: boolean;
   align?: string;
   elevation?: number;
-  width?: string;
+  width?: string | number;
   position?: string;
-  defaultOpen?: boolean;
+  /** Accordion/Collapsible may use a numeric default in schema types. */
+  defaultOpen?: boolean | number;
   style?: Record<string, unknown>;
-  [key: string]: unknown;
+}
+
+/**
+ * Best-effort narrow of `componentFor` results to {@link CompNode}.
+ * Core returns `Record<string, unknown>`; we only assert after verifying `component` is a string.
+ */
+function compNodeFromRecord(value: Record<string, unknown> | undefined): CompNode | undefined {
+  if (value == null || typeof value.component !== 'string') return undefined;
+  return value as object as CompNode;
+}
+
+/**
+ * The component document `tree` for layout walks. Schema `AnyComponent3` unions are wider than
+ * {@link CompNode} (e.g. `width: string | number`); this helper is the single sanctioned assertion
+ * at that boundary (no `unknown` / `any`).
+ */
+export function componentTreeForLayout(component: Pick<ComponentDocument, 'tree'>): CompNode {
+  return component.tree as object as CompNode;
 }
 
 /** Layout-specific properties extracted from LayoutContainerProps. */
@@ -147,13 +184,17 @@ export function removeStyleProperty(
   ref: NodeRef,
   key: string,
 ): void {
-  // Determine what component to fetch based on ref
-  const lookupKey = ref.nodeId || ref.bind;
-  if (!lookupKey) return;
+  if (!ref.nodeId && !ref.bind) return;
 
-  // Get current style from the component
-  const component = project.componentFor(lookupKey) as Record<string, unknown> | undefined;
-  const currentStyle = { ...(component?.style as Record<string, unknown>) ?? {} };
+  // Read current style: componentFor handles bind keys; for nodeIds we
+  // walk the tree since componentFor is documented for field keys only.
+  let node: CompNode | undefined;
+  if (ref.bind) {
+    node = compNodeFromRecord(project.componentFor(ref.bind));
+  } else {
+    node = findNodeById(componentTreeForLayout(project.component), ref.nodeId!);
+  }
+  const currentStyle = { ...(node?.style as Record<string, unknown>) ?? {} };
 
   // Delete the property
   delete currentStyle[key];
@@ -163,6 +204,17 @@ export function removeStyleProperty(
 
   // Write back the updated style
   project.setLayoutNodeProp(selectionKey, 'style', currentStyle);
+}
+
+/** Walk the component tree to find a node by nodeId. */
+function findNodeById(tree: CompNode | undefined, nodeId: string): CompNode | undefined {
+  if (!tree) return undefined;
+  if (tree.nodeId === nodeId) return tree;
+  for (const child of tree.children ?? []) {
+    const found = findNodeById(child, nodeId);
+    if (found) return found;
+  }
+  return undefined;
 }
 
 // ── Theme helpers (Tier 2 — PresentationBlock cascade) ───────────────
@@ -277,20 +329,19 @@ export function getEditableThemeProperties(
 
   // Look up the component that renders this item
   let component = '';
-  if (itemType === 'field') {
-    // Get the component from the project's component document
-    const componentNode = project.componentFor(itemKey);
-    if (componentNode && typeof componentNode.component === 'string') {
-      component = componentNode.component;
-    }
-    // If no component found, assume TextInput as a safe default
-    if (!component) {
-      component = 'TextInput';
-    }
+  const componentNode = project.componentFor(itemKey);
+  if (componentNode && typeof componentNode.component === 'string') {
+    component = componentNode.component;
+  }
+  // Apply defaults when no component is resolved
+  if (!component) {
+    if (itemType === 'display') component = 'Text';
+    else if (itemType === 'group') component = 'Stack';
+    else component = 'TextInput';
   }
 
-  const isDisplayComponent = DISPLAY_COMPONENTS.has(component);
-  const isGroupComponent = GROUP_COMPONENTS.has(component);
+  const isDisplayComponent = itemType === 'display' || DISPLAY_COMPONENTS.has(component);
+  const isGroupComponent = itemType === 'group' || GROUP_COMPONENTS.has(component);
 
   const props: EditableThemeProperty[] = [];
 

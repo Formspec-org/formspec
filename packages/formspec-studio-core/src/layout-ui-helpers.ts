@@ -1,6 +1,7 @@
 /** @filedesc Business logic helpers extracted from Studio UI components for shared use by Studio and MCP. */
-import type { Project } from './project.js';
 import { findComponentNodeById, nodeIdFromLayoutId, isLayoutId } from './authoring-helpers.js';
+import { componentTreeForLayout } from './layout-helpers.js';
+import type { Project } from './project.js';
 
 // ── Types ─────────────────────────────────────────────────────────────
 
@@ -40,9 +41,7 @@ export function resolveLayoutInsertTarget(
   }
 
   // Verify the page exists in the component tree
-  const tree = (project.component as unknown as Record<string, unknown>);
-  const treeRoot = tree?.tree as Record<string, unknown> | undefined;
-  const node = findComponentNodeById(treeRoot, pageId);
+  const node = findComponentNodeById(componentTreeForLayout(project.component), pageId);
   if (!node) {
     return { parentNodeId: 'root' };
   }
@@ -203,9 +202,7 @@ export function getEditablePropertiesForNode(
   // Resolve nodeId from layoutId or use as-is
   const nodeId = isLayoutId(nodeRef) ? nodeIdFromLayoutId(nodeRef) : nodeRef;
 
-  const tree = (project.component as unknown as Record<string, unknown>)
-    ?.tree as Record<string, unknown> | undefined;
-  const node = findComponentNodeById(tree, nodeId);
+  const node = findComponentNodeById(componentTreeForLayout(project.component), nodeId);
   const componentType = (node?.component as string) ?? '';
 
   // Common properties available for all nodes

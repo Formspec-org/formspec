@@ -10,13 +10,16 @@ import {
   dataTypeInfo,
   flatItems,
   findComponentNodeById,
+  findComponentNodeByRef,
   flattenComponentTree,
+  isCircularComponentMove,
   getFieldTypeCatalog,
   humanizeFEL,
   isLayoutId,
   nodeIdFromLayoutId,
   nodeRefFor,
   normalizeBindEntries,
+  resolveLayoutSelectionNodeRef,
   normalizeBindsView,
   pruneDescendants,
   sanitizeIdentifier,
@@ -276,5 +279,64 @@ describe('authoring-helpers', () => {
 
     expect(findComponentNodeById(tree as any, 'inner_panel')).toMatchObject({ component: 'Panel', nodeId: 'inner_panel' });
     expect(findComponentNodeById(tree as any, 'missing')).toBeNull();
+  });
+
+  it('resolveLayoutSelectionNodeRef maps layout keys to bind or nodeId for setNodeStyle', () => {
+    const treeShortLeaf = {
+      component: 'Stack',
+      nodeId: 'root',
+      children: [
+        groupNode('address', [fieldNode('city')]),
+        fieldNode('name'),
+        displayNode('notice_1'),
+      ],
+    } as any;
+    expect(resolveLayoutSelectionNodeRef(treeShortLeaf, 'address.city')).toEqual({ bind: 'city' });
+    expect(resolveLayoutSelectionNodeRef(treeShortLeaf, 'name')).toEqual({ bind: 'name' });
+    expect(resolveLayoutSelectionNodeRef(treeShortLeaf, 'notice_1')).toEqual({ nodeId: 'notice_1' });
+    expect(resolveLayoutSelectionNodeRef(treeShortLeaf, '__node:card_1')).toEqual({ nodeId: 'card_1' });
+
+    const treeFullBind = {
+      component: 'Stack',
+      nodeId: 'root',
+      children: [fieldNode('address.city')],
+    } as any;
+    expect(resolveLayoutSelectionNodeRef(treeFullBind, 'address.city')).toEqual({ bind: 'address.city' });
+
+    const treeMixedLeaf = {
+      component: 'Stack',
+      nodeId: 'root',
+      children: [
+        groupNode('section', [fieldNode('email'), displayNode('intro')]),
+      ],
+    } as any;
+    expect(resolveLayoutSelectionNodeRef(treeMixedLeaf, 'section.email')).toEqual({ bind: 'email' });
+    expect(resolveLayoutSelectionNodeRef(treeMixedLeaf, 'section.intro')).toEqual({ nodeId: 'intro' });
+  });
+
+  it('findComponentNodeByRef resolves bind or nodeId', () => {
+    const tree = {
+      component: 'Stack',
+      nodeId: 'root',
+      children: [
+        layoutNode('card_1', 'Card', [fieldNode('email')]),
+      ],
+    };
+    expect(findComponentNodeByRef(tree as any, { nodeId: 'card_1' })?.component).toBe('Card');
+    expect(findComponentNodeByRef(tree as any, { bind: 'email' })?.bind).toBe('email');
+    expect(findComponentNodeByRef(tree as any, { nodeId: 'nope' })).toBeNull();
+  });
+
+  it('isCircularComponentMove is true when target parent is source or inside source subtree', () => {
+    const inner = layoutNode('inner_stack', 'Stack', [fieldNode('email')]);
+    const tree = {
+      component: 'Stack',
+      nodeId: 'root',
+      children: [layoutNode('outer_stack', 'Stack', [inner])],
+    };
+    expect(isCircularComponentMove(tree as any, { nodeId: 'outer_stack' }, { nodeId: 'outer_stack' })).toBe(true);
+    expect(isCircularComponentMove(tree as any, { nodeId: 'outer_stack' }, { nodeId: 'inner_stack' })).toBe(true);
+    expect(isCircularComponentMove(tree as any, { nodeId: 'inner_stack' }, { nodeId: 'outer_stack' })).toBe(false);
+    expect(isCircularComponentMove(tree as any, { bind: 'email' }, { nodeId: 'inner_stack' })).toBe(false);
   });
 });
