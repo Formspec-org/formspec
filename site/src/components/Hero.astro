@@ -13,18 +13,20 @@ import Newsletter from "./Newsletter.astro";
       <span>Open source · AGPL-3.0 License</span>
     </div>
 
-    <p class="hero-descriptor">An open-source form specification for high-stakes environments</p>
+    <p class="hero-descriptor">The open-source form standard — no coding required</p>
 
     <h1 class="hero-headline">
-      Build complex forms<br />
-      in an afternoon.<br />
-      <span class="hero-headline-dim">They work everywhere. Even offline.</span>
+      Describe your form.<br />
+      AI builds it.<br />
+      <span class="hero-headline-dim">No coding required.</span>
     </h1>
 
     <p class="hero-sub">
-      Describe what you need in plain English. AI builds a working form — complete with
-      business rules, smart defaults, and multi-page workflows. One definition renders
-      on web, React, iOS, and Android. Works offline. No vendor lock-in.
+      Tell the AI what your form needs — fields, rules, calculations, page flow.
+      Get back a working form you can review, edit, and deploy yourself. Your form is a
+      single readable file: business logic lives in one layer, visual design lives in another.
+      Change the look without touching the rules. Works on web, mobile, and offline.
+      Open source, no vendor lock-in.
     </p>
 
     <div class="hero-actions">
@@ -52,7 +54,18 @@ import Newsletter from "./Newsletter.astro";
       </a>
     </div>
 
-    <div class="hero-pills" role="list" aria-label="Technologies">
+    <div class="hero-pills" role="list" aria-label="Capabilities">
+      <span role="listitem" class="hero-pill hero-pill--highlight">No coding required</span>
+      <span role="listitem" class="hero-pill">Works offline</span>
+      <span role="listitem" class="hero-pill">Cross-platform</span>
+      <span role="listitem" class="hero-pill">WCAG 2.1 AA</span>
+      <span role="listitem" class="hero-pill">Section 508</span>
+      <span role="listitem" class="hero-pill">USWDS</span>
+      <span role="listitem" class="hero-pill">AI-native</span>
+      <span role="listitem" class="hero-pill">i18n</span>
+      <span role="listitem" class="hero-pill">Open source</span>
+    </div>
+    <div class="hero-pills hero-pills--tech" role="list" aria-label="Technologies">
       <span role="listitem" class="hero-pill">Rust</span>
       <span role="listitem" class="hero-pill">TypeScript</span>
       <span role="listitem" class="hero-pill">React</span>
@@ -61,17 +74,11 @@ import Newsletter from "./Newsletter.astro";
       <span role="listitem" class="hero-pill">Python</span>
       <span role="listitem" class="hero-pill">WASM</span>
       <span role="listitem" class="hero-pill">Web Components</span>
-      <span role="listitem" class="hero-pill">Tailwind</span>
-      <span role="listitem" class="hero-pill">USWDS</span>
       <span role="listitem" class="hero-pill">JSON Schema</span>
       <span role="listitem" class="hero-pill">MCP Server</span>
       <span role="listitem" class="hero-pill">FHIR</span>
       <span role="listitem" class="hero-pill">schema.org</span>
       <span role="listitem" class="hero-pill">ICD-10</span>
-      <span role="listitem" class="hero-pill">Field-level guidance</span>
-      <span role="listitem" class="hero-pill">i18n</span>
-      <span role="listitem" class="hero-pill">AI-native</span>
-      <span role="listitem" class="hero-pill">AGPL-3.0</span>
     </div>
 
     <div class="hero-newsletter">
@@ -252,6 +259,16 @@ import Newsletter from "./Newsletter.astro";
     border: 1px solid var(--color-border);
     color: var(--color-ink-tertiary);
     background: var(--color-surface);
+  }
+
+  .hero-pill--highlight {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+    font-weight: 600;
+  }
+
+  .hero-pills--tech {
+    opacity: 0.6;
   }
 
   .hero-newsletter {

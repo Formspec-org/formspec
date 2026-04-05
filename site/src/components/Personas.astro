@@ -4,11 +4,11 @@
 
 const personas = [
   {
-    title: "I want to stop waiting months for forms",
+    title: "I'm a program manager, not a developer",
     quote: "I described our 200-field grant application to the AI. Twenty minutes later I had a working form with conditional sections, budget calculations, and validation rules. My team spent the afternoon reviewing it instead of the quarter building it.",
     features: [
-      "Describe what you need in plain English. The AI builds it through structured tool calls — not guessing. Every field, every rule, every calculation goes through validation before you see it.",
-      "The system can't produce a form that breaks your rules. Three layers of automatic checks catch errors before anything reaches your applicants.",
+      "No coding, no developers, no waiting. Describe your form in plain English — the AI builds a complete definition with fields, rules, calculations, and page flow. You review the result and make changes yourself.",
+      "Every form passes automatic validation before it reaches your users. The system can't produce a form that breaks your rules.",
       "You stay in control. Review everything, tweak what you want, deploy when ready. AI handles the tedious parts — you make the decisions.",
     ],
     icon: "ai",
@@ -20,6 +20,7 @@ const personas = [
       "Calculated fields, conditional sections, required-field enforcement — all built into the form definition. No backend glue.",
       "Collect once, output everywhere. Format transformation is built in.",
       "Version-locked: mid-cycle rule changes never invalidate submitted responses.",
+      "Your auditors review the form rules in a single readable file. When your UX team updates the interface based on user feedback, the rules your auditors approved don't change. No re-certification needed.",
       "Applicants get contextual help, regulatory references, and semantic autofill as they fill — so fewer support tickets and fewer abandoned forms.",
     ],
     icon: "grant",
@@ -31,7 +32,7 @@ const personas = [
       "Same form, same rules, no internet required. Runs natively on Android and iOS, or in the browser. Validation happens on-device, offline.",
       "Warnings flag unusual values without blocking submission. Only hard errors stop the form.",
       "Data syncs when connectivity returns — nothing lost.",
-      "Multi-language support (i18n) built in — locale documents add translated labels, help text, and error messages without modifying the form. Your staff see the form in their language; the data collected is identical.",
+      "Multi-language support built in — locale documents add translated labels, help text, and error messages without modifying the form. Your staff see the form in their language; the data collected is identical.",
     ],
     icon: "field",
   },
@@ -39,10 +40,10 @@ const personas = [
     title: "I'm evaluating this for my agency",
     quote: "I need to know we can own this, maintain it, and it won't disappear when a vendor pivots.",
     features: [
-      "Open source, AGPL-3.0 licensed. Your form definitions are portable files you control — not data locked inside a vendor's platform.",
-      "WCAG 2.1 AA and Section 508 compliant. A USWDS adapter ships built-in for federal branding — or plug in any design system through the headless adapter architecture.",
-      "One form definition deploys to five runtimes: web, React, iOS, Android, and server. A response that passes in the field can be re-verified at headquarters — automatically.",
-      "Agent interoperability is spec-defined and LLM-optional. Browser extensions, accessibility tools, and automation scripts can fill forms through the same protocol — no AI vendor lock-in.",
+      "Open source, AGPL-3.0 licensed. Every form is a plain JSON file — human-readable, portable, version-controllable. No database, no proprietary format, no vendor lock-in. Your staff can read the form logic directly, without special tools.",
+      "Form logic and visual design are separate layers. Your compliance team audits the rules; your UX team controls the interface. A design refresh doesn't require re-auditing the form logic.",
+      "WCAG 2.1 AA and Section 508 compliant. A USWDS adapter ships built-in for federal branding — or plug in any design system.",
+      "One form definition deploys to web, mobile, and server. A response that passes in the field can be re-verified at headquarters — automatically.",
     ],
     icon: "agency",
   },
