@@ -213,4 +213,39 @@ describe('component tree sync', () => {
     expect(project.componentFor('b')).toBeDefined();
     expect(project.componentFor('c')).toBeDefined();
   });
+
+  it('reconciles display label into component text when label changes via setItemProperty', () => {
+    const project = createRawProject();
+    project.dispatch({
+      type: 'definition.addItem',
+      payload: { type: 'display', key: 'note', label: 'First draft' },
+    });
+
+    function textNode(root: { children?: unknown[] }): { text?: string; style?: { gridRow?: string } } | undefined {
+      const stack = [...(root.children ?? [])] as { component?: string; nodeId?: string; text?: string; style?: { gridRow?: string }; children?: unknown[] }[];
+      while (stack.length) {
+        const n = stack.pop()!;
+        if (n.component === 'Text' && n.nodeId === 'note') return n;
+        for (const c of n.children ?? []) stack.push(c as (typeof n));
+      }
+      return undefined;
+    }
+
+    expect(textNode(project.component.tree as { children?: unknown[] })?.text).toBe('First draft');
+
+    project.dispatch({
+      type: 'component.setNodeStyle',
+      payload: { node: { nodeId: 'note' }, property: 'gridRow', value: 'span 3' },
+    });
+    expect(textNode(project.component.tree as { children?: unknown[] })?.style?.gridRow).toBe('span 3');
+
+    project.dispatch({
+      type: 'definition.setItemProperty',
+      payload: { path: 'note', property: 'label', value: 'Line 1\nLine 2' },
+    });
+
+    const after = textNode(project.component.tree as { children?: unknown[] });
+    expect(after?.text).toBe('Line 1\nLine 2');
+    expect(after?.style?.gridRow).toBe('span 3');
+  });
 });

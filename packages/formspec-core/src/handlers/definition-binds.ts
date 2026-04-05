@@ -181,7 +181,11 @@ export const definitionBindsHandlers: Record<string, CommandHandler> = {
 
     assertPropertyApplicable(loc.item, property);
     setNestedProperty(loc.item as Record<string, unknown>, property, value);
-    return { rebuildComponentTree: false };
+    // Display body is mirrored to component `text` during reconcile; without a rebuild the tree stays stale
+    // (e.g. live preview and layout canvas keep showing the old string).
+    const rebuild =
+      loc.item.type === 'display' && property === 'label';
+    return { rebuildComponentTree: rebuild };
   },
 
   'definition.setFieldDataType': (state, payload) => {
