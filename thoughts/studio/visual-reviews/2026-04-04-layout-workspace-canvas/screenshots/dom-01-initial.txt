@@ -1,0 +1,27 @@
+Synthetic DOM / component outline — Layout workspace (from source, not live capture)
+
+WorkspacePage (max-w-[980px])
+└── WorkspacePageSection (sticky header: px-7, border-b, backdrop-blur)
+    ├── ModeSelector + divider + LayoutThemeToggle
+    └── Actions: "+ Item" | "+ Page" | "+ Add Container" (hover dropdown)
+    └── [optional] LayoutStepNav (wizard/tabs)
+
+WorkspacePageSection (canvas body)
+└── div[onContextMenu]
+    └── renderLayoutTree → nested:
+        ├── LayoutContainer (data-layout-node-type=layout|group)
+        │   ├── header row: role=button, type badge (mono uppercase), title, toolbar
+        │   └── [data-layout-content] — CSS grid/flex per component (Grid, Stack, …)
+        │       └── InsertSlot (h-1 rounded bg-accent/30) interleaved with children
+        ├── FieldBlock (data-layout-node-type=field)
+        │   ├── role=group tabIndex=0, rounded-[18px] border, selected: accent shadow
+        │   ├── DragHandle (opacity-0 group-hover)
+        │   ├── FieldIcon tile (rounded-[10px] bg-bg-default/85)
+        │   ├── identity: key + datatype | inline inputs
+        │   ├── summary strip: Description / Hint (border-t)
+        │   ├── InlineToolbar (dense selects, 11px mono)
+        │   └── resize handles (absolute right/bottom)
+        └── DisplayBlock — analogous + glyph tile
+
+Contrast note: LayoutContainer shell = rounded border-dashed border-muted / selected border-accent bg-accent/5.
+FieldBlock shell = rounded-[18px] solid border-transparent → hover border-border/70; selected heavy blue shadow.

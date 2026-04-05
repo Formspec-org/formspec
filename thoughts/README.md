@@ -117,6 +117,7 @@ Numbers 0024, 0026, 0027, 0028, 0032, 0034, 0038 were execution plans, not decis
 
 | File | Date | Summary |
 |------|------|---------|
+| [review-since-e81e62a](reviews/2026-04-04-review-since-e81e62a.md) | 2026-04-04 | MCP + Studio patch review; 2 blockers, 5 warnings |
 | [reference-examples-smoke-test](reviews/2026-03-09-reference-examples-smoke-test.md) | 2026-03-09 | Smoke test issues (ex-ADR 0034) |
 | [studio-fixes-post-review](reviews/2026-03-13-studio-fixes-post-review.md) | 2026-03-13 | Post-review cleanup |
 | [helpers-review](reviews/2026-03-14-formspec-studio-core-helpers-review.md) | 2026-03-14 | C1-C5 critical issues |

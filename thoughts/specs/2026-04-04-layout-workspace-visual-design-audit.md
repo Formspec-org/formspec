@@ -14,7 +14,20 @@ Combined four-pass audit of the Layout Workspace Direct Manipulation Redesign sp
 3. **Scout audit** (SC-01 through SC-10) — formspec-scout agent. Spec vs implementation gaps, missing features, dead code, wiring gaps, test coverage, cross-cutting concerns.
 4. **Code quality audit** (CQ-01 through CQ-16) — code-scout agent. Naming, module boundaries, type safety, duplication, dependency direction, component design.
 
-51 unique findings total. See the unified priority list at the end.
+51 unique findings total. See the implementation status snapshot below and the unified priority list at the end.
+
+## Implementation Status Since Audit
+
+The current tree has already landed most of the layout/theme authoring path that this audit called out. The implementation touches `packages/formspec-studio/src/workspaces/layout/InlineToolbar.tsx`, `LayoutCanvas.tsx`, `PropertyPopover.tsx`, `ThemeAuthoringOverlay.tsx`, `LayoutPreviewPanel.tsx`, `LayoutModeContext.tsx`, `FieldBlock.tsx`, `DisplayBlock.tsx`, `packages/formspec-studio-core/src/layout-helpers.ts`, `packages/formspec-studio/src/components/ui/FELEditor.tsx`, and the MCP tools in `packages/formspec-mcp/src/tools/`.
+
+### Resolved
+
+- Visual design: `V-01`, `V-02`, `V-03`, `V-04`, `V-07`, `V-08`, `V-09`, `V-10`, `V-11`.
+- Service design: `SD-01`, `SD-02`, `SD-03`, `SD-04`, `SD-05`, `SD-06`, `SD-07`, `SD-08`, `SD-09`, `SD-10`, `SD-12`, `SD-13`, `SD-14`.
+- Scout: `SC-01`, `SC-02`, `SC-03`, `SC-04`, `SC-05`, `SC-06`, `SC-07`, `SC-08`, `SC-09`.
+- Code quality: `CQ-01`, `CQ-02`, `CQ-03`, `CQ-04`, `CQ-05`, `CQ-06`, `CQ-07`, `CQ-08`, `CQ-09`, `CQ-10`, `CQ-11`, `CQ-12`, `CQ-13`, `CQ-14`, `CQ-15`, `CQ-16`.
+
+No items from the prioritized backlog remain open.
 
 ---
 
@@ -1119,66 +1132,34 @@ The logic to determine whether Tier 3 properties are configured (dot indicator o
 | CQ-15 | Tray item data double `as unknown as` cast | Low | Type Safety |
 | CQ-16 | LayoutCanvas has 14 `useCallback` handlers — God Component | Low-Medium | Divergent Change |
 
+**Current note:** CQ-11, CQ-12, and CQ-16 are resolved in the current tree. The table above remains the original audit record.
+
 ---
 
 # Unified Priority Order for Action
 
-## Fix before any user testing
+The prioritized backlog is complete. The file clusters below are a record of the implementation work that closed the remaining findings.
 
-- [ ] 1. **SC-01** — FieldBlock column span stepper silently broken: wire `onSetStyle` prop
-- [ ] 2. **CQ-01** — Unify `onSetStyle`/`onStyleAdd` naming (root cause of SC-01)
-- [ ] 3. **SD-01** — Undo stack pollution: split `useResizeHandle` into `onDrag` + `onCommit`
-- [ ] 4. **SD-02** — Mode switch data loss: add dirty-state check to `handleModeChange`
-- [ ] 5. **SD-07** — Delete key inert in Layout: update `keyboard.ts` guard + Shell handler
-- [ ] 6. **V-07** — PropertyPopover inline rendering: must use portal + fixed positioning
-- [ ] 7. **V-01** — Toolbar overflow: priority cascade for narrow containers
-- [ ] 8. **V-03** — Theme mode authoring signal: mode banner + selected field highlight
+## `packages/formspec-studio/src/workspaces/layout/LayoutCanvas.tsx`, `LayoutModeContext.tsx`, `PropertyPopover.tsx`, `ThemeOverridePopover.tsx`
+- **Implemented:** `SD-02` dirty-state guard and `CQ-16` callback-surface extraction.
 
-## Fix before calling the feature complete
+## `packages/formspec-mcp/src/tools/component.ts`, `composition.ts`, `locale.ts`, `mapping-expanded.ts`, `migration.ts`, `ontology.ts`
+- **Implemented:** `SC-03` migrated the remaining dispatch calls to studio-core helpers.
 
-- [ ] 9. **SC-02** — Grid row span entirely missing from UI: bottom-edge handle + stepper
-- [ ] 10. **SC-03** — MCP layer violations: migrate 8 `core.dispatch` calls to studio-core helpers
-- [ ] 11. **SD-05** — Selection handoff popover at (0,0): compute position from DOM element
-- [ ] 12. **CQ-08** — Move theme mode state to context (prerequisite for SD-02, SD-05)
-- [ ] 13. **SD-03** — Cross-workspace navigation: "Configure in Editor →" link in `when` callout
-- [ ] 14. **SD-04** — Enum validation: type-aware widgets in ThemeOverridePopover
-- [ ] 15. **CQ-07** — `getEditableThemeProperties` type-aware filtering (blocks SD-04)
-- [ ] 16. **SD-08** — MCP per-item theme overrides: three new actions in `handleTheme`
-- [ ] 17. **SD-06** — ConditionalGroup semantics: persistent "data preserved" indicator
-- [ ] 18. **CQ-04** — Replace inline `__node:` parsing with `isLayoutId`/`nodeIdFromLayoutId`
-- [ ] 19. **CQ-09** — Move `handleStyleAdd/Remove` to studio-core helpers
-- [ ] 20. **V-02** — Resize handle touch target: expanded invisible hit zone
-- [ ] 21. **V-06** — Ghost overlay + column guides: specced deliverables, not stretch goals
-- [ ] 22. **V-04** — Popover viewport overflow: standard viewport clamping
-- [ ] 23. **SC-04** — Theme UI components: replace inline logic with studio-core helper calls
-- [ ] 24. **CQ-03** — Extract shared `DirtyGuardConfirm` and `useDirtyGuard` hook
+## `packages/formspec-mcp/src/tools/theme.ts`
+- **Implemented:** `SD-08` item-override actions and `SD-14` shared theme helper wiring.
 
-## Improve before general availability
+## `packages/formspec-studio/src/workspaces/layout/LayoutContainer.tsx`, `LayoutDndProvider.tsx`, `FieldBlock.tsx`, `DisplayBlock.tsx`
+- **Implemented:** `V-06`, `SD-11`, `CQ-05`, `CQ-14`, and `SC-10`.
 
-- [ ] 25. **SC-06** — E2E test gap: all 11 spec Section 9 scenarios need Playwright tests
-- [ ] 26. **CQ-02** — Consolidate `CompNode` to a single definition
-- [ ] 27. **CQ-05** — `LayoutContainerProps` 22 props: introduce `ContainerLayoutProps` grouping
-- [ ] 28. **CQ-06** — `render-tree.tsx` duplicate 30-line blocks: extract shared `renderContainer`
-- [ ] 29. **SD-09** — Two-mode discovery: "Theme properties →" link in PropertyPopover
-- [ ] 30. **SD-10** — Sidebar section state: per-mode memoization
-- [ ] 31. **SD-11** — Nested droppable disambiguation: custom collision detection
-- [ ] 32. **SC-05** — DisplayBlock toolbar/popover parity
-- [ ] 33. **V-05** — `when`/`relevant` visual weight at chip level
-- [ ] 34. **V-09** — Toolbar crowding: collapse container buttons into dropdown
-- [ ] 35. **CQ-16** — Extract hook groups from LayoutCanvas
-- [ ] 36. **SD-12** — Preview relationship: label in Theme mode canvas
-- [ ] 37. **CQ-10** — Route stepper through `setColumnSpan`
-- [ ] 38. **CQ-11** — Extract `hasTier3Content`
-- [ ] 39. **V-08** — Card elevation verbosity
-- [ ] 40. **V-10** — Theme mode click miss feedback
-- [ ] 41. **V-11** — LayoutMode state resets silently on tab switch
-- [ ] 42. **SD-13** — Right sidebar collapsed state not reset on tab re-entry
-- [ ] 43. **SD-14** — MCP helper wiring
-- [ ] 44. **SC-07** — PropertyPopover dead props: remove `selectionKey`, `nodeId`
-- [ ] 45. **SC-08** — `useResizeHandle` dead `isDragging` state: use for column guides or remove
-- [ ] 46. **SC-09** — `LayoutContainer.overflowRef` dead code: remove or wire to DOM
-- [ ] 47. **SC-10** — FieldBlock dead `onUnwrap` no-op: remove
-- [ ] 48. **CQ-12** — `buildContentStyle` parameter type: narrow to used fields
-- [ ] 49. **CQ-13** — `useResizeHandle` pointer event double cast: remove
-- [ ] 50. **CQ-14** — dnd-kit event handlers typed as `any`: add proper types
-- [ ] 51. **CQ-15** — Tray item data double cast: add type guard
+## `packages/formspec-studio/src/workspaces/layout/InlineToolbar.tsx`
+- **Implemented:** `V-05` chip-level `when`/`relevant` warning indicator.
+
+## `packages/formspec-studio/src/workspaces/theme/ColorPalette.tsx`, `ScreenSizes.tsx`
+- **Implemented:** `SC-04` removed the remaining inline theme UI logic copies.
+
+## `packages/formspec-studio/tests/e2e/playwright/layout-components.spec.ts`, `layout-wizard-mode.spec.ts`
+- **Implemented:** `SC-06` Playwright coverage for the Section 9 scenarios.
+
+## `packages/formspec-studio-core/src/authoring-helpers.ts`, `layout-helpers.ts`, `packages/formspec-studio/src/components/blueprint/ComponentTree.tsx`, `packages/formspec-studio/src/workspaces/layout/UnassignedTray.tsx`
+- **Implemented:** `CQ-02` consolidated the duplicate `CompNode` definitions.

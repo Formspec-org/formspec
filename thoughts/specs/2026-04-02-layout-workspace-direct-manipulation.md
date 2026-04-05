@@ -1,23 +1,119 @@
 # Layout Workspace Direct Manipulation Redesign
 
-**Date:** 2026-04-02
-**Status:** Approved
-**Scope:** `packages/formspec-studio/src/workspaces/layout/`
+**Date:** 2026-04-02  
+**Status:** Approved (spec); implementation tracked below  
+**Tracker updated:** 2026-04-04  
+**Scope:** `packages/formspec-studio/src/workspaces/layout/` (+ `formspec-studio-core` helpers, `Shell.tsx`, theme workspace re-parenting)
 
-## Summary
+This document is organized as **what shipped**, **what is still open**, then **design decisions** and the **full reference** (original Sections 0–9).
 
-Rewrite the Layout workspace from a flat-list canvas with a sidebar property editor into a direct-manipulation authoring surface with two modes. **Layout mode**: Containers render with real CSS layout (Grid, Flexbox). Fields show proportional sizing. Users drag edges to resize column spans, row spans, panel widths, and grid column counts. Common properties surface as inline toolbars; rare ones as popovers. The right sidebar becomes a live `<formspec-render>` preview. **Theme mode**: The live preview takes over the full main area. Form-wide theme settings (tokens, rules, breakpoints) live in the Blueprint sidebar. Clicking a field in the preview opens a popover for per-item theme overrides. The standalone Theme tab is eliminated. The Preview tab stays unchanged.
+---
 
-## Design Decisions
+## Delivered
 
-- **Approach A (Full Canvas Rewrite)** chosen over progressive enhancement or split canvas. The existing layout components are thin (~50-175 lines each) and weren't designed for spatial rendering. A focused rebuild of 6-8 components is cleaner than fighting the existing abstractions.
-- **Proportional grid canvas** — containers apply real CSS layout matching their component type. The canvas IS the layout.
-- **All numeric spatial properties are drag-resizable** — column span, row span, grid column count, panel width.
-- **Mixed inline editing strategy** — zero-click indicators, one-click toolbars, two-click popovers. Best tool for the job.
-- **Right sidebar = live preview** — `<formspec-render>` webcomponent, not a property editor.
-- **Preview tab unchanged** — the sidebar preview is a convenience; the tab is for deliberate testing with viewport/mode switching.
-- **Theme mode merges into layout workspace** — two-mode toggle (Layout/Theme). Theme mode shows full-width live preview with popover per-item overrides. Form-wide settings in sidebar. Eliminates standalone Theme tab.
-- **Per-item theme overrides via popover** — clicking a field in the theme preview opens a floating panel with cascade provenance and override controls. No right sidebar in Theme mode.
+### Canvas & structure
+
+- **Real CSS per container type** in `LayoutContainer` — Grid (`repeat(N, 1fr)`), Stack (flex + direction/wrap/gap/align), Card, Panel, Collapsible/Accordion semantics.
+- **`render-tree.tsx`** propagates parent layout context (container type, grid column count) to fields and display nodes.
+- **Proportional grid items** — `grid-column` / `grid-row` span from `style`, wired through studio-core `setColumnSpan` / `setRowSpan`.
+- **`LayoutCanvas`** orchestrates page structure, palette, step nav, context menu, DnD provider, Layout/Theme mode, preview vs structural canvas.
+
+### Resize & direct manipulation
+
+- **`useResizeHandle`** — shared pointer-driven resize with snapping.
+- **Field (and display) grid resize** — right-edge column span, bottom-edge row span; column guide overlay on parent Grid during horizontal resize; tooltips; disambiguation from dnd-kit via separate handles + activation distance.
+- **Full-width-span hides column handle** — avoids overlap with hypothetical grid column-count affordance (per spec disambiguation note).
+
+### Inline editing (toolbar / popover)
+
+- **`InlineToolbar`** — per-container controls (Grid/Stack/Card/Panel/Collapsible, etc.) and field controls including column span stepper where applicable.
+- **`PropertyPopover`** — Tier 3 (style, a11y, cssClass, unwrap/remove) with overflow dot when Tier 3 content exists.
+- **Visual condition** promoted to Tier 2 where implemented (`InlineExpression` / chip pattern per toolbar).
+
+### DnD (partial relative to Section 5)
+
+- **`LayoutDndProvider`** — tray → canvas, **insert-slot** targets with `moveComponentNodeToIndex`, **container-drop** → `moveComponentNodeToContainer`, fallback linear `reorderComponentNode` for non-spatial cases.
+- **Thin insert slots** interleaved with children when drag is active (containers with `nodeId`).
+- **Empty container** placeholder copy (“Drop items here”) when non-drag empty state.
+
+### Right sidebar & shell
+
+- **`LayoutPreviewPanel`** / **`FormspecPreviewHost`** in the Layout tab right sidebar (hidden in Theme mode and compact/chat layouts per existing shell rules).
+- **`Theme` workspace tab removed** from `Header` and `WORKSPACES`; theme editing lives under Layout **Theme mode**.
+- **Blueprint** switches to **`THEME_MODE_BLUEPRINT_SECTIONS`** when Layout + Theme mode (`BlueprintSidebarInner` + `LayoutModeProvider`).
+- **Theme workspace components** (ColorPalette, TypographySpacing, etc.) registered in sidebar — re-parented from deleted standalone Theme tab.
+
+### Theme mode
+
+- **Layout / Theme toggle** (`LayoutThemeToggle` + `LayoutModeContext`).
+- **Full-width preview** in Layout canvas when Theme mode; **`ThemeAuthoringOverlay`** + **`ThemeOverridePopover`** for per-item overrides; cascade via **`getPropertySources`** / **`getEditableThemeProperties`**.
+- **Studio-core layout + theme helpers** exported from `formspec-studio-core` (`layout-helpers.ts`, `layout-ui-helpers.ts`): e.g. `setColumnSpan`, `setRowSpan`, `setPadding`, `setStyleProperty`, `removeStyleProperty`, theme override helpers, `resolveLayoutInsertTarget`, `getItemOverrides`, `addStyleOverride`, `validateTokenName`, `applyBreakpointPresets`, `summarizeSelectorRule`, `getTokensByGroup`, `getGroupedTokens`, `getSortedBreakpoints`, `getEditablePropertiesForNode`.
+
+### Legacy removal
+
+- **Old layout property sidebar pieces** absorbed into toolbar/popover/helpers (per inventory — `ComponentProperties` et al. removed from Layout flow).
+- **`ThemeTab.tsx`** removed.
+
+### Tests
+
+- Studio-core tests for layout helpers; Vitest layout/workspace tests; Playwright layout E2E including insert-slot reorder and theme/layout flows (exact coverage evolves — see Section 9 checklist in reference).
+
+---
+
+## Outstanding
+
+### Grid DnD (Section 5 — highest gap)
+
+- **Required spatial drop indicator** — spec: while dragging over a Grid, **highlight the target cell** (outline or shaded region). Current: **no** cell-level preview; only small **`h-1` insert slots**, hard to interpret as “which column/row.”
+- **Nearest-cell / layout-aware `insertIndex`** — spec: derive placement from **pointer position vs grid geometry**. Current: **linear** insert indices from interleaved slots in DOM order, not true “nearest cell” in 2D (especially painful with mixed spans).
+- **`renderLayoutTree`** still does not pass **sibling `index`** into every draggable; fallback `reorderComponentNode` direction can be wrong if spatial drop misses.
+
+### Resize handles (Section 2)
+
+- **Grid `columns` via container edge drag** — spec: drag Grid container right edge (1–12) **in addition to** toolbar stepper. Current: **stepper only** (no container-edge column-count handle).
+- **Panel width** — spec: drag Panel edge with tooltip. Verify / implement if not present on `LayoutContainer` Panel path.
+- **Stack gap drag** — spec stretch goal; likely **not** implemented.
+
+### Sidebar preview & compact (Section 4)
+
+- **Selection sync** — explicitly deferred in spec (v1+): click field in preview → highlight on canvas.
+- **Compact “Preview” drawer/modal** — spec: when sidebar hidden, toolbar button opens on-demand preview; confirm fully wired everywhere compact Layout is used.
+
+### Theme mode polish (Section 7)
+
+- **Selection handoff** — spec: Layout→Theme opens popover for prior selection, scroll/highlight field; Theme→Layout restores prior canvas selection. Confirm behavior matches **full** spec wording.
+- **Overlay + `data-bind` / `data-key`** on preview — depends on webcomponent attributes; verify all field wrappers expose what overlay expects.
+
+### Spec / schema (Section 0)
+
+- Four **PresentationBlock** additions (`density`/`size`, `labelPosition: floating`, `helpTextPosition`, `errorDisplay`) — **Theme spec work**, not Studio-only; theme popover “future controls” stay blocked until spec lands.
+
+### Section 8 “done in core” vs UI residue
+
+- Helpers are **exported**; individual theme UI components may still contain **display-only** logic per “stays in UI” table — no need to move unless MCP parity is required.
+
+### Testing vs spec (Section 9)
+
+- E2E item **“Drag-resize a Grid container to change column count”** — only valid once **container-edge column resize** exists (or test should be reinterpreted as stepper-only).
+
+---
+
+## Design decisions (unchanged intent)
+
+- **Approach A (full canvas rewrite)** — structural canvas, not a flat list with fake boxes.
+- **Proportional grid canvas** — the canvas uses real Grid/Flex.
+- **Numeric spatial properties** — intended to be drag-resizable where specified (some still open above).
+- **Mixed inline editing** — zero-click affordances, one-click toolbar, two-click popover.
+- **Right sidebar = live preview** in Layout mode (not a property form).
+- **Preview tab unchanged** — full deliberate preview remains separate.
+- **Theme merged into Layout** — two-mode toggle; standalone Theme tab eliminated.
+- **Per-item theme overrides** — popover from preview in Theme mode; studio-core owns cascade reads/writes.
+
+---
+
+# Reference: original specification (Sections 0–9)
+
+The following sections are the **authoritative design text** from the 2026-04-02 approval. Use **Delivered** / **Outstanding** above for implementation status; paragraphs below are not retro-edited to match code.
 
 ## Section 0: Tier & Property Strategy
 
@@ -26,6 +122,7 @@ Rewrite the Layout workspace from a flat-list canvas with a sidebar property edi
 Both the Studio UI and the MCP server consume `formspec-studio-core`. Any business logic, convenience function, or optimization that one consumer needs, the other probably needs too. **Neither consumer should think about which document to edit, which tier owns a property, or how the cascade works.** They call intent-based helpers and render/return the results.
 
 This means:
+
 - Studio UI components call studio-core methods and render. They never import from `formspec-core` directly, never construct handler payloads, never do document routing.
 - MCP tools call the same studio-core helpers with identical semantics, different presentation.
 - Business logic found in studio UI during this rewrite gets refactored down into studio-core.
