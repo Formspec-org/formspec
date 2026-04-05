@@ -1,5 +1,6 @@
 /** @filedesc Theme tab section showing all tokens grouped by dot-prefix with inline edit and delete. */
 import { useState } from 'react';
+import { getGroupedTokens } from '@formspec-org/studio-core';
 import { useTheme } from '../../state/useTheme';
 import { useProject } from '../../state/useProject';
 
@@ -8,24 +9,14 @@ function isHexColor(v: string): boolean {
 }
 
 export function AllTokens() {
-  const theme = useTheme();
+  useTheme();
   const project = useProject();
   const [isAdding, setIsAdding] = useState(false);
   const [newKey, setNewKey] = useState('');
   const [newValue, setNewValue] = useState('');
 
-  const tokens = theme?.tokens ?? {};
-  const entries = Object.entries(tokens);
-
-  // Group by dot-prefix
-  const groups: Record<string, { key: string; suffix: string; value: string }[]> = {};
-  for (const [key, value] of entries) {
-    const dotIdx = key.indexOf('.');
-    const prefix = dotIdx >= 0 ? key.slice(0, dotIdx) : 'other';
-    const suffix = dotIdx >= 0 ? key.slice(dotIdx + 1) : key;
-    if (!groups[prefix]) groups[prefix] = [];
-    groups[prefix].push({ key, suffix, value: String(value) });
-  }
+  const groups = getGroupedTokens(project);
+  const totalTokens = Array.from(groups.values()).reduce((count, items) => count + items.length, 0);
 
   const setToken = (key: string, value: string | null) => {
     project.setToken(key, value);
@@ -45,7 +36,7 @@ export function AllTokens() {
     <div className="space-y-3">
       <div className="flex justify-between items-center mb-1">
         <h4 className="text-[12px] font-bold text-muted uppercase tracking-wider">
-          {entries.length} tokens
+          {totalTokens} tokens
         </h4>
         {!isAdding && (
           <button
@@ -102,10 +93,10 @@ export function AllTokens() {
         </div>
       )}
 
-      {Object.entries(groups).map(([prefix, items]) => (
+      {Array.from(groups.entries()).map(([prefix, items]) => (
         <div key={prefix} className="space-y-1">
           <div className="text-[11px] font-bold text-muted uppercase tracking-wider">{prefix}</div>
-          {items.map(({ key, suffix, value }) => (
+          {items.map(({ key, name, value }) => (
             <div
               key={key}
               className="flex items-center gap-2 py-1 px-2 rounded hover:bg-subtle/50 group"
@@ -117,7 +108,7 @@ export function AllTokens() {
                   style={{ backgroundColor: value }}
                 />
               )}
-              <span className="text-[12px] font-mono font-bold text-ink flex-shrink-0">{suffix}</span>
+              <span className="text-[12px] font-mono font-bold text-ink flex-shrink-0">{name}</span>
               <input
                 type="text"
                 defaultValue={value}

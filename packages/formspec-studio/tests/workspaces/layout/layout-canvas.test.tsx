@@ -53,8 +53,9 @@ describe('LayoutCanvas', () => {
     project.wrapInLayoutComponent('name', 'Card');
 
     renderLayout(project);
-    expect(screen.getByText('Card')).toBeInTheDocument();
-    expect(screen.getByText('Full Name')).toBeInTheDocument();
+    const cardContainer = screen.getByTestId(/^layout-container-/);
+    expect(cardContainer).toHaveTextContent('Card');
+    expect(cardContainer).toHaveTextContent('Full Name');
   });
 
   it('renders bound field items with their labels', () => {
@@ -83,6 +84,22 @@ describe('LayoutCanvas', () => {
     expect(screen.getByText('Important Notice')).toBeInTheDocument();
   });
 
+  it('commits multi-line body text for definition display items from the layout canvas', () => {
+    const project = makeProject({
+      $formspec: '1.0', url: 'urn:layout-test', version: '1.0.0',
+      items: [
+        { key: 'note1', type: 'display', label: 'First line' },
+      ],
+    });
+
+    renderLayout(project);
+    fireEvent.click(screen.getByTestId('layout-display-note1'));
+    const editor = screen.getByTestId('layout-display-body-editor');
+    fireEvent.change(editor, { target: { value: 'Line A\nLine B' } });
+    fireEvent.blur(editor);
+    expect(project.itemAt('note1')?.label).toBe('Line A\nLine B');
+  });
+
   it('shows mode selector with Single / Wizard / Tabs', () => {
     const project = makeProject({
       $formspec: '1.0', url: 'urn:layout-test', version: '1.0.0',
@@ -104,7 +121,8 @@ describe('LayoutCanvas', () => {
     renderLayout(project);
     fireEvent.click(screen.getByTestId('layout-add-card'));
 
-    expect(screen.getByText('Card')).toBeInTheDocument();
+    const cardContainer = screen.getByTestId(/^layout-container-/);
+    expect(cardContainer).toHaveTextContent('Card');
   });
 
   it('adds a new item from the layout palette', () => {
@@ -164,9 +182,9 @@ describe('LayoutCanvas', () => {
     renderLayout(project);
 
     const fieldBlock = screen.getByTestId('layout-field-name');
-    expect(fieldBlock.getAttribute('aria-pressed')).toBe('false');
+    expect(fieldBlock).not.toHaveAttribute('aria-pressed', 'true');
     fireEvent.click(fieldBlock);
-    expect(fieldBlock.getAttribute('aria-pressed')).toBe('true');
+    expect(fieldBlock).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('changes the visible page when selecting a different page in wizard mode', () => {

@@ -109,6 +109,18 @@ function ToolbarIconBtn({
   );
 }
 
+function WhenWarningBadge() {
+  return (
+    <span
+      title="This hides the component only. Use relevant in Editor to control data."
+      className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-warning/30 bg-warning/10 text-[9px] font-bold text-warning"
+      aria-hidden="true"
+    >
+      ⚠
+    </span>
+  );
+}
+
 function Stepper({
   decTestId,
   incTestId,
@@ -405,8 +417,8 @@ function FieldControls({
           min={1}
           max={parentCols}
           ariaLabel="column span"
-          onDecrement={() => onSetColumnSpan?.(currentSpan - 1) ?? onSetStyle?.('gridColumn', `span ${currentSpan - 1}`)}
-          onIncrement={() => onSetColumnSpan?.(currentSpan + 1) ?? onSetStyle?.('gridColumn', `span ${currentSpan + 1}`)}
+          onDecrement={() => { if (onSetColumnSpan) onSetColumnSpan(currentSpan - 1); else onSetStyle?.('gridColumn', `span ${currentSpan - 1}`); }}
+          onIncrement={() => { if (onSetColumnSpan) onSetColumnSpan(currentSpan + 1); else onSetStyle?.('gridColumn', `span ${currentSpan + 1}`); }}
         />
       )}
     </>
@@ -437,10 +449,11 @@ export function InlineToolbar(props: InlineToolbarProps) {
   useEffect(() => {
     const resizeObserver = new ResizeObserver(() => {
       if (toolbarRef.current) {
-        setToolbarWidth(toolbarRef.current.offsetWidth);
+        setToolbarWidth(toolbarRef.current.offsetWidth || 320);
       }
     });
     if (toolbarRef.current) {
+      setToolbarWidth(toolbarRef.current.offsetWidth || 320);
       resizeObserver.observe(toolbarRef.current);
     }
     return () => resizeObserver.disconnect();
@@ -523,11 +536,12 @@ export function InlineToolbar(props: InlineToolbarProps) {
             <button
               type="button"
               data-testid="toolbar-condition-chip-compact"
-              className="inline-flex h-6 px-1 items-center justify-center rounded border border-border/60 bg-subtle text-[10px] cursor-pointer hover:bg-subtle/80 transition-colors flex-shrink-0 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/70"
-              title={componentWhen}
+              className="inline-flex h-6 px-1 items-center justify-center rounded border border-warning/30 bg-warning/5 text-[10px] cursor-pointer hover:bg-warning/10 transition-colors flex-shrink-0 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-warning/60"
+              title="This hides the component only. Use relevant in Editor to control data."
+              aria-label="Condition controls rendering only"
               onClick={(e) => { e.stopPropagation(); onOpenPopover(); }}
             >
-              ⚙
+              <span className="text-warning">⚠</span>
             </button>
           )}
 
@@ -580,13 +594,14 @@ export function InlineToolbar(props: InlineToolbarProps) {
           )}
 
           {/* Full condition chip */}
-          <span data-testid="toolbar-condition-chip" className="flex items-center">
+          <span data-testid="toolbar-condition-chip" className="flex items-center gap-1">
             <InlineExpression
               value={componentWhen}
               onSave={(val) => onSetProp('when', val)}
               placeholder="Always shown (rendering only)"
               expressionType="when"
             />
+            {componentWhen && <WhenWarningBadge />}
           </span>
 
           <button

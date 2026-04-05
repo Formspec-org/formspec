@@ -1,10 +1,11 @@
 /** @filedesc Layout canvas wrapper for layout nodes — applies real CSS layout per container type (Grid, Stack, Card, Panel, Collapsible, Accordion). */
-import React, { useState, useRef, type ReactNode } from 'react';
+import React, { useState, useRef, useCallback, type ReactNode } from 'react';
 import { useDraggable, useDroppable } from '@dnd-kit/react';
 import { hasTier3Content, type ContainerLayoutProps } from '@formspec-org/studio-core';
 import { InlineToolbar } from './InlineToolbar';
 import { PropertyPopover } from './PropertyPopover';
 import { useLayoutDragActive } from './LayoutDragContext';
+import { LayoutResizeProvider, type LayoutResizeState } from './LayoutResizeContext';
 
 export interface LayoutContainerProps {
   component: string;
@@ -18,19 +19,8 @@ export interface LayoutContainerProps {
   index?: number;
   onSelect?: () => void;
   children?: ReactNode;
-  // Per-type layout props (from component tree node)
-  columns?: number;
-  gap?: string;
-  direction?: string;
-  wrap?: boolean;
-  align?: string;
-  elevation?: number;
-  width?: string;
-  position?: string;
-  title?: string;
-  defaultOpen?: boolean;
-  // Open-ended style map (e.g. style.padding on Card)
-  nodeStyle?: Record<string, unknown>;
+  /** Layout-specific props grouped to avoid a long positional prop list. */
+  layoutProps?: ContainerLayoutProps;
   /**
    * Full raw node props record — used by InlineToolbar to read current values.
    * When provided with onSetProp, enables the inline toolbar.
@@ -48,12 +38,8 @@ export interface LayoutContainerProps {
   onStyleRemove?: (styleKey: string) => void;
   /** When true, renders N+1 insert slots between/around children for spatial DnD. */
   isDragActive?: boolean;
-  /** True when a child is being resized (column span drag). */
-  isChildResizing?: boolean;
-  /** Current span value during child resize drag. */
-  childDragValue?: number;
-  /** Cursor position during child resize for tooltip (for future use). */
-  childDragCursorX?: number;
+  /** Collision priority for nested drop targets (higher wins). */
+  collisionPriority?: number;
 }
 
 const ELEVATION_SHADOW: Record<number, string> = {
@@ -63,7 +49,12 @@ const ELEVATION_SHADOW: Record<number, string> = {
   3: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
 };
 
-function buildContentStyle(component: string, layoutProps: ContainerLayoutProps): React.CSSProperties {
+type ContentStyleProps = Pick<
+  ContainerLayoutProps,
+  'columns' | 'gap' | 'direction' | 'wrap' | 'align' | 'elevation' | 'nodeStyle'
+>;
+
+function buildContentStyle(component: string, layoutProps: ContentStyleProps = {}): React.CSSProperties {
   const { columns, gap, direction, wrap, align, elevation, nodeStyle } = layoutProps;
 
   switch (component) {
@@ -103,10 +94,11 @@ function buildContentStyle(component: string, layoutProps: ContainerLayoutProps)
 }
 
 /** A single droppable insert slot registered with dnd-kit. */
-function InsertSlot({ nodeId, index }: { nodeId: string; index: number }) {
+function InsertSlot({ nodeId, index, collisionPriority }: { nodeId: string; index: number; collisionPriority: number }) {
   const { ref } = useDroppable({
     id: `slot-${nodeId}-${index}`,
     data: { type: 'insert-slot', containerId: nodeId, insertIndex: index },
+    collisionPriority,
   });
   return (
     <div
@@ -120,15 +112,15 @@ function InsertSlot({ nodeId, index }: { nodeId: string; index: number }) {
 }
 
 /** Renders N+1 droppable insert slots interleaved with N children. */
-function InsertSlotChildren({ nodeId, children }: { nodeId: string; children?: ReactNode }) {
+function InsertSlotChildren({ nodeId, children, collisionPriority }: { nodeId: string; children?: ReactNode; collisionPriority: number }) {
   const childArray = children ? (Array.isArray(children) ? children : [children]) : [];
   const slotCount = childArray.length + 1;
 
   return (
-    <>
+      <>
       {Array.from({ length: slotCount }, (_, i) => (
         <React.Fragment key={`slot-group-${i}`}>
-          <InsertSlot nodeId={nodeId} index={i} />
+          <InsertSlot nodeId={nodeId} index={i} collisionPriority={collisionPriority} />
           {i < childArray.length && childArray[i]}
         </React.Fragment>
       ))}
@@ -148,17 +140,7 @@ export function LayoutContainer(props: LayoutContainerProps) {
     index = 0,
     onSelect,
     children,
-    columns,
-    gap,
-    direction,
-    wrap,
-    align,
-    elevation,
-    width,
-    position,
-    title,
-    defaultOpen = true,
-    nodeStyle,
+    layoutProps,
     nodeProps,
     onSetProp,
     onSetStyle,
@@ -166,18 +148,21 @@ export function LayoutContainer(props: LayoutContainerProps) {
     onRemove,
     onStyleRemove,
     isDragActive: isDragActiveProp = false,
-    isChildResizing = false,
-    childDragValue = 0,
-    childDragCursorX = 0,
+    collisionPriority = 0,
   } = props;
 
   // OBJ-4-02: read from DnD context so containers know drag is active without prop threading
   const isDragActiveCtx = useLayoutDragActive();
   const isDragActive = isDragActiveProp || isDragActiveCtx;
 
-  const [open, setOpen] = useState(defaultOpen);
+  const resolvedLayoutProps = layoutProps ?? {};
+  const [open, setOpen] = useState(resolvedLayoutProps.defaultOpen ?? true);
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const [childResizeState, setChildResizeState] = useState<LayoutResizeState | null>(null);
   const overflowButtonRef = useRef<HTMLButtonElement | null>(null);
+  const reportChildResize = useCallback((state: LayoutResizeState | null) => {
+    setChildResizeState(state);
+  }, []);
 
   const dragId = nodeId ? `node:${nodeId}` : `bind:${bind ?? component}`;
   const nodeRef = nodeId ? { nodeId } : bind ? { bind } : undefined;
@@ -190,18 +175,23 @@ export function LayoutContainer(props: LayoutContainerProps) {
   const { ref: dropRef } = useDroppable({
     id: `drop:${dragId}`,
     data: { nodeRef, index, type: 'container-drop', component },
+    collisionPriority,
   });
 
   const isCollapsible = component === 'Collapsible' || component === 'Accordion';
-  const contentStyle = buildContentStyle(component, {
-    columns, gap, direction, wrap, align, elevation, nodeStyle,
-  });
-  const containerStyle: React.CSSProperties = component === 'Panel' && width ? { width } : {};
-  const displayTitle = title ?? undefined;
+  const contentStyle = buildContentStyle(component, resolvedLayoutProps);
+  const containerStyle: React.CSSProperties = component === 'Panel' && resolvedLayoutProps.width
+    ? { width: resolvedLayoutProps.width }
+    : {};
+  const displayTitle = resolvedLayoutProps.title ?? undefined;
+  const isChildResizing = childResizeState !== null;
+  const childDragValue = childResizeState?.value ?? 0;
+  const childDragCursorX = childResizeState?.cursor.x ?? 0;
+  const childResizeAxis = childResizeState?.axis ?? null;
 
   // Column guides overlay for Grid when child is resizing
-  const numColumns = component === 'Grid' ? (props.columns ?? 2) : 0;
-  const showColumnGuides = isChildResizing && numColumns > 0 && component === 'Grid';
+  const numColumns = component === 'Grid' ? (resolvedLayoutProps.columns ?? 2) : 0;
+  const showColumnGuides = isChildResizing && childResizeAxis === 'x' && numColumns > 0 && component === 'Grid';
 
   // Determine if any Tier 3 properties are set (for dot indicator on "...")
   const resolvedNodeProps = nodeProps ?? {};
@@ -211,12 +201,13 @@ export function LayoutContainer(props: LayoutContainerProps) {
 
   return (
     <div
-      ref={(el) => { dragRef(el); dropRef(el); }}
+      ref={dropRef}
       data-testid={`layout-container-${nodeId ?? bind ?? component}`}
       data-layout-node
       data-layout-node-type={nodeType}
       data-component={component}
       {...(bindPath ? { 'data-layout-bind': bindPath } : {})}
+      {...(bind ? { 'data-layout-tree-bind': bind } : {})}
       {...(nodeId ? { 'data-layout-node-id': nodeId } : {})}
       style={containerStyle}
       className={`rounded border border-dashed bg-surface transition-colors ${
@@ -227,8 +218,9 @@ export function LayoutContainer(props: LayoutContainerProps) {
           : 'border-muted'
       }`}
     >
-      {/* Header row: type badge + optional title + toolbar / collapse toggle */}
+      {/* Header row: type badge + optional title + toolbar / collapse toggle — sole drag handle so nested Grid cells do not move the container */}
       <div
+        ref={dragRef}
         role="button"
         tabIndex={0}
         aria-pressed={selected}
@@ -284,7 +276,7 @@ export function LayoutContainer(props: LayoutContainerProps) {
           onSetProp={onSetProp!}
           onSetStyle={onSetStyle ?? (() => {})}
           onStyleRemove={onStyleRemove ?? (() => {})}
-          onUnwrap={onUnwrap ?? (() => {})}
+          onUnwrap={onUnwrap}
           onRemove={onRemove ?? (() => {})}
           onClose={() => setPopoverOpen(false)}
         />
@@ -292,57 +284,63 @@ export function LayoutContainer(props: LayoutContainerProps) {
 
       {/* Content area — hidden when collapsible is closed */}
       {(!isCollapsible || open) && (
-        <div
-          data-layout-content
-          style={contentStyle}
-          className="relative px-3 pb-2"
-        >
-          {/* Column guides overlay when child is resizing in a Grid */}
-          {showColumnGuides && (
-            <div
-              className="absolute inset-0 pointer-events-none"
-              style={{
-                display: 'grid',
-                gridTemplateColumns: `repeat(${numColumns}, 1fr)`,
-                gap: contentStyle.gap as string | undefined,
-              }}
-            >
-              {Array.from({ length: numColumns }).map((_, i) => (
-                <div
-                  key={`guide-${i}`}
-                  className="border-l border-dashed border-accent/30"
-                />
-              ))}
-            </div>
-          )}
-
-          {/* Numeric tooltip during resize */}
-          {showColumnGuides && (
-            <div
-              className="fixed bg-accent/90 text-background px-2 py-1 rounded text-[11px] font-semibold pointer-events-none z-50"
-              style={{
-                left: `${childDragCursorX}px`,
-                top: '0px',
-                transform: 'translateX(-50%)',
-              }}
-            >
-              {childDragValue} col
-            </div>
-          )}
-
-          {isDragActive && nodeId ? (
-            <InsertSlotChildren nodeId={nodeId}>{children}</InsertSlotChildren>
-          ) : (
-            children ?? (
+        <LayoutResizeProvider onResizeChange={reportChildResize}>
+          <div
+            data-layout-content
+            style={contentStyle}
+            className="relative px-3 pb-2"
+          >
+            {/* Column guides overlay when a child is resizing inside a Grid */}
+            {showColumnGuides && childResizeAxis === 'x' && (
               <div
-                data-testid="empty-container-placeholder"
-                className="flex items-center justify-center rounded border border-dashed border-muted/50 py-4 text-[11px] text-muted"
+                data-testid="layout-resize-guides"
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: `repeat(${numColumns}, 1fr)`,
+                  gap: contentStyle.gap as string | undefined,
+                }}
               >
-                Drop items here
+                {Array.from({ length: numColumns }).map((_, i) => (
+                  <div
+                    key={`guide-${i}`}
+                    className="border-l border-dashed border-accent/30"
+                  />
+                ))}
               </div>
-            )
-          )}
-        </div>
+            )}
+
+            {/* Numeric tooltip during resize */}
+            {showColumnGuides && childResizeAxis === 'x' && (
+              <div
+                data-testid="layout-resize-tooltip"
+                className="fixed bg-accent/90 text-background px-2 py-1 rounded text-[11px] font-semibold pointer-events-none z-50"
+                style={{
+                  left: `${childDragCursorX}px`,
+                  top: '0px',
+                  transform: 'translateX(-50%)',
+                }}
+              >
+                {childDragValue} col
+              </div>
+            )}
+
+            {isDragActive && nodeId ? (
+              <InsertSlotChildren nodeId={nodeId} collisionPriority={collisionPriority + 1}>
+                {children}
+              </InsertSlotChildren>
+            ) : (
+              children ?? (
+                <div
+                  data-testid="empty-container-placeholder"
+                  className="flex items-center justify-center rounded border border-dashed border-muted/50 py-4 text-[11px] text-muted"
+                >
+                  Drop items here
+                </div>
+              )
+            )}
+          </div>
+        </LayoutResizeProvider>
       )}
     </div>
   );

@@ -13,9 +13,52 @@ function findDataBind(el: Element | null): string | null {
     if (current instanceof HTMLElement && current.dataset.bind) {
       return current.dataset.bind;
     }
-    current = current.parentElement;
+    const parent = current.parentElement;
+    if (parent) {
+      current = parent;
+      continue;
+    }
+    const root = current.getRootNode();
+    current = root instanceof ShadowRoot ? root.host : null;
   }
   return null;
+}
+
+function elementFromPointDeep(root: Document | ShadowRoot, x: number, y: number): Element | null {
+  const hit = root.elementFromPoint(x, y);
+  if (!hit) return null;
+  const shadowRoot = (hit as HTMLElement).shadowRoot;
+  if (shadowRoot) {
+    return elementFromPointDeep(shadowRoot, x, y) ?? hit;
+  }
+  return hit;
+}
+
+function findDataBindAtPoint(x: number, y: number): string | null {
+  const previewHost = document.querySelector('[data-testid="formspec-preview-host"]');
+  if (previewHost) {
+    let bestElement: HTMLElement | null = null;
+    let bestArea = Number.POSITIVE_INFINITY;
+
+    for (const candidate of Array.from(previewHost.querySelectorAll<HTMLElement>('[data-bind]'))) {
+      const rect = candidate.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) continue;
+      if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) continue;
+
+      const area = rect.width * rect.height;
+      if (area < bestArea) {
+        bestElement = candidate;
+        bestArea = area;
+      }
+    }
+
+    if (bestElement?.dataset.bind) {
+      return bestElement.dataset.bind;
+    }
+  }
+
+  const target = elementFromPointDeep(document, x, y);
+  return findDataBind(target);
 }
 
 export function ThemeAuthoringOverlay({ onFieldSelect, selectedItemKey }: ThemeAuthoringOverlayProps) {
@@ -42,10 +85,9 @@ export function ThemeAuthoringOverlay({ onFieldSelect, selectedItemKey }: ThemeA
 
     // Temporarily hide overlay so elementFromPoint can reach the element beneath
     overlay.style.pointerEvents = 'none';
-    const target = document.elementFromPoint(clientX, clientY);
     overlay.style.pointerEvents = 'all';
 
-    const itemKey = findDataBind(target);
+    const itemKey = findDataBindAtPoint(clientX, clientY);
     if (itemKey) {
       onFieldSelect(itemKey, { x: clientX, y: clientY });
     } else {

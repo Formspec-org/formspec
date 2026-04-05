@@ -8,6 +8,7 @@ import {
 } from '@formspec-org/studio-core';
 import type { Project } from '@formspec-org/studio-core';
 import { DirtyGuardConfirm } from './DirtyGuardConfirm';
+import { useOptionalLayoutMode } from './LayoutModeContext';
 
 export interface ThemeOverridePopoverProps {
   open: boolean;
@@ -136,6 +137,7 @@ export function ThemeOverridePopover({
 }: ThemeOverridePopoverProps) {
   const [dirtyInputs, setDirtyInputs] = useState<Set<string>>(new Set());
   const [showDirtyGuard, setShowDirtyGuard] = useState(false);
+  const layoutMode = useOptionalLayoutMode();
 
   useEffect(() => {
     if (!open) {
@@ -143,6 +145,17 @@ export function ThemeOverridePopover({
       setShowDirtyGuard(false);
     }
   }, [open]);
+
+  useEffect(() => {
+    if (!layoutMode) return;
+    const popoverId = 'theme-override-popover';
+    if (open && dirtyInputs.size > 0) {
+      layoutMode.registerDirtyPopover(popoverId);
+    } else {
+      layoutMode.clearDirtyPopover(popoverId);
+    }
+    return () => layoutMode.clearDirtyPopover(popoverId);
+  }, [layoutMode, open, dirtyInputs.size]);
 
   function trackDirty(id: string, isDirty: boolean) {
     setDirtyInputs((prev) => {
@@ -163,6 +176,9 @@ export function ThemeOverridePopover({
   if (!open) return null;
 
   const props = getEditableThemeProperties(project, itemKey);
+  const item = project.itemAt(itemKey) as { type?: string; dataType?: string } | undefined;
+  const itemType = item?.type ?? 'field';
+  const itemDataType = item?.dataType;
 
   // Calculate clamped position to prevent viewport overflow
   const popoverWidth = 320; // w-80 = 320px
@@ -202,7 +218,7 @@ export function ThemeOverridePopover({
       {/* Property rows */}
       <div className="flex-1 overflow-y-auto px-3 py-2 space-y-3">
         {props.map((propInfo) => {
-          const sources = getPropertySources(project, itemKey, propInfo.prop);
+          const sources = getPropertySources(project, itemKey, propInfo.prop, itemType, itemDataType);
           return (
             <OverrideRow
               key={propInfo.prop}

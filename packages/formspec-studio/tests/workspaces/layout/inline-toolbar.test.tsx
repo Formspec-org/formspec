@@ -180,18 +180,17 @@ describe('InlineToolbar — Stack', () => {
 // ── Card toolbar ──────────────────────────────────────────────────────────
 
 describe('InlineToolbar — Card', () => {
-  it('renders elevation buttons 0-3', () => {
+  it('renders elevation stepper', () => {
     render(<InlineToolbar {...makeContainerProps({ component: 'Card', nodeProps: {} })} />);
-    expect(screen.getByTestId('toolbar-elevation-0')).toBeInTheDocument();
-    expect(screen.getByTestId('toolbar-elevation-1')).toBeInTheDocument();
-    expect(screen.getByTestId('toolbar-elevation-2')).toBeInTheDocument();
-    expect(screen.getByTestId('toolbar-elevation-3')).toBeInTheDocument();
+    expect(screen.getByTestId('toolbar-elevation-dec')).toBeInTheDocument();
+    expect(screen.getByTestId('toolbar-elevation-inc')).toBeInTheDocument();
+    expect(screen.getByTestId('toolbar-elevation-value')).toHaveTextContent('1');
   });
 
-  it('calls onSetProp with elevation number when button clicked', () => {
+  it('calls onSetProp with elevation number when increment clicked', () => {
     const onSetProp = vi.fn();
     render(<InlineToolbar {...makeContainerProps({ component: 'Card', nodeProps: {}, onSetProp })} />);
-    fireEvent.click(screen.getByTestId('toolbar-elevation-2'));
+    fireEvent.click(screen.getByTestId('toolbar-elevation-inc'));
     expect(onSetProp).toHaveBeenCalledWith('elevation', 2);
   });
 
@@ -376,12 +375,13 @@ describe('InlineToolbar — condition chip', () => {
     render(<InlineToolbar {...makeContainerProps({ component: 'Grid', nodeProps: {} })} />);
     expect(screen.getByTestId('toolbar-condition-chip')).toBeInTheDocument();
     // InlineExpression mock renders placeholder when value is empty
-    expect(screen.getByTestId('inline-expression')).toHaveAttribute('data-placeholder', 'Always visible');
+    expect(screen.getByTestId('inline-expression')).toHaveAttribute('data-placeholder', 'Always shown (rendering only)');
   });
 
   it('shows "if: ..." chip when when expression is set', () => {
     render(<InlineToolbar {...makeContainerProps({ component: 'Grid', nodeProps: { when: 'age > 18' } })} />);
     expect(screen.getByTestId('inline-expression')).toHaveAttribute('data-value', 'age > 18');
+    expect(screen.getByTitle('This hides the component only. Use relevant in Editor to control data.')).toBeInTheDocument();
   });
 
   it('calls onSetProp with new when expression when saved', () => {

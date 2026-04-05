@@ -2,25 +2,23 @@
 import { useState, useRef } from 'react';
 import { useTheme } from '../../state/useTheme';
 import { useProject } from '../../state/useProject';
+import { getTokensByGroup, validateTokenName } from '@formspec-org/studio-core';
 
 export function ColorPalette() {
-  const theme = useTheme();
+  useTheme();
   const project = useProject();
   const [isAdding, setIsAdding] = useState(false);
   const [newName, setNewName] = useState('');
 
-  const tokens = theme?.tokens ?? {};
-  const colorTokens = Object.entries(tokens)
-    .filter(([key]) => key.startsWith('color.'))
-    .map(([key, value]) => ({ key, name: key.slice(6), value: String(value) }));
+  const colorTokens = getTokensByGroup(project, 'color');
 
   const setToken = (key: string, value: string | null) => {
     project.setToken(key, value);
   };
 
   const handleAdd = () => {
-    const name = newName.trim().replace(/[^a-zA-Z0-9_-]/g, '');
-    if (!name) return;
+    const name = newName.trim();
+    if (!validateTokenName(name)) return;
     setToken(`color.${name}`, '#808080');
     setNewName('');
     setIsAdding(false);
@@ -108,7 +106,10 @@ function ColorSwatch({
   const colorInputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div className="border border-border rounded-lg bg-surface p-3 transition-all hover:border-accent/50 group">
+    <div
+      data-testid={`color-token-${tokenKey}`}
+      className="border border-border rounded-lg bg-surface p-3 transition-all hover:border-accent/50 group"
+    >
       <div className="flex items-center gap-3">
         <button
           type="button"
@@ -128,9 +129,11 @@ function ColorSwatch({
         <div className="flex-1 min-w-0">
           <div className="text-[13px] font-bold text-ink truncate">{name}</div>
           <input
+            data-testid={`color-value-${tokenKey}`}
             type="text"
             defaultValue={value}
             key={value}
+            aria-label={`Value for ${name}`}
             onBlur={(e) => {
               const v = e.target.value.trim();
               if (v && v !== value) onChange(v);

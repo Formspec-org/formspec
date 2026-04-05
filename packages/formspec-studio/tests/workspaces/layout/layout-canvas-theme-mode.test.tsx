@@ -1,5 +1,5 @@
 /** @filedesc Tests for LayoutCanvas Theme mode integration — full-width preview, overlay, selection handoff on mode switch. */
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { createProject, type Project } from '@formspec-org/studio-core';
 import { ProjectProvider } from '../../../src/state/ProjectContext';
@@ -93,7 +93,7 @@ describe('LayoutCanvas — Theme mode toggle', () => {
       $formspec: '1.0', url: 'urn:t', version: '1.0.0',
       items: [{ key: 'email', type: 'field', dataType: 'string', label: 'Email' }],
     });
-    const { container } = renderLayout(project);
+    renderLayout(project);
 
     // Select a field in Layout mode
     const fieldBlock = screen.getByTestId('layout-field-email');
@@ -109,7 +109,9 @@ describe('LayoutCanvas — Theme mode toggle', () => {
     const overlay = screen.getByTestId('theme-authoring-overlay');
     expect(overlay).toBeInTheDocument();
     // The selected-item key is passed as data attribute or via data-testid
-    expect(overlay.getAttribute('data-selected-key')).toBe('email');
+    await waitFor(() => {
+      expect(overlay).toHaveAttribute('data-selected-key', 'email');
+    });
   });
 
   it('switches back to Layout mode from Theme mode', async () => {

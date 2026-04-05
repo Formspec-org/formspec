@@ -5,6 +5,10 @@ import { type LayoutMode } from './LayoutThemeToggle';
 interface LayoutModeState {
   layoutMode: LayoutMode;
   setLayoutMode: (mode: LayoutMode) => void;
+  pendingLayoutMode: LayoutMode | null;
+  requestLayoutModeChange: (mode: LayoutMode) => boolean;
+  confirmLayoutModeChange: () => void;
+  cancelLayoutModeChange: () => void;
   // Theme mode state
   themeSelectedKey: string | null;
   setThemeSelectedKey: (key: string | null) => void;
@@ -25,13 +29,44 @@ const LayoutModeContext = createContext<LayoutModeState | null>(null);
 
 export function LayoutModeProvider({ children }: { children: ReactNode }) {
   const [layoutMode, setLayoutModeSt] = useState<LayoutMode>('layout');
+  const [pendingLayoutMode, setPendingLayoutMode] = useState<LayoutMode | null>(null);
   const [themeSelectedKey, setThemeSelectedKey] = useState<string | null>(null);
   const [themePopoverPosition, setThemePopoverPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [dirtyPopovers, setDirtyPopovers] = useState<Set<string>>(new Set());
   const [layoutModeSection, setLayoutModeSection] = useState<string | null>(null);
   const [themeModeSection, setThemeModeSection] = useState<string | null>(null);
 
-  const setLayoutMode = useCallback((mode: LayoutMode) => setLayoutModeSt(mode), []);
+  const setLayoutMode = useCallback((mode: LayoutMode) => {
+    setPendingLayoutMode(null);
+    setLayoutModeSt(mode);
+  }, []);
+
+  const requestLayoutModeChange = useCallback((mode: LayoutMode) => {
+    if (mode === layoutMode) {
+      setPendingLayoutMode(null);
+      return true;
+    }
+    if (dirtyPopovers.size > 0) {
+      setPendingLayoutMode(mode);
+      return false;
+    }
+    setPendingLayoutMode(null);
+    setLayoutModeSt(mode);
+    return true;
+  }, [dirtyPopovers.size, layoutMode]);
+
+  const confirmLayoutModeChange = useCallback(() => {
+    setPendingLayoutMode((mode) => {
+      if (mode) {
+        setLayoutModeSt(mode);
+      }
+      return null;
+    });
+  }, []);
+
+  const cancelLayoutModeChange = useCallback(() => {
+    setPendingLayoutMode(null);
+  }, []);
 
   const registerDirtyPopover = useCallback((popoverId: string) => {
     setDirtyPopovers((prev) => new Set(prev).add(popoverId));
@@ -51,6 +86,10 @@ export function LayoutModeProvider({ children }: { children: ReactNode }) {
     () => ({
       layoutMode,
       setLayoutMode,
+      pendingLayoutMode,
+      requestLayoutModeChange,
+      confirmLayoutModeChange,
+      cancelLayoutModeChange,
       themeSelectedKey,
       setThemeSelectedKey,
       themePopoverPosition,
@@ -63,7 +102,7 @@ export function LayoutModeProvider({ children }: { children: ReactNode }) {
       themeModeSection,
       setThemeModeSection,
     }),
-    [layoutMode, setLayoutMode, themeSelectedKey, themePopoverPosition, hasDirtyPopover, registerDirtyPopover, clearDirtyPopover, layoutModeSection, themeModeSection],
+    [layoutMode, setLayoutMode, pendingLayoutMode, requestLayoutModeChange, confirmLayoutModeChange, cancelLayoutModeChange, themeSelectedKey, themePopoverPosition, hasDirtyPopover, registerDirtyPopover, clearDirtyPopover, layoutModeSection, themeModeSection],
   );
   return <LayoutModeContext.Provider value={value}>{children}</LayoutModeContext.Provider>;
 }

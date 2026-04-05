@@ -2,17 +2,16 @@
 import { useState } from 'react';
 import { useTheme } from '../../state/useTheme';
 import { useProject } from '../../state/useProject';
+import { applyBreakpointPresets, getSortedBreakpoints } from '@formspec-org/studio-core';
 
 export function ScreenSizes() {
-  const theme = useTheme();
+  useTheme();
   const project = useProject();
   const [isAdding, setIsAdding] = useState(false);
   const [newName, setNewName] = useState('');
   const [newWidth, setNewWidth] = useState('');
 
-  const breakpoints = theme?.breakpoints ?? {};
-  const sorted = Object.entries(breakpoints)
-    .sort(([, a], [, b]) => a - b);
+  const sorted = getSortedBreakpoints(project);
 
   const setBreakpoint = (name: string, minWidth: number | null) => {
     project.setBreakpoint(name, minWidth);
@@ -29,9 +28,7 @@ export function ScreenSizes() {
   };
 
   const applyPresets = () => {
-    setBreakpoint('mobile', 0);
-    setBreakpoint('tablet', 768);
-    setBreakpoint('desktop', 1024);
+    applyBreakpointPresets(project);
   };
 
   return (
@@ -112,7 +109,7 @@ export function ScreenSizes() {
       )}
 
       <div className="space-y-1">
-        {sorted.map(([name, width]) => (
+        {sorted.map(({ name, width }) => (
           <div
             key={name}
             className="flex items-center gap-3 py-1.5 px-2 rounded hover:bg-subtle/50 group"

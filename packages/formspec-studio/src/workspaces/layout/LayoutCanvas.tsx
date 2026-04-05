@@ -1,5 +1,5 @@
 /** @filedesc Main Layout workspace canvas — renders the component tree with page sections, layout containers, and field/display blocks. */
-import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
+import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { useDefinition } from '../../state/useDefinition';
 import { useComponent } from '../../state/useComponent';
 import { useProject } from '../../state/useProject';
@@ -12,7 +12,9 @@ import {
   executeLayoutAction,
   isLayoutId,
   nodeIdFromLayoutId,
+  resolveLayoutSelectionNodeRef,
   type CompNode,
+  type ItemChanges,
   type LayoutContextMenuState,
 } from '@formspec-org/studio-core';
 import { WorkspacePage, WorkspacePageSection } from '../../components/ui/WorkspacePage';
@@ -27,6 +29,7 @@ import { clampContextMenuPosition } from '../../components/ui/context-menu-utils
 import { LayoutThemeToggle } from './LayoutThemeToggle';
 import { ThemeAuthoringOverlay } from './ThemeAuthoringOverlay';
 import { ThemeOverridePopover } from './ThemeOverridePopover';
+import { DirtyGuardConfirm } from './DirtyGuardConfirm';
 import { FormspecPreviewHost } from '../preview/FormspecPreviewHost';
 import { useOptionalLayoutMode } from './LayoutModeContext';
 import { type LayoutMode } from './LayoutThemeToggle';
@@ -37,59 +40,196 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
+ * Layout mode + theme selection orchestration for the canvas header and theme overlay.
+ */
+function useLayoutCanvasMode(
+  layoutModeCtx: ReturnType<typeof useOptionalLayoutMode>,
+  selectedLayoutKey: string | null,
+) {
+  const [localLayoutMode, setLocalLayoutMode] = useState<LayoutMode>('layout');
+  const [localThemeSelectedKey, setLocalThemeSelectedKey] = useState<string | null>(null);
+  const [localThemePopoverPosition, setLocalThemePopoverPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+
+  const layoutMode = layoutModeCtx?.layoutMode ?? localLayoutMode;
+  const pendingLayoutMode = layoutModeCtx?.pendingLayoutMode ?? null;
+  const themeSelectedKey = layoutModeCtx?.themeSelectedKey ?? localThemeSelectedKey;
+  const setThemeSelectedKey = layoutModeCtx?.setThemeSelectedKey ?? setLocalThemeSelectedKey;
+  const themePopoverPosition = layoutModeCtx?.themePopoverPosition ?? localThemePopoverPosition;
+  const setThemePopoverPosition = layoutModeCtx?.setThemePopoverPosition ?? setLocalThemePopoverPosition;
+
+  const previousLayoutModeRef = useRef<LayoutMode>(layoutMode);
+  useEffect(() => {
+    const wasThemeMode = previousLayoutModeRef.current === 'theme';
+    if (!wasThemeMode && layoutMode === 'theme') {
+      const canvasKey = selectedLayoutKey;
+      setThemeSelectedKey(canvasKey);
+
+      if (canvasKey) {
+        const isNode = isLayoutId(canvasKey);
+        const selector = isNode
+          ? `[data-layout-node-id="${CSS.escape(nodeIdFromLayoutId(canvasKey))}"]`
+          : `[data-layout-bind="${CSS.escape(canvasKey)}"]`;
+        const element = document.querySelector(selector);
+        if (element) {
+          const rect = element.getBoundingClientRect();
+          setThemePopoverPosition({
+            x: rect.left + rect.width / 2,
+            y: rect.top + rect.height,
+          });
+          element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      }
+    }
+    previousLayoutModeRef.current = layoutMode;
+  }, [layoutMode, selectedLayoutKey, setThemePopoverPosition, setThemeSelectedKey]);
+
+  const handleModeChange = (mode: LayoutMode) => {
+    if (layoutModeCtx?.requestLayoutModeChange) {
+      layoutModeCtx.requestLayoutModeChange(mode);
+      return;
+    }
+    setLocalLayoutMode(mode);
+  };
+
+  const handleThemeFieldSelect = (itemKey: string, position: { x: number; y: number }) => {
+    setThemeSelectedKey(itemKey);
+    setThemePopoverPosition({ x: position.x + 12, y: position.y + 12 });
+  };
+
+  return {
+    layoutMode,
+    pendingLayoutMode,
+    themeSelectedKey,
+    setThemeSelectedKey,
+    themePopoverPosition,
+    setThemePopoverPosition,
+    handleModeChange,
+    handleThemeFieldSelect,
+  };
+}
+
+/**
+ * Context menu orchestration for the Layout canvas tree and page structure.
+ */
+function useLayoutCanvasContextMenu(
+  project: ReturnType<typeof useProject>,
+  deselect: () => void,
+  activePageId: string | null,
+  materializePagedLayout: () => Map<string, string>,
+  setActivePageId: (id: string) => void,
+  handleSelectNode: (key: string, type: 'field' | 'group' | 'display' | 'layout') => void,
+) {
+  const [contextMenu, setContextMenu] = useState<LayoutContextMenuState | null>(null);
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const target = (e.target as HTMLElement).closest<HTMLElement>(
+      '[data-layout-node]',
+    );
+    if (!target) {
+      setContextMenu({ x: e.clientX, y: e.clientY, kind: 'canvas' });
+      return;
+    }
+
+    const nodeType = target.dataset.layoutNodeType as LayoutContextMenuState['nodeType'];
+    const treeBind = target.dataset.layoutTreeBind;
+    const layoutBind = target.dataset.layoutBind;
+    const nodeId = target.dataset.layoutNodeId;
+    const clamped = clampContextMenuPosition(e.clientX, e.clientY);
+
+    // NodeRef for tree ops (wrap/move) must match TreeNode.bind / nodeId — not defPath (data-layout-bind).
+    const nodeRef =
+      nodeId != null && nodeId !== ''
+        ? { nodeId }
+        : treeBind != null && treeBind !== ''
+          ? { bind: treeBind }
+          : layoutBind != null && layoutBind !== ''
+            ? { bind: layoutBind }
+            : undefined;
+
+    setContextMenu({
+      ...clamped,
+      kind: 'node',
+      nodeType,
+      nodeRef,
+    });
+  };
+
+  const closeMenu = () => setContextMenu(null);
+
+  const handleAction = (action: string) => {
+    const pageIdMap = materializePagedLayout();
+    if (activePageId) {
+      const resolvedActivePageId = pageIdMap.get(activePageId);
+      if (resolvedActivePageId && resolvedActivePageId !== activePageId) {
+        setActivePageId(resolvedActivePageId);
+      }
+    }
+    executeLayoutAction({
+      action,
+      menu: contextMenu,
+      project,
+      deselect,
+      select: handleSelectNode,
+      closeMenu,
+    });
+  };
+
+  const menuItems = useMemo(
+    () => buildLayoutContextMenuItems(contextMenu),
+    [contextMenu],
+  );
+
+  return {
+    contextMenu,
+    menuItems,
+    handleContextMenu,
+    handleAction,
+    closeMenu,
+  };
+}
+
+/**
  * Custom hook grouping node mutation operations.
  */
 function useLayoutNodeOperations(
   project: ReturnType<typeof useProject>,
   deselect: () => void,
 ) {
-  const handleSelectNode = useCallback((key: string, type: 'field' | 'group' | 'display' | 'layout') => {
-    // select is used from the parent
-  }, []);
+  const tree = project.component.tree as CompNode | undefined;
+  const nodeRef = (selectionKey: string) => resolveLayoutSelectionNodeRef(tree, selectionKey);
 
-  const handleSetNodeProp = useCallback((selectionKey: string, key: string, value: unknown) => {
+  const handleSetNodeProp = (selectionKey: string, key: string, value: unknown) => {
     project.setLayoutNodeProp(selectionKey, key, value);
-  }, [project]);
+  };
 
-  const handleUnwrapNode = useCallback((selectionKey: string) => {
+  const handleUnwrapNode = (selectionKey: string) => {
     const nodeId = nodeIdFromLayoutId(selectionKey);
     project.unwrapLayoutNode(nodeId);
     deselect();
-  }, [project, deselect]);
+  };
 
-  const handleRemoveNode = useCallback((selectionKey: string) => {
+  const handleRemoveNode = (selectionKey: string) => {
     const nodeId = nodeIdFromLayoutId(selectionKey);
     project.deleteLayoutNode(nodeId);
     deselect();
-  }, [project, deselect]);
+  };
 
-  const handleStyleAdd = useCallback((selectionKey: string, key: string, value: string) => {
-    const ref = isLayoutId(selectionKey)
-      ? { nodeId: nodeIdFromLayoutId(selectionKey) }
-      : { bind: selectionKey };
-    setStyleProperty(project, ref, key, value);
-  }, [project]);
+  const handleStyleAdd = (selectionKey: string, key: string, value: string) => {
+    setStyleProperty(project, nodeRef(selectionKey), key, value);
+  };
 
-  const handleStyleRemove = useCallback((selectionKey: string, key: string) => {
-    const ref = isLayoutId(selectionKey)
-      ? { nodeId: nodeIdFromLayoutId(selectionKey) }
-      : { bind: selectionKey };
-    removeStyleProperty(project, ref, key);
-  }, [project]);
+  const handleStyleRemove = (selectionKey: string, key: string) => {
+    removeStyleProperty(project, nodeRef(selectionKey), key);
+  };
 
-  const handleResizeColSpan = useCallback((selectionKey: string, newSpan: number) => {
-    const ref = isLayoutId(selectionKey)
-      ? { nodeId: nodeIdFromLayoutId(selectionKey) }
-      : { bind: selectionKey };
-    setColumnSpan(project, ref, newSpan);
-  }, [project]);
+  const handleResizeColSpan = (selectionKey: string, newSpan: number) => {
+    setColumnSpan(project, nodeRef(selectionKey), newSpan);
+  };
 
-  const handleResizeRowSpan = useCallback((selectionKey: string, newSpan: number) => {
-    const ref = isLayoutId(selectionKey)
-      ? { nodeId: nodeIdFromLayoutId(selectionKey) }
-      : { bind: selectionKey };
-    setRowSpan(project, ref, newSpan);
-  }, [project]);
+  const handleResizeRowSpan = (selectionKey: string, newSpan: number) => {
+    setRowSpan(project, nodeRef(selectionKey), newSpan);
+  };
 
   return {
     handleSetNodeProp,
@@ -114,7 +254,7 @@ function useLayoutAddOperations(
   setActivePageId: (id: string) => void,
   handleSelectNode: (key: string, type: 'field' | 'group' | 'display' | 'layout') => void,
 ) {
-  const handleAddContainer = useCallback((componentName: typeof CONTAINER_PRESETS[number]) => {
+  const handleAddContainer = (componentName: typeof CONTAINER_PRESETS[number]) => {
     const pageIdMap = materializePagedLayout();
     const resolvedActivePageId = activePageId ? (pageIdMap.get(activePageId) ?? activePageId) : null;
     const parentNodeId = isMultiPage ? (resolvedActivePageId ?? 'root') : 'root';
@@ -125,26 +265,26 @@ function useLayoutAddOperations(
       }
       handleSelectNode(`__node:${result.createdId}`, 'layout');
     }
-  }, [activePageId, handleSelectNode, isMultiPage, materializePagedLayout, project, setActivePageId]);
+  };
 
-  const handleAddPage = useCallback(() => {
+  const handleAddPage = () => {
     materializePagedLayout();
     const result = project.addPage(`Page ${pageNavItems.length + 1}`);
     if (result.createdId) {
       setActivePageId(result.createdId);
     }
-  }, [materializePagedLayout, pageNavItems.length, project, setActivePageId]);
+  };
 
-  const handleRenamePage = useCallback((pageId: string, title: string, groupPath?: string, componentPageId?: string) => {
+  const handleRenamePage = (pageId: string, title: string, groupPath?: string, componentPageId?: string) => {
     if (componentPageId) {
       project.renamePage(componentPageId, title);
     }
     if (groupPath) {
       project.updateItem(groupPath, { label: title });
     }
-  }, [project]);
+  };
 
-  const handleAddItem = useCallback((option: FieldTypeOption) => {
+  const handleAddItem = (option: FieldTypeOption) => {
     const pageIdMap = materializePagedLayout();
     const resolvedActivePageId = activePageId ? (pageIdMap.get(activePageId) ?? activePageId) : null;
     const pageId = isMultiPage ? (resolvedActivePageId ?? undefined) : undefined;
@@ -173,7 +313,7 @@ function useLayoutAddOperations(
           : 'field';
 
     handleSelectNode(selectionKey, selectionType);
-  }, [activePageId, handleSelectNode, isMultiPage, materializePagedLayout, project, setActivePageId]);
+  };
 
   return {
     handleAddContainer,
@@ -223,16 +363,10 @@ export function LayoutCanvas() {
   const { deselect, select, selectedKeyForTab } = useSelection();
   const structure = useLayoutPageStructure();
 
-  const [contextMenu, setContextMenu] = useState<LayoutContextMenuState | null>(null);
   const [activePageId, setActivePageId] = useState<string | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
-  const [localLayoutMode, setLocalLayoutMode] = useState<LayoutMode>('layout');
   const layoutModeCtx = useOptionalLayoutMode();
-  const layoutMode = layoutModeCtx?.layoutMode ?? localLayoutMode;
-  const themeSelectedKey = layoutModeCtx?.themeSelectedKey ?? null;
-  const setThemeSelectedKey = layoutModeCtx?.setThemeSelectedKey ?? (() => {});
-  const themePopoverPosition = layoutModeCtx?.themePopoverPosition ?? { x: 0, y: 0 };
-  const setThemePopoverPosition = layoutModeCtx?.setThemePopoverPosition ?? (() => {});
+  const selectedLayoutKey = selectedKeyForTab('layout');
 
   const items = definition?.items ?? [];
   const tree = component?.tree as CompNode | undefined;
@@ -275,7 +409,7 @@ export function LayoutCanvas() {
   // appear after a definition change).
   useEffect(() => { materialized.current = false; }, [pageNavItems]);
 
-  const materializePagedLayout = useCallback(() => {
+  const materializePagedLayout = () => {
     const pageIdMap = new Map<string, string>();
     if (materialized.current) return pageIdMap;
 
@@ -294,7 +428,7 @@ export function LayoutCanvas() {
 
     materialized.current = true;
     return pageIdMap;
-  }, [pageNavItems, project]);
+  };
 
   useEffect(() => {
     if (pageNavItems.length === 0) {
@@ -316,9 +450,33 @@ export function LayoutCanvas() {
     );
   }, [activePageId, isMultiPage, pagedTreeChildren]);
 
-  const handleSelectNode = useCallback((key: string, type: 'field' | 'group' | 'display' | 'layout') => {
+  const handleSelectNode = (key: string, type: 'field' | 'group' | 'display' | 'layout') => {
     select(key, type, { tab: 'layout' });
-  }, [select]);
+  };
+
+  const handleRenameDefinitionItem = useCallback(
+    (defPath: string, nextKey: string, nextLabel: string | null, kind: 'field' | 'display') => {
+      const currentKey = defPath.split('.').pop() ?? defPath;
+      let nextPath = defPath;
+      if (nextKey !== currentKey) {
+        project.renameItem(defPath, nextKey);
+        const parentPath = defPath.split('.').slice(0, -1).join('.');
+        nextPath = parentPath ? `${parentPath}.${nextKey}` : nextKey;
+      }
+      project.updateItem(nextPath, {
+        label: nextLabel === null || nextLabel === '' ? null : nextLabel,
+      });
+      select(nextPath, kind, { tab: 'layout' });
+    },
+    [project, select],
+  );
+
+  const handleUpdateDefinitionItem = useCallback(
+    (defPath: string, changes: Record<string, unknown>) => {
+      project.updateItem(defPath, changes as ItemChanges);
+    },
+    [project],
+  );
 
   const nodeOps = useLayoutNodeOperations(project, deselect);
   const { handleSetNodeProp, handleUnwrapNode, handleRemoveNode, handleStyleAdd, handleStyleRemove, handleResizeColSpan, handleResizeRowSpan } = nodeOps;
@@ -334,86 +492,35 @@ export function LayoutCanvas() {
   );
   const { handleAddContainer, handleAddPage, handleRenamePage, handleAddItem } = addOps;
 
-  const handleModeChange = useCallback((mode: LayoutMode) => {
-    if (mode === 'theme') {
-      // Transfer canvas selection to theme mode
-      const canvasKey = selectedKeyForTab('layout');
-      setThemeSelectedKey(canvasKey);
+  const {
+    layoutMode,
+    pendingLayoutMode,
+    themeSelectedKey,
+    setThemeSelectedKey,
+    themePopoverPosition,
+    setThemePopoverPosition,
+    handleModeChange,
+    handleThemeFieldSelect,
+  } = useLayoutCanvasMode(layoutModeCtx, selectedLayoutKey);
 
-      // Update popover position based on selected element's DOM position
-      if (canvasKey) {
-        const element = document.querySelector(`[data-bind="${CSS.escape(canvasKey)}"]`);
-        if (element) {
-          const rect = element.getBoundingClientRect();
-          setThemePopoverPosition({
-            x: rect.left + rect.width / 2,
-            y: rect.top + rect.height,
-          });
-          element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
-      }
-    }
-    // When switching back to layout, existing layout tab selection is preserved
-    setLocalLayoutMode(mode);
-    layoutModeCtx?.setLayoutMode(mode);
-  }, [selectedKeyForTab, layoutModeCtx, setThemeSelectedKey, setThemePopoverPosition]);
-
-  const handleThemeFieldSelect = useCallback((itemKey: string, position: { x: number; y: number }) => {
-    setThemeSelectedKey(itemKey);
-    setThemePopoverPosition({ x: position.x + 12, y: position.y + 12 });
-  }, []);
-
-  const handleContextMenu = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    const target = (e.target as HTMLElement).closest<HTMLElement>(
-      '[data-layout-node]',
-    );
-    if (!target) {
-      setContextMenu({ x: e.clientX, y: e.clientY, kind: 'canvas' });
-      return;
-    }
-
-    const nodeType = target.dataset.layoutNodeType as LayoutContextMenuState['nodeType'];
-    const bind = target.dataset.layoutBind;
-    const nodeId = target.dataset.layoutNodeId;
-    const clamped = clampContextMenuPosition(e.clientX, e.clientY);
-
-    setContextMenu({
-      ...clamped,
-      kind: 'node',
-      nodeType,
-      nodeRef: bind ? { bind } : nodeId ? { nodeId } : undefined,
-    });
-  }, []);
-
-  const closeMenu = useCallback(() => setContextMenu(null), []);
-
-  const handleAction = useCallback((action: string) => {
-    const pageIdMap = materializePagedLayout();
-    if (activePageId) {
-      const resolvedActivePageId = pageIdMap.get(activePageId);
-      if (resolvedActivePageId && resolvedActivePageId !== activePageId) {
-        setActivePageId(resolvedActivePageId);
-      }
-    }
-    executeLayoutAction({
-      action,
-      menu: contextMenu,
-      project,
-      deselect,
-      select: handleSelectNode,
-      closeMenu,
-    });
-  }, [activePageId, closeMenu, contextMenu, deselect, handleSelectNode, materializePagedLayout, project]);
-
-  const menuItems = useMemo(
-    () => buildLayoutContextMenuItems(contextMenu),
-    [contextMenu],
+  const {
+    contextMenu,
+    menuItems,
+    handleContextMenu,
+    handleAction,
+    closeMenu,
+  } = useLayoutCanvasContextMenu(
+    project,
+    deselect,
+    activePageId,
+    materializePagedLayout,
+    setActivePageId,
+    handleSelectNode,
   );
 
   return (
     <LayoutDndProvider activePageId={activePageId}>
-    <WorkspacePage maxWidth="max-w-[980px]" className="overflow-y-auto">
+    <WorkspacePage maxWidth="max-w-[980px]" className="overflow-y-auto relative">
       <WorkspacePageSection
         padding="px-7"
         className="sticky top-0 z-20 border-b border-border/40 bg-bg-default/85 py-4 backdrop-blur-md"
@@ -521,6 +628,11 @@ export function LayoutCanvas() {
                 onStyleRemove: handleStyleRemove,
                 onResizeColSpan: handleResizeColSpan,
                 onResizeRowSpan: handleResizeRowSpan,
+                onCommitDisplayLabel: (defPath, text) => {
+                  project.updateItem(defPath, { label: text });
+                },
+                onRenameDefinitionItem: handleRenameDefinitionItem,
+                onUpdateDefinitionItem: handleUpdateDefinitionItem,
               }, '')}
 
               {visibleTreeChildren.length === 0 && (
@@ -556,6 +668,17 @@ export function LayoutCanvas() {
             onAction={handleAction}
             onClose={closeMenu}
           />
+        </div>
+      )}
+
+      {pendingLayoutMode && layoutModeCtx && (
+        <div className="fixed inset-x-0 bottom-4 z-50 flex justify-center pointer-events-none">
+          <div className="relative h-0 w-[min(100vw-2rem,28rem)] pointer-events-auto">
+            <DirtyGuardConfirm
+              onDiscard={layoutModeCtx.confirmLayoutModeChange}
+              onCancel={layoutModeCtx.cancelLayoutModeChange}
+            />
+          </div>
         </div>
       )}
 

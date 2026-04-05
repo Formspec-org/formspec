@@ -1,5 +1,6 @@
 /** @filedesc Theme tab section for managing selector rules that apply styles by item type or dataType. */
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
+import { summarizeSelectorRule } from '@formspec-org/studio-core';
 import { useTheme } from '../../state/useTheme';
 import { useProject } from '../../state/useProject';
 
@@ -8,24 +9,27 @@ interface SelectorRule {
   apply?: Record<string, unknown>;
 }
 
-function ruleSummary(rule: SelectorRule): string {
-  const parts: string[] = [];
-  if (rule.match?.type) parts.push(rule.match.type);
-  if (rule.match?.dataType) parts.push(rule.match.dataType);
-  if (parts.length === 0) return 'Any item';
-  return parts.join(' + ');
-}
-
 export function FieldTypeRules() {
   const theme = useTheme();
   const project = useProject();
-  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
-
   const selectors = (theme?.selectors ?? []) as SelectorRule[];
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+  const previousSelectorCount = useRef(selectors.length);
 
   const addRule = () => {
+    // Auto-expand the newly created rule so authors can edit it immediately.
     project.addThemeSelector({}, {});
+    setExpandedIndex(selectors.length);
   };
+
+  // Theme selector CRUD can cause this panel to remount. Keep the newest rule
+  // open when the selector list grows so authors can edit immediately.
+  useLayoutEffect(() => {
+    if (selectors.length > previousSelectorCount.current) {
+      setExpandedIndex(selectors.length - 1);
+    }
+    previousSelectorCount.current = selectors.length;
+  }, [selectors.length]);
 
   const setSelector = (index: number, match?: Record<string, unknown>, apply?: Record<string, unknown>) => {
     const update: { match?: Record<string, unknown>; apply?: Record<string, unknown> } = {};
@@ -49,6 +53,7 @@ export function FieldTypeRules() {
       <div className="flex justify-between items-center mb-1">
         <h4 className="text-[12px] font-bold text-muted uppercase tracking-wider">Selector Rules</h4>
         <button
+          data-testid="selector-rule-add"
           type="button"
           onClick={addRule}
           className="text-[11px] text-accent hover:text-accent-hover font-bold uppercase tracking-wider transition-colors"
@@ -68,14 +73,20 @@ export function FieldTypeRules() {
       </div>
 
       {selectors.map((rule, index) => {
-        const isExpanded = expandedIndex === index;
-        const summary = ruleSummary(rule);
+        const isDraftRule = !rule.match?.type && !rule.match?.dataType && !rule.apply?.widget;
+        const isExpanded = isDraftRule || expandedIndex === index;
+        const summary = summarizeSelectorRule(rule as Record<string, unknown>);
         const widgetName = rule.apply?.widget as string | undefined;
 
         return (
-          <div key={index} className="border border-border rounded-lg bg-surface overflow-hidden">
+          <div
+            key={index}
+            data-testid={`selector-rule-${index}`}
+            className="border border-border rounded-lg bg-surface overflow-hidden"
+          >
             {/* Collapsed header */}
             <div
+              data-testid={`selector-rule-header-${index}`}
               className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-subtle/50 transition-colors"
               onClick={() => setExpandedIndex(isExpanded ? null : index)}
             >
@@ -97,6 +108,7 @@ export function FieldTypeRules() {
                     </label>
                     <select
                       id={`rule-type-${index}`}
+                      data-testid={`selector-rule-type-${index}`}
                       aria-label="Item Type"
                       value={rule.match?.type ?? ''}
                       onChange={(e) => {
@@ -118,6 +130,7 @@ export function FieldTypeRules() {
                     </label>
                     <select
                       id={`rule-dataType-${index}`}
+                      data-testid={`selector-rule-dataType-${index}`}
                       value={rule.match?.dataType ?? ''}
                       onChange={(e) => {
                         const newMatch = { ...rule.match, dataType: e.target.value || undefined };
@@ -141,6 +154,7 @@ export function FieldTypeRules() {
                   </label>
                   <input
                     id={`rule-widget-${index}`}
+                    data-testid={`selector-rule-widget-${index}`}
                     type="text"
                     aria-label="Widget"
                     defaultValue={(rule.apply?.widget as string) ?? ''}

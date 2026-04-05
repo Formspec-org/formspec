@@ -48,15 +48,18 @@ export function useResizeHandle(options: UseResizeHandleOptions) {
   const { axis, min, max, snap, initialValue, pixelsPerUnit, onDrag, onCommit } = options;
   const [isDragging, setIsDragging] = useState(false);
   const [dragValue, setDragValue] = useState(initialValue);
+  const [dragPoint, setDragPoint] = useState<{ x: number; y: number } | null>(null);
   const startRef = useRef<{ pos: number; value: number } | null>(null);
 
   const onPointerDown = useCallback(
     (e: React.PointerEvent) => {
       // Stop propagation so dnd-kit doesn't start a reorder drag
+      e.preventDefault();
       e.stopPropagation();
       e.currentTarget.setPointerCapture(e.pointerId);
       setIsDragging(true);
       setDragValue(initialValue);
+      setDragPoint({ x: e.clientX, y: e.clientY });
       startRef.current = {
         pos: axis === 'x' ? e.clientX : e.clientY,
         value: initialValue,
@@ -68,6 +71,7 @@ export function useResizeHandle(options: UseResizeHandleOptions) {
   const onPointerMove = useCallback(
     (e: React.PointerEvent) => {
       if (!startRef.current) return;
+      setDragPoint({ x: e.clientX, y: e.clientY });
       const currentPos = axis === 'x' ? e.clientX : e.clientY;
       const pixelDelta = currentPos - startRef.current.pos;
       const unitDelta = pixelsPerUnit && pixelsPerUnit > 0 ? pixelDelta / pixelsPerUnit : pixelDelta;
@@ -83,6 +87,7 @@ export function useResizeHandle(options: UseResizeHandleOptions) {
     (e: React.PointerEvent) => {
       e.currentTarget.releasePointerCapture(e.pointerId);
       setIsDragging(false);
+      setDragPoint(null);
       // Commit final value on pointerup
       if (startRef.current) {
         onCommit?.(dragValue);
@@ -99,6 +104,7 @@ export function useResizeHandle(options: UseResizeHandleOptions) {
     (e: React.PointerEvent) => {
       try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* already released */ }
       setIsDragging(false);
+      setDragPoint(null);
       startRef.current = null;
     },
     [],
@@ -111,5 +117,5 @@ export function useResizeHandle(options: UseResizeHandleOptions) {
     onPointerCancel,
   };
 
-  return { handleProps, isDragging, dragValue };
+  return { handleProps, isDragging, dragValue, dragPoint };
 }

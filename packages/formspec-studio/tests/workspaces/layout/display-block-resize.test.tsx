@@ -1,6 +1,6 @@
 /** @filedesc Tests for DisplayBlock resize handles — presence and grid-column CSS (mirrors FieldBlock). */
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { DisplayBlock } from '../../../src/workspaces/layout/DisplayBlock';
 import type { LayoutContext } from '../../../src/workspaces/layout/FieldBlock';
 
@@ -51,5 +51,20 @@ describe('DisplayBlock resize handles', () => {
     );
     const root = container.firstChild as HTMLElement;
     expect(root.style.gridColumn).toBe('');
+  });
+
+  it('shows the overflow dot when Tier 3 content exists', () => {
+    const ctx: LayoutContext = { parentContainerType: 'grid', parentGridColumns: 3, currentColSpan: 1 };
+    render(
+      <DisplayBlock
+        {...defaultProps}
+        selected
+        onSetProp={vi.fn()}
+        layoutContext={ctx}
+        nodeProps={{ cssClass: 'hero-block' }}
+      />,
+    );
+
+    expect(screen.getByTestId('toolbar-overflow-dot')).toBeInTheDocument();
   });
 });

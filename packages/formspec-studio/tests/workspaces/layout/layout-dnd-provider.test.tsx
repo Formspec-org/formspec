@@ -1,7 +1,7 @@
 /** @filedesc Tests for LayoutDndProvider drop handler logic — asserts project API is used, not core.dispatch. */
 import { describe, it, expect, vi } from 'vitest';
 import { handleTrayDrop, handleTreeReorder, handleSpatialDrop, handleContainerDrop, handleDragEnd } from '../../../src/workspaces/layout/LayoutDndProvider';
-import { createProject } from '@formspec-org/studio-core';
+import { createProject, type Project } from '@formspec-org/studio-core';
 
 function makeProject() {
   const project = createProject();
@@ -244,8 +244,70 @@ describe('handleDragEnd routing — insert-slot drops', () => {
     // source.index (2) > target.index (0) → direction 'up'
     expect(reorder).toHaveBeenCalledWith({ bind: 'email' }, 'up');
   });
-});
 
-// NOTE: handleDragEnd must be exported from LayoutDndProvider for the above tests to run.
-// Add: export function handleDragEnd(project, eventData, activePageId, selectFn) { ... }
-// The import at the top of this file must be updated to include handleDragEnd.
+  it('adds a tray item and then moves it into the hit insert slot', () => {
+    const project = makeProject();
+    const addItemToLayout = vi.spyOn(project, 'addItemToLayout').mockReturnValue({
+      summary: 'ok',
+      action: { helper: 'addItemToLayout', params: {} },
+      affectedPaths: [],
+      createdId: 'email',
+    });
+    const moveToIndex = vi.spyOn(project, 'moveComponentNodeToIndex').mockReturnValue({
+      summary: 'ok', action: { helper: 'moveComponentNodeToIndex', params: {} }, affectedPaths: [],
+    });
+    const selectFn = vi.fn();
+
+    handleDragEnd(project, {
+      canceled: false,
+      source: {
+        id: 'unassigned:email',
+        data: { type: 'unassigned-item', key: 'email', label: 'Email', itemType: 'field' },
+      },
+      target: {
+        id: 'slot:grid-main:1',
+        data: { type: 'insert-slot', containerId: 'grid-main', insertIndex: 1 },
+      },
+    }, 'page-1', selectFn);
+
+    expect(addItemToLayout).toHaveBeenCalledWith(
+      expect.objectContaining({ key: 'email', label: 'Email', itemType: 'field' }),
+      'page-1',
+    );
+    expect(moveToIndex).toHaveBeenCalledWith({ bind: 'email' }, 'grid-main', 1);
+    expect(selectFn).toHaveBeenCalledWith('email', 'field', { tab: 'layout' });
+  });
+
+  it('does not call moveComponentNodeToIndex when source is the same container as the insert-slot target (avoids circular move)', () => {
+    const stackId = 'stack_main';
+    const tree = {
+      component: 'Stack',
+      nodeId: 'root',
+      _layout: true,
+      children: [
+        {
+          component: 'Stack',
+          nodeId: stackId,
+          _layout: true,
+          children: [{ component: 'TextInput', bind: 'email' }],
+        },
+      ],
+    };
+    const moveToIndex = vi.fn();
+    const project = {
+      component: { tree },
+      moveComponentNodeToIndex: moveToIndex,
+      reorderComponentNode: vi.fn(),
+      moveComponentNodeToContainer: vi.fn(),
+      addItemToLayout: vi.fn(),
+    } as unknown as Project;
+
+    handleDragEnd(project, {
+      canceled: false,
+      source: { id: `node:${stackId}`, data: { nodeRef: { nodeId: stackId }, type: 'tree-node', index: 0 } },
+      target: { id: `slot:${stackId}-0`, data: { type: 'insert-slot', containerId: stackId, insertIndex: 0 } },
+    }, null, vi.fn());
+
+    expect(moveToIndex).not.toHaveBeenCalled();
+  });
+});

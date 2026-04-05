@@ -1,5 +1,5 @@
-import { test, expect } from '@playwright/test';
-import { waitForApp, switchTab, importProject } from './helpers';
+import { test, expect, type Page } from '@playwright/test';
+import { importProject, switchTab, waitForApp } from './helpers';
 
 const SEED = {
   definition: {
@@ -21,55 +21,107 @@ const SEED = {
   },
 };
 
+const EMPTY_SELECTOR_SEED = {
+  definition: SEED.definition,
+  theme: {
+    ...SEED.theme,
+    selectors: [],
+  },
+};
+
+async function enterThemeMode(page: Page, state: Record<string, unknown>) {
+  await waitForApp(page);
+  await importProject(page, state);
+  await switchTab(page, 'Layout');
+  await page.locator('[data-testid="layout-theme-toggle"]').getByRole('radio', { name: 'Theme' }).click();
+  await expect(page.locator('[data-testid="blueprint-sidebar"]')).toBeVisible();
+}
+
+function themeSidebar(page: Page) {
+  return page.locator('[data-testid="blueprint-sidebar"]');
+}
+
 test.describe('Theme Workspace', () => {
   test.beforeEach(async ({ page }) => {
-    await waitForApp(page);
-    await importProject(page, SEED);
-    await switchTab(page, 'Theme');
+    await enterThemeMode(page, SEED);
   });
 
-  test('shows all 6 pillar headings in "All Theme" filter', async ({ page }) => {
-    const workspace = page.locator('[data-testid="workspace-Theme"]');
-    await expect(workspace.getByText('Color Palette')).toBeVisible();
-    await expect(workspace.getByText('Typography & Spacing')).toBeVisible();
-    await expect(workspace.getByText('All Tokens')).toBeVisible();
-    await expect(workspace.getByText('Default Field Style')).toBeVisible();
-    await expect(workspace.getByText('Field Type Rules')).toBeVisible();
-    await expect(workspace.getByText('Screen Sizes')).toBeVisible();
+  test('shows the six theme blueprint sections', async ({ page }) => {
+    const sidebar = themeSidebar(page);
+    for (const section of ['Colors', 'Typography', 'Field Defaults', 'Field Rules', 'Breakpoints', 'All Tokens']) {
+      await expect(sidebar.getByRole('button', { name: section })).toBeVisible();
+    }
   });
 
-  test('Brand & Colors filter shows only brand pillars', async ({ page }) => {
-    const workspace = page.locator('[data-testid="workspace-Theme"]');
-    await workspace.getByRole('button', { name: /brand & colors/i }).click();
-    await expect(workspace.getByText('Color Palette')).toBeVisible();
-    await expect(workspace.getByText('Typography & Spacing')).toBeVisible();
-    await expect(workspace.getByText('All Tokens')).toBeVisible();
-    await expect(workspace.getByText('Default Field Style')).not.toBeVisible();
+  test('typography section shows typography, spacing, and border controls', async ({ page }) => {
+    const sidebar = themeSidebar(page);
+    await sidebar.getByRole('button', { name: 'Typography' }).click();
+
+    await expect(sidebar).toContainText('Typography');
+    await expect(sidebar).toContainText('Spacing');
+    await expect(sidebar).toContainText('Borders');
+    await expect(sidebar).toContainText('Font Family');
   });
 
-  test('color palette shows color tokens', async ({ page }) => {
-    const workspace = page.locator('[data-testid="workspace-Theme"]');
-    await expect(workspace.getByText('primary').first()).toBeVisible();
+  test('colors section shows color tokens', async ({ page }) => {
+    const sidebar = themeSidebar(page);
+    const colorToken = sidebar.locator('[data-testid="color-token-color.primary"]');
+    if (!(await colorToken.isVisible())) {
+      await sidebar.getByRole('button', { name: 'Colors' }).click();
+    }
+    await expect(sidebar).toContainText('primary');
+    await expect(sidebar.locator('[data-testid="color-value-color.primary"]')).toHaveValue('#3b82f6');
   });
 
   test('field type rules show selector summary', async ({ page }) => {
-    const workspace = page.locator('[data-testid="workspace-Theme"]');
-    await expect(workspace.getByText('field + string')).toBeVisible();
+    const sidebar = themeSidebar(page);
+    const fieldRulesButton = sidebar.getByRole('button', { name: 'Field Rules' });
+    const buttonBox = await fieldRulesButton.boundingBox();
+    if (!buttonBox) throw new Error('Field Rules button is not visible');
+    await page.mouse.click(
+      buttonBox.x + (buttonBox.width / 2),
+      buttonBox.y + (buttonBox.height / 2),
+    );
+
+    await expect(sidebar).toContainText('Selector Rules');
+    await expect(sidebar).toContainText('field + string');
+  });
+
+  test('adding a selector rule auto-expands the new row', async ({ page }) => {
+    await enterThemeMode(page, EMPTY_SELECTOR_SEED);
+
+    const sidebar = themeSidebar(page);
+    const fieldRulesButton = sidebar.getByRole('button', { name: 'Field Rules' });
+    const buttonBox = await fieldRulesButton.boundingBox();
+    if (!buttonBox) throw new Error('Field Rules button is not visible');
+    await page.mouse.click(
+      buttonBox.x + (buttonBox.width / 2),
+      buttonBox.y + (buttonBox.height / 2),
+    );
+
+    await sidebar.locator('[data-testid="selector-rule-add"]').dispatchEvent('click');
+
+    await expect(sidebar.locator('[data-testid="selector-rule-0"]')).toBeVisible();
+    await expect(sidebar.locator('[data-testid="selector-rule-type-0"]')).toBeVisible();
   });
 
   test('screen sizes show breakpoints sorted by width', async ({ page }) => {
-    const workspace = page.locator('[data-testid="workspace-Theme"]');
-    await expect(workspace.getByText('3 breakpoints')).toBeVisible();
+    const sidebar = themeSidebar(page);
+    await sidebar.getByRole('button', { name: 'Breakpoints' }).click();
+
+    await expect(sidebar).toContainText('3 breakpoints');
+    await expect(sidebar.locator('[data-testid^="breakpoint-name-"]')).toHaveText(['mobile', 'tablet', 'desktop']);
   });
 
   test('empty theme shows empty states', async ({ page }) => {
-    await importProject(page, {
+    await enterThemeMode(page, {
       definition: SEED.definition,
       theme: {},
     });
-    const workspace = page.locator('[data-testid="workspace-Theme"]');
-    await expect(workspace.getByText(/no color tokens/i)).toBeVisible();
-    await expect(workspace.getByText(/no.*rules/i)).toBeVisible();
-    await expect(workspace.getByText(/0 breakpoints/i)).toBeVisible();
+
+    const sidebar = themeSidebar(page);
+    await sidebar.getByRole('button', { name: 'Colors' }).click();
+    await expect(sidebar).toContainText(/no color tokens defined/i);
+    await expect(sidebar.getByRole('button', { name: 'Breakpoints' })).toBeVisible();
   });
 });

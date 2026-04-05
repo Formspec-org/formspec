@@ -2,10 +2,10 @@
 import { useState, useCallback, type ReactNode } from 'react';
 import { DragDropProvider } from '@dnd-kit/react';
 import { LayoutDragContext } from './LayoutDragContext';
-import { PointerSensor, PointerActivationConstraints } from '@dnd-kit/dom';
+import { PointerSensor, PointerActivationConstraints, type DragStartEvent as DndDragStartEvent, type DragEndEvent as DndDragEndEvent } from '@dnd-kit/dom';
 import { useProject } from '../../state/useProject';
 import { useSelection } from '../../state/useSelection';
-import type { Project } from '@formspec-org/studio-core';
+import { isCircularComponentMove, type CompNode, type Project } from '@formspec-org/studio-core';
 
 const LAYOUT_TAB = 'layout';
 
@@ -16,6 +16,8 @@ interface LayoutDndProviderProps {
 
 type NodeRef = { bind?: string; nodeId?: string };
 type UnassignedItemData = { key: string; label: string; itemType: 'field' | 'group' | 'display' };
+type DragStartPayload = Parameters<DndDragStartEvent>[0];
+type DragEndPayload = Parameters<DndDragEndEvent>[0];
 
 function isUnassignedItemData(data: unknown): data is UnassignedItemData {
   return !!data && typeof data === 'object' && 'key' in data && 'label' in data && 'itemType' in data;
@@ -101,10 +103,35 @@ export function handleDragEnd(
   if (!sourceId || !targetId || sourceId === targetId) return;
 
   const sourceData = event.source?.data ?? {};
+  const targetData = event.target?.data ?? {};
+  const componentTree = project.component.tree as CompNode | undefined;
 
   // Tray-to-canvas: unassigned item dragged onto the tree
   if (sourceData.type === 'unassigned-item' && isUnassignedItemData(sourceData)) {
     handleTrayDrop(project, sourceData, activePageId);
+
+    const traySourceRef: NodeRef = { bind: sourceData.key };
+
+    // If the tray item was dropped on a container or spatial slot, place it there.
+    if (targetData.type === 'insert-slot' && targetData.containerId) {
+      const targetParent = { nodeId: String(targetData.containerId) };
+      if (!isCircularComponentMove(componentTree, traySourceRef, targetParent)) {
+        handleSpatialDrop(
+          project,
+          traySourceRef,
+          targetParent.nodeId,
+          Number(targetData.insertIndex ?? 0),
+        );
+      }
+    } else if (targetData.type === 'container-drop' && targetData.nodeRef) {
+      const containerRef = targetData.nodeRef as { nodeId?: string; bind?: string };
+      if (containerRef.nodeId || containerRef.bind) {
+        if (!isCircularComponentMove(componentTree, traySourceRef, containerRef)) {
+          handleContainerDrop(project, traySourceRef, containerRef);
+        }
+      }
+    }
+
     selectFn(sourceData.key, sourceData.itemType, { tab: LAYOUT_TAB });
     return;
   }
@@ -113,11 +140,12 @@ export function handleDragEnd(
   const sourceRef: NodeRef | undefined = sourceData.nodeRef as NodeRef | undefined;
   if (!sourceRef) return;
 
-  const targetData = event.target?.data ?? {};
-
   // Spatial insert-slot drop: target carries { type: 'insert-slot', containerId, insertIndex }
   if (targetData.type === 'insert-slot' && targetData.containerId) {
-    handleSpatialDrop(project, sourceRef, String(targetData.containerId), Number(targetData.insertIndex ?? 0));
+    const targetParent = { nodeId: String(targetData.containerId) };
+    if (!isCircularComponentMove(componentTree, sourceRef, targetParent)) {
+      handleSpatialDrop(project, sourceRef, targetParent.nodeId, Number(targetData.insertIndex ?? 0));
+    }
     return;
   }
 
@@ -125,7 +153,9 @@ export function handleDragEnd(
   if (targetData.type === 'container-drop' && targetData.nodeRef) {
     const containerRef = targetData.nodeRef as { nodeId?: string; bind?: string };
     if (containerRef.nodeId || containerRef.bind) {
-      handleContainerDrop(project, sourceRef, containerRef);
+      if (!isCircularComponentMove(componentTree, sourceRef, containerRef)) {
+        handleContainerDrop(project, sourceRef, containerRef);
+      }
       return;
     }
   }
@@ -152,13 +182,13 @@ export function LayoutDndProvider({ children, activePageId = null }: LayoutDndPr
   const { select } = useSelection();
   const [activeId, setActiveId] = useState<string | null>(null);
 
-  const onDragStart = useCallback((event: any) => {
+  const onDragStart = useCallback((event: DragStartPayload) => {
     const sourceId = String(event.operation?.source?.id ?? '');
     if (!sourceId) return;
     setActiveId(sourceId);
   }, []);
 
-  const onDragEnd = useCallback((event: any) => {
+  const onDragEnd = useCallback((event: DragEndPayload) => {
     setActiveId(null);
     const source = event.operation?.source;
     const target = event.operation?.target;

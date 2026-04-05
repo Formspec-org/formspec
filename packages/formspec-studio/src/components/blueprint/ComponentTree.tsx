@@ -1,13 +1,6 @@
 /** @filedesc Blueprint section rendering the UI component tree with color-coded layout/input/display nodes. */
+import type { CompNode } from '@formspec-org/studio-core';
 import { useComponent } from '../../state/useComponent';
-
-interface CompNode {
-  component: string;
-  bind?: string;
-  nodeId?: string;
-  children?: CompNode[];
-  [key: string]: unknown;
-}
 
 const CATEGORY_COLORS: Record<string, string> = {
   layout: 'text-accent',

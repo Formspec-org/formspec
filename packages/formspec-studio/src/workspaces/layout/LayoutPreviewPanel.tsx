@@ -23,7 +23,13 @@ export function LayoutPreviewPanel({ width = '100%' }: LayoutPreviewPanelProps) 
           <button
             type="button"
             data-testid="preview-customize-appearance"
-            onClick={() => layoutMode.setLayoutMode('theme')}
+            onClick={() => {
+              if (layoutMode.requestLayoutModeChange) {
+                layoutMode.requestLayoutModeChange('theme');
+              } else {
+                layoutMode.setLayoutMode('theme');
+              }
+            }}
             className="text-[11px] font-semibold text-muted hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/50"
           >
             Customize appearance →

@@ -1,5 +1,4 @@
 /** @filedesc Overflow popover for Tier 3 layout properties (accessibility, style overrides, CSS class) with dirty guard. */
-import { createPortal } from 'react-dom';
 import { useEffect, useRef, useState } from 'react';
 import { DirtyGuardConfirm } from './DirtyGuardConfirm';
 import { useOptionalLayoutMode } from './LayoutModeContext';
@@ -18,7 +17,7 @@ export interface PropertyPopoverProps {
   onSetProp: (key: string, value: unknown) => void;
   onSetStyle: (key: string, value: string) => void;
   onStyleRemove: (key: string) => void;
-  onUnwrap: () => void;
+  onUnwrap?: () => void;
   onRemove: () => void;
   onClose: () => void;
 }
@@ -116,6 +115,17 @@ export function PropertyPopover({
     }
   }, [open]);
 
+  useEffect(() => {
+    if (!layoutMode) return;
+    const popoverId = 'property-popover';
+    if (open && dirtyInputs.size > 0) {
+      layoutMode.registerDirtyPopover(popoverId);
+    } else {
+      layoutMode.clearDirtyPopover(popoverId);
+    }
+    return () => layoutMode.clearDirtyPopover(popoverId);
+  }, [layoutMode, open, dirtyInputs.size]);
+
   function trackDirty(id: string, isDirty: boolean) {
     setDirtyInputs((prev) => {
       const next = new Set(prev);
@@ -139,7 +149,7 @@ export function PropertyPopover({
     }
   }
 
-  if (!open || !position) return null;
+  if (!open) return null;
 
   const accessibility = (nodeProps.accessibility as Record<string, unknown>) ?? {};
   const style = (nodeProps.style as Record<string, unknown>) ?? {};
@@ -169,8 +179,8 @@ export function PropertyPopover({
       onKeyDown={handleKeyDown}
       style={{
         position: 'fixed',
-        top: `${position.top}px`,
-        left: `${position.left}px`,
+        top: `${(position ?? { top: 0, left: 0 }).top}px`,
+        left: `${(position ?? { top: 0, left: 0 }).left}px`,
         zIndex: 50,
       }}
       className="w-72 rounded border border-border bg-surface shadow-lg flex flex-col overflow-hidden"
@@ -295,9 +305,12 @@ export function PropertyPopover({
                 type="button"
                 data-testid="popover-theme-properties"
                 onClick={() => {
-                  layoutMode.setLayoutMode('theme');
                   layoutMode.setThemeSelectedKey(itemKey);
-                  onClose();
+                  if (layoutMode.requestLayoutModeChange) {
+                    layoutMode.requestLayoutModeChange('theme');
+                  } else {
+                    onClose();
+                  }
                 }}
                 className="rounded-full border border-border bg-surface px-3 py-1 text-[12px] font-semibold text-ink hover:border-accent hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/70"
               >
@@ -336,5 +349,5 @@ export function PropertyPopover({
     </div>
   );
 
-  return createPortal(popoverContent, document.body);
+  return popoverContent;
 }
