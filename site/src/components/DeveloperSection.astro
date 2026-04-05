@@ -73,6 +73,22 @@ const codeMCP = `<span class="tok-comment">// AI builds a grant application via 
       </h2>
       <p class="dev-lead">Self-hosted. Free forever. AGPL-3.0 license. Business logic, theme, and components are separate specification tiers — your team works on each independently.</p>
 
+      <div class="dev-pills" role="list" aria-label="Technologies">
+        <span role="listitem" class="dev-pill">Rust</span>
+        <span role="listitem" class="dev-pill">TypeScript</span>
+        <span role="listitem" class="dev-pill">React</span>
+        <span role="listitem" class="dev-pill">Swift</span>
+        <span role="listitem" class="dev-pill">Kotlin</span>
+        <span role="listitem" class="dev-pill">Python</span>
+        <span role="listitem" class="dev-pill">WASM</span>
+        <span role="listitem" class="dev-pill">Web Components</span>
+        <span role="listitem" class="dev-pill">JSON Schema</span>
+        <span role="listitem" class="dev-pill">MCP Server</span>
+        <span role="listitem" class="dev-pill">FHIR</span>
+        <span role="listitem" class="dev-pill">schema.org</span>
+        <span role="listitem" class="dev-pill">ICD-10</span>
+      </div>
+
       <div class="dev-groups">
         <div class="dev-group">
           <h3 class="dev-group-label">The Specification</h3>
@@ -281,7 +297,24 @@ const codeMCP = `<span class="tok-comment">// AI builds a grant application via 
     font-size: 1rem;
     font-weight: 600;
     color: var(--color-ink-secondary);
-    margin: 0 0 2rem;
+    margin: 0 0 1.25rem;
+  }
+
+  .dev-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    margin-bottom: 2rem;
+  }
+
+  .dev-pill {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    padding: 0.2rem 0.5rem;
+    border-radius: 100px;
+    border: 1px solid var(--color-border);
+    color: var(--color-ink-tertiary);
+    background: var(--color-surface);
   }
 
   .dev-groups {
