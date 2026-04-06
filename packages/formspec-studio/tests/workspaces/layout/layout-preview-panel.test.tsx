@@ -1,4 +1,4 @@
-/** @filedesc Tests for LayoutPreviewPanel — right sidebar live preview wrapper for the Layout workspace. */
+/** @filedesc Tests for LayoutPreviewPanel — thin h-full wrapper around LayoutLivePreviewSection. */
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { createProject } from '@formspec-org/studio-core';

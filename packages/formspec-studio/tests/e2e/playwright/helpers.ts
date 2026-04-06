@@ -1,5 +1,10 @@
 /** @filedesc Playwright helper utilities for formspec-studio E2E tests (navigation, import, tab switching). */
-import { Page } from '@playwright/test';
+import { Page, type Locator } from '@playwright/test';
+
+/** Select row in this container's header only (nested layout nodes also use layout-select-row). */
+export function layoutContainerHeaderSelectRow(container: Locator): Locator {
+  return container.locator(':scope > div').first().getByTestId('layout-select-row');
+}
 
 /** Wait for the app to be fully loaded (Shell visible). */
 export async function waitForApp(page: Page) {

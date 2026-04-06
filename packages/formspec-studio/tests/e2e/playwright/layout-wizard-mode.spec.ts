@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { importProject, switchTab, waitForApp } from './helpers';
+import { importProject, layoutContainerHeaderSelectRow, switchTab, waitForApp } from './helpers';
 
 /*
  * Editor/Layout workspace split:
@@ -70,7 +70,7 @@ const THEME_PROJECT = {
 };
 
 async function openLayoutContainerMenu(page: Parameters<typeof waitForApp>[0]) {
-  await page.locator('[data-testid="layout-add-container"]').hover();
+  await page.locator('[data-testid="layout-add-container-menu"]').click();
   await expect(page.locator('[data-testid="layout-add-card"]')).toBeVisible();
 }
 
@@ -80,6 +80,11 @@ function activeLayoutPage(page: Page) {
 
 function activeLayoutStack(page: Page) {
   return page.locator('[data-testid^="layout-container-"]').filter({ hasText: 'Stack' }).first();
+}
+
+/** Layout node root — use data-component, not hasText: 'Card', or Page sections match descendants too. */
+function layoutContainerByComponent(page: Page, component: string) {
+  return page.locator(`[data-testid^="layout-container-"][data-component="${component}"]`);
 }
 
 async function clickPreviewField(page: Page, bind: string) {
@@ -112,7 +117,7 @@ test.describe('Layout Components in Wizard Mode', () => {
     await openLayoutContainerMenu(page);
     await page.click('[data-testid="layout-add-card"]');
 
-    await expect(page.locator('[data-testid^="layout-container-"]').filter({ hasText: 'Card' })).toHaveCount(1);
+    await expect(layoutContainerByComponent(page, 'Card')).toHaveCount(1);
     await expect(activeLayoutPage(page)).toBeVisible();
   });
 
@@ -130,11 +135,11 @@ test.describe('Layout Components in Wizard Mode', () => {
     await activeLayoutStack(page).getByRole('button', { name: /^Stack$/ }).click({ button: 'right' });
     await page.click('[data-testid="layout-ctx-wrapInCard"]');
 
-    const card = page.locator('[data-testid^="layout-container-"]').filter({ hasText: 'Card' });
-    await card.getByRole('button', { name: /card/i }).click({ button: 'right' });
+    const card = layoutContainerByComponent(page, 'Card');
+    await layoutContainerHeaderSelectRow(card).click({ button: 'right' });
     await page.click('[data-testid="layout-ctx-unwrap"]');
 
-    await expect(page.locator('[data-testid^="layout-container-"]').filter({ hasText: 'Card' })).toHaveCount(0);
+    await expect(layoutContainerByComponent(page, 'Card')).toHaveCount(0);
     await expect(activeLayoutPage(page)).toBeVisible();
   });
 
@@ -156,7 +161,7 @@ test.describe('Layout Components in Wizard Mode', () => {
     await openLayoutContainerMenu(page);
     await page.click('[data-testid="layout-add-stack"]');
 
-    await expect(page.locator('[data-testid^="layout-container-"]').filter({ hasText: 'Card' })).toHaveCount(1);
+    await expect(layoutContainerByComponent(page, 'Card')).toHaveCount(1);
     await expect(page.locator('[data-testid^="layout-container-"]').filter({ hasText: 'Stack' })).toHaveCount(2);
   });
 });

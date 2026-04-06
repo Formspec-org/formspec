@@ -1,5 +1,13 @@
 import { test, expect, type Page, type Locator } from '@playwright/test';
-import { addFromLayoutPalette, addFromPalette, importDefinition, importProject, switchTab, waitForApp } from './helpers';
+import {
+  addFromLayoutPalette,
+  addFromPalette,
+  importDefinition,
+  importProject,
+  layoutContainerHeaderSelectRow,
+  switchTab,
+  waitForApp,
+} from './helpers';
 
 const SEED_DEF = {
   $formspec: '1.0',
@@ -107,7 +115,7 @@ async function dragSelectorByOffset(page: Page, sourceSelector: string, xOffset:
 }
 
 async function openLayoutContainerMenu(page: Page) {
-  await page.locator('[data-testid="layout-add-container"]').hover();
+  await page.locator('[data-testid="layout-add-container-menu"]').click();
   await expect(page.locator('[data-testid="layout-add-card"]')).toBeVisible();
 }
 
@@ -239,13 +247,16 @@ test.describe('Layout Components', () => {
     test('adds a Heading display item', async ({ page }) => {
       await addFromLayoutPalette(page, 'Heading');
 
-      await expect(page.locator('[data-testid^="layout-display-"]')).toHaveCount(1);
+      const layoutWs = page.locator('[data-testid="workspace-Layout"]');
+      // Root display nodes only — inner controls also use data-testid^="layout-display-".
+      await expect(layoutWs.locator('[data-layout-node-type="display"]')).toHaveCount(1);
     });
 
     test('adds a Divider display item', async ({ page }) => {
       await addFromLayoutPalette(page, 'Divider');
 
-      await expect(page.locator('[data-testid^="layout-display-"]')).toHaveCount(1);
+      const layoutWs = page.locator('[data-testid="workspace-Layout"]');
+      await expect(layoutWs.locator('[data-layout-node-type="display"]')).toHaveCount(1);
     });
 
     // Spacer is itemType: 'layout' (Component Spec §5.5) — excluded from
@@ -331,7 +342,7 @@ test.describe('Layout Components', () => {
       await page.click('[data-testid="layout-ctx-wrapInCard"]');
 
       const layoutBlock = page.locator('[data-testid^="layout-container-"]').filter({ hasText: 'Card' });
-      await layoutBlock.getByRole('button', { name: /card/i }).click({ button: 'right' });
+      await layoutContainerHeaderSelectRow(layoutBlock).click({ button: 'right' });
 
       await expect(page.locator('[data-testid="layout-ctx-unwrap"]')).toBeVisible();
       await expect(page.locator('[data-testid="layout-ctx-removeFromTree"]')).toBeVisible();
@@ -344,7 +355,7 @@ test.describe('Layout Components', () => {
       await page.click('[data-testid="layout-ctx-wrapInCard"]');
 
       const layoutBlock = page.locator('[data-testid^="layout-container-"]').filter({ hasText: 'Card' });
-      await layoutBlock.getByRole('button', { name: /card/i }).click({ button: 'right' });
+      await layoutContainerHeaderSelectRow(layoutBlock).click({ button: 'right' });
       await page.click('[data-testid="layout-ctx-unwrap"]');
 
       await expect(page.locator('[data-testid^="layout-container-"]').filter({ hasText: 'Card' })).toHaveCount(0);
@@ -461,7 +472,7 @@ test.describe('Layout Components', () => {
       await page.click('[data-testid="layout-ctx-wrapInCard"]');
 
       const layoutBlock = page.locator('[data-testid^="layout-container-"]').filter({ hasText: 'Card' });
-      await layoutBlock.getByRole('button', { name: /card/i }).click({ button: 'right' });
+      await layoutContainerHeaderSelectRow(layoutBlock).click({ button: 'right' });
       await page.click('[data-testid="layout-ctx-unwrap"]');
 
       await switchTab(page, 'Editor');
@@ -512,7 +523,8 @@ test.describe('Layout Components', () => {
     });
 
     test('reorders fields within the Grid using a spatial insert slot', async ({ page }) => {
-      const source = '[data-testid="layout-field-lastName"]';
+      // Drag activator is the grip only (FieldBlock useDraggable handle), not the whole block.
+      const source = '[data-testid="layout-field-lastName"] [data-testid="drag-handle"]';
       const target = '[data-testid="insert-slot-grid-main-0"]';
 
       await dragSelectorToSelector(page, source, target);
@@ -544,7 +556,7 @@ test.describe('Layout Components', () => {
       await expect.poll(async () => content.evaluate((el: HTMLElement) => el.style.flexDirection)).toBe('row');
     });
 
-    test('updates the right sidebar preview when a new layout item is added', async ({ page }) => {
+    test('updates the inline live preview when a new layout item is added', async ({ page }) => {
       const previewHost = page.locator('[data-testid="formspec-preview-host"]');
 
       await page.click('[data-testid="layout-add-item"]');

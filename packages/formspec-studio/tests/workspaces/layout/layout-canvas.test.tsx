@@ -119,6 +119,7 @@ describe('LayoutCanvas', () => {
     });
 
     renderLayout(project);
+    fireEvent.click(screen.getByTestId('layout-add-container-menu'));
     fireEvent.click(screen.getByTestId('layout-add-card'));
 
     const cardContainer = screen.getByTestId(/^layout-container-/);
@@ -232,8 +233,8 @@ describe('LayoutCanvas', () => {
     const groupContainer = screen.getByTestId('layout-container-section');
     expect(groupContainer).toBeInTheDocument();
 
-    // Click to select — the header button should respond
-    const headerBtn = groupContainer.querySelector('[role="button"]') as HTMLElement;
+    // Click to select — row target (not the drag grip button)
+    const headerBtn = groupContainer.querySelector('[data-testid="layout-select-row"]') as HTMLElement;
     expect(headerBtn).not.toBeNull();
     expect(headerBtn.getAttribute('aria-pressed')).toBe('false');
     fireEvent.click(headerBtn);
@@ -257,7 +258,7 @@ describe('LayoutCanvas', () => {
 
     // Select the group
     const groupContainer = screen.getByTestId('layout-container-contact');
-    const headerBtn = groupContainer.querySelector('[role="button"]') as HTMLElement;
+    const headerBtn = groupContainer.querySelector('[data-testid="layout-select-row"]') as HTMLElement;
     fireEvent.click(headerBtn);
 
     // With selectionKey + onSetProp wired, the inline toolbar should appear on selection

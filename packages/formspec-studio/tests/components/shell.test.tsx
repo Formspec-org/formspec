@@ -181,16 +181,16 @@ describe('Shell', () => {
     expect(screen.getByText('Form Health')).toBeInTheDocument();
   });
 
-  it('hides the Component Tree blueprint section while Editor is active', () => {
+  it('hides the Component Tree blueprint section while Editor or Layout is active', () => {
     renderShell(seededDefinition, 1440);
 
     expect(screen.queryByTestId('blueprint-section-Component Tree')).toBeNull();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Layout' }));
-    expect(screen.getByTestId('blueprint-section-Component Tree')).toBeInTheDocument();
+    expect(screen.queryByTestId('blueprint-section-Component Tree')).toBeNull();
   });
 
-  it('hides Theme and Mappings blueprint sections while Editor is active', () => {
+  it('hides Theme and Mappings blueprint sections while Editor is active; Layout tab uses theme authoring list', () => {
     renderShell(seededDefinition, 1440);
 
     expect(screen.queryByTestId('blueprint-section-Theme')).toBeNull();
@@ -199,8 +199,9 @@ describe('Shell', () => {
     expect(screen.getByTestId('blueprint-section-Screener')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Layout' }));
-    expect(screen.getByTestId('blueprint-section-Theme')).toBeInTheDocument();
-    expect(screen.getByTestId('blueprint-section-Mappings')).toBeInTheDocument();
+    expect(screen.getByTestId('blueprint-section-Colors')).toBeInTheDocument();
+    expect(screen.queryByTestId('blueprint-section-Theme')).toBeNull();
+    expect(screen.queryByTestId('blueprint-section-Mappings')).toBeNull();
   });
 
   it('uses the same row-first editor surface on compact screens without a separate properties mode', async () => {
@@ -227,20 +228,18 @@ describe('Shell', () => {
     expect(screen.getByRole('radio', { name: 'Manage' })).toBeInTheDocument();
   });
 
-  it('Layout workspace Blueprint shows Theme section in sidebar sections list', () => {
-    renderShell(seededDefinition, 1440);
-    fireEvent.click(screen.getByRole('tab', { name: 'Layout' }));
-    // Theme section should be available in Layout's blueprint sections
-    expect(screen.getByTestId('blueprint-section-Theme')).toBeInTheDocument();
-  });
-
-  it('Layout workspace in Theme mode shows theme sidebar sections (Colors, Typography, etc.) in Blueprint', async () => {
+  it('Layout workspace Blueprint shows theme authoring sections (Colors, Typography, …) in the sidebar', async () => {
     renderShell(seededDefinition, 1440);
     await act(async () => { fireEvent.click(screen.getByRole('tab', { name: 'Layout' })); });
-    // Switch to Theme mode via the Layout/Theme toggle
+    expect(screen.getByTestId('blueprint-section-Colors')).toBeInTheDocument();
+    expect(screen.getByTestId('blueprint-section-Typography')).toBeInTheDocument();
+  });
+
+  it('Layout workspace keeps theme blueprint sections in Theme workspace mode', async () => {
+    renderShell(seededDefinition, 1440);
+    await act(async () => { fireEvent.click(screen.getByRole('tab', { name: 'Layout' })); });
     const themeToggle = screen.getByRole('radio', { name: 'Theme' });
     await act(async () => { fireEvent.click(themeToggle); });
-    // Theme mode blueprint should include Color Palette section
     expect(screen.getByTestId('blueprint-section-Colors')).toBeInTheDocument();
   });
 
@@ -751,20 +750,20 @@ describe('Shell', () => {
     expect(manageLabel?.textContent).toContain('6');
   });
 
-  // Layout sidebar — live preview
-  it('shows live preview panel (not ComponentProperties) in the Layout right sidebar', async () => {
+  // Layout workspace — live preview inline (same column as canvas; no right rail)
+  it('shows live preview inside the Layout workspace, not in a properties sidebar', async () => {
     renderShell(seededDefinition, 1440);
 
     await act(async () => {
       screen.getByRole('tab', { name: 'Layout' }).click();
     });
 
-    // The right sidebar should contain the layout preview header
-    const panel = screen.getByTestId('properties-panel');
-    expect(within(panel).getByTestId('layout-preview-header')).toBeInTheDocument();
+    const layoutWs = screen.getByTestId('workspace-Layout');
+    expect(within(layoutWs).getByTestId('layout-preview-header')).toBeInTheDocument();
+    expect(screen.queryByTestId('properties-panel')).not.toBeInTheDocument();
   });
 
-  it('does not show compact properties modal when on Layout tab (replaced by preview sheet)', async () => {
+  it('does not show compact properties modal when on Layout tab', async () => {
     renderShell(seededDefinition, 768);
     fireEvent(window, new Event('resize'));
 
@@ -772,11 +771,10 @@ describe('Shell', () => {
       screen.getByRole('tab', { name: 'Layout' }).click();
     });
 
-    // Old compact properties modal should not be present
     expect(screen.queryByRole('dialog', { name: /properties/i })).toBeNull();
   });
 
-  it('shows a Preview button in compact Layout mode', async () => {
+  it('shows inline live preview in compact Layout mode (in workspace scroll)', async () => {
     renderShell(seededDefinition, 768);
     fireEvent(window, new Event('resize'));
 
@@ -784,23 +782,7 @@ describe('Shell', () => {
       screen.getByRole('tab', { name: 'Layout' }).click();
     });
 
-    const previewBtn = screen.getByRole('button', { name: /preview/i });
-    expect(previewBtn).toBeInTheDocument();
-  });
-
-  it('opens preview bottom sheet when Preview button is clicked in compact Layout mode', async () => {
-    renderShell(seededDefinition, 768);
-    fireEvent(window, new Event('resize'));
-
-    await act(async () => {
-      screen.getByRole('tab', { name: 'Layout' }).click();
-    });
-
-    const previewBtn = screen.getByRole('button', { name: /preview/i });
-    await act(async () => {
-      previewBtn.click();
-    });
-
-    expect(screen.getByRole('dialog', { name: /live preview/i })).toBeInTheDocument();
+    const layoutWs = screen.getByTestId('workspace-Layout');
+    expect(within(layoutWs).getByTestId('layout-preview-header')).toBeInTheDocument();
   });
 });

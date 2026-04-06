@@ -33,10 +33,53 @@ describe('PropertyPopover — visibility', () => {
   });
 });
 
+describe('PropertyPopover — click outside', () => {
+  it('calls onClose on pointerdown outside popover (and outside anchor)', () => {
+    const onClose = vi.fn();
+    const anchor = document.createElement('button');
+    document.body.appendChild(anchor);
+    const anchorRef = { current: anchor };
+    render(
+      <>
+        <div data-testid="click-outside">outside</div>
+        <PropertyPopover {...makeProps({ onClose, anchorRef })} />
+      </>,
+    );
+    fireEvent.pointerDown(screen.getByTestId('click-outside'));
+    expect(onClose).toHaveBeenCalled();
+    anchor.remove();
+  });
+
+  it('does not close when pointerdown is on the anchor', () => {
+    const onClose = vi.fn();
+    const anchor = document.createElement('button');
+    document.body.appendChild(anchor);
+    const anchorRef = { current: anchor };
+    render(<PropertyPopover {...makeProps({ onClose, anchorRef })} />);
+    fireEvent.pointerDown(anchor);
+    expect(onClose).not.toHaveBeenCalled();
+    anchor.remove();
+  });
+
+  it('shows dirty guard on outside pointerdown when a field is dirty', () => {
+    const onClose = vi.fn();
+    render(
+      <>
+        <div data-testid="click-outside">outside</div>
+        <PropertyPopover {...makeProps({ onClose })} />
+      </>,
+    );
+    fireEvent.change(screen.getByTestId('popover-css-class'), { target: { value: 'dirty' } });
+    fireEvent.pointerDown(screen.getByTestId('click-outside'));
+    expect(screen.getByTestId('dirty-guard-confirm')).toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+});
+
 // ── Accessibility inputs ──────────────────────────────────────────────────
 
 describe('PropertyPopover — accessibility inputs', () => {
-  it('renders aria-label input', () => {
+  it('renders accessible description input (maps to accessibility.description)', () => {
     render(<PropertyPopover {...makeProps()} />);
     expect(screen.getByTestId('popover-aria-label')).toBeInTheDocument();
   });
@@ -46,7 +89,7 @@ describe('PropertyPopover — accessibility inputs', () => {
     expect(screen.getByTestId('popover-aria-role')).toBeInTheDocument();
   });
 
-  it('populates aria-label from nodeProps.accessibility.description', () => {
+  it('populates accessible description from nodeProps.accessibility.description', () => {
     render(<PropertyPopover {...makeProps({ nodeProps: { accessibility: { description: 'My Label' } } })} />);
     expect(screen.getByTestId('popover-aria-label')).toHaveValue('My Label');
   });
@@ -56,7 +99,7 @@ describe('PropertyPopover — accessibility inputs', () => {
     expect(screen.getByTestId('popover-aria-role')).toHaveValue('region');
   });
 
-  it('commits aria-label on blur', () => {
+  it('commits accessibility.description on blur', () => {
     const onSetProp = vi.fn();
     render(<PropertyPopover {...makeProps({ onSetProp, nodeProps: {} })} />);
     const input = screen.getByTestId('popover-aria-label');

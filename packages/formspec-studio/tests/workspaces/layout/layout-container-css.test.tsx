@@ -137,7 +137,7 @@ describe('LayoutContainer — Collapsible', () => {
       </LayoutContainer>,
     );
     expect(container.querySelector('[data-layout-content]')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: /Sect/i }));
+    fireEvent.click(screen.getByTestId('layout-select-row'));
     expect(container.querySelector('[data-layout-content]')).not.toBeNull();
   });
 });
@@ -153,7 +153,7 @@ describe('LayoutContainer — generic header', () => {
     render(
       <LayoutContainer component="Grid" nodeType="layout" nodeId="n15" onSelect={onSelect} layoutProps={{}} />,
     );
-    fireEvent.click(screen.getByRole('button', { name: /Grid/i }));
+    fireEvent.click(screen.getByTestId('layout-select-row'));
     expect(onSelect).toHaveBeenCalledOnce();
   });
 });

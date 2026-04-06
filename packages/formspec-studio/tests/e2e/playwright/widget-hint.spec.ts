@@ -36,13 +36,13 @@ test.describe('widgetHint affects preview rendering', () => {
     await switchTab(page, 'Layout');
     await page.click('[data-testid="layout-field-maritalStatus"]');
 
-    const widgetSelect = page.getByLabel('Component Type');
+    const widgetSelect = page.getByTestId('toolbar-widget');
     await expect(widgetSelect).toBeVisible();
 
     // Must match the webcomponent renderer's compatibility matrix
     const options = widgetSelect.locator('option');
     const texts = await options.allTextContents();
-    expect(texts).toContain('Default');
+    expect(texts.some((t) => t.includes('Default'))).toBe(true);
     expect(texts).toContain('Select');
     expect(texts).toContain('RadioGroup');
     expect(texts).toContain('TextInput');
@@ -52,7 +52,7 @@ test.describe('widgetHint affects preview rendering', () => {
     await switchTab(page, 'Layout');
     await page.click('[data-testid="layout-field-maritalStatus"]');
 
-    const widgetSelect = page.getByLabel('Component Type');
+    const widgetSelect = page.getByTestId('toolbar-widget');
     await expect(widgetSelect).toBeVisible();
     await widgetSelect.selectOption('RadioGroup');
 
@@ -69,7 +69,7 @@ test.describe('widgetHint affects preview rendering', () => {
   test('switching widget back to Select re-renders as dropdown', async ({ page }) => {
     await switchTab(page, 'Layout');
     await page.click('[data-testid="layout-field-maritalStatus"]');
-    const widgetSelect = page.getByLabel('Component Type');
+    const widgetSelect = page.getByTestId('toolbar-widget');
     await widgetSelect.selectOption('RadioGroup');
 
     // Switch back to Select
@@ -121,7 +121,7 @@ test.describe('widget change works in wizard mode', () => {
     await switchTab(page, 'Layout');
     await page.click('[data-testid="layout-field-priority"]');
 
-    const widgetSelect = page.getByLabel('Component Type');
+    const widgetSelect = page.getByTestId('toolbar-widget');
     await expect(widgetSelect).toBeVisible();
     await widgetSelect.selectOption('RadioGroup');
 

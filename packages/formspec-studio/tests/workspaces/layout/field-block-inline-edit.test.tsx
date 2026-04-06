@@ -1,8 +1,10 @@
-/** @filedesc FieldBlock inline definition identity and summary editing (layout canvas). */
+/** @filedesc FieldBlock inline definition label on layout canvas; description/hint open Editor. */
+import type { ReactElement } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { FieldBlock } from '../../../src/workspaces/layout/FieldBlock';
+import { OpenDefinitionInEditorProvider } from '../../../src/state/OpenDefinitionInEditorContext';
 
 vi.mock('@dnd-kit/react', () => ({
   useDraggable: () => ({ ref: () => {}, isDragging: false }),
@@ -16,18 +18,22 @@ const base = {
   dataType: 'string',
 };
 
+function renderField(ui: ReactElement, openEditor = vi.fn()) {
+  return render(
+    <OpenDefinitionInEditorProvider value={openEditor}>{ui}</OpenDefinitionInEditorProvider>,
+  );
+}
+
 describe('FieldBlock inline definition editing', () => {
   it('commits label via inline edit when selected', async () => {
     const onRename = vi.fn();
-    const onUpdate = vi.fn();
     const user = userEvent.setup();
-    render(
+    renderField(
       <FieldBlock
         {...base}
         selected
         onSelect={vi.fn()}
         onRenameDefinitionItem={onRename}
-        onUpdateDefinitionItem={onUpdate}
       />,
     );
     await user.click(screen.getByTestId('layout-field-email-label-edit'));
@@ -37,25 +43,37 @@ describe('FieldBlock inline definition editing', () => {
     expect(onRename).toHaveBeenCalledWith('email', 'Work email');
   });
 
-  it('commits description when inline summary is blurred', async () => {
-    const onRename = vi.fn();
-    const onUpdate = vi.fn();
+  it('hides definition copy panel behind toggle when inline toolbar is shown', async () => {
     const user = userEvent.setup();
-    render(
+    renderField(
       <FieldBlock
         {...base}
         selected
-        description="Old"
         onSelect={vi.fn()}
-        onRenameDefinitionItem={onRename}
-        onUpdateDefinitionItem={onUpdate}
+        onRenameDefinitionItem={vi.fn()}
+        onSetProp={vi.fn()}
+        nodeProps={{ component: 'TextInput' }}
       />,
     );
-    await user.click(screen.getByRole('button', { name: /edit description/i }));
-    const ta = screen.getByRole('textbox', { name: /inline description/i });
-    await user.clear(ta);
-    await user.type(ta, 'New copy');
-    fireEvent.blur(ta);
-    expect(onUpdate).toHaveBeenCalledWith({ description: 'New copy' });
+    expect(screen.queryByTestId('layout-field-email-definition-copy')).toBeNull();
+    await user.click(screen.getByTestId('layout-field-email-definition-copy-toggle'));
+    expect(screen.getByTestId('layout-field-email-definition-copy')).toBeInTheDocument();
+  });
+
+  it('Edit in Editor calls navigation with bind path and field kind', async () => {
+    const openEditor = vi.fn();
+    const user = userEvent.setup();
+    renderField(
+      <FieldBlock
+        {...base}
+        selected
+        description="Help text"
+        onSelect={vi.fn()}
+        onRenameDefinitionItem={vi.fn()}
+      />,
+      openEditor,
+    );
+    await user.click(screen.getByTestId('layout-field-email-edit-copy-in-editor'));
+    expect(openEditor).toHaveBeenCalledWith('email', 'field');
   });
 });

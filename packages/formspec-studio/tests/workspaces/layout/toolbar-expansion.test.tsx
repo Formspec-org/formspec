@@ -30,25 +30,33 @@ function makeProject() {
   return createProject({ seed: { definition: EMPTY_DEF } });
 }
 
+function openLayoutContainerTypeMenu() {
+  fireEvent.click(screen.getByTestId('layout-add-container-menu'));
+}
+
 describe('Toolbar — Accordion and Collapsible', () => {
   it('shows a + Accordion toolbar button', () => {
     renderLayout(makeProject());
+    openLayoutContainerTypeMenu();
     expect(screen.getByTestId('layout-add-accordion')).toBeInTheDocument();
   });
 
   it('shows a + Collapsible toolbar button', () => {
     renderLayout(makeProject());
+    openLayoutContainerTypeMenu();
     expect(screen.getByTestId('layout-add-collapsible')).toBeInTheDocument();
   });
 
   it('adds an Accordion container to the canvas when clicked', () => {
     renderLayout(makeProject());
+    openLayoutContainerTypeMenu();
     fireEvent.click(screen.getByTestId('layout-add-accordion'));
     expect(screen.getByText('Accordion')).toBeInTheDocument();
   });
 
   it('adds a Collapsible container to the canvas when clicked', () => {
     renderLayout(makeProject());
+    openLayoutContainerTypeMenu();
     fireEvent.click(screen.getByTestId('layout-add-collapsible'));
     expect(screen.getByText('Collapsible')).toBeInTheDocument();
   });
@@ -57,11 +65,13 @@ describe('Toolbar — Accordion and Collapsible', () => {
 describe('Toolbar — ConditionalGroup', () => {
   it('shows a + ConditionalGroup toolbar button', () => {
     renderLayout(makeProject());
+    openLayoutContainerTypeMenu();
     expect(screen.getByTestId('layout-add-conditionalgroup')).toBeInTheDocument();
   });
 
   it('adds a ConditionalGroup container to the canvas when clicked', () => {
     renderLayout(makeProject());
+    openLayoutContainerTypeMenu();
     fireEvent.click(screen.getByTestId('layout-add-conditionalgroup'));
     expect(screen.getByText('ConditionalGroup')).toBeInTheDocument();
   });
@@ -69,6 +79,7 @@ describe('Toolbar — ConditionalGroup', () => {
   it('ConditionalGroup node has no children initially and empty when expression', () => {
     const project = makeProject();
     renderLayout(project);
+    openLayoutContainerTypeMenu();
     fireEvent.click(screen.getByTestId('layout-add-conditionalgroup'));
     // The component tree should have a ConditionalGroup node with _layout:true
     const tree = (project.component as any)?.tree;
