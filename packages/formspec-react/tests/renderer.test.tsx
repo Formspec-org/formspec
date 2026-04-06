@@ -145,7 +145,7 @@ describe('FormspecForm', () => {
             <FormspecForm definition={testDefinition} />
         );
         const host = container.querySelector('.formspec-container') as HTMLElement;
-        expect(host?.style.getPropertyValue('--formspec-color-border').trim()).toBe('#a0a4a8');
+        expect(host?.style.getPropertyValue('--formspec-color-border').trim()).toBe('#c9c1b4');
     });
 });
 

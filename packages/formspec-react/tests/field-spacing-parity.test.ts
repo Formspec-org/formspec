@@ -70,6 +70,17 @@ describe('Field spacing token ownership', () => {
         expect(layoutTheme.tokens['spacing.field']).toBe('0.75rem');
     });
 
+    it('defines the refined default typography and color tokens in the canonical theme', () => {
+        expect(layoutTheme.tokens['font.family']).toBe('"Instrument Sans", "Avenir Next", "Segoe UI", sans-serif');
+        expect(layoutTheme.tokens['color.primary']).toBe('#1f6a5b');
+        expect(layoutTheme.tokens['color.surface']).toBe('#f4efe7');
+    });
+
+    it('uses a less boxy grouped-choice layout in the canonical CSS', () => {
+        expect(extractRuleProp(layoutCSS, '.formspec-checkbox-group', 'border-left')).toBe('none');
+        expect(extractRuleProp(layoutCSS, '.formspec-checkbox-group', 'padding-left')).toBe('0');
+    });
+
     it('keeps shared field skin selectors in the canonical layout bundle instead of the React add-on', () => {
         const sharedSelectors = [
             '.formspec-file-upload',
