@@ -336,6 +336,10 @@ export interface NumberInput {
    */
   bind: string;
   /**
+   * Placeholder text displayed when the field is empty.
+   */
+  placeholder?: string;
+  /**
    * Increment/decrement step value.
    */
   step?: number;
@@ -365,6 +369,10 @@ export interface DatePicker {
    * Item key from the target Definition.
    */
   bind: string;
+  /**
+   * Placeholder text displayed when the field is empty, when the host platform exposes placeholders for date/time controls.
+   */
+  placeholder?: string;
   /**
    * Display format hint (e.g. 'MM/DD/YYYY'). Does not affect stored value (always ISO 8601).
    */
@@ -667,6 +675,10 @@ export interface MoneyInput {
    * Item key from the target Definition.
    */
   bind: string;
+  /**
+   * Placeholder text displayed in the amount input when the field is empty.
+   */
+  placeholder?: string;
   /**
    * Increment/decrement step value (applies to amount).
    */

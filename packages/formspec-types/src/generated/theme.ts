@@ -103,7 +103,7 @@ export interface PresentationBlock {
    */
   widget?: string;
   /**
-   * Widget-specific configuration. Properties depend on the widget. Renderers MUST ignore unrecognized keys. Fallback resolution does NOT carry widgetConfig forward — each fallback widget uses its own default configuration. Well-known configs by widget: textInput (maxLength, inputMode), textarea (rows, maxRows, autoResize), numberInput (showStepper, locale), datePicker (format, minDate, maxDate), dropdown (searchable, placeholder), checkboxGroup (columns, maxVisible), fileUpload (accept, maxSizeMb, preview), moneyInput (showCurrencySymbol, locale), slider (min, max, step, showTicks, showValue), toggle (onLabel, offLabel), radio (direction, columns), richText (toolbar), signature (strokeColor, height).
+   * Widget-specific configuration. Properties depend on the widget. Renderers MUST ignore unrecognized keys. Fallback resolution does NOT carry widgetConfig forward — each fallback widget uses its own default configuration. Well-known configs by widget: textInput (maxLength, inputMode, placeholder), textarea (rows, maxRows, autoResize, placeholder), numberInput (showStepper, locale, placeholder), datePicker (format, minDate, maxDate, placeholder), dropdown (searchable, placeholder), checkboxGroup (columns, maxVisible), fileUpload (accept, maxSizeMb, preview), moneyInput (showCurrencySymbol, locale, placeholder), slider (min, max, step, showTicks, showValue), toggle (onLabel, offLabel), radio (direction, columns), richText (toolbar), signature (strokeColor, height).
    */
   widgetConfig?: {
     [k: string]: unknown;
