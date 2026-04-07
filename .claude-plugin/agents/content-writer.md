@@ -167,7 +167,7 @@ H2s are benefit-first: "Everything complex forms require — nothing bolted on."
 4. **Accessible by default** — WCAG 2.1 AA, Section 508, built into behavior layer.
 5. **FEL** — Deterministic, side-effect-free expression language. Spreadsheet-familiar syntax.
 6. **Rust shared kernel** — One implementation compiled to WASM + PyO3. Base-10 decimal arithmetic.
-7. **No vendor lock-in** — AGPL-3.0 license. JSON files you own.
+7. **No vendor lock-in** — Apache-2.0 runtime, open-core model. JSON files you own.
 8. **Design system adapters** — USWDS out of the box, headless architecture for any system.
 
 **Domain scenarios to draw from:**

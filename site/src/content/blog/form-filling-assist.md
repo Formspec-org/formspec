@@ -165,4 +165,4 @@ Assist closes the loop on the other side: giving AI, extensions, and accessibili
 - Formy extension prototyping is underway — we'll write about the WebAuthn profile vault separately.
 - The conversational chat layer will be the subject of a dedicated post once the assist layer is stable.
 
-All three pieces are open source and AGPL-3.0 licensed. The spec, the implementation, and the extension — no vendor lock-in at any layer.
+All three pieces are open source. The spec and runtime are Apache-2.0 licensed; authoring tools are BSL 1.1 (converting to Apache-2.0 in 2030). No vendor lock-in at any layer.

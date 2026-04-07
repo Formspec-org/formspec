@@ -136,4 +136,4 @@ cargo test -p formspec-eval
 
 ## License
 
-Workspace `license` field (see root `Cargo.toml`).
+Apache-2.0 — see [LICENSE](../../LICENSE) and [LICENSING.md](../../LICENSING.md).

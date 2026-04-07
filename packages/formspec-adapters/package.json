@@ -3,7 +3,7 @@
   "description": "Render adapter library — design-system-specific DOM implementations for formspec-webcomponent",
   "version": "0.1.0",
   "type": "module",
-  "license": "AGPL-3.0-only",
+  "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Formspec-org/formspec.git",

@@ -3,7 +3,7 @@
   "description": "Layout algorithm for resolving Formspec theme pages, grids, and component arrangements",
   "version": "1.0.0",
   "type": "module",
-  "license": "AGPL-3.0-only",
+  "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Formspec-org/formspec.git",

@@ -2,7 +2,7 @@
 
 **A declarative form specification where structure, behavior, and presentation are independent, composable JSON documents.**
 
-Built by [Michael Deeb](https://www.linkedin.com/in/michael-deeb/), [TealWolf Consulting](https://tealwolf.consulting/) with [Focus Consulting](https://focusconsulting.io/) as a strategic partner. Free and open source under the [AGPL-3.0 License](LICENSE).
+Built by [Michael Deeb](https://www.linkedin.com/in/michael-deeb/), [TealWolf Consulting](https://tealwolf.consulting/) with [Focus Consulting](https://focusconsulting.io/) as a strategic partner. Open-core: runtime under [Apache-2.0](LICENSE), authoring tools under [BSL 1.1](LICENSE-BSL). See [LICENSING.md](LICENSING.md).
 
 [Website](https://formspec.org) · [Features](https://formspec.org/features/) · [Architecture](https://formspec.org/architecture/) · [Blog](https://formspec.org/blog/) · [About](https://formspec.org/about/)
 
@@ -359,4 +359,7 @@ Created by [Michael Deeb](https://www.linkedin.com/in/michael-deeb/) at [TealWol
 
 ## License
 
-[AGPL-3.0](LICENSE)
+Open-core model — see [LICENSING.md](LICENSING.md) for details.
+
+- **Runtime** (engine, renderers, FEL, schemas, specs): [Apache-2.0](LICENSE)
+- **Authoring tools** (studio, MCP, chat, linter): [BSL 1.1](LICENSE-BSL) — converts to Apache-2.0 on April 7, 2030

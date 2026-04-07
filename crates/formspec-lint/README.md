@@ -118,4 +118,4 @@ cargo test -p formspec-lint
 
 ## License
 
-Workspace `license` field (see root `Cargo.toml`).
+BUSL-1.1 — see [LICENSE-BSL](../../LICENSE-BSL) and [LICENSING.md](../../LICENSING.md).
