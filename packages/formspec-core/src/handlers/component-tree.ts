@@ -238,6 +238,66 @@ export const componentTreeHandlers: Record<string, CommandHandler> = {
     return { rebuildComponentTree: false, nodeRef: { nodeId: wrapperNode.nodeId! } };
   },
 
+  /**
+   * Wrap several sibling nodes in one layout container, preserving their relative order.
+   * Resolves all targets before mutating; removes from highest index downward so indices stay valid.
+   */
+  'component.wrapSiblingNodes': (state, payload) => {
+    const { nodes: rawRefs, wrapper } = payload as {
+      nodes: Array<{ bind?: string; nodeId?: string }>;
+      wrapper: { component: string; props?: Record<string, unknown> };
+    };
+
+    const refKey = (r: { bind?: string; nodeId?: string }) =>
+      r.bind != null && r.bind !== '' ? `b:${r.bind}` : `n:${r.nodeId ?? ''}`;
+
+    const seen = new Set<string>();
+    const refs = rawRefs.filter((r) => {
+      const k = refKey(r);
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+
+    if (refs.length < 2) throw new Error('wrapSiblingNodes requires at least two distinct nodes');
+
+    const root = ensureTree(state);
+    const results = refs.map((ref) => {
+      const r = findNode(root, ref);
+      if (!r || r.index === -1) throw new Error('Node not found');
+      return r;
+    });
+
+    const parent = results[0].parent;
+    for (const r of results) {
+      if (r.parent !== parent) {
+        throw new Error('Nodes are not siblings');
+      }
+    }
+
+    const sortedAsc = [...results].sort((a, b) => a.index - b.index);
+    const insertIdx = sortedAsc[0].index;
+    const sortedDesc = [...sortedAsc].reverse();
+
+    const extracted: TreeNode[] = [];
+    for (const r of sortedDesc) {
+      const [n] = parent.children!.splice(r.index, 1);
+      extracted.unshift(n);
+    }
+
+    const wrapperNode: TreeNode = {
+      component: wrapper.component,
+      nodeId: generateNodeId(),
+      _layout: true,
+      children: extracted,
+    };
+    if (wrapper.props) Object.assign(wrapperNode, wrapper.props);
+
+    parent.children!.splice(insertIdx, 0, wrapperNode);
+
+    return { rebuildComponentTree: false, nodeRef: { nodeId: wrapperNode.nodeId! } };
+  },
+
   'component.unwrapNode': (state, payload) => {
     const { node: ref } = payload as { node: { bind?: string; nodeId?: string } };
 

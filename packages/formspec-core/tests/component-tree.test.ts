@@ -320,6 +320,81 @@ describe('component.wrapNode', () => {
   });
 });
 
+describe('component.wrapSiblingNodes', () => {
+  it('wraps adjacent siblings in one container', () => {
+    const project = createRawProject();
+
+    project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'a' } });
+    project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'b' } });
+
+    const refA = { bind: 'a' };
+    const refB = { bind: 'b' };
+
+    const result = project.dispatch({
+      type: 'component.wrapSiblingNodes',
+      payload: { nodes: [refA, refB], wrapper: { component: 'Grid' } },
+    }) as any;
+
+    const tree = project.component.tree as any;
+    expect(tree.children).toHaveLength(1);
+    expect(tree.children[0].component).toBe('Grid');
+    expect(tree.children[0].children.map((c: any) => c.bind)).toEqual(['a', 'b']);
+    expect(result.nodeRef.nodeId).toBe(tree.children[0].nodeId);
+  });
+
+  it('wraps non-contiguous siblings and preserves left-to-right order', () => {
+    const project = createRawProject();
+
+    project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'a' } });
+    project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'b' } });
+    project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'c' } });
+    project.dispatch({ type: 'definition.addItem', payload: { type: 'field', key: 'd' } });
+
+    project.dispatch({
+      type: 'component.wrapSiblingNodes',
+      payload: { nodes: [{ bind: 'b' }, { bind: 'd' }], wrapper: { component: 'Grid' } },
+    });
+
+    const tree = project.component.tree as any;
+    expect(tree.children).toHaveLength(3);
+    expect(tree.children[0].bind).toBe('a');
+    expect(tree.children[1].component).toBe('Grid');
+    expect(tree.children[1].children.map((c: any) => c.bind)).toEqual(['b', 'd']);
+    expect(tree.children[2].bind).toBe('c');
+  });
+
+  it('throws when nodes are not siblings', () => {
+    const project = createRawProject();
+
+    const card1 = (project.dispatch({
+      type: 'component.addNode',
+      payload: { parent: { nodeId: 'root' }, component: 'Card' },
+    }) as any).nodeRef;
+
+    const card2 = (project.dispatch({
+      type: 'component.addNode',
+      payload: { parent: { nodeId: 'root' }, component: 'Card' },
+    }) as any).nodeRef;
+
+    const f1 = (project.dispatch({
+      type: 'component.addNode',
+      payload: { parent: card1, component: 'TextInput', bind: 'f1' },
+    }) as any).nodeRef;
+
+    const f2 = (project.dispatch({
+      type: 'component.addNode',
+      payload: { parent: card2, component: 'TextInput', bind: 'f2' },
+    }) as any).nodeRef;
+
+    expect(() =>
+      project.dispatch({
+        type: 'component.wrapSiblingNodes',
+        payload: { nodes: [f1, f2], wrapper: { component: 'Grid' } },
+      }),
+    ).toThrow(/siblings/i);
+  });
+});
+
 describe('component.unwrapNode', () => {
   it('promotes children to parent and removes wrapper', () => {
     const project = createRawProject();
