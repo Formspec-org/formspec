@@ -351,7 +351,7 @@ Formspec uses an open-core licensing model:
 
 **Government procurement:** The runtime packages are Apache-2.0, which is universally accepted by government procurement offices. No copyleft concerns for the components you embed in your applications. The authoring tools (BSL) are relevant only if you're building a competing hosted form-builder — internal use is unrestricted.
 
-For commercial licensing of the authoring tools, contact licensing@formspec.org. Full details in [LICENSING.md](LICENSING.md).
+For commercial licensing of the authoring tools, contact Michael.Deeb@tealwolf.consulting. Full details in [LICENSING.md](LICENSING.md).
 
 ---
 

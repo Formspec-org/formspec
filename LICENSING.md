@@ -64,7 +64,7 @@ The following are licensed under the [Business Source License 1.1](LICENSE-BSL):
 
 **Change date:** April 7, 2030 — on this date, all BSL-licensed code converts automatically to Apache-2.0.
 
-For commercial licensing inquiries, contact licensing@formspec.org.
+For commercial licensing inquiries, contact Michael.Deeb@tealwolf.consulting.
 
 ## Form definitions are your data
 
