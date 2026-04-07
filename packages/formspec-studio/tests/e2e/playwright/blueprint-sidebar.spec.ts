@@ -9,18 +9,40 @@
  *  #47 Collapse arrow frozen     — Section ▶ button arrow does not rotate on expand/collapse
  */
 import { test, expect } from '@playwright/test';
-import { importDefinition, switchTab, waitForApp } from './helpers';
+import { importDefinition, importProject, switchTab, waitForApp } from './helpers';
 
 // ─── Shared seed definitions ────────────────────────────────────────────────
 
 /** Definition with fields so the Component Tree can have nodes added to it. */
 const COMPONENT_TREE_DEFINITION = {
   $formspec: '1.0',
+  url: 'urn:blueprint-component-tree',
+  version: '1.0.0',
   items: [
     { key: 'firstName', type: 'field', dataType: 'string', label: 'First Name' },
     { key: 'lastName', type: 'field', dataType: 'string', label: 'Last Name' },
     { key: 'email', type: 'field', dataType: 'string', label: 'Email' },
   ],
+};
+
+/** Minimal component tree so the Component Tree badge counts UI nodes (definition-only import has no tree). */
+const COMPONENT_TREE_DOC = {
+  targetDefinition: { url: 'urn:blueprint-component-tree' },
+  tree: {
+    component: 'Stack',
+    nodeId: 'root',
+    children: [
+      {
+        component: 'Page',
+        nodeId: 'page1',
+        children: [
+          { component: 'TextInput', bind: 'firstName', nodeId: 'n1' },
+          { component: 'TextInput', bind: 'lastName', nodeId: 'n2' },
+          { component: 'TextInput', bind: 'email', nodeId: 'n3' },
+        ],
+      },
+    ],
+  },
 };
 
 /** Definition with a title long enough to potentially truncate in the narrow sidebar. */
@@ -60,9 +82,13 @@ async function openBlueprintSection(page: import('@playwright/test').Page, secti
 test.describe('Bug #14 — Component Tree count badge is always 0', () => {
   test('count badge on the "Component Tree" nav row reflects actual node count (non-zero)', async ({ page }) => {
     await waitForApp(page);
-    await importDefinition(page, COMPONENT_TREE_DEFINITION);
+    await importProject(page, {
+      definition: COMPONENT_TREE_DEFINITION,
+      component: COMPONENT_TREE_DOC,
+    });
     await page.waitForSelector('[data-testid="field-firstName"]', { timeout: 5000 });
-    await switchTab(page, 'Layout');
+    // Component Tree appears in the Preview blueprint (Layout sidebar is theme-authoring only).
+    await switchTab(page, 'Preview');
 
     const sectionBtn = page.locator('[data-testid="blueprint-section-Component Tree"]');
     await expect(sectionBtn).toBeVisible();

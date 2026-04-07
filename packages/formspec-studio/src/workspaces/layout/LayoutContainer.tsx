@@ -22,8 +22,10 @@ export interface LayoutContainerProps {
   /** Selection key used by InlineToolbar/PropertyPopover (e.g. '__node:n1' or bind path). */
   selectionKey?: string;
   selected?: boolean;
+  /** When set, inline toolbar only shows on the primary row during multi-select. */
+  layoutPrimaryKey?: string | null;
   index?: number;
-  onSelect?: () => void;
+  onSelect?: (e: React.MouseEvent | React.KeyboardEvent) => void;
   children?: ReactNode;
   /** Layout-specific props grouped to avoid a long positional prop list. */
   layoutProps?: ContainerLayoutProps;
@@ -148,6 +150,7 @@ export function LayoutContainer(props: LayoutContainerProps) {
     nodeId,
     selectionKey,
     selected = false,
+    layoutPrimaryKey = null,
     index = 0,
     onSelect,
     children,
@@ -212,7 +215,8 @@ export function LayoutContainer(props: LayoutContainerProps) {
   const resolvedNodeProps = nodeProps ?? {};
   const hasPopoverContent = hasTier3Content(resolvedNodeProps);
 
-  const showToolbar = selected && !!onSetProp && !!selectionKey;
+  const isToolbarPrimary = layoutPrimaryKey == null || layoutPrimaryKey === selectionKey;
+  const showToolbar = selected && isToolbarPrimary && !!onSetProp && !!selectionKey;
 
   const shellClasses =
     selected
@@ -231,6 +235,7 @@ export function LayoutContainer(props: LayoutContainerProps) {
       {...(bindPath ? { 'data-layout-bind': bindPath } : {})}
       {...(bind ? { 'data-layout-tree-bind': bind } : {})}
       {...(nodeId ? { 'data-layout-node-id': nodeId } : {})}
+      {...(selectionKey ? { 'data-layout-select-key': selectionKey } : {})}
       style={containerStyle}
       className={`transition-colors ${isDragging ? 'opacity-40' : ''} ${shellClasses}`}
     >
@@ -247,10 +252,18 @@ export function LayoutContainer(props: LayoutContainerProps) {
           tabIndex={0}
           aria-pressed={selected}
           aria-label={displayTitle ?? component}
-          onClick={isCollapsible
-            ? () => { setOpen((o) => !o); onSelect?.(); }
-            : onSelect}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect?.(); } }}
+          onClick={(e) => {
+            if (isCollapsible && !(e.metaKey || e.ctrlKey || e.shiftKey)) {
+              setOpen((o) => !o);
+            }
+            onSelect?.(e);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              onSelect?.(e);
+            }
+          }}
           className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded px-1 py-0.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/70"
         >
           <span className={`shrink-0 inline-block rounded px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider ${

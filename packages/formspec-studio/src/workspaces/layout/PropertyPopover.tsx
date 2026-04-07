@@ -376,13 +376,14 @@ export function PropertyPopover({
               <button
                 type="button"
                 data-testid="popover-theme-properties"
-                onClick={() => {
+                onClick={(event) => {
                   layoutMode.setThemeSelectedKey(itemKey);
-                  if (layoutMode.requestLayoutModeChange) {
-                    layoutMode.requestLayoutModeChange('theme');
-                  } else {
-                    onClose();
-                  }
+                  const rect = (event.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                  layoutMode.setThemePopoverPosition({
+                    x: rect.right + 12,
+                    y: rect.top,
+                  });
+                  onClose();
                 }}
                 className="rounded-full border border-border bg-surface px-3 py-1 text-[12px] font-semibold text-ink hover:border-accent hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/70"
               >

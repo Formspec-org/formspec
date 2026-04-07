@@ -18,94 +18,24 @@ import {
 } from '@formspec-org/studio-core';
 import { WorkspacePage, WorkspacePageSection } from '../../components/ui/WorkspacePage';
 import { AddItemPalette, type FieldTypeOption } from '../../components/AddItemPalette';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { ModeSelector } from './ModeSelector';
 import { LayoutStepNav } from './LayoutStepNav';
-import { renderLayoutTree } from './render-tree';
+import {
+  collectLayoutFlatSelectionKeys,
+  renderLayoutTree,
+  type LayoutRowSelectEvent,
+} from './render-tree';
 import { UnassignedTray } from './UnassignedTray';
 import { LayoutContextMenu } from './LayoutContextMenu';
 import { LayoutDndProvider } from './LayoutDndProvider';
 import { clampContextMenuPosition } from '../../components/ui/context-menu-utils';
-import { LayoutThemeToggle } from './LayoutThemeToggle';
-import { ThemeAuthoringOverlay } from './ThemeAuthoringOverlay';
 import { ThemeOverridePopover } from './ThemeOverridePopover';
-import { DirtyGuardConfirm } from './DirtyGuardConfirm';
-import { FormspecPreviewHost } from '../preview/FormspecPreviewHost';
-import { LayoutLivePreviewSection } from './LayoutLivePreviewSection';
 import { useOptionalLayoutMode } from './LayoutModeContext';
-import { type LayoutMode } from './LayoutThemeToggle';
 import { setThemeOverride, clearThemeOverride, setColumnSpan, setRowSpan, setStyleProperty, removeStyleProperty } from '@formspec-org/studio-core';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
-}
-
-/**
- * Layout mode + theme selection orchestration for the canvas header and theme overlay.
- */
-function useLayoutCanvasMode(
-  layoutModeCtx: ReturnType<typeof useOptionalLayoutMode>,
-  selectedLayoutKey: string | null,
-) {
-  const [localLayoutMode, setLocalLayoutMode] = useState<LayoutMode>('layout');
-  const [localThemeSelectedKey, setLocalThemeSelectedKey] = useState<string | null>(null);
-  const [localThemePopoverPosition, setLocalThemePopoverPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-
-  const layoutMode = layoutModeCtx?.layoutMode ?? localLayoutMode;
-  const pendingLayoutMode = layoutModeCtx?.pendingLayoutMode ?? null;
-  const themeSelectedKey = layoutModeCtx?.themeSelectedKey ?? localThemeSelectedKey;
-  const setThemeSelectedKey = layoutModeCtx?.setThemeSelectedKey ?? setLocalThemeSelectedKey;
-  const themePopoverPosition = layoutModeCtx?.themePopoverPosition ?? localThemePopoverPosition;
-  const setThemePopoverPosition = layoutModeCtx?.setThemePopoverPosition ?? setLocalThemePopoverPosition;
-
-  const previousLayoutModeRef = useRef<LayoutMode>(layoutMode);
-  useEffect(() => {
-    const wasThemeMode = previousLayoutModeRef.current === 'theme';
-    if (!wasThemeMode && layoutMode === 'theme') {
-      const canvasKey = selectedLayoutKey;
-      setThemeSelectedKey(canvasKey);
-
-      if (canvasKey) {
-        const isNode = isLayoutId(canvasKey);
-        const selector = isNode
-          ? `[data-layout-node-id="${CSS.escape(nodeIdFromLayoutId(canvasKey))}"]`
-          : `[data-layout-bind="${CSS.escape(canvasKey)}"]`;
-        const element = document.querySelector(selector);
-        if (element) {
-          const rect = element.getBoundingClientRect();
-          setThemePopoverPosition({
-            x: rect.left + rect.width / 2,
-            y: rect.top + rect.height,
-          });
-          element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
-      }
-    }
-    previousLayoutModeRef.current = layoutMode;
-  }, [layoutMode, selectedLayoutKey, setThemePopoverPosition, setThemeSelectedKey]);
-
-  const handleModeChange = (mode: LayoutMode) => {
-    if (layoutModeCtx?.requestLayoutModeChange) {
-      layoutModeCtx.requestLayoutModeChange(mode);
-      return;
-    }
-    setLocalLayoutMode(mode);
-  };
-
-  const handleThemeFieldSelect = (itemKey: string, position: { x: number; y: number }) => {
-    setThemeSelectedKey(itemKey);
-    setThemePopoverPosition({ x: position.x + 12, y: position.y + 12 });
-  };
-
-  return {
-    layoutMode,
-    pendingLayoutMode,
-    themeSelectedKey,
-    setThemeSelectedKey,
-    themePopoverPosition,
-    setThemePopoverPosition,
-    handleModeChange,
-    handleThemeFieldSelect,
-  };
 }
 
 /**
@@ -117,7 +47,9 @@ function useLayoutCanvasContextMenu(
   activePageId: string | null,
   materializePagedLayout: () => Map<string, string>,
   setActivePageId: (id: string) => void,
-  handleSelectNode: (key: string, type: 'field' | 'group' | 'display' | 'layout') => void,
+  selectLayoutNode: (key: string, type: 'field' | 'group' | 'display' | 'layout') => void,
+  layoutSelectedKeys: Set<string>,
+  layoutFlatOrder: string[],
 ) {
   const [contextMenu, setContextMenu] = useState<LayoutContextMenuState | null>(null);
 
@@ -135,6 +67,19 @@ function useLayoutCanvasContextMenu(
     const treeBind = target.dataset.layoutTreeBind;
     const layoutBind = target.dataset.layoutBind;
     const nodeId = target.dataset.layoutNodeId;
+    const layoutSelectKey =
+      target.dataset.layoutSelectKey
+      ?? layoutBind
+      ?? (nodeId != null && nodeId !== '' ? `__node:${nodeId}` : null);
+    let targetKeysForMenu: string[];
+    if (layoutSelectKey && !layoutSelectedKeys.has(layoutSelectKey)) {
+      const t = (nodeType ?? 'layout') as 'field' | 'group' | 'display' | 'layout';
+      selectLayoutNode(layoutSelectKey, t);
+      targetKeysForMenu = [layoutSelectKey];
+    } else {
+      targetKeysForMenu = Array.from(layoutSelectedKeys);
+    }
+
     const clamped = clampContextMenuPosition(e.clientX, e.clientY);
 
     // NodeRef for tree ops (wrap/move) must match TreeNode.bind / nodeId — not defPath (data-layout-bind).
@@ -152,6 +97,8 @@ function useLayoutCanvasContextMenu(
       kind: 'node',
       nodeType,
       nodeRef,
+      layoutTargetKeys: targetKeysForMenu,
+      selectionCount: targetKeysForMenu.length,
     });
   };
 
@@ -165,12 +112,15 @@ function useLayoutCanvasContextMenu(
         setActivePageId(resolvedActivePageId);
       }
     }
+    const tree = project.component.tree as CompNode | undefined;
     executeLayoutAction({
       action,
       menu: contextMenu,
       project,
+      tree,
+      layoutFlatOrder,
       deselect,
-      select: handleSelectNode,
+      select: selectLayoutNode,
       closeMenu,
     });
   };
@@ -254,19 +204,6 @@ function useLayoutAddOperations(
   setActivePageId: (id: string) => void,
   handleSelectNode: (key: string, type: 'field' | 'group' | 'display' | 'layout') => void,
 ) {
-  const handleAddContainer = (componentName: typeof CONTAINER_PRESETS[number]) => {
-    const pageIdMap = materializePagedLayout();
-    const resolvedActivePageId = activePageId ? (pageIdMap.get(activePageId) ?? activePageId) : null;
-    const parentNodeId = isMultiPage ? (resolvedActivePageId ?? 'root') : 'root';
-    const result = project.addLayoutNode(parentNodeId, componentName);
-    if (result.createdId) {
-      if (resolvedActivePageId && resolvedActivePageId !== activePageId) {
-        setActivePageId(resolvedActivePageId);
-      }
-      handleSelectNode(`__node:${result.createdId}`, 'layout');
-    }
-  };
-
   const handleAddPage = () => {
     materializePagedLayout();
     const result = project.addPage(`Page ${pageNavItems.length + 1}`);
@@ -316,7 +253,6 @@ function useLayoutAddOperations(
   };
 
   return {
-    handleAddContainer,
     handleAddPage,
     handleRenamePage,
     handleAddItem,
@@ -352,95 +288,28 @@ function synthesizePagedLayoutTree(nodes: CompNode[], definition: ReturnType<typ
   });
 }
 
-// Ordered list of containers shown in the toolbar. Keep in sync with
-// LAYOUT_CONTAINER_COMPONENTS in studio-core — ordering matters for display.
-const CONTAINER_PRESETS = ['Card', 'Stack', 'Grid', 'Panel', 'Accordion', 'Collapsible', 'ConditionalGroup'] as const;
-
-type LayoutContainerPreset = (typeof CONTAINER_PRESETS)[number];
-
-/**
- * Primary action adds a Stack; chevron opens a click menu (keyboard/touch friendly vs hover-only).
- */
-function AddLayoutContainerSplit({
-  onAddStack,
-  onPick,
-  presets,
-}: {
-  onAddStack: () => void;
-  onPick: (name: LayoutContainerPreset) => void;
-  presets: readonly LayoutContainerPreset[];
-}) {
-  const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDoc = (e: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', onDoc);
-    return () => document.removeEventListener('mousedown', onDoc);
-  }, [open]);
-
-  return (
-    <div ref={rootRef} data-testid="layout-add-container" className="relative inline-flex min-h-11 items-stretch rounded-full border border-border/50 bg-bg-default/40">
-      <button
-        type="button"
-        data-testid="layout-add-container-primary"
-        aria-label="Add Stack layout container"
-        className="rounded-l-full border-0 bg-transparent px-3 py-2 text-[12px] font-medium text-muted transition-colors hover:bg-bg-default/60 hover:text-ink focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/70"
-        onClick={() => onAddStack()}
-      >
-        + Stack
-      </button>
-      <span className="w-px shrink-0 self-stretch bg-border/50" aria-hidden />
-      <button
-        type="button"
-        data-testid="layout-add-container-menu"
-        aria-label="Choose layout container type"
-        aria-expanded={open}
-        className="min-w-11 rounded-r-full border-0 bg-transparent px-2.5 py-2 text-[12px] font-medium text-muted transition-colors hover:bg-bg-default/60 hover:text-ink focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/70"
-        onClick={() => setOpen((o) => !o)}
-      >
-        ▾
-      </button>
-      {open ? (
-        <div
-          className="absolute right-0 top-full z-50 mt-1 flex min-w-[160px] flex-col rounded border border-border/60 bg-surface py-1 shadow-lg"
-          role="menu"
-        >
-          {presets.map((componentName) => (
-            <button
-              key={componentName}
-              type="button"
-              role="menuitem"
-              data-testid={`layout-add-${componentName.toLowerCase()}`}
-              className="px-3 py-1.5 text-left text-[12px] text-ink transition-colors hover:bg-subtle hover:text-accent"
-              onClick={() => {
-                onPick(componentName);
-                setOpen(false);
-              }}
-            >
-              {componentName}
-            </button>
-          ))}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
 export function LayoutCanvas() {
   const definition = useDefinition();
   const component = useComponent();
   const project = useProject();
-  const { deselect, select, selectedKeyForTab } = useSelection();
+  const {
+    deselect,
+    select,
+    toggleSelect,
+    rangeSelect,
+    isSelectedForTab,
+    selectedKeysForTab,
+    selectedKeyForTab,
+  } = useSelection();
   const structure = useLayoutPageStructure();
 
   const [activePageId, setActivePageId] = useState<string | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [pendingRemovePageNavId, setPendingRemovePageNavId] = useState<string | null>(null);
   const layoutModeCtx = useOptionalLayoutMode();
-  const selectedLayoutKey = selectedKeyForTab('layout');
+  const themeSelectedKey = layoutModeCtx?.themeSelectedKey ?? null;
+  const setThemeSelectedKey = layoutModeCtx?.setThemeSelectedKey ?? (() => {});
+  const themePopoverPosition = layoutModeCtx?.themePopoverPosition ?? { x: 0, y: 0 };
 
   const items = definition?.items ?? [];
   const tree = component?.tree as CompNode | undefined;
@@ -456,7 +325,8 @@ export function LayoutCanvas() {
 
   const hasPages = pagedTreeChildren.some((node) => node.component === 'Page');
   const isMultiPage = structure.mode !== 'single' && hasPages;
-  const selectedKey = selectedKeyForTab('layout');
+  const layoutPrimaryKey = selectedKeyForTab('layout');
+  const layoutSelectedKeys = selectedKeysForTab('layout');
 
   const pageNavItems = useMemo(
     () => pagedTreeChildren
@@ -477,7 +347,7 @@ export function LayoutCanvas() {
   // component-doc pages.  After the first materialization the synthetic list
   // is empty, so subsequent calls are no-ops — the ref lets us skip the
   // filter + loop entirely on every subsequent user interaction.
-  const materialized = useRef(false);
+  const materialized = useRef<boolean>(false);
 
   // Reset the flag when the page nav items change (e.g. new synthetic pages
   // appear after a definition change).
@@ -524,9 +394,46 @@ export function LayoutCanvas() {
     );
   }, [activePageId, isMultiPage, pagedTreeChildren]);
 
-  const handleSelectNode = (key: string, type: 'field' | 'group' | 'display' | 'layout') => {
-    select(key, type, { tab: 'layout' });
-  };
+  const selectLayoutNode = useCallback(
+    (key: string, type: 'field' | 'group' | 'display' | 'layout') => {
+      select(key, type, { tab: 'layout' });
+    },
+    [select],
+  );
+
+  const layoutFlatOrder = useMemo(
+    () =>
+      collectLayoutFlatSelectionKeys(
+        visibleTreeChildren,
+        defLookup,
+        bindKeyMap,
+        activePageId,
+        '',
+        !isMultiPage,
+      ),
+    [visibleTreeChildren, defLookup, bindKeyMap, activePageId, isMultiPage],
+  );
+
+  const handleLayoutRowSelect = useCallback(
+    (ev: LayoutRowSelectEvent | null, key: string, type: 'field' | 'group' | 'display' | 'layout') => {
+      const opts = { tab: 'layout' as const };
+      if (ev && 'metaKey' in ev && (ev.metaKey || ev.ctrlKey)) {
+        toggleSelect(key, type, opts);
+      } else if (ev && 'shiftKey' in ev && ev.shiftKey) {
+        rangeSelect(key, type, layoutFlatOrder, opts);
+      } else if (isSelectedForTab('layout', key)) {
+        deselect();
+      } else {
+        select(key, type, opts);
+      }
+    },
+    [deselect, isSelectedForTab, layoutFlatOrder, rangeSelect, select, toggleSelect],
+  );
+
+  const isLayoutRowSelected = useCallback(
+    (key: string) => isSelectedForTab('layout', key),
+    [isSelectedForTab],
+  );
 
   const handleRenameDefinitionItem = useCallback(
     (defPath: string, nextKey: string, nextLabel: string | null, kind: 'field' | 'display') => {
@@ -540,9 +447,9 @@ export function LayoutCanvas() {
       project.updateItem(nextPath, {
         label: nextLabel === null || nextLabel === '' ? null : nextLabel,
       });
-      select(nextPath, kind, { tab: 'layout' });
+      selectLayoutNode(nextPath, kind);
     },
-    [project, select],
+    [project, selectLayoutNode],
   );
 
   const nodeOps = useLayoutNodeOperations(project, deselect);
@@ -555,20 +462,85 @@ export function LayoutCanvas() {
     pageNavItems,
     materializePagedLayout,
     setActivePageId,
-    handleSelectNode,
+    selectLayoutNode,
   );
-  const { handleAddContainer, handleAddPage, handleRenamePage, handleAddItem } = addOps;
+  const { handleAddPage, handleRenamePage, handleAddItem } = addOps;
 
-  const {
-    layoutMode,
-    pendingLayoutMode,
-    themeSelectedKey,
-    setThemeSelectedKey,
-    themePopoverPosition,
-    setThemePopoverPosition,
-    handleModeChange,
-    handleThemeFieldSelect,
-  } = useLayoutCanvasMode(layoutModeCtx, selectedLayoutKey);
+  const resolvePageNavToComponentId = useCallback(
+    (navId: string, pageIdMap: Map<string, string>) => {
+      const entry = pageNavItems.find((p) => p.id === navId);
+      if (!entry) return null;
+      return entry.pageId ?? pageIdMap.get(entry.id) ?? entry.id;
+    },
+    [pageNavItems],
+  );
+
+  const syncActivePageAfterMaterialize = useCallback(
+    (pageIdMap: Map<string, string>) => {
+      if (!activePageId || pageIdMap.size === 0) return;
+      const mapped = pageIdMap.get(activePageId);
+      if (mapped && mapped !== activePageId) {
+        setActivePageId(mapped);
+      }
+    },
+    [activePageId],
+  );
+
+  const handlePageNavReorder = useCallback(
+    (navId: string, direction: 'up' | 'down') => {
+      const pageIdMap = materializePagedLayout();
+      syncActivePageAfterMaterialize(pageIdMap);
+      const compId = resolvePageNavToComponentId(navId, pageIdMap);
+      if (!compId) return;
+      project.reorderPage(compId, direction);
+    },
+    [materializePagedLayout, project, resolvePageNavToComponentId, syncActivePageAfterMaterialize],
+  );
+
+  const handlePageNavMoveToIndex = useCallback(
+    (navId: string, targetIndex: number) => {
+      const pageIdMap = materializePagedLayout();
+      syncActivePageAfterMaterialize(pageIdMap);
+      const compId = resolvePageNavToComponentId(navId, pageIdMap);
+      if (!compId) return;
+      project.movePageToIndex(compId, targetIndex);
+    },
+    [materializePagedLayout, project, resolvePageNavToComponentId, syncActivePageAfterMaterialize],
+  );
+
+  const handleRequestRemovePage = useCallback((navId: string) => {
+    setPendingRemovePageNavId(navId);
+  }, []);
+
+  const handleConfirmRemovePage = useCallback(() => {
+    if (!pendingRemovePageNavId || pageNavItems.length <= 1) {
+      setPendingRemovePageNavId(null);
+      return;
+    }
+    const navId = pendingRemovePageNavId;
+    const idx = pageNavItems.findIndex((p) => p.id === navId);
+    const neighbor = idx > 0 ? pageNavItems[idx - 1] : pageNavItems[idx + 1];
+    const pageIdMap = materializePagedLayout();
+    syncActivePageAfterMaterialize(pageIdMap);
+    const compId = resolvePageNavToComponentId(navId, pageIdMap);
+    setPendingRemovePageNavId(null);
+    if (!compId) return;
+    const wasActive = activePageId === navId;
+    project.removePage(compId);
+    deselect();
+    if (wasActive && neighbor) {
+      setActivePageId(neighbor.id);
+    }
+  }, [
+    activePageId,
+    deselect,
+    pageNavItems,
+    pendingRemovePageNavId,
+    project,
+    resolvePageNavToComponentId,
+    syncActivePageAfterMaterialize,
+    materializePagedLayout,
+  ]);
 
   const {
     contextMenu,
@@ -582,7 +554,9 @@ export function LayoutCanvas() {
     activePageId,
     materializePagedLayout,
     setActivePageId,
-    handleSelectNode,
+    selectLayoutNode,
+    layoutSelectedKeys,
+    layoutFlatOrder,
   );
 
   return (
@@ -596,20 +570,29 @@ export function LayoutCanvas() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <ModeSelector mode={structure.mode} onSetMode={(mode) => project.setFlow(mode)} />
-              <div className="w-px h-5 bg-border/40" />
-              <LayoutThemeToggle activeMode={layoutMode} onModeChange={handleModeChange} />
             </div>
-            <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+            {structure.mode !== 'single' && !isMultiPage ? (
               <button
                 type="button"
-                data-testid="layout-add-item"
-                aria-label="Add item to layout"
-                className="min-h-11 rounded-full border border-border/70 bg-subtle/80 px-4 py-2 text-[12px] font-semibold text-ink shadow-sm transition-colors hover:border-accent/60 hover:bg-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/70"
-                onClick={() => setPaletteOpen(true)}
+                data-testid="layout-add-page"
+                aria-label="Add page to layout"
+                className="min-h-11 rounded-full border border-transparent px-3 py-2 text-[12px] font-medium text-muted transition-colors hover:border-border/60 hover:bg-bg-default/50 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/70"
+                onClick={handleAddPage}
               >
-                + Item
+                + Page
               </button>
-              {structure.mode !== 'single' && (
+            ) : null}
+          </div>
+          {isMultiPage && (
+            <LayoutStepNav
+              pages={pageNavItems}
+              activePageId={activePageId ?? pageNavItems[0]?.id ?? null}
+              onSelectPage={setActivePageId}
+              onRenamePage={handleRenamePage}
+              onReorderPage={handlePageNavReorder}
+              onMovePageToIndex={handlePageNavMoveToIndex}
+              onRequestRemovePage={handleRequestRemovePage}
+              trailing={
                 <button
                   type="button"
                   data-testid="layout-add-page"
@@ -619,55 +602,23 @@ export function LayoutCanvas() {
                 >
                   + Page
                 </button>
-              )}
-              <AddLayoutContainerSplit
-                onAddStack={() => handleAddContainer('Stack')}
-                onPick={(name) => handleAddContainer(name)}
-                presets={CONTAINER_PRESETS}
-              />
-            </div>
-          </div>
-          {isMultiPage && (
-            <LayoutStepNav
-              pages={pageNavItems}
-              activePageId={activePageId ?? pageNavItems[0]?.id ?? null}
-              onSelectPage={setActivePageId}
-              onRenamePage={handleRenamePage}
+              }
             />
           )}
         </div>
       </WorkspacePageSection>
 
-      {layoutMode === 'theme' ? (
-        <WorkspacePageSection className="py-0 flex-1 min-h-0 relative">
-          <div className="relative w-full h-full min-h-[400px]">
-            <FormspecPreviewHost width="100%" />
-            <ThemeAuthoringOverlay
-              onFieldSelect={handleThemeFieldSelect}
-              selectedItemKey={themeSelectedKey}
-            />
-          </div>
-          <ThemeOverridePopover
-            open={!!themeSelectedKey}
-            itemKey={themeSelectedKey ?? ''}
-            position={themePopoverPosition}
-            project={project}
-            onClose={() => setThemeSelectedKey(null)}
-            onSetOverride={(key, prop, value) => setThemeOverride(project, key, prop, value)}
-            onClearOverride={(key, prop) => clearThemeOverride(project, key, prop)}
-          />
-        </WorkspacePageSection>
-      ) : (
-        <>
-          <WorkspacePageSection className="space-y-3 py-4">
+      <>
+        <WorkspacePageSection className="space-y-3 py-4">
             <div onContextMenu={handleContextMenu}>
               {renderLayoutTree(
                 visibleTreeChildren,
                 {
                   defLookup,
                   bindKeyMap,
-                  selectedKey,
-                  onSelect: handleSelectNode,
+                  isSelected: isLayoutRowSelected,
+                  layoutPrimaryKey,
+                  onSelect: handleLayoutRowSelect,
                   activePageId,
                   onSelectPage: setActivePageId,
                   onSetNodeProp: handleSetNodeProp,
@@ -690,13 +641,25 @@ export function LayoutCanvas() {
 
               {visibleTreeChildren.length === 0 && (
                 <p className="text-center text-[13px] text-muted py-8">
-                  No layout content yet. Add items here or place existing definition items from the tray.
+                  No layout content yet. Use add below or place existing definition items from the tray.
                 </p>
               )}
             </div>
-          </WorkspacePageSection>
+          <button
+            type="button"
+            data-testid="layout-add-item"
+            aria-label="Add item to layout"
+            aria-expanded={paletteOpen}
+            className="mt-3 flex min-h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-[10px] border border-dashed border-accent/25 bg-bg-default/75 py-3 font-mono text-[11.5px] uppercase tracking-[0.18em] text-accent/65 transition-colors hover:border-accent/50 hover:bg-surface hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+            onClick={() => {
+              setPaletteOpen((open) => !open);
+            }}
+          >
+            Add to layout
+          </button>
+        </WorkspacePageSection>
 
-          <WorkspacePageSection className="py-4">
+        <WorkspacePageSection className="py-4">
             <UnassignedTray
               items={items}
               treeChildren={treeChildren}
@@ -704,18 +667,21 @@ export function LayoutCanvas() {
               onPlaceItem={(item) => {
                 if (!activePageId) return;
                 project.placeOnPage(item.key, activePageId);
-                handleSelectNode(item.key, item.itemType);
+                selectLayoutNode(item.key, item.itemType);
               }}
             />
-          </WorkspacePageSection>
+        </WorkspacePageSection>
+      </>
 
-          <WorkspacePageSection padding="px-7" className="py-5 border-t border-border/50">
-            <div className="rounded-[18px] border border-border/70 bg-surface/80 overflow-hidden shadow-sm">
-              <LayoutLivePreviewSection width="100%" className="min-h-[min(360px,55vh)]" />
-            </div>
-          </WorkspacePageSection>
-        </>
-      )}
+      <ThemeOverridePopover
+        open={!!themeSelectedKey}
+        itemKey={themeSelectedKey ?? ''}
+        position={themePopoverPosition}
+        project={project}
+        onClose={() => setThemeSelectedKey(null)}
+        onSetOverride={(key, prop, value) => setThemeOverride(project, key, prop, value)}
+        onClearOverride={(key, prop) => clearThemeOverride(project, key, prop)}
+      />
 
       {contextMenu && menuItems.length > 0 && (
         <div
@@ -730,22 +696,22 @@ export function LayoutCanvas() {
         </div>
       )}
 
-      {pendingLayoutMode && layoutModeCtx && (
-        <div className="fixed inset-x-0 bottom-4 z-50 flex justify-center pointer-events-none">
-          <div className="relative h-0 w-[min(100vw-2rem,28rem)] pointer-events-auto">
-            <DirtyGuardConfirm
-              onDiscard={layoutModeCtx.confirmLayoutModeChange}
-              onCancel={layoutModeCtx.cancelLayoutModeChange}
-            />
-          </div>
-        </div>
-      )}
-
       <AddItemPalette
         open={paletteOpen}
         onClose={() => setPaletteOpen(false)}
         onAdd={handleAddItem}
         title="Add To Layout"
+        scope="layout"
+      />
+
+      <ConfirmDialog
+        open={pendingRemovePageNavId !== null}
+        title={`Remove page “${pageNavItems.find((p) => p.id === pendingRemovePageNavId)?.title ?? ''}”?`}
+        description="The page surface is removed. Definition items on this page stay in the project and appear in the unassigned tray until you place them again."
+        confirmLabel="Remove page"
+        cancelLabel="Cancel"
+        onCancel={() => setPendingRemovePageNavId(null)}
+        onConfirm={handleConfirmRemovePage}
       />
     </WorkspacePage>
     </LayoutDndProvider>

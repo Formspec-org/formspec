@@ -84,7 +84,7 @@ test.describe('Cross-Workspace Authoring', () => {
         ],
       },
       theme: {
-        tokens: { primaryColor: '#3b82f6', spacing: '8px' },
+        tokens: { 'color.primaryColor': '#3b82f6', spacing: '8px' },
       },
       mapping: {
         direction: 'outbound',
@@ -113,10 +113,14 @@ test.describe('Cross-Workspace Authoring', () => {
     await expect(responsePanel).toContainText('name');
     await expect(responsePanel).toContainText('email');
 
-    await switchTab(page, 'Theme');
-    const themeWorkspace = page.locator('[data-testid="workspace-Theme"]');
-    await expect(themeWorkspace.getByText('primaryColor', { exact: true })).toBeVisible();
-    await expect(themeWorkspace.locator('[data-testid="swatch-primaryColor"]')).toBeVisible();
+    await switchTab(page, 'Layout');
+    await page.locator('[data-testid="layout-theme-toggle"]').getByRole('radio', { name: 'Theme' }).click();
+    const themeSidebar = page.locator('[data-testid="blueprint-sidebar"]');
+    await themeSidebar.getByRole('button', { name: 'Colors' }).click();
+    const colorToken = themeSidebar.locator('[data-testid="color-token-color.primaryColor"]');
+    await colorToken.scrollIntoViewIfNeeded();
+    await expect(colorToken).toBeVisible();
+    await expect(themeSidebar.locator('[data-testid="color-value-color.primaryColor"]')).toHaveValue('#3b82f6');
 
     await switchTab(page, 'Mapping');
     const mappingWorkspace = page.locator('[data-testid="workspace-Mapping"]');

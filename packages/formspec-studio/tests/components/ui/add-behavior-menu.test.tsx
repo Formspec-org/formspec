@@ -44,52 +44,72 @@ describe('AddBehaviorMenu', () => {
   });
 
   describe('when itemType is "display"', () => {
-    it('only shows "relevant" regardless of allowedTypes', async () => {
+    it('only offers "relevant" regardless of allowedTypes (single-option adds on first click)', async () => {
       const user = userEvent.setup();
+      const onAdd = vi.fn();
       render(
         <AddBehaviorMenu
           existingTypes={[]}
           allowedTypes={['relevant', 'required', 'readonly', 'calculate', 'constraint']}
           itemType="display"
-          onAdd={() => {}}
+          onAdd={onAdd}
         />,
       );
 
       await user.click(screen.getByRole('button', { name: /add behavior/i }));
 
-      expect(screen.getByText('Relevant')).toBeInTheDocument();
-      // All non-relevant types should be filtered out
+      expect(onAdd).toHaveBeenCalledTimes(1);
+      expect(onAdd).toHaveBeenCalledWith('relevant');
+      // No dropdown for a single available type
       expect(screen.queryByText('Required')).not.toBeInTheDocument();
       expect(screen.queryByText('Readonly')).not.toBeInTheDocument();
       expect(screen.queryByText('Calculate')).not.toBeInTheDocument();
       expect(screen.queryByText('Constraint')).not.toBeInTheDocument();
     });
 
-    it('shows "relevant" even when allowedTypes is not provided', async () => {
+    it('adds "relevant" on first click when allowedTypes is not provided', async () => {
       const user = userEvent.setup();
+      const onAdd = vi.fn();
       render(
         <AddBehaviorMenu
           existingTypes={[]}
           itemType="display"
-          onAdd={() => {}}
+          onAdd={onAdd}
         />,
       );
 
       await user.click(screen.getByRole('button', { name: /add behavior/i }));
 
-      expect(screen.getByText('Relevant')).toBeInTheDocument();
+      expect(onAdd).toHaveBeenCalledWith('relevant');
       expect(screen.queryByText('Required')).not.toBeInTheDocument();
     });
   });
 
   describe('menu interactions', () => {
-    it('fires onAdd with the type id when a menu button is clicked', async () => {
+    it('fires onAdd with the type id when the only option is chosen (instant add)', async () => {
       const user = userEvent.setup();
       const onAdd = vi.fn();
       render(
         <AddBehaviorMenu
           existingTypes={[]}
           allowedTypes={['relevant']}
+          onAdd={onAdd}
+        />,
+      );
+
+      await user.click(screen.getByRole('button', { name: /add behavior/i }));
+
+      expect(onAdd).toHaveBeenCalledWith('relevant');
+      expect(onAdd).toHaveBeenCalledTimes(1);
+    });
+
+    it('fires onAdd when a dropdown row is clicked (multiple options)', async () => {
+      const user = userEvent.setup();
+      const onAdd = vi.fn();
+      render(
+        <AddBehaviorMenu
+          existingTypes={[]}
+          allowedTypes={['relevant', 'required']}
           onAdd={onAdd}
         />,
       );

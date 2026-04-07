@@ -30,7 +30,7 @@ describe('AllTokens', () => {
   });
 
   it('shows token count in header', () => {
-    renderAllTokens({ 'color.primary': '#3b82f6', 'spacing.md': '8px', 'border.radius': '4px' });
+    renderAllTokens({ 'color.primary': '#3b82f6', 'spacing.md': '8px', 'radius.sm': '4px' });
     expect(screen.getByText(/3 tokens/i)).toBeInTheDocument();
   });
 

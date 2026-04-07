@@ -324,6 +324,9 @@ function IdentityColumn({ identity, editState, actions, layout }: ItemRowContent
   );
 }
 
+/** Fixed strip for field rows — matches definition-tree integration tests. */
+const FIELD_SUMMARY_CATEGORY_ORDER = ['Visibility', 'Validation', 'Value', 'Format'];
+
 function SummaryColumn({
   identity,
   editState,
@@ -331,7 +334,7 @@ function SummaryColumn({
   categoryEditor,
   statusPills = [],
 }: ItemRowContentProps) {
-  const { testId, selected, editable } = identity;
+  const { testId, selected, editable, isField } = identity;
   const showEditMark = selected && editable;
   const {
     activeInlineSummary,
@@ -346,9 +349,23 @@ function SummaryColumn({
   return (
     <div className='min-w-0 flex flex-col gap-3'>
       {(() => {
-        const visibleCategories = selected
-          ? Object.entries(categorySummaries)
-          : Object.entries(categorySummaries).filter(([, v]) => v);
+        let visibleCategories: [string, string][];
+        if (isField) {
+          const keys: string[] = [...FIELD_SUMMARY_CATEGORY_ORDER];
+          if (Object.prototype.hasOwnProperty.call(categorySummaries, 'Options')) {
+            keys.push('Options');
+          }
+          const allCategories: [string, string][] = keys.map((k) => [k, categorySummaries[k] ?? '']);
+          // When selected, show all 4 category slots so the user sees what's editable.
+          // When unselected, filter out empty/dash categories to reduce clutter.
+          visibleCategories = selected
+            ? allCategories
+            : allCategories.filter(([, v]) => v && v !== '\u2014');
+        } else {
+          visibleCategories = selected
+            ? Object.entries(categorySummaries)
+            : Object.entries(categorySummaries).filter(([, v]) => v);
+        }
         if (visibleCategories.length === 0) return null;
         return (
           <dl

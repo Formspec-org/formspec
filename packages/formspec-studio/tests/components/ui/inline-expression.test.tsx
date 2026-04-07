@@ -93,13 +93,12 @@ describe('InlineExpression', () => {
   });
 
   it('renders syntax-highlighted tokens in display mode', () => {
-    const { container } = render(<InlineExpression value="$field > 10" onSave={vi.fn()} />);
+    render(<InlineExpression value="$field > 10" onSave={vi.fn()} />);
     const chip = getDisplayChip('$field > 10');
-    // Path token should have green highlighting
-    const spans = chip.querySelectorAll('span');
-    const pathSpan = Array.from(spans).find(s => s.textContent?.includes('$field'));
+    // Path token lives inside the ellipsis wrapper; match the highlighted leaf, not the wrapper.
+    const pathSpan = chip.querySelector('span.text-green');
     expect(pathSpan).toBeTruthy();
-    expect(pathSpan!.className).toContain('text-green');
+    expect(pathSpan!.textContent).toContain('$field');
   });
 
   it('RED test: when rendering condition — callout visible when editing', () => {

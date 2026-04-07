@@ -1,9 +1,10 @@
 /** @filedesc Collapsible group node for the definition tree editor. */
-import { useEffect, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useState, useRef, type KeyboardEvent, type ReactNode } from 'react';
 import { Pill } from '../../components/ui/Pill';
 import { DragHandle } from '../../components/ui/DragHandle';
 import type { FormItem } from '@formspec-org/types';
 import type { StatusPill } from './item-row-shared';
+import { useSelection } from '../../state/useSelection';
 
 function EditMark({ testId }: { testId?: string }) {
   return (
@@ -80,7 +81,22 @@ export function GroupNode({
 }: GroupNodeProps) {
   // Collapse expanded content while being dragged to avoid layout disruption
   const effectiveSelected = selected && !isDragSource;
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
+  const { selectedKey } = useSelection();
+  // Auto-expand when a descendant becomes selected.
+  const prevSelectedKeyRef = useRef(selectedKey);
+  useEffect(() => {
+    const prev = prevSelectedKeyRef.current;
+    prevSelectedKeyRef.current = selectedKey;
+    if (
+      selectedKey &&
+      selectedKey !== prev &&
+      selectedKey !== itemPath &&
+      selectedKey.startsWith(itemPath + '.')
+    ) {
+      setExpanded(true);
+    }
+  }, [selectedKey, itemPath]);
   const [activeIdentityField, setActiveIdentityField] = useState<'label' | 'key' | null>(null);
   const [editingContent, setEditingContent] = useState<'description' | 'hint' | 'both' | null>(null);
   const [editingBehavior, setEditingBehavior] = useState(false);
@@ -556,15 +572,21 @@ export function GroupNode({
           </div>
         )}
       </div>
-      {expanded && (
-        <div
-          id={`group-panel-${itemKey}`}
-          data-testid={`group-${itemKey}-children`}
-          className="mt-2 flex flex-col px-4 pb-1 md:px-6"
-        >
-          {children}
+      <div
+        className="grid transition-[grid-template-rows] duration-150 ease-out"
+        style={{ gridTemplateRows: expanded ? '1fr' : '0fr' }}
+        data-expanded={expanded}
+      >
+        <div className="overflow-hidden" aria-hidden={!expanded}>
+          <div
+            id={`group-panel-${itemKey}`}
+            data-testid={`group-${itemKey}-children`}
+            className="mt-2 flex flex-col px-4 pb-1 md:px-6"
+          >
+            {children}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

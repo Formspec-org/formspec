@@ -7,11 +7,6 @@ function plural(n: number, singular: string): string {
   return `${n} ${singular}${n === 1 ? '' : 's'}`;
 }
 
-/**
- * Technical status bar shown at the bottom of the shell.
- * Displays version, status, and entity counts with refined visual hierarchy,
- * interactive elements, and enhanced visual polish.
- */
 export function StatusBar() {
   const definition = useDefinition();
   const [copied, setCopied] = useState(false);
@@ -22,38 +17,17 @@ export function StatusBar() {
   const fieldCount = countDefinitionFields(items);
   const bindCount = definition.binds?.length ?? 0;
   const shapeCount = definition.shapes?.length ?? 0;
-  const varCount = definition.variables?.length ?? 0;
 
   const presentation = definition.formPresentation ?? {};
   const pageMode = presentation.pageMode;
   const defaultCurrency = presentation.defaultCurrency;
   const density = presentation.density;
 
-  // Status color indicator
-  const statusColor = status === 'active' ? 'bg-emerald-500'
-    : status === 'retired' ? 'bg-slate-400'
-    : 'bg-amber-500';
-
-  const statusBorderColor = status === 'active' ? 'border-emerald-500/30'
-    : status === 'retired' ? 'border-slate-400/30'
-    : 'border-amber-500/30';
-
-  const statusBgColor = status === 'active' ? 'bg-emerald-500/5'
-    : status === 'retired' ? 'bg-slate-400/5'
-    : 'bg-amber-500/5';
-
-  const statusGlow = status === 'active' ? 'shadow-[0_0_6px_rgba(16,185,129,0.5)]'
-    : status === 'retired' ? 'shadow-[0_0_6px_rgba(100,116,139,0.4)]'
-    : 'shadow-[0_0_6px_rgba(217,119,6,0.5)]';
-
-  const statusTextColor = status === 'active' ? 'text-emerald-400'
-    : status === 'retired' ? 'text-slate-400'
-    : 'text-amber-400';
-
-  // Entity icons for visual density
-  const FieldIcon = () => <span className="text-[40px] opacity-70 leading-none flex items-center justify-center -translate-y-0.5">▦</span>;
-  const BindIcon = () => <span className="text-[40px] opacity-70 leading-none flex items-center justify-center -translate-y-0.5">⇄</span>;
-  const ShapeIcon = () => <span className="text-[40px] opacity-70 leading-none flex items-center justify-center -translate-y-0.5">◯</span>;
+  const statusTone = status === 'active'
+    ? 'text-emerald-700 bg-emerald-500/10 border-emerald-500/25 dark:text-emerald-300 dark:bg-emerald-500/10 dark:border-emerald-400/25'
+    : status === 'retired'
+      ? 'text-slate-600 bg-slate-500/10 border-slate-400/25 dark:text-slate-300 dark:bg-slate-500/10 dark:border-slate-400/25'
+      : 'text-amber-700 bg-amber-500/10 border-amber-500/25 dark:text-amber-300 dark:bg-amber-500/10 dark:border-amber-400/25';
 
   const handleCopyUrl = (url: string) => {
     navigator.clipboard.writeText(url);
@@ -64,135 +38,71 @@ export function StatusBar() {
   return (
     <footer
       data-testid="status-bar"
-      className={`h-10 bg-gradient-to-r from-surface via-surface to-surface/90 border-t border-border/40 px-4 flex items-center justify-between font-mono shrink-0 cursor-default overflow-visible hover:border-border/60 transition-colors relative`}
-      style={{
-        borderBottom: `2px solid rgba(${
-          status === 'active' ? '16,185,129'
-          : status === 'retired' ? '100,116,139'
-          : '217,119,6'
-        }, 0.15)`
-      }}
+      className="relative flex min-h-12 items-center justify-between gap-4 border-t border-border/80 bg-[linear-gradient(180deg,rgba(255,252,247,0.98),rgba(248,241,231,0.95))] dark:bg-[linear-gradient(180deg,rgba(26,35,47,0.98),rgba(32,44,59,0.95))] px-4 py-2 font-mono shrink-0"
     >
-      {/* Gradient separator accent bar */}
-      <div className="absolute bottom-0 left-0 h-px w-full bg-gradient-to-r from-transparent via-border/20 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(39,87,199,0.24),transparent)]" />
 
-      <div className="flex items-center gap-8 min-w-0 flex-1 relative z-10">
-        {/* Version & Status Section - Pill shaped background */}
-        <div
-          className={`flex items-center gap-3 shrink-0 px-3 py-1.5 rounded-full ${statusBgColor} border ${statusBorderColor} transition-all hover:bg-opacity-[0.08]`}
-          title={`Specification version and lifecycle status: ${status}`}
-        >
-          {/* Status Indicator */}
-          <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${statusColor} ${statusGlow} transition-all`} />
-            <div className="flex flex-col gap-0.5">
-              <span className="text-[11px] font-black tracking-widest uppercase text-ink leading-none">
-                FORMSPEC {formspecVersion}
-              </span>
-              <span className={`text-[11px] font-semibold tracking-wide uppercase ${statusTextColor} leading-none`}>
-                {status}
-              </span>
-            </div>
-          </div>
+      <div className="flex min-w-0 flex-1 items-center gap-4 overflow-x-auto scrollbar-none">
+        <div className="flex shrink-0 items-center gap-2">
+          <span className="font-display text-[17px] tracking-[-0.04em] text-ink">The Stack</span>
+          <span className="text-[11px] uppercase tracking-[0.22em] text-muted">FORMSPEC {formspecVersion}</span>
         </div>
 
-        {/* Presentation Section */}
-        <div className="hidden md:flex items-center gap-3 shrink-0" title="Page mode, default currency, and density">
-          {/* Gradient separator */}
-          <div className="h-4 w-px bg-gradient-to-b from-transparent via-border/50 to-transparent" />
-          <div className="flex flex-col gap-1">
-            <span className="text-[11px] font-medium text-muted/80 uppercase tracking-wide leading-none">
-              Mode · Currency
-            </span>
-            <span className="text-[11px] font-semibold text-ink/90 leading-none">
-              {pageMode || 'standard'} · {(defaultCurrency as string) || 'USD'}
-            </span>
-          </div>
-          {/* Gradient separator */}
-          <div className="h-4 w-px bg-gradient-to-b from-transparent via-border/50 to-transparent" />
-          <div className="flex flex-col gap-1">
-            <span className="text-[11px] font-medium text-muted/80 uppercase tracking-wide leading-none">
-              Density
-            </span>
-            <span className="text-[11px] font-semibold text-ink/90 leading-none">
-              {(density as string) || 'comfortable'}
-            </span>
-          </div>
+        <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${statusTone}`}>
+          {status}
+        </span>
+
+        <div className="hidden items-center gap-3 text-[11px] text-muted md:flex">
+          <span className="flex items-center gap-2 uppercase tracking-[0.18em]">
+            <span className="text-[16px] leading-none text-brass">◫</span>
+            Mode {pageMode || 'standard'}
+          </span>
+          <span className="text-border">/</span>
+          <span className="flex items-center gap-2 uppercase tracking-[0.18em]">
+            <span className="text-[14px] leading-none text-teal">$</span>
+            Currency {(defaultCurrency as string) || 'USD'}
+          </span>
+          <span className="text-border">/</span>
+          <span className="flex items-center gap-2 uppercase tracking-[0.18em]">
+            <span className="text-[15px] leading-none text-accent">⋮⋮</span>
+            Density {(density as string) || 'comfortable'}
+          </span>
         </div>
 
-        {/* Counts Section with entity type icons */}
-        <div className="hidden sm:flex items-center gap-4 shrink-0" title="Entity counts across the definition">
-          {/* Gradient separator */}
-          <div className="h-4 w-px bg-gradient-to-b from-transparent via-border/50 to-transparent" />
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-12 h-12 flex items-center justify-center">
-                <FieldIcon />
-              </div>
-              <div className="flex flex-col gap-1">
-                <span className="text-[11px] font-medium text-muted/80 uppercase tracking-wide leading-none">
-                  Fields
-                </span>
-                <span className="text-[11px] font-semibold text-accent leading-none">
-                  {plural(fieldCount, 'field')}
-                </span>
-              </div>
-            </div>
-            <div className="hidden md:flex items-center gap-2">
-              <div className="w-12 h-12 flex items-center justify-center -my-3">
-                <BindIcon />
-              </div>
-              <div className="flex flex-col gap-1">
-                <span className="text-[11px] font-medium text-muted/80 uppercase tracking-wide leading-none">
-                  Binds
-                </span>
-                <span className="text-[11px] font-semibold text-ink/90 leading-none">
-                  {plural(bindCount, 'bind')}
-                </span>
-              </div>
-            </div>
-            <div className="hidden md:flex items-center gap-2">
-              <div className="w-12 h-12 flex items-center justify-center -my-3">
-                <ShapeIcon />
-              </div>
-              <div className="flex flex-col gap-1">
-                <span className="text-[11px] font-medium text-muted/80 uppercase tracking-wide leading-none">
-                  Shapes
-                </span>
-                <span className="text-[11px] font-semibold text-ink/90 leading-none">
-                  {plural(shapeCount, 'shape')}
-                </span>
-              </div>
-            </div>
-          </div>
+        <div className="flex shrink-0 items-center gap-4 text-[11px] text-ink/88">
+          <span className="flex items-center gap-2 uppercase tracking-[0.18em] text-muted">
+            <span className="text-[19px] leading-none text-accent">▦</span>
+            <span><span className="text-accent">{plural(fieldCount, 'field')}</span></span>
+          </span>
+          <span className="hidden items-center gap-2 uppercase tracking-[0.18em] text-muted sm:flex">
+            <span className="text-[18px] leading-none text-teal">⇄</span>
+            <span>{plural(bindCount, 'bind')}</span>
+          </span>
+          <span className="hidden items-center gap-2 uppercase tracking-[0.18em] text-muted md:flex">
+            <span className="text-[18px] leading-none text-brass">◯</span>
+            <span>{plural(shapeCount, 'shape')}</span>
+          </span>
         </div>
       </div>
 
-      {/* URL Section with copy button */}
-      <div className="flex items-center gap-3 shrink-0 min-w-fit ml-8 relative z-10">
-        {definition.url && (
-          <>
-            {/* Gradient separator */}
-            <div className="h-4 w-px bg-gradient-to-b from-transparent via-border/50 to-transparent" />
-            <div className="flex items-center gap-2">
-              <a
-                href={definition.url}
-                title={definition.url}
-                className="text-[11px] text-muted/85 hover:text-accent font-semibold tracking-wide uppercase transition-colors underline-offset-2 hover:underline truncate max-w-[140px] sm:max-w-[240px]"
-              >
-                {definition.url}
-              </a>
-              <button
-                onClick={() => handleCopyUrl(definition.url)}
-                title="Copy URL"
-                className="shrink-0 w-4 h-4 flex items-center justify-center rounded opacity-40 hover:opacity-70 hover:bg-border/20 transition-all duration-200"
-              >
-                <span className="text-[11px] leading-none">{copied ? '✓' : '⎘'}</span>
-              </button>
-            </div>
-          </>
-        )}
-      </div>
+      {definition.url && (
+        <div className="ml-4 hidden min-w-0 shrink-0 items-center gap-2 sm:flex">
+          <a
+            href={definition.url}
+            title={definition.url}
+            className="max-w-[260px] truncate text-[11px] uppercase tracking-[0.16em] text-muted hover:text-accent transition-colors"
+          >
+            {definition.url}
+          </a>
+          <button
+            onClick={() => handleCopyUrl(definition.url)}
+            title="Copy URL"
+            className="rounded-full border border-border/70 px-2 py-1 text-[10px] text-muted hover:bg-surface hover:text-ink transition-colors"
+          >
+            {copied ? 'Copied' : 'Copy'}
+          </button>
+        </div>
+      )}
     </footer>
   );
 }

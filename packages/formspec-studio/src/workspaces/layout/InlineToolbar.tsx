@@ -386,7 +386,8 @@ function FieldControls({
   onSetColumnSpan?: (newSpan: number) => void;
 }) {
   const widgets = compatibleWidgets(itemType ?? 'field', itemDataType);
-  const currentWidget = (nodeProps.widget as string) ?? '';
+  const defaultWidget = widgets[0] ?? '';
+  const currentWidget = (nodeProps.component as string) || '';
 
   const isInGrid = layoutContext?.parentContainerType === 'grid';
   const parentCols = layoutContext?.parentGridColumns ?? 1;
@@ -399,8 +400,13 @@ function FieldControls({
           data-testid="toolbar-widget"
           aria-label="Input control type"
           title="Sets the component tree control and keeps definition presentation hints in sync. Default follows theme or data type."
-          value={currentWidget}
-          onChange={(e) => { e.stopPropagation(); onSetProp('widget', e.currentTarget.value); }}
+          value={currentWidget || ''}
+          onChange={(e) => {
+            e.stopPropagation();
+            const v = e.currentTarget.value;
+            // Tier-3 tree uses `component` (Select, RadioGroup, …); `widget` is not a tree field.
+            onSetProp('component', v === '' ? defaultWidget : v);
+          }}
           className="h-7 rounded border border-border bg-surface px-1 text-[12px] font-mono text-ink outline-none focus:border-accent"
         >
           <option value="">Default (theme / data type)</option>

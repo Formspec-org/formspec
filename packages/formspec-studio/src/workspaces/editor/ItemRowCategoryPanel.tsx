@@ -361,8 +361,10 @@ export const ItemRowCategoryPanel = forwardRef<
               )}
               allowedTypes={['required', 'constraint']}
               onAdd={(type) => {
-                onUpdateItem?.({ [type]: '' });
-                onBindCreated?.(type);
+                // Literal mandatory uses FEL "true" so the bind is active without opening the editor.
+                const initial = type === 'required' ? 'true' : '';
+                onUpdateItem?.({ [type]: initial });
+                if (initial === '') onBindCreated?.(type);
                 onExpandCategory('Validation');
               }}
               className='mt-1'

@@ -72,6 +72,47 @@ describe('LayoutCanvas', () => {
     expect(screen.getByText('Age')).toBeInTheDocument();
   });
 
+  it('multi-selects field rows with meta+click', () => {
+    const project = makeProject({
+      $formspec: '1.0', url: 'urn:layout-test', version: '1.0.0',
+      items: [
+        { key: 'email', type: 'field', dataType: 'string', label: 'Email Address' },
+        { key: 'age', type: 'field', dataType: 'integer', label: 'Age' },
+      ],
+    });
+
+    renderLayout(project);
+    const emailRow = screen.getByTestId('layout-field-email');
+    const ageRow = screen.getByTestId('layout-field-age');
+
+    fireEvent.click(emailRow);
+    expect(emailRow.getAttribute('aria-pressed')).toBe('true');
+    expect(ageRow.getAttribute('aria-pressed')).toBe('false');
+
+    fireEvent.click(ageRow, { metaKey: true });
+    expect(emailRow.getAttribute('aria-pressed')).toBe('true');
+    expect(ageRow.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('range-selects field rows with shift+click', () => {
+    const project = makeProject({
+      $formspec: '1.0', url: 'urn:layout-test', version: '1.0.0',
+      items: [
+        { key: 'email', type: 'field', dataType: 'string', label: 'Email Address' },
+        { key: 'age', type: 'field', dataType: 'integer', label: 'Age' },
+      ],
+    });
+
+    renderLayout(project);
+    const emailRow = screen.getByTestId('layout-field-email');
+    const ageRow = screen.getByTestId('layout-field-age');
+
+    fireEvent.click(emailRow);
+    fireEvent.click(ageRow, { shiftKey: true });
+    expect(emailRow.getAttribute('aria-pressed')).toBe('true');
+    expect(ageRow.getAttribute('aria-pressed')).toBe('true');
+  });
+
   it('renders display items', () => {
     const project = makeProject({
       $formspec: '1.0', url: 'urn:layout-test', version: '1.0.0',
@@ -112,21 +153,7 @@ describe('LayoutCanvas', () => {
     expect(screen.getByText('Tabs')).toBeInTheDocument();
   });
 
-  it('adds a layout container from the header toolbar', () => {
-    const project = makeProject({
-      $formspec: '1.0', url: 'urn:layout-test', version: '1.0.0',
-      items: [],
-    });
-
-    renderLayout(project);
-    fireEvent.click(screen.getByTestId('layout-add-container-menu'));
-    fireEvent.click(screen.getByTestId('layout-add-card'));
-
-    const cardContainer = screen.getByTestId(/^layout-container-/);
-    expect(cardContainer).toHaveTextContent('Card');
-  });
-
-  it('adds a new item from the layout palette', () => {
+  it('adds a layout container from the modal palette (fields and groups are editor-only)', () => {
     const project = makeProject({
       $formspec: '1.0', url: 'urn:layout-test', version: '1.0.0',
       items: [],
@@ -134,10 +161,10 @@ describe('LayoutCanvas', () => {
 
     renderLayout(project);
     fireEvent.click(screen.getByTestId('layout-add-item'));
-    fireEvent.click(screen.getByRole('button', { name: /^Text Short text/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Card / }));
 
-    expect(project.itemAt('text')?.type).toBe('field');
-    expect(screen.getByTestId('layout-field-text')).toBeInTheDocument();
+    const cardContainer = screen.getByTestId(/^layout-container-/);
+    expect(cardContainer).toHaveTextContent('Card');
   });
 
   it('renders nested children inside layout containers', () => {
@@ -170,6 +197,27 @@ describe('LayoutCanvas', () => {
     renderLayout(project);
     // LayoutCanvas should expose wizard step navigation for authored Page nodes.
     expect(screen.getByTestId('page-nav')).toBeInTheDocument();
+  });
+
+  it('opens page step context menu with rename, move, and delete', () => {
+    const project = makeProject({
+      $formspec: '1.0', url: 'urn:layout-test', version: '1.0.0',
+      items: [],
+    });
+    project.addPage('First');
+    project.addPage('Second');
+
+    renderLayout(project);
+
+    const tabs = screen.getAllByTestId(/^page-nav-tab-/);
+    expect(tabs.length).toBeGreaterThanOrEqual(2);
+    fireEvent.contextMenu(tabs[0]!);
+
+    expect(screen.getByTestId('page-nav-context-menu')).toBeInTheDocument();
+    expect(screen.getByTestId('page-nav-ctx-rename')).toBeInTheDocument();
+    expect(screen.getByTestId('page-nav-ctx-move-left')).toBeDisabled();
+    expect(screen.getByTestId('page-nav-ctx-move-right')).not.toBeDisabled();
+    expect(screen.getByTestId('page-nav-ctx-delete')).toBeInTheDocument();
   });
 
   it('selects a field from the canvas when clicked', async () => {
@@ -207,7 +255,7 @@ describe('LayoutCanvas', () => {
     expect(screen.getByTestId(/^layout-page-/)).toHaveTextContent('Intro');
     expect(screen.queryByText('Email Address')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /details/i }));
+    fireEvent.click(screen.getByTestId(`page-nav-tab-${detailsPageId}`));
 
     expect(screen.getByTestId(/^layout-page-/)).toHaveTextContent('Details');
     expect(screen.getByTestId('layout-field-email')).toBeInTheDocument();

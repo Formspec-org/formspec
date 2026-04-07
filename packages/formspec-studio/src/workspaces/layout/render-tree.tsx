@@ -1,4 +1,5 @@
 /** @filedesc Recursive Layout canvas renderer for authored Page sections, layout containers, and bound nodes. Passes layout context (parentContainerType, parentGridColumns) to children. */
+import type { Key, KeyboardEvent, MouseEvent, ReactNode } from 'react';
 import type { CompNode, ContainerLayoutProps, DefLookupEntry } from '@formspec-org/studio-core';
 import { LayoutPageSection } from './LayoutPageSection';
 import { LayoutContainer } from './LayoutContainer';
@@ -17,11 +18,20 @@ type DisplayNode = CompNode & {
   text?: string;
 };
 
+/** Pointer / keyboard events from layout row clicks — drives modifier multi-select in LayoutCanvas. */
+export type LayoutRowSelectEvent = MouseEvent<Element> | KeyboardEvent<Element>;
+
 export interface LayoutRenderContext {
   defLookup: Map<string, DefLookupEntry>;
   bindKeyMap: Map<string, string>;
-  selectedKey: string | null;
-  onSelect: (key: string, type: 'field' | 'group' | 'display' | 'layout') => void;
+  isSelected: (selectionKey: string) => boolean;
+  /** Primary layout selection key — inline toolbars stay on this row when multiple are selected. */
+  layoutPrimaryKey: string | null;
+  onSelect: (
+    ev: LayoutRowSelectEvent | null,
+    key: string,
+    type: 'field' | 'group' | 'display' | 'layout',
+  ) => void;
   activePageId: string | null;
   onSelectPage: (pageId: string) => void;
   /** Write a property to a component node identified by selectionKey. */
@@ -63,14 +73,112 @@ const ROOT_CONTEXT: ParentLayoutContext = {
   parentGridColumns: 0,
 };
 
+function resolveDefPathMaps(
+  key: string,
+  defPathPrefix: string,
+  defLookup: Map<string, DefLookupEntry>,
+  bindKeyMap: Map<string, string>,
+): string | null {
+  const candidate = defPathPrefix ? `${defPathPrefix}.${key}` : key;
+  if (defLookup.has(candidate)) return candidate;
+  return bindKeyMap.get(key) ?? candidate;
+}
+
 function resolveDefPath(
   key: string,
   defPathPrefix: string,
   ctx: LayoutRenderContext,
 ): string | null {
-  const candidate = defPathPrefix ? `${defPathPrefix}.${key}` : key;
-  if (ctx.defLookup.has(candidate)) return candidate;
-  return ctx.bindKeyMap.get(key) ?? candidate;
+  return resolveDefPathMaps(key, defPathPrefix, ctx.defLookup, ctx.bindKeyMap);
+}
+
+/** Depth-first list of layout row selection keys (same order as `renderLayoutTree`). Used for Shift+click range select. */
+export function collectLayoutFlatSelectionKeys(
+  nodes: CompNode[],
+  defLookup: Map<string, DefLookupEntry>,
+  bindKeyMap: Map<string, string>,
+  activePageId: string | null,
+  defPathPrefix: string,
+  pageSectionActive = false,
+): string[] {
+  const keys: string[] = [];
+
+  for (const node of nodes) {
+    if (node._layout && node.component === 'Page') {
+      const pageId = node.nodeId ?? 'page';
+      const activePageSection = activePageId == null || activePageId === pageId;
+      if (node.children) {
+        keys.push(
+          ...collectLayoutFlatSelectionKeys(
+            node.children,
+            defLookup,
+            bindKeyMap,
+            activePageId,
+            defPathPrefix,
+            activePageSection,
+          ),
+        );
+      }
+      continue;
+    }
+
+    if (node._layout && (node.component === 'Heading' || node.component === 'Divider')) {
+      if (!node.nodeId) continue;
+      keys.push(`__node:${node.nodeId}`);
+      continue;
+    }
+
+    if (node._layout) {
+      if (!node.nodeId) continue;
+      keys.push(`__node:${node.nodeId}`);
+      if (node.children) {
+        keys.push(
+          ...collectLayoutFlatSelectionKeys(
+            node.children,
+            defLookup,
+            bindKeyMap,
+            activePageId,
+            defPathPrefix,
+            pageSectionActive,
+          ),
+        );
+      }
+      continue;
+    }
+
+    if (node.bind) {
+      const defPath = resolveDefPathMaps(node.bind, defPathPrefix, defLookup, bindKeyMap);
+      const defEntry = defPath ? defLookup.get(defPath) : null;
+      if (!defPath || !defEntry) continue;
+      const item = defEntry.item as Item;
+      if (item.type === 'group') {
+        keys.push(defPath);
+        if (node.children) {
+          keys.push(
+            ...collectLayoutFlatSelectionKeys(
+              node.children,
+              defLookup,
+              bindKeyMap,
+              activePageId,
+              defPath,
+              pageSectionActive,
+            ),
+          );
+        }
+        continue;
+      }
+      keys.push(defPath);
+      continue;
+    }
+
+    if (node.nodeId) {
+      const defPath = resolveDefPathMaps(node.nodeId, defPathPrefix, defLookup, bindKeyMap);
+      const displaySelKey = defPath || node.nodeId;
+      keys.push(displaySelKey);
+    }
+  }
+
+  return keys;
 }
 
 /** Parse column span from a style.gridColumn value like "span 2". */
@@ -125,7 +233,7 @@ function buildContainerLayoutProps(node: CompNode): ContainerLayoutProps {
 
 /** Render a LayoutContainer with shared props. */
 function renderContainer(
-  key: React.Key,
+  key: Key,
   node: CompNode,
   nodeType: 'layout' | 'group',
   selectionKey: string,
@@ -149,8 +257,10 @@ function renderContainer(
       bindPath={extraProps?.bindPath}
       nodeId={extraProps?.nodeId}
       selectionKey={selectionKey}
-      selected={ctx.selectedKey === selectionKey}
-      onSelect={() => ctx.onSelect(selectionKey, nodeType === 'layout' ? 'layout' : 'group')}
+      selected={ctx.isSelected(selectionKey)}
+      onSelect={(e) =>
+        ctx.onSelect(e, selectionKey, nodeType === 'layout' ? 'layout' : 'group')}
+      layoutPrimaryKey={ctx.layoutPrimaryKey}
       layoutProps={layoutProps}
       nodeProps={nodePropsRecord(node)}
       onSetProp={ctx.onSetNodeProp ? (k, v) => ctx.onSetNodeProp!(selectionKey, k, v) : undefined}
@@ -174,8 +284,8 @@ export function renderLayoutTree(
   containerDepth = 0,
   /** True when nodes live on the active wizard page or single-page canvas (see LayoutCanvas). */
   pageSectionActive = false,
-): React.ReactNode[] {
-  const result: React.ReactNode[] = [];
+): ReactNode[] {
+  const result: ReactNode[] = [];
 
   for (const node of nodes) {
     // Authored Page node — render as a titled section in the Layout workspace.
@@ -227,8 +337,9 @@ export function renderLayoutTree(
           selectionKey={nodeSelKey}
           label={label}
           widgetHint={node.component}
-          selected={ctx.selectedKey === nodeSelKey}
-          onSelect={(selectionKey) => ctx.onSelect(selectionKey, 'layout')}
+          selected={ctx.isSelected(nodeSelKey)}
+          layoutPrimaryKey={ctx.layoutPrimaryKey}
+          onSelect={(e, sk) => ctx.onSelect(e, sk, 'layout')}
           layoutContext={displayLayoutCtx}
           nodeStyle={node.style as Record<string, unknown> | undefined}
           onResizeColSpan={ctx.onResizeColSpan ? (n) => ctx.onResizeColSpan!(nodeSelKey, n) : undefined}
@@ -328,8 +439,9 @@ export function renderLayoutTree(
           label={item.label}
           dataType={item.dataType}
           itemType={item.type}
-          selected={ctx.selectedKey === defPath}
-          onSelect={(selectionKey) => ctx.onSelect(selectionKey, 'field')}
+          selected={ctx.isSelected(defPath)}
+          layoutPrimaryKey={ctx.layoutPrimaryKey}
+          onSelect={(e, sk) => ctx.onSelect(e, sk, 'field')}
           groupPathPrefix={groupPathPrefix}
           description={description}
           hint={hint}
@@ -388,8 +500,9 @@ export function renderLayoutTree(
           selectionKey={displaySelKey}
           label={label}
           widgetHint={node.component !== 'Text' ? node.component : undefined}
-          selected={ctx.selectedKey === displaySelKey}
-          onSelect={(selectionKey) => ctx.onSelect(selectionKey, 'display')}
+          selected={ctx.isSelected(displaySelKey)}
+          layoutPrimaryKey={ctx.layoutPrimaryKey}
+          onSelect={(e, sk) => ctx.onSelect(e, sk, 'display')}
           groupPathPrefix={displayGroupPrefix}
           description={displayDescription}
           hint={displayHint}

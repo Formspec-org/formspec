@@ -60,7 +60,7 @@ function ManagePillar({
       id={id}
       ref={sectionRef as RefObject<HTMLDivElement>}
       data-testid={`manage-section-${id}`}
-      className="mb-12 last:mb-0 scroll-mt-20"
+      className="mb-8 last:mb-0 scroll-mt-20"
     >
       <header className="mb-6">
         <button
@@ -93,11 +93,17 @@ function ManagePillar({
           </HelpTip>
         </div>
       </header>
-      {open && (
-        <div className="pl-6 border-l border-border/60 ml-0.5 mt-4">
-          {children}
+      <div
+        className="grid transition-[grid-template-rows] duration-150 ease-out"
+        style={{ gridTemplateRows: open ? '1fr' : '0fr' }}
+        data-expanded={open}
+      >
+        <div className="overflow-hidden" aria-hidden={!open}>
+          <div className="pl-6 border-l border-border/60 ml-0.5 mt-4">
+            {children}
+          </div>
         </div>
-      )}
+      </div>
     </section>
   );
 }
@@ -135,8 +141,8 @@ export function ManageView() {
 
   return (
     <WorkspacePage className="overflow-y-auto" maxWidth="max-w-[880px]">
-      <WorkspacePageSection className="flex-1 py-10">
-        <div className="mb-10">
+      <WorkspacePageSection className="flex-1 py-8">
+        <div className="mb-6">
           <SectionNav sectionRefs={sectionRefs} />
         </div>
 

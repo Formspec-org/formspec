@@ -305,11 +305,11 @@ describe('InlineToolbar — Field', () => {
     expect(screen.queryByTestId('toolbar-widget')).toBeNull();
   });
 
-  it('calls onSetProp with widget value when dropdown changes', () => {
+  it('calls onSetProp with component type when widget dropdown changes', () => {
     const onSetProp = vi.fn();
     render(<InlineToolbar {...makeFieldProps({ itemType: 'field', itemDataType: 'string', onSetProp })} />);
     fireEvent.change(screen.getByTestId('toolbar-widget'), { target: { value: 'TextArea' } });
-    expect(onSetProp).toHaveBeenCalledWith('widget', 'TextArea');
+    expect(onSetProp).toHaveBeenCalledWith('component', 'TextArea');
   });
 
   it('renders span stepper when parent is a grid', () => {

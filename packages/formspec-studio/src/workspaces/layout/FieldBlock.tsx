@@ -1,5 +1,5 @@
 /** @filedesc Layout canvas block for bound fields — label edit, read-only definition copy + Editor link, drag/resize, inline toolbar. */
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
 import { useDraggable } from '@dnd-kit/react';
 import { dataTypeInfo, hasTier3Content } from '@formspec-org/studio-core';
 import { DragHandle } from '../../components/ui/DragHandle';
@@ -40,8 +40,10 @@ interface FieldBlockProps {
   /** Item type — 'field' | 'group' | 'display'. */
   itemType?: string;
   selected?: boolean;
+  /** When set, toolbars / inline edits show only on the primary row during multi-select. */
+  layoutPrimaryKey?: string | null;
   index?: number;
-  onSelect?: (selectionKey: string) => void;
+  onSelect?: (ev: MouseEvent | KeyboardEvent, selectionKey: string) => void;
   /** Dot-delimited parent path prefix (e.g. `demographics.`) shown before the key when inline editing. */
   groupPathPrefix?: string | null;
   /** Tier 1 definition copy — shown as inline summary rows when selected. */
@@ -85,6 +87,7 @@ export function FieldBlock({
   dataType,
   itemType = 'field',
   selected = false,
+  layoutPrimaryKey = null,
   index = 0,
   onSelect,
   groupPathPrefix = null,
@@ -203,7 +206,8 @@ export function FieldBlock({
 
   const editable = Boolean(onRenameDefinitionItem);
   const effectiveSelected = selected && !isDragging;
-  const showEditMark = effectiveSelected && editable;
+  const isToolbarPrimary = layoutPrimaryKey == null || layoutPrimaryKey === selectionKey;
+  const showEditMark = effectiveSelected && editable && isToolbarPrimary;
 
   useEffect(() => {
     if (!activeIdentityField) {
@@ -217,7 +221,7 @@ export function FieldBlock({
     }
   }, [selected]);
 
-  const showToolbar = selected && !!onSetProp && !!selectionKey;
+  const showToolbar = selected && isToolbarPrimary && !!onSetProp && !!selectionKey;
 
   const openLabelEditor = () => {
     setDraftLabel(label?.trim() ? label.trim() : '');
@@ -283,7 +287,7 @@ export function FieldBlock({
   const renderIdentity = () => {
     const headlineUnselected = label?.trim() || itemKey;
 
-    if (!effectiveSelected || !editable) {
+    if (!effectiveSelected || !editable || !isToolbarPrimary) {
       return (
         <>
           <div className="min-w-0 text-[19px] font-semibold leading-tight tracking-tight text-ink md:text-[21px]">
@@ -342,17 +346,18 @@ export function FieldBlock({
       data-layout-node-type="field"
       data-layout-bind={bindPath}
       data-layout-tree-bind={itemKey}
+      data-layout-select-key={selectionKey}
       style={gridStyle}
       className={shellClasses}
       onClick={(e) => {
         if (targetStopsSelect(e.target)) return;
-        onSelect?.(selectionKey);
+        onSelect?.(e, selectionKey);
       }}
       onKeyDown={(e) => {
         if (targetStopsSelect(e.target)) return;
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          onSelect?.(selectionKey);
+          onSelect?.(e, selectionKey);
         }
       }}
     >

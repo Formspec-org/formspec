@@ -13,6 +13,7 @@ interface AddItemPaletteProps {
   onClose: () => void;
   onAdd: (option: FieldTypeOption) => void;
   title?: string;
+  /** `editor` = fields + groups (definition). `layout` = display + layout components only — no definition items. */
   scope?: 'all' | 'editor' | 'layout';
 }
 
@@ -29,14 +30,16 @@ export function AddItemPalette({ open, onClose, onAdd, title, scope = 'all' }: A
   const [activeIdx, setActiveIdx] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
-  const availableTabs = scope === 'editor'
-    ? ([] as const)
-    : ([
-        { id: 'all', label: 'All' },
-        { id: 'field', label: 'Inputs' },
-        { id: 'layout', label: 'Layout' },
-        { id: 'display', label: 'Display' },
-      ] as const);
+  // Editor: definition items (fields + groups). Layout: presentation tree only (no fields or groups).
+  const availableTabs =
+    scope === 'editor' || scope === 'layout'
+      ? ([] as const)
+      : ([
+          { id: 'all', label: 'All' },
+          { id: 'field', label: 'Inputs' },
+          { id: 'layout', label: 'Layout' },
+          { id: 'display', label: 'Display' },
+        ] as const);
 
   // Reset state when opened
   useEffect(() => {
@@ -49,7 +52,7 @@ export function AddItemPalette({ open, onClose, onAdd, title, scope = 'all' }: A
   }, [open]);
 
   useEffect(() => {
-    if (scope === 'editor' && activeTab !== 'all') {
+    if ((scope === 'editor' || scope === 'layout') && activeTab !== 'all') {
       setActiveTab('all');
     }
   }, [activeTab, scope]);
@@ -58,6 +61,10 @@ export function AddItemPalette({ open, onClose, onAdd, title, scope = 'all' }: A
     if (scope === 'editor') {
       // Editor scope: fields and groups only — no layout containers or display/content items.
       if (opt.itemType === 'layout' || opt.itemType === 'display') return false;
+    }
+    if (scope === 'layout') {
+      // Layout workspace: Tier-3 layout nodes + display chrome — groups/fields live in the Editor definition.
+      if (opt.itemType === 'field' || opt.itemType === 'group') return false;
     }
     return true;
   });
@@ -123,7 +130,12 @@ export function AddItemPalette({ open, onClose, onAdd, title, scope = 'all' }: A
 
   // Group by category (only when not searching)
   const showGrouped = query.trim() === '';
-  const searchPlaceholder = scope === 'editor' ? 'Search inputs and groups...' : 'Search types...';
+  const searchPlaceholder =
+    scope === 'editor'
+      ? 'Search inputs and groups...'
+      : scope === 'layout'
+        ? 'Search layout and content...'
+        : 'Search types...';
   const grouped = showGrouped
     ? CATEGORIES
         .slice()
@@ -208,7 +220,11 @@ export function AddItemPalette({ open, onClose, onAdd, title, scope = 'all' }: A
         {/* Results */}
         <div ref={listRef} className="overflow-y-auto flex-1 p-3">
           {filtered.length === 0 ? (
-            <div className="py-8 text-center text-sm text-muted">No field types match &ldquo;{query}&rdquo;</div>
+            <div className="py-8 text-center text-sm text-muted">
+              {scope === 'layout'
+                ? <>Nothing matches &ldquo;{query}&rdquo;</>
+                : <>No field types match &ldquo;{query}&rdquo;</>}
+            </div>
           ) : (
             grouped.map(({ cat, items }, groupIdx) => (
               <div key={cat} className="mb-4 last:mb-0">

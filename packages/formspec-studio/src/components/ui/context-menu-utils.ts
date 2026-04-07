@@ -27,3 +27,30 @@ export function clampContextMenuPosition(x: number, y: number) {
     y: Math.min(Math.max(0, y), maxY),
   };
 }
+
+const DROPDOWN_GAP = 4;
+
+/**
+ * Position a dropdown so its top-left sits below the anchor (or above if needed),
+ * horizontally aligned with the anchor and at least as wide as `minMenuWidth` or the anchor.
+ */
+export function getAnchoredDropdownPosition(
+  anchor: DOMRect,
+  opts?: { minMenuWidth?: number; estimatedHeight?: number },
+): { x: number; y: number; width: number } {
+  const minMenuWidth = opts?.minMenuWidth ?? 180;
+  const estimatedHeight = opts?.estimatedHeight ?? 220;
+  const width = Math.max(minMenuWidth, anchor.width);
+
+  let x = anchor.left;
+  x = Math.min(Math.max(0, x), Math.max(0, window.innerWidth - width));
+
+  let y = anchor.bottom + DROPDOWN_GAP;
+  const roomBelow = window.innerHeight - y - DROPDOWN_GAP;
+  if (roomBelow < estimatedHeight && anchor.top > estimatedHeight + DROPDOWN_GAP) {
+    y = anchor.top - estimatedHeight - DROPDOWN_GAP;
+  }
+  y = Math.min(Math.max(DROPDOWN_GAP, y), Math.max(DROPDOWN_GAP, window.innerHeight - estimatedHeight));
+
+  return { x, y, width };
+}

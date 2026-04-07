@@ -176,7 +176,10 @@ export function ThemeOverridePopover({
   if (!open) return null;
 
   const props = getEditableThemeProperties(project, itemKey);
-  const item = project.itemAt(itemKey) as { type?: string; dataType?: string } | undefined;
+  const item =
+    typeof project.itemAt === 'function'
+      ? (project.itemAt(itemKey) as { type?: string; dataType?: string } | undefined)
+      : undefined;
   const itemType = item?.type ?? 'field';
   const itemDataType = item?.dataType;
 

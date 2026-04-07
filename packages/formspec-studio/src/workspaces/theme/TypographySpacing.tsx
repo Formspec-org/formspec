@@ -1,11 +1,9 @@
-/** @filedesc Theme tab section for editing typography, spacing scale, and border design tokens. */
+/** @filedesc Theme tab section for editing typography, spacing scale, and radius design tokens. */
 import { useTheme } from '../../state/useTheme';
 import { useProject } from '../../state/useProject';
 
 const TYPOGRAPHY_FIELDS = [
-  { key: 'typography.fontFamily', label: 'Font Family', placeholder: 'e.g. Inter, system-ui' },
-  { key: 'typography.monoFamily', label: 'Mono Font', placeholder: 'e.g. JetBrains Mono' },
-  { key: 'typography.fontSize', label: 'Base Font Size', placeholder: 'e.g. 14px' },
+  { key: 'font.family', label: 'Font Family', placeholder: 'e.g. Inter, system-ui' },
 ];
 
 const SPACING_FIELDS = [
@@ -14,11 +12,12 @@ const SPACING_FIELDS = [
   { key: 'spacing.md', label: 'MD' },
   { key: 'spacing.lg', label: 'LG' },
   { key: 'spacing.xl', label: 'XL' },
+  { key: 'spacing.field', label: 'Field' },
 ];
 
-const BORDER_FIELDS = [
-  { key: 'border.radius', label: 'Border Radius', placeholder: 'e.g. 4px' },
-  { key: 'border.width', label: 'Border Width', placeholder: 'e.g. 1px' },
+const RADIUS_FIELDS = [
+  { key: 'radius.sm', label: 'Radius SM', placeholder: 'e.g. 0.5rem' },
+  { key: 'radius.md', label: 'Radius MD', placeholder: 'e.g. 1rem' },
 ];
 
 function TokenInput({
@@ -89,7 +88,7 @@ export function TypographySpacing() {
       {/* Spacing */}
       <div className="space-y-3">
         <h4 className="text-[12px] font-bold text-muted uppercase tracking-wider">Spacing</h4>
-        <div className="grid grid-cols-5 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           {SPACING_FIELDS.map((f) => (
             <TokenInput
               key={f.key}
@@ -103,11 +102,11 @@ export function TypographySpacing() {
         </div>
       </div>
 
-      {/* Borders */}
+      {/* Radius */}
       <div className="space-y-3">
-        <h4 className="text-[12px] font-bold text-muted uppercase tracking-wider">Borders</h4>
+        <h4 className="text-[12px] font-bold text-muted uppercase tracking-wider">Radius</h4>
         <div className="grid grid-cols-2 gap-3">
-          {BORDER_FIELDS.map((f) => (
+          {RADIUS_FIELDS.map((f) => (
             <TokenInput
               key={f.key}
               tokenKey={f.key}

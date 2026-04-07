@@ -54,8 +54,8 @@ export function useResizeHandle(options: UseResizeHandleOptions) {
   const onPointerDown = useCallback(
     (e: React.PointerEvent) => {
       // Stop propagation so dnd-kit doesn't start a reorder drag
-      e.preventDefault();
-      e.stopPropagation();
+      e.preventDefault?.();
+      e.stopPropagation?.();
       e.currentTarget.setPointerCapture(e.pointerId);
       setIsDragging(true);
       setDragValue(initialValue);

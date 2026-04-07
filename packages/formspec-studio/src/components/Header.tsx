@@ -140,7 +140,7 @@ export function Header({
       ref={(node) => {
         tabRefs.current[index] = node;
       }}
-      className={`px-3 sm:px-3.5 h-full text-[13px] transition-colors border-b-2 cursor-pointer whitespace-nowrap shrink-0 ${
+      className={`flex items-center px-3 sm:px-3.5 h-full text-[13px] transition-colors border-b-2 cursor-pointer whitespace-nowrap shrink-0 ${
         activeTab === name
           ? 'border-accent text-accent font-semibold'
           : 'border-transparent text-muted hover:text-ink'
@@ -226,13 +226,13 @@ export function Header({
   );
 
   const actionButtons = (
-    <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+    <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
       {/* Search — icon-only on compact, full bar on wide */}
       {isCompact ? (
         <button
           onClick={onSearch}
           aria-label="Search"
-          className="p-1.5 rounded hover:bg-subtle transition-colors"
+          className="rounded-full border border-border/65 bg-surface/70 p-2 text-muted hover:bg-surface hover:text-ink transition-colors"
           title="Search (⌘K)"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
@@ -240,11 +240,11 @@ export function Header({
       ) : (
         <button
           onClick={onSearch}
-          className="flex items-center gap-2 bg-subtle border border-border rounded-[4px] px-3 py-1.5 max-w-[240px] text-muted hover:border-muted/40 transition-colors group"
+          className="group flex items-center gap-2 rounded-full border border-border/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(246,237,226,0.88))] dark:bg-[linear-gradient(180deg,rgba(32,44,59,0.9),rgba(26,35,47,0.88))] px-4 py-2 max-w-[260px] text-muted shadow-[0_10px_25px_rgba(23,32,51,0.06)] dark:shadow-[0_12px_26px_rgba(0,0,0,0.28)] hover:border-muted/50 hover:text-ink transition-colors"
         >
-          <span className="text-[13px]">🔍</span>
+          <span className="text-[13px]">⌕</span>
           <span className="text-[13px] font-ui">Search…</span>
-          <span className="ml-auto font-mono text-[11px] border border-border rounded-[2px] px-1.5 py-0.5 group-hover:bg-surface transition-colors">
+          <span className="ml-auto rounded-full border border-border/70 px-2 py-0.5 font-mono text-[11px] group-hover:bg-surface transition-colors">
             ⌘K
           </span>
         </button>
@@ -254,7 +254,7 @@ export function Header({
         <button
           type="button"
           aria-label={`FORMSPEC ${definition.$formspec} metadata`}
-          className="px-3 py-1.5 text-[12.5px] font-medium rounded-[4px] border border-border hover:bg-subtle transition-colors"
+          className="rounded-full border border-border/75 px-3.5 py-2 text-[12.5px] font-medium text-ink/88 hover:bg-surface/70 transition-colors"
           onClick={onOpenMetadata}
         >
           Metadata
@@ -264,7 +264,7 @@ export function Header({
         data-testid="undo-btn"
         aria-label="Undo"
         disabled={!project.canUndo}
-        className="p-1.5 rounded hover:bg-subtle disabled:opacity-30 transition-colors"
+        className="rounded-full border border-transparent p-2 text-muted hover:border-border/60 hover:bg-surface/75 hover:text-ink disabled:opacity-30 transition-colors"
         onClick={() => project.undo()}
         title="Undo (⌘Z)"
       >
@@ -274,7 +274,7 @@ export function Header({
         data-testid="redo-btn"
         aria-label="Redo"
         disabled={!project.canRedo}
-        className="p-1.5 rounded hover:bg-subtle disabled:opacity-30 transition-colors"
+        className="rounded-full border border-transparent p-2 text-muted hover:border-border/60 hover:bg-surface/75 hover:text-ink disabled:opacity-30 transition-colors"
         onClick={() => project.redo()}
         title="Redo (⌘⇧Z)"
       >
@@ -286,7 +286,7 @@ export function Header({
           type="button"
           data-testid="toggle-chat"
           aria-label="Toggle AI chat"
-          className="p-1.5 rounded hover:bg-subtle transition-colors"
+          className="rounded-full border border-transparent p-2 text-muted hover:border-border/60 hover:bg-surface/75 hover:text-ink transition-colors"
           onClick={onToggleChat}
           title="AI Assistant"
         >
@@ -301,7 +301,7 @@ export function Header({
           type="button"
           aria-label={`Switch to ${nextTheme(colorScheme.theme)} theme`}
           title={`Theme: ${colorScheme.theme} (click to switch to ${nextTheme(colorScheme.theme)})`}
-          className="p-1.5 rounded hover:bg-subtle transition-colors"
+          className="rounded-full border border-transparent p-2 text-muted hover:border-border/60 hover:bg-surface/75 hover:text-ink transition-colors"
           onClick={() => colorScheme.setTheme(nextTheme(colorScheme.theme))}
         >
           <ThemeToggleIcon theme={colorScheme.theme} resolved={colorScheme.resolvedTheme} />
@@ -317,12 +317,12 @@ export function Header({
     return (
       <div data-testid="header" className="shrink-0 bg-surface border-b border-border">
         {/* Row 1: Logo + Title + Actions */}
-        <div className="flex items-center h-[44px] px-3 gap-4">
+        <div className="flex items-center min-h-[56px] px-3 gap-4 bg-[linear-gradient(180deg,rgba(255,251,245,0.95),rgba(247,239,228,0.92))] dark:bg-[linear-gradient(180deg,rgba(26,35,47,0.96),rgba(32,44,59,0.92))]">
           {onToggleMenu && (
             <button
               type="button"
               aria-label="Toggle blueprint menu"
-              className="p-1.5 -ml-1.5 rounded hover:bg-subtle transition-colors"
+              className="rounded-full border border-border/60 bg-surface/75 p-2 -ml-1.5 hover:bg-surface transition-colors"
               onClick={onToggleMenu}
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -338,16 +338,16 @@ export function Header({
             className="flex items-center gap-2.5 shrink-0 text-left"
             onClick={() => { onTabChange('Editor'); onHome?.(); }}
           >
-            <div className="w-6 h-6 bg-accent rounded-[5px] flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 bg-[linear-gradient(160deg,var(--color-accent),color-mix(in_srgb,var(--color-accent)_68%,var(--color-teal)))] rounded-[9px] flex items-center justify-center shrink-0 shadow-[0_12px_30px_rgba(39,87,199,0.24)]">
               <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
                 <rect x="2" y="1.5" width="8" height="2" rx=".4" fill="white" />
                 <rect x="2" y="5" width="8" height="2" rx=".4" fill="white" fillOpacity=".7" />
                 <rect x="2" y="8.5" width="8" height="2" rx=".4" fill="white" fillOpacity=".4" />
               </svg>
             </div>
-            <div className="">
-              <div className="font-bold text-[14px] tracking-tight leading-none whitespace-nowrap">The Stack</div>
-              <div className="font-mono text-[11px] text-muted/85 tracking-wide uppercase whitespace-nowrap">
+            <div>
+              <div className="font-display text-[22px] tracking-[-0.04em] leading-none whitespace-nowrap text-ink">The Stack</div>
+              <div className="font-mono text-[11px] text-muted/85 tracking-[0.22em] uppercase whitespace-nowrap">
                 FORMSPEC {definition.$formspec} · {definition.status || 'DRAFT'}
               </div>
             </div>
@@ -357,7 +357,7 @@ export function Header({
         </div>
 
         {/* Row 2: Scrollable tab strip */}
-        <nav className="flex h-[36px] overflow-x-auto scrollbar-none px-3" role="tablist" aria-label="Studio workspaces">
+        <nav className="flex h-[42px] overflow-x-auto scrollbar-none border-t border-border/40 px-3 bg-[linear-gradient(180deg,rgba(255,253,249,0.8),rgba(255,248,239,0.72))] dark:bg-[linear-gradient(180deg,rgba(26,35,47,0.88),rgba(23,32,46,0.82))]" role="tablist" aria-label="Studio workspaces">
           {tabButtons}
         </nav>
       </div>
@@ -368,32 +368,33 @@ export function Header({
   return (
     <header
       data-testid="header"
-      className="flex items-center h-[50px] px-4 border-b border-border bg-surface shrink-0"
+      className="relative flex min-h-[72px] items-center gap-5 border-b border-border/80 bg-[linear-gradient(180deg,rgba(255,252,247,0.97),rgba(248,240,229,0.94))] dark:bg-[linear-gradient(180deg,rgba(26,35,47,0.97),rgba(23,32,46,0.94))] px-4 py-3 shadow-[0_18px_40px_rgba(103,77,44,0.06)] dark:shadow-[0_18px_42px_rgba(0,0,0,0.26)] shrink-0"
     >
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-[linear-gradient(90deg,transparent,rgba(39,87,199,0.3),transparent)]" />
       {/* Left: App Mark + Title */}
       <button
         type="button"
         aria-label="The Stack home"
-        className="flex items-center gap-2 mr-6 shrink-0 text-left"
+        className="flex items-center gap-3 mr-4 shrink-0 text-left"
         onClick={() => { onTabChange('Editor'); onHome?.(); }}
       >
-        <div className="w-6.5 h-6.5 bg-accent rounded-[6px] flex items-center justify-center shrink-0">
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+        <div className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-[linear-gradient(145deg,var(--color-accent),color-mix(in_srgb,var(--color-accent)_72%,var(--color-teal)))] shadow-[0_20px_40px_rgba(39,87,199,0.24)] shrink-0">
+          <svg width="16" height="16" viewBox="0 0 12 12" fill="none">
             <rect x="2" y="1.5" width="8" height="2" rx=".4" fill="white" />
             <rect x="2" y="5" width="8" height="2" rx=".4" fill="white" fillOpacity=".7" />
             <rect x="2" y="8.5" width="8" height="2" rx=".4" fill="white" fillOpacity=".4" />
           </svg>
         </div>
-        <div>
-          <div className="font-bold text-[15px] tracking-tight leading-none">The Stack</div>
-          <div className="font-mono text-[11px] text-muted tracking-widest uppercase">
+        <div className="space-y-1">
+          <div className="font-display text-[31px] tracking-[-0.05em] leading-none text-ink">The Stack</div>
+          <div className="font-mono text-[11px] text-muted tracking-[0.24em] uppercase">
             FORMSPEC {definition.$formspec} · {definition.status || 'DRAFT'}
           </div>
         </div>
       </button>
 
       {/* Tabs */}
-      <nav className="flex h-full" role="tablist" aria-label="Studio workspaces">
+      <nav className="flex h-12 items-end self-stretch" role="tablist" aria-label="Studio workspaces">
         {tabButtons}
       </nav>
 

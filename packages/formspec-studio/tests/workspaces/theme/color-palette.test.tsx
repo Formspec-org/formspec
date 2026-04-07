@@ -74,7 +74,7 @@ describe('ColorPalette', () => {
   });
 
   it('empty state when no color tokens', () => {
-    renderPalette({ 'typography.fontFamily': 'Inter' });
+    renderPalette({ 'font.family': 'Inter' });
     expect(screen.getByText(/no color tokens/i)).toBeInTheDocument();
   });
 

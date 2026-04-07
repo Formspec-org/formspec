@@ -15,6 +15,7 @@ import { FormHealthPanel } from '../workspaces/editor/FormHealthPanel';
 import { BuildManageToggle, type EditorView } from '../workspaces/editor/BuildManageToggle';
 import { MappingTab } from '../workspaces/mapping/MappingTab';
 import { PreviewTab } from '../workspaces/preview/PreviewTab';
+import { LayoutLivePreviewSection } from '../workspaces/layout/LayoutLivePreviewSection';
 import { CommandPalette } from './CommandPalette';
 import { ImportDialog } from './ImportDialog';
 import { ChatPanel } from './ChatPanel';
@@ -131,7 +132,7 @@ function BlueprintSidebarInner({
   return (
     <aside
       data-testid="blueprint-sidebar"
-      className={`border-r border-border/80 bg-surface overflow-y-auto flex flex-col shrink-0 ${compactLayout ? 'hidden' : ''}`}
+      className={`overflow-y-auto flex flex-col shrink-0 border-r border-border/70 bg-[linear-gradient(180deg,rgba(255,252,247,0.94),rgba(248,241,231,0.88))] dark:bg-[linear-gradient(180deg,rgba(26,35,47,0.94),rgba(32,44,59,0.92))] backdrop-blur-sm ${compactLayout ? 'hidden' : ''}`}
       style={{ width: `clamp(140px, ${leftWidth}px, calc(50vw - 340px))` }}
       aria-label="Blueprint sidebar"
     >
@@ -159,6 +160,7 @@ export function Shell({ colorScheme }: ShellProps = {}) {
   const [showChatPanel, setShowChatPanel] = useState(false);
   const [showHealthSheet, setShowHealthSheet] = useState(false);
   const [showRightPanel, setShowRightPanel] = useState(true);
+  const [showLayoutPreviewPanel, setShowLayoutPreviewPanel] = useState(true);
   const [chatPrompt, setChatPrompt] = useState<string | null>(null);
   const [isTabletLayout, setIsTabletLayout] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 1024);
   const [leftWidth, setLeftWidth] = useState(214);
@@ -219,6 +221,17 @@ export function Shell({ colorScheme }: ShellProps = {}) {
   }, [activeSection, resolvedActiveSection]);
 
   const hasScreener = project.state.screener !== null;
+  const shellBackgroundImage = colorScheme?.resolvedTheme === 'dark'
+    ? [
+        'radial-gradient(circle at 0% 0%, rgba(123,161,255,0.13), transparent 26%)',
+        'radial-gradient(circle at 100% 0%, rgba(131,216,219,0.11), transparent 28%)',
+        'linear-gradient(180deg, rgba(19,24,33,0.96), rgba(23,32,46,0.98) 34%, rgba(27,38,54,0.94) 100%)',
+      ].join(', ')
+    : [
+        'radial-gradient(circle at 0% 0%, rgba(183,121,31,0.12), transparent 26%)',
+        'radial-gradient(circle at 100% 0%, rgba(47,107,126,0.12), transparent 28%)',
+        'linear-gradient(180deg, rgba(255,249,241,0.8), rgba(246,240,232,0.96) 34%, rgba(241,232,220,0.82) 100%)',
+      ].join(', ');
 
   const workspaceContent = (() => {
     if (activeTab === 'Editor') {
@@ -322,7 +335,11 @@ export function Shell({ colorScheme }: ShellProps = {}) {
   useEffect(() => {
     const onNavigateWorkspace = (event: Event) => {
       const detail = (event as CustomEvent<{ tab?: string; subTab?: string; view?: EditorView; section?: string }>).detail ?? {};
-      const { tab, subTab, view, section } = detail;
+      let { tab, subTab, view, section } = detail;
+      // Theme workspace was merged into Layout (theme authoring sidebar + Layout/Theme mode toggle).
+      if (tab === 'Theme') {
+        tab = 'Layout';
+      }
       if (tab && (tab === 'Editor' || WORKSPACES[tab])) {
         setActiveTab(tab);
         if (tab === 'Editor' && view) {
@@ -332,6 +349,7 @@ export function Shell({ colorScheme }: ShellProps = {}) {
           if (tab === 'Mapping') setActiveMappingTab(subTab as MappingTabId);
         }
         if (section) {
+          setActiveSection(section);
           window.dispatchEvent(new CustomEvent('formspec:scroll-to-section', {
             detail: { section },
           }));
@@ -433,7 +451,11 @@ export function Shell({ colorScheme }: ShellProps = {}) {
   };
 
   return (
-    <div data-testid="shell" className="relative h-screen flex flex-col overflow-hidden bg-bg-default text-ink font-ui">
+    <div
+      data-testid="shell"
+      className="relative flex h-screen flex-col overflow-hidden bg-bg-default text-ink font-ui"
+      style={{ backgroundImage: shellBackgroundImage }}
+    >
       <Header
         activeTab={activeTab}
         onTabChange={setActiveTab}
@@ -452,7 +474,10 @@ export function Shell({ colorScheme }: ShellProps = {}) {
       <OpenDefinitionInEditorProvider value={openDefinitionInEditor}>
       <LayoutModeProvider>
       <CanvasTargetsProvider>
-        <div className={`flex flex-1 overflow-hidden bg-bg-default ${activeTab === 'Editor' ? 'bg-[linear-gradient(180deg,rgba(255,255,255,0.82)_0%,rgba(246,243,238,0.9)_100%)] dark:bg-none' : ''}`} aria-hidden={overlayOpen ? true : undefined}>
+        <div
+          className={`flex flex-1 overflow-hidden ${activeTab === 'Editor' ? 'bg-[linear-gradient(180deg,rgba(255,252,247,0.42)_0%,rgba(244,235,224,0.7)_100%)] dark:bg-[linear-gradient(180deg,rgba(26,35,47,0.38)_0%,rgba(20,28,39,0.74)_100%)]' : ''}`}
+          aria-hidden={overlayOpen ? true : undefined}
+        >
           {/* Desktop Left Sidebar */}
           <BlueprintSidebarInner
             activeTab={activeTab}
@@ -464,7 +489,7 @@ export function Shell({ colorScheme }: ShellProps = {}) {
           />
           {!compactLayout && <ResizeHandle side="left" onResize={onResizeLeft} />}
 
-          <main className="flex-1 overflow-y-auto bg-bg-default min-w-0 shrink-0">
+          <main className="flex-1 overflow-y-auto min-w-0 shrink-0 bg-[linear-gradient(180deg,rgba(255,252,247,0.66),rgba(246,238,227,0.92))] dark:bg-[linear-gradient(180deg,rgba(26,35,47,0.74),rgba(19,24,33,0.94))]">
             <div
               id={activePanelId}
               role="tabpanel"
@@ -477,7 +502,7 @@ export function Shell({ colorScheme }: ShellProps = {}) {
               }}
             >
               {compactLayout && activeTab === 'Editor' && (
-                <div className="sticky top-0 z-20 border-b border-border/70 bg-surface/95 px-3 py-3 backdrop-blur" data-testid="mobile-editor-chrome">
+                <div className="sticky top-0 z-20 border-b border-border/70 bg-[linear-gradient(180deg,rgba(255,252,247,0.94),rgba(248,241,231,0.9))] dark:bg-[linear-gradient(180deg,rgba(26,35,47,0.94),rgba(32,44,59,0.9))] px-3 py-3 backdrop-blur" data-testid="mobile-editor-chrome">
                   <div className="flex items-center justify-between">
                     <div data-testid="mobile-selection-context" className="min-h-10 flex-1 rounded-[14px] border border-border/60 bg-bg-default/75 px-3 py-2">
                       <div className="text-[10px] font-mono uppercase tracking-[0.16em] text-muted">Selected</div>
@@ -501,7 +526,7 @@ export function Shell({ colorScheme }: ShellProps = {}) {
               <div
                 data-testid={activeTab === 'Editor' ? 'editor-canvas-shell' : undefined}
                 className={activeTab === 'Editor'
-                  ? 'flex-1 px-3 py-3 md:px-6 md:py-4 xl:px-8'
+                  ? 'flex-1 px-3 py-3 md:px-6 md:py-5 xl:px-8'
                   : 'flex-1'}
                 onClick={activeTab === 'Editor'
                   ? (event) => {
@@ -511,13 +536,13 @@ export function Shell({ colorScheme }: ShellProps = {}) {
               >
                 {compactLayout && activeTab === 'Editor' ? (
                   <div data-testid="mobile-editor-structure" className="space-y-3">
-                    <div className="rounded-[18px] border border-border/70 bg-surface px-3 py-3 shadow-sm">
+                    <div className="rounded-[24px] border border-border/70 bg-[linear-gradient(180deg,rgba(255,253,249,0.95),rgba(249,242,232,0.92))] dark:bg-[linear-gradient(180deg,rgba(26,35,47,0.95),rgba(32,44,59,0.94))] px-3 py-3 shadow-[0_20px_45px_rgba(77,57,30,0.08)] dark:shadow-[0_20px_45px_rgba(0,0,0,0.28)]">
                       <Blueprint activeSection={resolvedActiveSection} onSectionChange={setActiveSection} sections={visibleBlueprintSections} activeEditorView={activeEditorView} activeTab={activeTab} />
                     </div>
-                    <div className="rounded-[18px] border border-border/70 bg-surface px-3 py-3 shadow-sm">
+                    <div className="rounded-[24px] border border-border/70 bg-[linear-gradient(180deg,rgba(255,253,249,0.95),rgba(249,242,232,0.92))] dark:bg-[linear-gradient(180deg,rgba(26,35,47,0.95),rgba(32,44,59,0.94))] px-3 py-3 shadow-[0_20px_45px_rgba(77,57,30,0.08)] dark:shadow-[0_20px_45px_rgba(0,0,0,0.28)]">
                       {SidebarComponent && <SidebarComponent />}
                     </div>
-                    <div className="rounded-[18px] border border-border/70 bg-surface px-2 py-2 shadow-sm">
+                    <div className="rounded-[26px] border border-border/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(249,242,232,0.92))] dark:bg-[linear-gradient(180deg,rgba(26,35,47,0.96),rgba(32,44,59,0.95))] px-2 py-2 shadow-[0_24px_60px_rgba(77,57,30,0.1)] dark:shadow-[0_24px_60px_rgba(0,0,0,0.32)]">
                       {workspaceContent}
                     </div>
                   </div>
@@ -532,7 +557,7 @@ export function Shell({ colorScheme }: ShellProps = {}) {
               <>
                 <ResizeHandle side="right" onResize={onResizeRight} />
                 <aside
-                  className="flex flex-col border-l border-border/80 bg-surface overflow-hidden shrink-0"
+                  className="flex flex-col overflow-hidden shrink-0 border-l border-border/70 bg-[linear-gradient(180deg,rgba(255,252,247,0.95),rgba(246,238,227,0.9))] dark:bg-[linear-gradient(180deg,rgba(26,35,47,0.94),rgba(32,44,59,0.92))]"
                   style={{ width: `clamp(200px, ${rightWidth}px, calc(50vw - 340px))` }}
                   data-testid="properties-panel"
                   aria-label="Form health panel"
@@ -556,8 +581,46 @@ export function Shell({ colorScheme }: ShellProps = {}) {
               <button
                 type="button"
                 aria-label="Show form health panel"
-                className="shrink-0 border-l border-border/80 bg-surface px-1.5 py-3 text-muted hover:text-ink hover:bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+                className="shrink-0 border-l border-border/70 bg-[linear-gradient(180deg,rgba(255,252,247,0.95),rgba(246,238,227,0.9))] dark:bg-[linear-gradient(180deg,rgba(26,35,47,0.94),rgba(32,44,59,0.92))] px-1.5 py-3 text-muted hover:text-ink hover:bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
                 onClick={() => setShowRightPanel(true)}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+              </button>
+            )
+          )}
+          {activeTab === 'Layout' && !compactLayout && !showChatPanel && (
+            showLayoutPreviewPanel ? (
+              <>
+                <ResizeHandle side="right" onResize={onResizeRight} />
+                <aside
+                  className="flex flex-col overflow-hidden shrink-0 border-l border-border/70 bg-[linear-gradient(180deg,rgba(255,252,247,0.95),rgba(246,238,227,0.9))] dark:bg-[linear-gradient(180deg,rgba(26,35,47,0.94),rgba(32,44,59,0.92))]"
+                  style={{ width: `clamp(280px, ${rightWidth}px, calc(50vw - 260px))` }}
+                  data-testid="layout-preview-panel"
+                  aria-label="Layout live preview"
+                >
+                  <div className="flex items-center justify-end px-3 pt-2 shrink-0">
+                    <button
+                      type="button"
+                      aria-label="Hide layout preview panel"
+                      className="rounded p-1 text-muted hover:text-ink hover:bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+                      onClick={() => setShowLayoutPreviewPanel(false)}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                    </button>
+                  </div>
+                  <div className="flex-1 min-h-0 px-3 pb-3">
+                    <div className="h-full overflow-hidden rounded-[22px] border border-border/70 bg-surface/80 shadow-[0_18px_40px_rgba(23,32,51,0.08)] dark:shadow-[0_18px_36px_rgba(0,0,0,0.24)]">
+                      <LayoutLivePreviewSection width="100%" className="h-full" />
+                    </div>
+                  </div>
+                </aside>
+              </>
+            ) : (
+              <button
+                type="button"
+                aria-label="Show layout preview panel"
+                className="shrink-0 border-l border-border/70 bg-[linear-gradient(180deg,rgba(255,252,247,0.95),rgba(246,238,227,0.9))] dark:bg-[linear-gradient(180deg,rgba(26,35,47,0.94),rgba(32,44,59,0.92))] px-1.5 py-3 text-muted hover:text-ink hover:bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+                onClick={() => setShowLayoutPreviewPanel(true)}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
               </button>

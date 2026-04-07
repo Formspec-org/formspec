@@ -29,6 +29,7 @@ export default defineConfig({
       '@formspec-org/engine/fel-tools': path.resolve(repoRoot, 'packages/formspec-engine/src/fel/fel-api-tools.ts'),
       '@formspec-org/engine': path.resolve(repoRoot, 'packages/formspec-engine/src/index.ts'),
       '@formspec-org/layout/default-theme': path.resolve(repoRoot, 'packages/formspec-layout/src/default-theme.json'),
+      '@formspec-org/layout/token-registry': path.resolve(repoRoot, 'packages/formspec-layout/src/token-registry.json'),
       '@formspec-org/layout': path.resolve(repoRoot, 'packages/formspec-layout/src/index.ts'),
       '@formspec-org/chat': path.resolve(repoRoot, 'packages/formspec-chat/src/index.ts'),
       '@formspec-org/mcp/dispatch': path.resolve(repoRoot, 'packages/formspec-mcp/src/dispatch.ts'),

@@ -23,18 +23,18 @@ function renderTypography(tokens?: Record<string, unknown>) {
 
 describe('TypographySpacing', () => {
   it('renders font family input with current value', () => {
-    renderTypography({ 'typography.fontFamily': 'Inter' });
+    renderTypography({ 'font.family': 'Inter' });
     expect(screen.getByDisplayValue('Inter')).toBeInTheDocument();
   });
 
   it('font change dispatches theme.setToken', async () => {
-    const { project } = renderTypography({ 'typography.fontFamily': 'Inter' });
+    const { project } = renderTypography({ 'font.family': 'Inter' });
     const input = screen.getByDisplayValue('Inter');
     await act(async () => {
       fireEvent.change(input, { target: { value: 'Roboto' } });
       fireEvent.blur(input);
     });
-    expect((project.export().theme as any).tokens['typography.fontFamily']).toBe('Roboto');
+    expect((project.export().theme as any).tokens['font.family']).toBe('Roboto');
   });
 
   it('spacing values render as editable inputs', () => {
@@ -54,14 +54,14 @@ describe('TypographySpacing', () => {
     expect((project.export().theme as any).tokens['spacing.md']).toBe('12px');
   });
 
-  it('border radius input dispatches correctly', async () => {
-    const { project } = renderTypography({ 'border.radius': '4px' });
+  it('radius input dispatches correctly', async () => {
+    const { project } = renderTypography({ 'radius.sm': '4px' });
     const input = screen.getByDisplayValue('4px');
     await act(async () => {
       fireEvent.change(input, { target: { value: '8px' } });
       fireEvent.blur(input);
     });
-    expect((project.export().theme as any).tokens['border.radius']).toBe('8px');
+    expect((project.export().theme as any).tokens['radius.sm']).toBe('8px');
   });
 
   it('shows placeholders when tokens not set', () => {

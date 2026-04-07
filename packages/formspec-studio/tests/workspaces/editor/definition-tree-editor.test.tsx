@@ -93,7 +93,8 @@ describe('DefinitionTreeEditor', () => {
     expect(row.getByTestId('field-email-category-Visibility')).toBeInTheDocument();
     fireEvent.click(row.getByTestId('field-email-category-Visibility'));
     expect(row.getByRole('region', { name: 'Field details' })).toBeInTheDocument();
-    expect(row.getByRole('button', { name: /Add visibility condition/i })).toBeInTheDocument();
+    // Visibility click auto-creates an empty relevant bind and opens the expression editor.
+    expect(row.getByPlaceholderText('Click to add expression')).toBeInTheDocument();
   });
 
   it('hides empty description and hint rows when unselected', () => {
@@ -242,7 +243,7 @@ describe('DefinitionTreeEditor', () => {
     expect(statusRow.getByText('linked')).toBeInTheDocument();
   });
 
-  it('always shows exactly four fixed category slots for fields regardless of data richness', () => {
+  it('unselected fields only show non-empty category slots; selected fields show all four', () => {
     renderTree({
       $formspec: '1.0', url: 'urn:tree-summary-cap', version: '1.0.0',
       items: [
@@ -266,6 +267,7 @@ describe('DefinitionTreeEditor', () => {
       ],
     });
 
+    // All four categories have content so all four show even when unselected
     const summary = within(screen.getByTestId('field-amount-summary'));
     const terms = summary.getAllByRole('term');
     expect(terms).toHaveLength(4);
@@ -287,6 +289,26 @@ describe('DefinitionTreeEditor', () => {
     expect(row.getByText('Monthly amount for review.')).toBeInTheDocument();
     expect(row.getByText('Hint')).toBeInTheDocument();
     expect(row.getByText('Use gross income before deductions.')).toBeInTheDocument();
+  });
+
+  it('hides empty category columns for unselected field rows', () => {
+    renderTree({
+      $formspec: '1.0', url: 'urn:tree-empty-cats', version: '1.0.0',
+      items: [
+        { key: 'plain', type: 'field', dataType: 'string', label: 'Plain' },
+      ],
+    });
+
+    // A plain field still shows Visibility="Always", so the summary grid renders with 1 slot
+    const row = within(screen.getByTestId('field-plain'));
+    const summary = within(row.getByTestId('field-plain-summary'));
+    const terms = summary.getAllByRole('term');
+    expect(terms).toHaveLength(1);
+    expect(terms[0]).toHaveTextContent('Visibility');
+    // Validation, Value, Format are empty and hidden when unselected
+    expect(summary.queryByText('Validation')).toBeNull();
+    expect(summary.queryByText('Value')).toBeNull();
+    expect(summary.queryByText('Format')).toBeNull();
   });
 
   it('renders group items as collapsible nodes with children', () => {
@@ -543,7 +565,7 @@ describe('DefinitionTreeEditor', () => {
     expect(screen.getByText('must fill')).toBeInTheDocument();
   });
 
-  it('collapses group children when toggle is clicked', () => {
+  it('groups start collapsed and expand/collapse on toggle click', () => {
     renderTree({
       $formspec: '1.0', url: 'urn:tree-test', version: '1.0.0',
       items: [{
@@ -553,16 +575,18 @@ describe('DefinitionTreeEditor', () => {
         ],
       }],
     });
-    // Child visible by default
+    // Children always in DOM (animated wrapper), but group starts collapsed
     expect(screen.getByText('Child Field')).toBeInTheDocument();
+    const wrapper = screen.getByTestId('group-section-children').parentElement!.parentElement!;
+    expect(wrapper).toHaveStyle({ gridTemplateRows: '0fr' });
 
-    // Click the expand/collapse toggle to collapse
+    // Click toggle to expand
     fireEvent.click(screen.getByTestId('toggle-section'));
-    expect(screen.queryByText('Child Field')).toBeNull();
+    expect(wrapper).toHaveStyle({ gridTemplateRows: '1fr' });
 
-    // Click again to expand
+    // Click again to collapse
     fireEvent.click(screen.getByTestId('toggle-section'));
-    expect(screen.getByText('Child Field')).toBeInTheDocument();
+    expect(wrapper).toHaveStyle({ gridTemplateRows: '0fr' });
   });
 
   it('renders group toggles as visible button controls', () => {
@@ -591,11 +615,12 @@ describe('DefinitionTreeEditor', () => {
       }],
     });
 
-    const toggle = screen.getByRole('button', { name: 'Collapse Section' });
-    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    // Groups start collapsed
+    const toggle = screen.getByRole('button', { name: 'Expand Section' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
 
     fireEvent.click(toggle);
-    expect(screen.getByRole('button', { name: 'Expand Section' })).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByRole('button', { name: 'Collapse Section' })).toHaveAttribute('aria-expanded', 'true');
   });
 
   it('renders an add button on each group row', () => {
@@ -1167,7 +1192,8 @@ describe('DefinitionTreeEditor', () => {
     const selectButton = within(nameRow).getByRole('button', { name: 'Select Full Name' });
 
     fireEvent.click(selectButton);
-    fireEvent.click(within(nameRow).getByTestId('field-name-category-Visibility'));
+    // Validation: no auto-created bind / FELEditor — panel receives focus (Visibility auto-adds relevant + editor focus).
+    fireEvent.click(within(nameRow).getByTestId('field-name-category-Validation'));
 
     const lowerPanel = within(nameRow).getByTestId('field-name-lower-panel');
     expect(lowerPanel).toHaveAttribute('tabindex', '-1');
@@ -1176,13 +1202,13 @@ describe('DefinitionTreeEditor', () => {
     // Click another field to collapse the first one
     const ageRow = screen.getByTestId('field-age');
     fireEvent.click(within(ageRow).getByRole('button', { name: 'Select Age' }));
-    fireEvent.click(within(ageRow).getByTestId('field-age-category-Visibility'));
+    fireEvent.click(within(ageRow).getByTestId('field-age-category-Validation'));
 
     const ageLowerPanel = within(ageRow).getByTestId('field-age-lower-panel');
     expect(document.activeElement).toBe(ageLowerPanel);
   });
 
-  it('shows fixed category slots (Visibility, Validation, Value, Format) for field summary grid', () => {
+  it('unselected fields only show non-empty category slots in the summary grid', () => {
     renderTree({
       $formspec: '1.0', url: 'urn:tree-category-grid-field', version: '1.0.0',
       items: [
@@ -1202,11 +1228,11 @@ describe('DefinitionTreeEditor', () => {
 
     const summary = within(screen.getByTestId('field-amount-summary'));
     const terms = summary.getAllByRole('term');
-    expect(terms).toHaveLength(4);
+    // Value is empty (no calculate/initial/readonly), so only 3 slots show when unselected
+    expect(terms).toHaveLength(3);
     expect(terms[0]).toHaveTextContent('Visibility');
     expect(terms[1]).toHaveTextContent('Validation');
-    expect(terms[2]).toHaveTextContent('Value');
-    expect(terms[3]).toHaveTextContent('Format');
+    expect(terms[2]).toHaveTextContent('Format');
 
     // Values come from buildCategorySummaries
     expect(summary.getByText(/Enabled is Yes/)).toBeInTheDocument();
@@ -1241,7 +1267,7 @@ describe('DefinitionTreeEditor', () => {
     expect(summary.queryByRole('textbox')).toBeNull();
   });
 
-  it('shows "Always" for visibility and em-dash for empty categories on a bare field', () => {
+  it('shows only Visibility "Always" for a bare field when unselected (empty categories hidden)', () => {
     renderTree({
       $formspec: '1.0', url: 'urn:tree-category-defaults', version: '1.0.0',
       items: [
@@ -1250,10 +1276,11 @@ describe('DefinitionTreeEditor', () => {
     });
 
     const summary = within(screen.getByTestId('field-name-summary'));
+    // Only Visibility shows — it has "Always"; Validation/Value/Format are empty and filtered
+    const terms = summary.getAllByRole('term');
+    expect(terms).toHaveLength(1);
+    expect(terms[0]).toHaveTextContent('Visibility');
     expect(summary.getByText('Always')).toBeInTheDocument();
-    // em-dash for empty categories
-    const dashes = summary.getAllByText('\u2014');
-    expect(dashes.length).toBe(3); // Validation, Value, Format
   });
 
   it('scrolls the selected group or field into view when selection changes externally', () => {

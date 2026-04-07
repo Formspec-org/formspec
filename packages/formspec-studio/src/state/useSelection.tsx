@@ -37,6 +37,9 @@ interface SelectionState {
   // Per-tab queries
   selectedKeyForTab: (tab: string) => string | null;
   selectedTypeForTab: (tab: string) => string | null;
+  /** Keys selected in `tab` — use on canvases that are not the selection provider's active tab. */
+  selectedKeysForTab: (tab: string) => Set<string>;
+  isSelectedForTab: (tab: string, key: string) => boolean;
 
   // Inspector focus (e.g. rename on double-click)
   shouldFocusInspector: boolean;
@@ -151,6 +154,14 @@ export function SelectionProvider({ children }: { children: ReactNode }) {
     return getTabState(tab).primaryType;
   }, [getTabState]);
 
+  const selectedKeysForTab = useCallback((tab: string): Set<string> => {
+    return getTabState(tab).selectedKeys;
+  }, [getTabState]);
+
+  const isSelectedForTab = useCallback((tab: string, key: string) => {
+    return getTabState(tab).selectedKeys.has(key);
+  }, [getTabState]);
+
   const consumeFocusInspector = useCallback(() => {
     setFocusInspector(false);
   }, []);
@@ -172,6 +183,8 @@ export function SelectionProvider({ children }: { children: ReactNode }) {
     // Per-tab queries
     selectedKeyForTab,
     selectedTypeForTab,
+    selectedKeysForTab,
+    isSelectedForTab,
     // Inspector focus
     shouldFocusInspector: focusInspector,
     consumeFocusInspector,
@@ -179,6 +192,7 @@ export function SelectionProvider({ children }: { children: ReactNode }) {
     active.selectedKeys, active.primaryKey, active.primaryType,
     select, toggleSelect, rangeSelect,
     deselect, isSelected, selectedKeyForTab, selectedTypeForTab,
+    selectedKeysForTab, isSelectedForTab,
     focusInspector, consumeFocusInspector,
   ]);
 

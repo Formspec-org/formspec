@@ -75,7 +75,7 @@ describe('Blueprint — Layout workspace', () => {
     expect(screen.queryByTestId('blueprint-section-Mappings')).not.toBeInTheDocument();
   });
 
-  it('keeps the same theme blueprint list when switching Layout ↔ Theme workspace mode', async () => {
+  it('uses only the theme authoring blueprint on Layout tab (no separate Theme workspace toggle)', async () => {
     renderLayoutShell();
     await act(async () => {
       goToLayoutTab();
@@ -83,18 +83,8 @@ describe('Blueprint — Layout workspace', () => {
 
     expect(screen.getByTestId('blueprint-section-Colors')).toBeInTheDocument();
     expect(screen.getByTestId('blueprint-section-Typography')).toBeInTheDocument();
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole('radio', { name: 'Theme' }));
-    });
-    expect(screen.getByTestId('blueprint-section-Colors')).toBeInTheDocument();
-    expect(screen.getByTestId('blueprint-section-Typography')).toBeInTheDocument();
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole('radio', { name: 'Layout' }));
-    });
-    expect(screen.getByTestId('blueprint-section-Colors')).toBeInTheDocument();
-    expect(screen.getByTestId('blueprint-section-Typography')).toBeInTheDocument();
+    expect(screen.queryByTestId('layout-theme-toggle')).not.toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: 'Theme' })).not.toBeInTheDocument();
   });
 
   it('does not list Component Tree, Theme, or Mappings on Editor tab', () => {

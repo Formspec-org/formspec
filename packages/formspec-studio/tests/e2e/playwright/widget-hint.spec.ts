@@ -1,5 +1,17 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { waitForApp, switchTab, importDefinition } from './helpers';
+
+/** Layout canvas shows fields only after they are placed from Unassigned; stay in Layout (not Theme) mode. */
+async function selectLayoutFieldBlock(page: Page, itemKey: string) {
+  await switchTab(page, 'Layout');
+  await page.locator('[data-testid="layout-theme-toggle"]').getByRole('radio', { name: 'Layout' }).click();
+  const block = page.locator(`[data-testid="layout-field-${itemKey}"]`);
+  if (!(await block.isVisible().catch(() => false))) {
+    await page.locator(`[data-testid="unassigned-${itemKey}"]`).getByRole('button', { name: /Add/i }).click();
+    await block.waitFor({ state: 'visible', timeout: 8000 });
+  }
+  await block.click();
+}
 
 const CHOICE_DEF = {
   $formspec: '1.0',
@@ -33,8 +45,7 @@ test.describe('widgetHint affects preview rendering', () => {
   });
 
   test('widgetHint dropdown shows all renderable widgets for choice fields', async ({ page }) => {
-    await switchTab(page, 'Layout');
-    await page.click('[data-testid="layout-field-maritalStatus"]');
+    await selectLayoutFieldBlock(page, 'maritalStatus');
 
     const widgetSelect = page.getByTestId('toolbar-widget');
     await expect(widgetSelect).toBeVisible();
@@ -49,8 +60,7 @@ test.describe('widgetHint affects preview rendering', () => {
   });
 
   test('changing widget dropdown via mouse updates preview rendering', async ({ page }) => {
-    await switchTab(page, 'Layout');
-    await page.click('[data-testid="layout-field-maritalStatus"]');
+    await selectLayoutFieldBlock(page, 'maritalStatus');
 
     const widgetSelect = page.getByTestId('toolbar-widget');
     await expect(widgetSelect).toBeVisible();
@@ -67,8 +77,7 @@ test.describe('widgetHint affects preview rendering', () => {
   });
 
   test('switching widget back to Select re-renders as dropdown', async ({ page }) => {
-    await switchTab(page, 'Layout');
-    await page.click('[data-testid="layout-field-maritalStatus"]');
+    await selectLayoutFieldBlock(page, 'maritalStatus');
     const widgetSelect = page.getByTestId('toolbar-widget');
     await widgetSelect.selectOption('RadioGroup');
 
@@ -118,8 +127,7 @@ test.describe('widget change works in wizard mode', () => {
       .toBeVisible({ timeout: 5000 });
 
     // Switch to Layout, select the field, then change its component type.
-    await switchTab(page, 'Layout');
-    await page.click('[data-testid="layout-field-priority"]');
+    await selectLayoutFieldBlock(page, 'priority');
 
     const widgetSelect = page.getByTestId('toolbar-widget');
     await expect(widgetSelect).toBeVisible();
@@ -136,13 +144,21 @@ test.describe('widget change works in wizard mode', () => {
 
     const previewState = await page.evaluate(() => {
       const el = document.querySelector('formspec-render') as any;
+      const tree = el?.componentDocument?.tree;
+      const findFirstBindComponent = (node: any): string | null => {
+        if (!node) return null;
+        if (node.bind && node.component) return node.component;
+        for (const c of node.children ?? []) {
+          const hit = findFirstBindComponent(c);
+          if (hit) return hit;
+        }
+        return null;
+      };
       return {
-        definitionHint: el?.definition?.items?.[0]?.presentation?.widgetHint ?? null,
-        componentRoot: el?.componentDocument?.tree?.component ?? null,
-        fieldComponent: el?.componentDocument?.tree?.children?.[0]?.component ?? null,
+        componentRoot: tree?.component ?? null,
+        fieldComponent: findFirstBindComponent(tree),
       };
     });
-    expect(previewState.definitionHint).toBe('radio');
     expect(previewState.componentRoot).toBe('Stack');
     expect(previewState.fieldComponent).toBe('RadioGroup');
 

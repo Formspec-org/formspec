@@ -16,7 +16,7 @@ interface SectionDef {
   name: string;
   countFn: ((state: ReturnType<typeof useProjectState>) => number) | null;
   help: string;
-  link?: { tab: string; subTab?: string; view?: string };
+  link?: { tab: string; subTab?: string; view?: string; section?: string };
 }
 
 function countComponentNodes(node: unknown): number {
@@ -32,7 +32,7 @@ const SECTIONS: SectionDef[] = [
     countFn: null, // computed from authored component below
     help: 'UI component hierarchy generated from the item tree',
   },
-  { name: 'Theme', countFn: (s) => Object.keys(s.theme.tokens ?? {}).length, help: 'Visual tokens, selectors, and presentation defaults', link: { tab: 'Theme', subTab: 'tokens' } },
+  { name: 'Theme', countFn: (s) => Object.keys(s.theme.tokens ?? {}).length, help: 'Visual tokens, selectors, and presentation defaults', link: { tab: 'Layout', section: 'Colors' } },
   { name: 'Screener', countFn: (s) => {
     const scr = s.screener;
     if (!scr) return 0;

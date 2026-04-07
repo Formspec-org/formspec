@@ -141,6 +141,35 @@ describe('AddItemPalette', () => {
       expect(screen.queryByRole('button', { name: /^Display$/ })).not.toBeInTheDocument();
     });
 
+    it('omits the tab bar entirely in layout scope', () => {
+      render(
+        <AddItemPalette open={true} onClose={vi.fn()} onAdd={vi.fn()} scope="layout" />
+      );
+
+      expect(screen.queryByRole('button', { name: /^Inputs$/ })).not.toBeInTheDocument();
+    });
+
+    it('layout scope excludes fields and groups; keeps layout and display items', () => {
+      render(
+        <AddItemPalette open={true} onClose={vi.fn()} onAdd={vi.fn()} scope="layout" />
+      );
+
+      expect(screen.queryByRole('button', { name: /^Text Short text\b/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /^Integer\b/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /^Group\b/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /^Repeatable Group\b/i })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^Card\b/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^Heading\b/i })).toBeInTheDocument();
+    });
+
+    it('uses a layout-scoped search prompt', () => {
+      render(
+        <AddItemPalette open={true} onClose={vi.fn()} onAdd={vi.fn()} scope="layout" />
+      );
+
+      expect(screen.getByPlaceholderText('Search layout and content...')).toBeInTheDocument();
+    });
+
     it('filters items when clicking Layout tab', () => {
       render(
         <AddItemPalette open={true} onClose={vi.fn()} onAdd={vi.fn()} />

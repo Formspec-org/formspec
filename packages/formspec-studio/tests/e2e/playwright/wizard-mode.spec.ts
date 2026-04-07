@@ -1,5 +1,5 @@
-import { test, expect } from '@playwright/test';
-import { waitForApp, importDefinition, switchTab } from './helpers';
+import { test, expect, type Page } from '@playwright/test';
+import { addFromLayoutPalette, waitForApp, importDefinition, switchTab } from './helpers';
 
 const WIZARD_DEF = {
   $formspec: '1.0',
@@ -80,6 +80,11 @@ const PAGED_DEF = {
   ],
 };
 
+/** Page title button in Layout step nav (excludes drag handles). */
+function layoutPageTabByTitle(page: Page, title: RegExp | string) {
+  return page.locator('[data-testid="page-nav"]').locator('[data-testid^="page-nav-tab-"]').filter({ hasText: title });
+}
+
 // BUG #10 — Inactive tabs hide labels
 // RESOLVED by Editor/Layout split: The Editor no longer has page tabs.
 // Wizard step navigation is now in the Layout tab (LayoutStepNav component).
@@ -90,10 +95,9 @@ test.describe('Bug #10 — inactive page tabs show label text', () => {
     await importDefinition(page, PAGED_DEF);
     await switchTab(page, 'Layout');
 
-    const nav = page.locator('[data-testid="page-nav"]');
-    await expect(nav.getByRole('button', { name: /Applicant Info/i })).toBeVisible();
-    await expect(nav.getByRole('button', { name: /Household Details/i })).toBeVisible();
-    await expect(nav.getByRole('button', { name: /Review/i })).toBeVisible();
+    await expect(layoutPageTabByTitle(page, /Applicant Info/i)).toBeVisible();
+    await expect(layoutPageTabByTitle(page, /Household Details/i)).toBeVisible();
+    await expect(layoutPageTabByTitle(page, /Review/i)).toBeVisible();
   });
 
   test('inactive tab label is visible before clicking it [BUG-010]', async ({ page }) => {
@@ -101,7 +105,7 @@ test.describe('Bug #10 — inactive page tabs show label text', () => {
     await importDefinition(page, PAGED_DEF);
     await switchTab(page, 'Layout');
 
-    const inactiveTab = page.locator('[data-testid="page-nav"]').getByRole('button', { name: /Household Details/i });
+    const inactiveTab = layoutPageTabByTitle(page, /Household Details/i);
     await expect(inactiveTab).toBeVisible();
     await expect(inactiveTab).not.toHaveAttribute('aria-current', 'page');
   });
@@ -141,7 +145,7 @@ test.describe('Bug #44 — double-click page tab opens inline label editor', () 
     await importDefinition(page, PAGED_DEF);
     await switchTab(page, 'Layout');
 
-    await page.locator('[data-testid="page-nav"]').getByRole('button', { name: /Applicant Info/i }).dblclick();
+    await layoutPageTabByTitle(page, /Applicant Info/i).dblclick();
     await expect(page.locator('[data-testid="page-nav-rename-input"]')).toBeVisible();
   });
 
@@ -150,12 +154,12 @@ test.describe('Bug #44 — double-click page tab opens inline label editor', () 
     await importDefinition(page, PAGED_DEF);
     await switchTab(page, 'Layout');
 
-    await page.locator('[data-testid="page-nav"]').getByRole('button', { name: /Applicant Info/i }).dblclick();
+    await layoutPageTabByTitle(page, /Applicant Info/i).dblclick();
     const renameInput = page.locator('[data-testid="page-nav-rename-input"]');
     await renameInput.fill('Applicant Basics');
     await renameInput.press('Enter');
 
-    await expect(page.locator('[data-testid="page-nav"]').getByRole('button', { name: /Applicant Basics/i })).toBeVisible();
+    await expect(layoutPageTabByTitle(page, /Applicant Basics/i)).toBeVisible();
 
     await switchTab(page, 'Editor');
     await expect(page.locator('[data-testid="group-page1"]')).toContainText('Applicant Basics');
@@ -228,12 +232,11 @@ test.describe('Bug #74 — new page tab is selected after key collision rename',
     await expect(pageTabs).toHaveCount(3);
     await expect(pageTabs.nth(2)).toHaveAttribute('aria-current', 'page');
 
-    await page.click('[data-testid="layout-add-item"]');
-    await page.getByRole('button', { name: 'Text Short text — names,' }).click();
-    await expect(page.locator('[data-testid="layout-field-text"]')).toBeVisible();
+    await addFromLayoutPalette(page, 'Card');
+    await expect(page.locator('[data-testid^="layout-container-"][data-component="Card"]')).toHaveCount(1);
 
     await pageTabs.nth(0).click();
-    await expect(page.locator('[data-testid="layout-field-text"]')).toHaveCount(0);
+    await expect(page.locator('[data-testid^="layout-container-"][data-component="Card"]')).toHaveCount(0);
   });
 });
 

@@ -114,11 +114,6 @@ async function dragSelectorByOffset(page: Page, sourceSelector: string, xOffset:
   await page.mouse.up();
 }
 
-async function openLayoutContainerMenu(page: Page) {
-  await page.locator('[data-testid="layout-add-container-menu"]').click();
-  await expect(page.locator('[data-testid="layout-add-card"]')).toBeVisible();
-}
-
 async function dispatchResizeDrag(page: Page, sourceSelector: string | Locator, xOffset: number, yOffset = 0) {
   const source = typeof sourceSelector === 'string' ? page.locator(sourceSelector) : sourceSelector;
   const sourceBox = await source.boundingBox();
@@ -169,8 +164,8 @@ async function dispatchResizeDrag(page: Page, sourceSelector: string | Locator, 
  * The Layout canvas context menu offers: Wrap in Card, Wrap in Stack, Wrap in
  * Grid, Wrap in Panel, Unwrap, Remove from Tree — but only on existing nodes.
  *
- * Layout containers are now added from the Layout workspace chrome via
- * `layout-add-*` buttons, not the Editor palette.
+ * Layout nodes and display chrome are added via `layout-add-item` → AddItemPalette
+ * (layout scope: no fields or groups — those belong in the Editor).
  */
 
 test.describe('Layout Components', () => {
@@ -184,45 +179,35 @@ test.describe('Layout Components', () => {
 
   test.describe('Add from palette', () => {
     test('adds a Card layout container to the canvas', async ({ page }) => {
-      await switchTab(page, 'Layout');
-      await openLayoutContainerMenu(page);
-      await page.click('[data-testid="layout-add-card"]');
+      await addFromLayoutPalette(page, 'Card');
 
       const layoutBlock = page.locator('[data-testid^="layout-container-"]').filter({ hasText: 'Card' });
       await expect(layoutBlock).toHaveCount(1);
     });
 
     test('adds a Stack layout container to the canvas', async ({ page }) => {
-      await switchTab(page, 'Layout');
-      await openLayoutContainerMenu(page);
-      await page.click('[data-testid="layout-add-stack"]');
+      await addFromLayoutPalette(page, 'Stack');
 
       const layoutBlock = page.locator('[data-testid^="layout-container-"]').filter({ hasText: 'Stack' });
       await expect(layoutBlock).toHaveCount(1);
     });
 
     test('adds a Grid layout container to the canvas', async ({ page }) => {
-      await switchTab(page, 'Layout');
-      await openLayoutContainerMenu(page);
-      await page.click('[data-testid="layout-add-grid"]');
+      await addFromLayoutPalette(page, 'Grid');
 
       const layoutBlock = page.locator('[data-testid^="layout-container-"]').filter({ hasText: 'Grid' });
       await expect(layoutBlock).toHaveCount(1);
     });
 
     test('adds a Panel layout container to the canvas', async ({ page }) => {
-      await switchTab(page, 'Layout');
-      await openLayoutContainerMenu(page);
-      await page.click('[data-testid="layout-add-panel"]');
+      await addFromLayoutPalette(page, 'Panel');
 
       const layoutBlock = page.locator('[data-testid^="layout-container-"]').filter({ hasText: 'Panel' });
       await expect(layoutBlock).toHaveCount(1);
     });
 
     test('auto-selects the new layout container after adding', async ({ page }) => {
-      await switchTab(page, 'Layout');
-      await openLayoutContainerMenu(page);
-      await page.click('[data-testid="layout-add-card"]');
+      await addFromLayoutPalette(page, 'Card');
 
       const cardHeader = page.locator('[data-testid^="layout-container-"]').filter({ hasText: 'Card' }).getByRole('button', { name: /^Card$/ });
       await expect(cardHeader).toHaveAttribute('aria-pressed', 'true');
@@ -230,11 +215,8 @@ test.describe('Layout Components', () => {
     });
 
     test('can add multiple layout containers', async ({ page }) => {
-      await switchTab(page, 'Layout');
-      await openLayoutContainerMenu(page);
-      await page.click('[data-testid="layout-add-card"]');
-      await openLayoutContainerMenu(page);
-      await page.click('[data-testid="layout-add-stack"]');
+      await addFromLayoutPalette(page, 'Card');
+      await addFromLayoutPalette(page, 'Stack');
 
       await expect(page.locator('[data-testid^="layout-container-"]')).toHaveCount(2);
     });
@@ -367,9 +349,7 @@ test.describe('Layout Components', () => {
 
   test.describe('Layout selection and popover actions', () => {
     test('clicking a layout block selects it in the canvas', async ({ page }) => {
-      await switchTab(page, 'Layout');
-      await openLayoutContainerMenu(page);
-      await page.click('[data-testid="layout-add-card"]');
+      await addFromLayoutPalette(page, 'Card');
 
       const layoutBlock = page.locator('[data-testid^="layout-container-"]').filter({ hasText: 'Card' });
       const cardHeader = layoutBlock.getByRole('button', { name: /^Card$/ });
@@ -397,9 +377,7 @@ test.describe('Layout Components', () => {
     });
 
     test('delete button in the popover removes the layout container', async ({ page }) => {
-      await switchTab(page, 'Layout');
-      await openLayoutContainerMenu(page);
-      await page.click('[data-testid="layout-add-card"]');
+      await addFromLayoutPalette(page, 'Card');
 
       const layoutBlock = page.locator('[data-testid^="layout-container-"]').filter({ hasText: 'Card' });
       await layoutBlock.getByRole('button', { name: /^Card$/ }).click();
@@ -412,9 +390,7 @@ test.describe('Layout Components', () => {
     });
 
     test('switching between field and layout selection updates selection state', async ({ page }) => {
-      await switchTab(page, 'Layout');
-      await openLayoutContainerMenu(page);
-      await page.click('[data-testid="layout-add-card"]');
+      await addFromLayoutPalette(page, 'Card');
 
       const layoutBlock = page.locator('[data-testid^="layout-container-"]').filter({ hasText: 'Card' });
       const cardHeader = layoutBlock.getByRole('button', { name: /^Card$/ });
@@ -560,9 +536,9 @@ test.describe('Layout Components', () => {
       const previewHost = page.locator('[data-testid="formspec-preview-host"]');
 
       await page.click('[data-testid="layout-add-item"]');
-      await page.getByRole('button', { name: /Text Short text/i }).click();
+      await page.getByRole('button', { name: /Heading /i }).click();
 
-      await expect(previewHost.getByRole('textbox', { name: /Text/i })).toBeVisible({ timeout: 5000 });
+      await expect(previewHost.getByRole('heading')).toBeVisible({ timeout: 5000 });
     });
   });
 });

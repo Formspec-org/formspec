@@ -74,6 +74,17 @@ describe('per-tab selection scoping', () => {
     expect(result.current.selectedKeyForTab('layout')).toBeNull();
   });
 
+  it('isSelectedForTab and selectedKeysForTab read a named tab regardless of active tab', () => {
+    const { result } = renderHook(() => useSelection(), { wrapper });
+
+    act(() => result.current.select('field1', 'field', { tab: 'editor' }));
+    act(() => result.current.select('__node:abc', 'layout', { tab: 'layout' }));
+
+    expect(result.current.isSelectedForTab('layout', '__node:abc')).toBe(true);
+    expect(result.current.isSelectedForTab('layout', 'field1')).toBe(false);
+    expect(result.current.selectedKeysForTab('layout').has('__node:abc')).toBe(true);
+  });
+
   it('selectedTypeForTab returns the primary type for a given tab', () => {
     const { result } = renderHook(() => useSelection(), { wrapper });
 

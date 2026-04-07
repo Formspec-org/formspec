@@ -1,5 +1,5 @@
 /** @filedesc Layout canvas block for display-only items — label, body editor for notes, read-only definition copy with link to Editor, toolbar. */
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
 import { hasTier3Content } from '@formspec-org/studio-core';
 import type { LayoutContext } from './FieldBlock';
 import { EditMark } from '../editor/item-row-shared';
@@ -30,7 +30,8 @@ interface DisplayBlockProps {
   label?: string;
   widgetHint?: string;
   selected?: boolean;
-  onSelect?: (selectionKey: string) => void;
+  layoutPrimaryKey?: string | null;
+  onSelect?: (ev: MouseEvent | KeyboardEvent, selectionKey: string) => void;
   groupPathPrefix?: string | null;
   description?: string | null;
   hint?: string | null;
@@ -71,6 +72,7 @@ export function DisplayBlock({
   label,
   widgetHint,
   selected = false,
+  layoutPrimaryKey = null,
   onSelect,
   groupPathPrefix = null,
   description = null,
@@ -177,12 +179,13 @@ export function DisplayBlock({
 
   const resolvedNodeProps = nodeProps ?? {};
   const hasPopoverContent = hasTier3Content(resolvedNodeProps);
-  const showToolbar = selected && !!onSetProp && !!selectionKey;
-  const showBodyEditor = selected && !!onCommitDisplayLabel;
+  const isToolbarPrimary = layoutPrimaryKey == null || layoutPrimaryKey === selectionKey;
+  const showToolbar = selected && isToolbarPrimary && !!onSetProp && !!selectionKey;
+  const showBodyEditor = selected && !!onCommitDisplayLabel && isToolbarPrimary;
 
   const editable = Boolean(onRenameDefinitionItem);
   const effectiveSelected = selected;
-  const showEditMark = effectiveSelected && editable;
+  const showEditMark = effectiveSelected && editable && isToolbarPrimary;
 
   useEffect(() => {
     if (!activeIdentityField) {
@@ -260,7 +263,7 @@ export function DisplayBlock({
   const renderIdentity = () => {
     const headlineUnselected = label?.trim() || itemKey;
 
-    if (!effectiveSelected || !editable) {
+    if (!effectiveSelected || !editable || !isToolbarPrimary) {
       return (
         <div className="flex min-w-0 flex-col gap-0.5">
           <div className="min-w-0 text-[19px] font-semibold leading-tight tracking-tight text-ink md:text-[21px]">
@@ -322,17 +325,18 @@ export function DisplayBlock({
       data-layout-node
       data-layout-node-type="display"
       data-layout-node-id={itemKey}
+      data-layout-select-key={selectionKey}
       style={gridStyle}
       className={shellClasses}
       onClick={(e) => {
         if (targetStopsSelect(e.target)) return;
-        onSelect?.(selectionKey);
+        onSelect?.(e, selectionKey);
       }}
       onKeyDown={(e) => {
         if (targetStopsSelect(e.target)) return;
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          onSelect?.(selectionKey);
+          onSelect?.(e, selectionKey);
         }
       }}
     >

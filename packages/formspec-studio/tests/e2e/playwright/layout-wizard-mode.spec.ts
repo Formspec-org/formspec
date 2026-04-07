@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { importProject, layoutContainerHeaderSelectRow, switchTab, waitForApp } from './helpers';
+import { addFromLayoutPalette, importProject, layoutContainerHeaderSelectRow, switchTab, waitForApp } from './helpers';
 
 /*
  * Editor/Layout workspace split:
@@ -69,11 +69,6 @@ const THEME_PROJECT = {
   },
 };
 
-async function openLayoutContainerMenu(page: Parameters<typeof waitForApp>[0]) {
-  await page.locator('[data-testid="layout-add-container-menu"]').click();
-  await expect(page.locator('[data-testid="layout-add-card"]')).toBeVisible();
-}
-
 function activeLayoutPage(page: Page) {
   return page.locator('[data-testid^="layout-page-"]').first();
 }
@@ -113,9 +108,7 @@ test.describe('Layout Components in Wizard Mode', () => {
   });
 
   test('adding a Card in wizard mode preserves page fields', async ({ page }) => {
-    await switchTab(page, 'Layout');
-    await openLayoutContainerMenu(page);
-    await page.click('[data-testid="layout-add-card"]');
+    await addFromLayoutPalette(page, 'Card');
 
     await expect(layoutContainerByComponent(page, 'Card')).toHaveCount(1);
     await expect(activeLayoutPage(page)).toBeVisible();
@@ -148,18 +141,14 @@ test.describe('Layout Components in Wizard Mode', () => {
     await activeLayoutStack(page).getByRole('button', { name: /^Stack$/ }).click({ button: 'right' });
     await page.click('[data-testid="layout-ctx-wrapInCard"]');
 
-    await page.click('[data-testid="layout-add-item"]');
-    await page.locator('[data-testid="add-item-palette"]').getByRole('button', { name: /Text Short text/i }).click();
+    await addFromLayoutPalette(page, 'Heading');
 
     await expect(page.getByRole('button', { name: /^Card$/ })).toHaveCount(1);
   });
 
   test('multiple layout types can coexist in wizard mode', async ({ page }) => {
-    await switchTab(page, 'Layout');
-    await openLayoutContainerMenu(page);
-    await page.click('[data-testid="layout-add-card"]');
-    await openLayoutContainerMenu(page);
-    await page.click('[data-testid="layout-add-stack"]');
+    await addFromLayoutPalette(page, 'Card');
+    await addFromLayoutPalette(page, 'Stack');
 
     await expect(layoutContainerByComponent(page, 'Card')).toHaveCount(1);
     await expect(page.locator('[data-testid^="layout-container-"]').filter({ hasText: 'Stack' })).toHaveCount(2);

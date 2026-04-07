@@ -23,9 +23,9 @@ test.describe('Inspector Safety', () => {
     await expect(page.locator('[data-testid="ctx-delete"]')).toBeVisible();
     await page.keyboard.press('Escape');
 
-    await switchTab(page, 'Theme');
+    await switchTab(page, 'Mapping');
 
-    // The right rail properties panel should be hidden or show theme content, not field actions
+    // Non-Editor workspace — context menu from Editor selection must not surface destructive actions
     // (Editor right rail shows Form Health, not field properties)
     await expect(page.locator('[data-testid="ctx-duplicate"]')).toBeHidden();
     await expect(page.locator('[data-testid="ctx-delete"]')).toBeHidden();

@@ -89,7 +89,7 @@ export async function addFromPalette(page: Page, label: string) {
   await palette.getByRole('button', { name: new RegExp(`^${label}\\b`) }).first().click();
 }
 
-/** Add a definition item from the Layout workspace palette (display, fields, groups — full catalog). */
+/** Add from the Layout workspace palette (layout + display only; fields and groups use Editor). */
 export async function addFromLayoutPalette(page: Page, label: string) {
   await switchTab(page, 'Layout');
   await page.click('[data-testid="layout-add-item"]');

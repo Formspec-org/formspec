@@ -1,5 +1,5 @@
 /* Google Fonts — must precede tailwindcss import to avoid CSS ordering warning */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 @import "tailwindcss";
 
@@ -84,26 +84,27 @@ html {
 
 /* PRD Design Tokens */
 :root {
-  --studio-color-ink: #0f172a;
-  --studio-color-foreground: #0f172a;
-  --studio-color-bg-default: #f8fafc;
-  --studio-color-surface: #ffffff;
-  --studio-color-border: #e2e8f0;
-  --studio-color-accent: #2563eb;
-  --studio-color-logic: #7c3aed;
+  --studio-color-ink: #172033;
+  --studio-color-foreground: #172033;
+  --studio-color-bg-default: #f6f0e8;
+  --studio-color-surface: #fffdf9;
+  --studio-color-border: #ddcfbd;
+  --studio-color-accent: #2757c7;
+  --studio-color-logic: #2d6b73;
   --studio-color-error: #dc2626;
-  --studio-color-muted: #64748b;
-  --studio-color-subtle: #f1f5f9;
-  --studio-color-panel: #ffffff;
+  --studio-color-muted: #6f6a63;
+  --studio-color-subtle: #f1e8dc;
+  --studio-color-panel: #fffaf3;
   --studio-color-green: #059669;
   --studio-color-amber: #d97706;
-  --studio-color-teal: #2F6B7E;
-  --studio-color-brass: #B7791F;
-  --studio-color-warm-border: #d4c5a9;
-  --studio-color-warm-subtle: #f7f3ec;
-  --studio-color-rust: #B44C3B;
-  --studio-color-focus-ring: #2563eb;
+  --studio-color-teal: #2d6b73;
+  --studio-color-brass: #9b6a1e;
+  --studio-color-warm-border: #d7c2a3;
+  --studio-color-warm-subtle: #fbf5eb;
+  --studio-color-rust: #b2533f;
+  --studio-color-focus-ring: #2757c7;
   --studio-font-ui: 'Space Grotesk', system-ui, sans-serif;
+  --studio-font-display: 'Fraunces', Georgia, serif;
   --studio-font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
   /* Type scale tokens — editor tree rows */
@@ -141,6 +142,7 @@ html {
   --color-rust: var(--studio-color-rust);
   --color-focus-ring: var(--studio-color-focus-ring);
   --font-ui: var(--studio-font-ui);
+  --font-display: var(--studio-font-display);
   --font-mono: var(--studio-font-mono);
   --radius-sm: 3px;
   --radius-DEFAULT: 4px;
@@ -148,23 +150,32 @@ html {
 
 /* Dark mode overrides — applied via .dark class on <html> */
 .dark {
-  --studio-color-ink: #f1f5f9;
-  --studio-color-foreground: #f1f5f9;
-  --studio-color-bg-default: #0f172a;
-  --studio-color-surface: #1e293b;
-  --studio-color-border: #334155;
-  --studio-color-accent: #3b82f6;
-  --studio-color-logic: #a78bfa;
+  --studio-color-ink: #f7f2e8;
+  --studio-color-foreground: #f7f2e8;
+  --studio-color-bg-default: #131821;
+  --studio-color-surface: #1a232f;
+  --studio-color-border: #374558;
+  --studio-color-accent: #7ba1ff;
+  --studio-color-logic: #78c4c8;
   --studio-color-error: #f87171;
-  --studio-color-muted: #94a3b8;
-  --studio-color-subtle: #253348;
-  --studio-color-panel: #253348;
+  --studio-color-muted: #a5a29b;
+  --studio-color-subtle: #202c3b;
+  --studio-color-panel: #202836;
   --studio-color-green: #34d399;
   --studio-color-amber: #fbbf24;
-  --studio-color-teal: #5eead4;
-  --studio-color-brass: #fcd34d;
-  --studio-color-warm-border: #4a3728;
-  --studio-color-warm-subtle: #1e1710;
+  --studio-color-teal: #83d8db;
+  --studio-color-brass: #f0c979;
+  --studio-color-warm-border: #5f4935;
+  --studio-color-warm-subtle: #221a13;
   --studio-color-rust: #fb7185;
   --studio-color-focus-ring: #93c5fd;
+}
+
+body {
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--color-brass) 14%, transparent) 0, transparent 34%),
+    radial-gradient(circle at top right, color-mix(in srgb, var(--color-teal) 14%, transparent) 0, transparent 36%),
+    linear-gradient(180deg, color-mix(in srgb, var(--color-warm-subtle) 88%, white) 0%, var(--color-bg-default) 56%, color-mix(in srgb, var(--color-subtle) 32%, var(--color-bg-default)) 100%);
+  color: var(--color-ink);
+  font-family: var(--font-ui);
 }

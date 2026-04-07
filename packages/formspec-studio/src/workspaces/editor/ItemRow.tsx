@@ -528,34 +528,41 @@ export function ItemRow({
     onUpdateSummaryValue: updateSummaryValue,
   } satisfies ItemRowActions;
 
-  const categoryPanelEl =
-    showCategoryPanel && expandedCategory ? (
-      <ItemRowCategoryPanel
-        ref={categoryPanelRef}
-        testId={testId}
-        itemKey={itemKey}
-        itemLabel={itemLabel}
-        item={item}
-        binds={binds}
-        expandedCategory={expandedCategory}
-        isField={isField}
-        isDisplayItem={isDisplayItem}
-        prePopulateValue={prePopulateValue}
-        statusPills={statusPills}
-        fieldDetailLaunchers={fieldDetailLaunchers}
-        summaryInputValue={summaryInputValue}
-        updateSummaryValue={updateSummaryValue}
-        closeInlineSummary={closeInlineSummary}
-        openEditorForSummary={openEditorForSummary}
-        onExpandCategory={expandCategory}
-        orphanFieldDetailLabel={orphanFieldDetailLabel}
-        handleOrphanFieldDetailBlur={handleOrphanFieldDetailBlur}
-        onUpdateItem={onUpdateItem}
-        justCreatedBind={justCreatedBind}
-        onClearJustCreatedBind={() => setJustCreatedBind(null)}
-        onBindCreated={setJustCreatedBind}
-      />
-    ) : null;
+  const categoryPanelEl = expandedCategory ? (
+    <div
+      className="grid transition-[grid-template-rows] duration-150 ease-out"
+      style={{ gridTemplateRows: showCategoryPanel ? '1fr' : '0fr' }}
+      data-expanded={showCategoryPanel}
+    >
+      <div className="overflow-hidden">
+        <ItemRowCategoryPanel
+          ref={categoryPanelRef}
+          testId={testId}
+          itemKey={itemKey}
+          itemLabel={itemLabel}
+          item={item}
+          binds={binds}
+          expandedCategory={expandedCategory}
+          isField={isField}
+          isDisplayItem={isDisplayItem}
+          prePopulateValue={prePopulateValue}
+          statusPills={statusPills}
+          fieldDetailLaunchers={fieldDetailLaunchers}
+          summaryInputValue={summaryInputValue}
+          updateSummaryValue={updateSummaryValue}
+          closeInlineSummary={closeInlineSummary}
+          openEditorForSummary={openEditorForSummary}
+          onExpandCategory={expandCategory}
+          orphanFieldDetailLabel={orphanFieldDetailLabel}
+          handleOrphanFieldDetailBlur={handleOrphanFieldDetailBlur}
+          onUpdateItem={onUpdateItem}
+          justCreatedBind={justCreatedBind}
+          onClearJustCreatedBind={() => setJustCreatedBind(null)}
+          onBindCreated={setJustCreatedBind}
+        />
+      </div>
+    </div>
+  ) : null;
 
   return (
     <div

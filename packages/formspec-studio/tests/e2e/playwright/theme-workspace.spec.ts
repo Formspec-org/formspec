@@ -9,7 +9,7 @@ const SEED = {
     ],
   },
   theme: {
-    tokens: { 'color.primary': '#3b82f6', 'typography.fontSize': '14px', 'spacing.md': '8px' },
+    tokens: { 'color.primary': '#3b82f6', 'font.family': '"Inter", sans-serif', 'spacing.md': '8px' },
     defaults: { labelPosition: 'top' },
     selectors: [
       { match: { type: 'field', dataType: 'string' }, apply: { widget: 'text-input' } },
@@ -59,7 +59,7 @@ test.describe('Theme Workspace', () => {
 
     await expect(sidebar).toContainText('Typography');
     await expect(sidebar).toContainText('Spacing');
-    await expect(sidebar).toContainText('Borders');
+    await expect(sidebar).toContainText('Radius');
     await expect(sidebar).toContainText('Font Family');
   });
 

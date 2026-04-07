@@ -21,11 +21,12 @@ test.describe('Workspace Navigation — Tab Switching', () => {
     await expect(page.getByTestId('manage-section-data-sources')).toBeVisible();
   });
 
-  test('Theme tab renders theme workspace', async ({ page }) => {
-    await switchTab(page, 'Theme');
-    const workspace = page.locator('[data-testid="workspace-Theme"]');
-    await expect(workspace.getByRole('button', { name: 'All Theme' })).toBeVisible();
-    await expect(workspace.getByRole('button', { name: 'Brand & Colors' })).toBeVisible();
+  test('Layout Theme mode shows theme authoring in the blueprint sidebar', async ({ page }) => {
+    await switchTab(page, 'Layout');
+    await page.locator('[data-testid="layout-theme-toggle"]').getByRole('radio', { name: 'Theme' }).click();
+    const sidebar = page.locator('[data-testid="blueprint-sidebar"]');
+    await expect(sidebar.getByRole('button', { name: 'Colors' })).toBeVisible();
+    await expect(sidebar.getByRole('button', { name: 'Typography' })).toBeVisible();
   });
 
   test('Layout tab renders layout workspace', async ({ page }) => {

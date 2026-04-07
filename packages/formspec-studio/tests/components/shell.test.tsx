@@ -235,12 +235,11 @@ describe('Shell', () => {
     expect(screen.getByTestId('blueprint-section-Typography')).toBeInTheDocument();
   });
 
-  it('Layout workspace keeps theme blueprint sections in Theme workspace mode', async () => {
+  it('Layout workspace shows a live preview in the right rail', async () => {
     renderShell(seededDefinition, 1440);
     await act(async () => { fireEvent.click(screen.getByRole('tab', { name: 'Layout' })); });
-    const themeToggle = screen.getByRole('radio', { name: 'Theme' });
-    await act(async () => { fireEvent.click(themeToggle); });
-    expect(screen.getByTestId('blueprint-section-Colors')).toBeInTheDocument();
+    expect(screen.getByTestId('layout-preview-panel')).toBeInTheDocument();
+    expect(within(screen.getByTestId('layout-preview-panel')).getByTestId('layout-preview-header')).toBeInTheDocument();
   });
 
   it('preserves Mapping tab state when navigating away and returning', async () => {
@@ -750,16 +749,15 @@ describe('Shell', () => {
     expect(manageLabel?.textContent).toContain('6');
   });
 
-  // Layout workspace — live preview inline (same column as canvas; no right rail)
-  it('shows live preview inside the Layout workspace, not in a properties sidebar', async () => {
+  it('shows live preview in a dedicated right rail on the Layout tab', async () => {
     renderShell(seededDefinition, 1440);
 
     await act(async () => {
       screen.getByRole('tab', { name: 'Layout' }).click();
     });
 
-    const layoutWs = screen.getByTestId('workspace-Layout');
-    expect(within(layoutWs).getByTestId('layout-preview-header')).toBeInTheDocument();
+    expect(screen.getByTestId('layout-preview-panel')).toBeInTheDocument();
+    expect(within(screen.getByTestId('layout-preview-panel')).getByTestId('layout-preview-header')).toBeInTheDocument();
     expect(screen.queryByTestId('properties-panel')).not.toBeInTheDocument();
   });
 
@@ -774,7 +772,7 @@ describe('Shell', () => {
     expect(screen.queryByRole('dialog', { name: /properties/i })).toBeNull();
   });
 
-  it('shows inline live preview in compact Layout mode (in workspace scroll)', async () => {
+  it('does not render the desktop preview rail in compact Layout mode', async () => {
     renderShell(seededDefinition, 768);
     fireEvent(window, new Event('resize'));
 
@@ -782,7 +780,6 @@ describe('Shell', () => {
       screen.getByRole('tab', { name: 'Layout' }).click();
     });
 
-    const layoutWs = screen.getByTestId('workspace-Layout');
-    expect(within(layoutWs).getByTestId('layout-preview-header')).toBeInTheDocument();
+    expect(screen.queryByTestId('layout-preview-panel')).toBeNull();
   });
 });

@@ -48,6 +48,8 @@ export function CategoryCell({
           <span className="truncate italic" style={{ color: 'color-mix(in srgb, var(--color-ink) 35%, transparent)' }}>
             Add {category.toLowerCase()}...
           </span>
+        ) : isEmpty && !selected ? (
+          <span className="truncate text-ink/56">{'\u2014'}</span>
         ) : (
           <span className="truncate">{value}</span>
         )}
