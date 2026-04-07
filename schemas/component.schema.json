@@ -510,6 +510,7 @@
       "properties": {
         "component": { "const": "NumberInput" },
         "bind": { "type": "string", "description": "Item key from the target Definition." },
+        "placeholder": { "type": "string", "description": "Placeholder text displayed when the field is empty." },
         "step": { "type": "number", "description": "Increment/decrement step value." },
         "min": { "type": "number", "description": "Minimum allowed value." },
         "max": { "type": "number", "description": "Maximum allowed value." },
@@ -518,7 +519,7 @@
       },
       "unevaluatedProperties": false,
       "examples": [
-        { "component": "NumberInput", "bind": "quantity", "min": 1, "max": 100, "step": 1, "showStepper": true }
+        { "component": "NumberInput", "bind": "quantity", "min": 1, "max": 100, "step": 1, "showStepper": true, "placeholder": "0" }
       ]
     },
 
@@ -536,6 +537,7 @@
       "properties": {
         "component": { "const": "DatePicker" },
         "bind": { "type": "string", "description": "Item key from the target Definition." },
+        "placeholder": { "type": "string", "description": "Placeholder text displayed when the field is empty, when the host platform exposes placeholders for date/time controls." },
         "format": { "type": "string", "description": "Display format hint (e.g. 'MM/DD/YYYY'). Does not affect stored value (always ISO 8601)." },
         "minDate": { "type": "string", "description": "Earliest selectable date (ISO 8601)." },
         "maxDate": { "type": "string", "description": "Latest selectable date (ISO 8601)." },
@@ -543,7 +545,7 @@
       },
       "unevaluatedProperties": false,
       "examples": [
-        { "component": "DatePicker", "bind": "startDate", "format": "MM/DD/YYYY", "minDate": "2025-01-01" }
+        { "component": "DatePicker", "bind": "startDate", "format": "MM/DD/YYYY", "placeholder": "YYYY-MM-DD", "minDate": "2025-01-01" }
       ]
     },
 
@@ -1010,6 +1012,7 @@
       "properties": {
         "component": { "const": "MoneyInput" },
         "bind": { "type": "string", "description": "Item key from the target Definition." },
+        "placeholder": { "type": "string", "description": "Placeholder text displayed in the amount input when the field is empty." },
         "step": { "type": "number", "description": "Increment/decrement step value (applies to amount)." },
         "min": { "type": "number", "description": "Minimum allowed amount." },
         "max": { "type": "number", "description": "Maximum allowed amount." },
@@ -1020,7 +1023,7 @@
       },
       "unevaluatedProperties": false,
       "examples": [
-        { "component": "MoneyInput", "bind": "totalBudget", "currency": "USD", "showCurrency": true, "min": 0, "step": 0.01 }
+        { "component": "MoneyInput", "bind": "totalBudget", "currency": "USD", "showCurrency": true, "placeholder": "0.00", "min": 0, "step": 0.01 }
       ]
     },
 

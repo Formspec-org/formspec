@@ -130,6 +130,7 @@ that omits a REQUIRED property.
 | `#/properties/stylesheets` | `stylesheets` | <code>array</code> | no | — | External CSS stylesheet URIs. Web renderers SHOULD load these before rendering the form. Loaded in array order — later sheets take CSS precedence over earlier sheets. Renderers MUST NOT fail if a stylesheet cannot be loaded; they SHOULD warn and continue. Non-web renderers (PDF, native) MAY ignore stylesheets. Subject to host application security policy (CSP, CORS). |
 | `#/properties/targetDefinition` | `targetDefinition` | <code>&#36;ref</code> | yes | <code>&#36;ref</code>: <code>#/&#36;defs/TargetDefinition</code>; critical | Binding to the target Formspec Definition and compatible version range. The theme will only be applied to Definitions matching this target. If compatibleVersions is present and the Definition version falls outside the range, the processor SHOULD warn and MAY fall back to Tier 1 hints only (null theme). The processor MUST NOT fail on a version mismatch. |
 | `#/properties/title` | `title` | <code>string</code> | no | — | Human-readable display name for the theme. |
+| `#/properties/tokenMeta` | `tokenMeta` | <code>object</code> | no | — | Metadata for custom tokens introduced by this theme. Follows the Token Registry category schema. Platform tokens MUST NOT be redefined here — the platform registry provides their metadata. See the Token Registry Specification for details. |
 | `#/properties/tokens` | `tokens` | <code>&#36;ref</code> | no | <code>&#36;ref</code>: <code>#/&#36;defs/Tokens</code>; critical | Design tokens — named values (colors, spacing, typography, borders) that promote visual consistency. Defined once here, referenced throughout the theme via '$token.<key>' syntax in style and widgetConfig string values. Token keys use dot-delimited category prefixes (e.g., 'color.primary', 'spacing.md'). Values MUST be strings or numbers. Token references MUST NOT be recursive. |
 | `#/properties/url` | `url` | <code>string</code> | no | — | Canonical identifier for this theme. Stable across theme versions — the pair (url, version) SHOULD be globally unique. |
 | `#/properties/version` | `version` | <code>string</code> | yes | critical | Version of this theme document. SemVer is RECOMMENDED. The pair (url, version) SHOULD be unique across all published theme versions. |
@@ -248,12 +249,20 @@ interoperability. These categories are RECOMMENDED, not required.
 
 | Prefix | Purpose | Example keys |
 |--------|---------|-------------|
-| `color.` | Colors (hex, rgb, hsl, named) | `color.primary`, `color.error`, `color.surface` |
-| `spacing.` | Spacing and padding | `spacing.xs`, `spacing.sm`, `spacing.md`, `spacing.lg` |
-| `typography.` | Font properties | `typography.body.family`, `typography.body.size`, `typography.heading.weight` |
-| `border.` | Borders | `border.radius`, `border.width`, `border.color` |
+| `color.` | Colors (hex, rgb, hsl, named) | `color.primary`, `color.error`, `color.warning`, `color.success`, `color.info`, `color.surface`, `color.background` |
+| `spacing.` | Spacing and padding | `spacing.xs`, `spacing.sm`, `spacing.md`, `spacing.lg`, `spacing.field` |
+| `font.` | Font properties | `font.family` |
+| `radius.` | Border radii | `radius.sm`, `radius.md` |
+| `typography.` | Extended typography (font size, weight, line-height) | `typography.body.family`, `typography.body.size`, `typography.heading.weight` |
+| `border.` | Border width, style, color | `border.width`, `border.color` |
 | `elevation.` | Shadows and depth | `elevation.low`, `elevation.medium`, `elevation.high` |
 | `x-` | Custom/vendor tokens | `x-brand.logo-height`, `x-agency.seal-color` |
+
+> **See also:** The [Token Registry Specification](token-registry-spec.md)
+> defines a structured catalog format that adds type, description, and
+> default metadata to these token categories. The registry enables
+> studio tooling and validation without changing the flat token map
+> format.
 
 ### 3.3 Token Reference Syntax
 
@@ -295,6 +304,38 @@ recursive references as unresolved.
 Token keys prefixed with `x-` are reserved for custom or
 vendor-specific tokens. Processors MUST NOT assign semantics to `x-`
 prefixed tokens unless they recognize the specific extension.
+
+### 3.6 Color Scheme Variants
+
+Theme documents MAY include dark-mode token overrides using the
+`color.dark.*` prefix convention. For every light-mode token
+`color.<name>`, the corresponding dark-mode token is
+`color.dark.<name>`. Dark tokens follow the same naming rules
+as their light counterparts.
+
+Renderers that support color schemes SHOULD emit both `color.*` and
+`color.dark.*` tokens as CSS custom properties. Dark-mode stylesheets
+reference the `color.dark.*` properties with fallback values:
+
+```css
+/* Light mode */
+--formspec-default-primary: var(--formspec-color-primary, #1f6a5b);
+/* Dark mode */
+--formspec-default-primary: var(--formspec-color-dark-primary, #8bb8ac);
+```
+
+This convention ensures that:
+
+- Theme authors can customize both color schemes from the token map.
+- Renderers that do not support dark mode simply ignore the
+  `color.dark.*` tokens — they are emitted as CSS custom properties
+  but have no effect unless a dark-mode stylesheet references them.
+- The fallback values provide a curated dark palette when no
+  `color.dark.*` tokens are present in the theme document.
+
+Renderers MAY activate dark-mode stylesheets via `prefers-color-scheme`
+media queries, explicit appearance classes, or other
+renderer-specific mechanisms.
 
 ## 4. Widget Catalog
 
@@ -1153,8 +1194,15 @@ This appendix is **informative**.
 | Token key pattern | Example | Typical value |
 |---|---|---|
 | `color.*` | `color.primary` | `"#0057B7"` |
+| `color.*` (error) | `color.error` | `"#D32F2F"` |
+| `color.*` (warning) | `color.warning` | `"#ED6C02"` |
+| `color.*` (success) | `color.success` | `"#2E7D32"` |
+| `color.*` (info) | `color.info` | `"#0288D1"` |
+| `color.*` (surface) | `color.surface` | `"#FFFFFF"` |
+| `color.*` (background) | `color.background` | `"#F5F5F5"` |
 | `color.*.light` | `color.primary.light` | `"#E0F0FF"` |
 | `spacing.*` | `spacing.md` | `"16px"` |
+| `spacing.*` (semantic) | `spacing.field` | `"0.75rem"` |
 | `typography.*.family` | `typography.body.family` | `"Inter, sans-serif"` |
 | `typography.*.size` | `typography.body.size` | `"1rem"` |
 | `typography.*.weight` | `typography.heading.weight` | `"700"` |

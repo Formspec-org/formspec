@@ -268,6 +268,36 @@
           "https://cdn.example.com/custom/form-overrides.css"
         ]
       ]
+    },
+    "tokenMeta": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Metadata for custom tokens introduced by this theme. Follows the Token Registry category schema. Platform tokens MUST NOT be redefined here — the platform registry provides their metadata. See the Token Registry Specification for details.",
+      "properties": {
+        "categories": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "https://formspec.org/schemas/token-registry/1.0#/$defs/Category"
+          },
+          "description": "Custom token categories keyed by category prefix. Each category follows the Token Registry Category schema."
+        }
+      },
+      "examples": [
+        {
+          "categories": {
+            "x-agency": {
+              "description": "Agency branding tokens",
+              "type": "color",
+              "tokens": {
+                "x-agency.seal-color": {
+                  "description": "Official agency seal color",
+                  "type": "color"
+                }
+              }
+            }
+          }
+        }
+      ]
     }
   },
   "$defs": {
@@ -304,7 +334,7 @@
         "widgetConfig": {
           "type": "object",
           "additionalProperties": true,
-          "description": "Widget-specific configuration. Properties depend on the widget. Renderers MUST ignore unrecognized keys. Fallback resolution does NOT carry widgetConfig forward — each fallback widget uses its own default configuration. Well-known configs by widget: textInput (maxLength, inputMode), textarea (rows, maxRows, autoResize), numberInput (showStepper, locale), datePicker (format, minDate, maxDate), dropdown (searchable, placeholder), checkboxGroup (columns, maxVisible), fileUpload (accept, maxSizeMb, preview), moneyInput (showCurrencySymbol, locale), slider (min, max, step, showTicks, showValue), toggle (onLabel, offLabel), radio (direction, columns), richText (toolbar), signature (strokeColor, height).",
+          "description": "Widget-specific configuration. Properties depend on the widget. Renderers MUST ignore unrecognized keys. Fallback resolution does NOT carry widgetConfig forward — each fallback widget uses its own default configuration. Well-known configs by widget: textInput (maxLength, inputMode, placeholder), textarea (rows, maxRows, autoResize, placeholder), numberInput (showStepper, locale, placeholder), datePicker (format, minDate, maxDate, placeholder), dropdown (searchable, placeholder), checkboxGroup (columns, maxVisible), fileUpload (accept, maxSizeMb, preview), moneyInput (showCurrencySymbol, locale, placeholder), slider (min, max, step, showTicks, showValue), toggle (onLabel, offLabel), radio (direction, columns), richText (toolbar), signature (strokeColor, height).",
           "examples": [
             { "showCurrencySymbol": true, "locale": "en-US" },
             { "min": 0, "max": 100, "step": 5, "showTicks": true },

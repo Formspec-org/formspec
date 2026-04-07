@@ -595,6 +595,9 @@ The following component properties are localizable:
 | Summary | `items[N].label` |
 | Select | `placeholder` |
 | TextInput | `placeholder`, `prefix`, `suffix` |
+| NumberInput | `placeholder` |
+| DatePicker | `placeholder` |
+| MoneyInput | `placeholder` |
 
 ##### Repeat template nodes
 

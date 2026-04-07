@@ -538,6 +538,9 @@ property are addressable.
 | Summary | `items[N].label` |
 | Select | `placeholder` |
 | TextInput | `placeholder`, `prefix`, `suffix` |
+| NumberInput | `placeholder` |
+| DatePicker | `placeholder` |
+| MoneyInput | `placeholder` |
 
 Array-valued properties use bracket indexing with numeric indices
 (e.g., `$component.mainTabs.tabLabels[0]`).
@@ -977,6 +980,7 @@ integers, decimals, and monetary values (when paired with prefix/suffix).
 
 | Prop | Type | Default | Token-able | Description |
 |------|------|---------|------------|-------------|
+| `placeholder` | string | — | No | Placeholder text displayed when the field is empty. |
 | `step` | number | `1` | No | Increment/decrement step value. |
 | `min` | number | — | No | Minimum allowed value. |
 | `max` | number | — | No | Maximum allowed value. |
@@ -1000,6 +1004,7 @@ integers, decimals, and monetary values (when paired with prefix/suffix).
 {
   "component": "NumberInput",
   "bind": "quantity",
+  "placeholder": "0",
   "min": 1,
   "max": 100,
   "step": 1,
@@ -1026,6 +1031,7 @@ automatically determined by the bound item's `dataType`.
 
 | Prop | Type | Default | Token-able | Description |
 |------|------|---------|------------|-------------|
+| `placeholder` | string | — | No | Placeholder text displayed when the field is empty, when the host platform exposes placeholders for date/time controls. |
 | `format` | string | — | No | Display format hint (e.g., `"YYYY-MM-DD"`, `"MM/DD/YYYY"`). Does not affect stored value (always ISO 8601). |
 | `minDate` | string | — | No | Earliest selectable date (ISO 8601). |
 | `maxDate` | string | — | No | Latest selectable date (ISO 8601). |
@@ -1049,6 +1055,7 @@ automatically determined by the bound item's `dataType`.
 {
   "component": "DatePicker",
   "bind": "startDate",
+  "placeholder": "YYYY-MM-DD",
   "format": "MM/DD/YYYY",
   "minDate": "2025-01-01"
 }
@@ -1812,6 +1819,7 @@ formatting.
 
 | Prop | Type | Default | Token-able | Description |
 |------|------|---------|------------|-------------|
+| `placeholder` | string | — | No | Placeholder text displayed in the amount input when the field is empty. |
 | `currency` | string | `"USD"` | No | ISO 4217 currency code (e.g., `"USD"`, `"EUR"`, `"GBP"`). |
 | `showCurrency` | boolean | `true` | No | Whether to display the currency symbol. |
 | `locale` | string | — | No | Locale for number/currency formatting (e.g., `"en-US"`). |
@@ -1839,7 +1847,8 @@ the input if the bound item has a `prefix` presentation hint.
   "component": "MoneyInput",
   "bind": "totalBudget",
   "currency": "USD",
-  "showCurrency": true
+  "showCurrency": true,
+  "placeholder": "0.00"
 }
 ```
 
@@ -2960,9 +2969,12 @@ JavaScript coupling. Bridge CSS can use `var(--formspec-color-primary)`
 to stay in sync with the active theme.
 
 Renderers that emit CSS custom properties SHOULD update them when the
-theme document changes. Renderers MAY also emit tokens from the
-Component Document's `tokens` map, with component tokens taking
-precedence over theme tokens for identically named properties.
+theme document changes. When updating properties after a theme change,
+renderers SHOULD remove properties from the previous theme that are not
+present in the new theme, to prevent stale values from affecting
+styling. Renderers MAY also emit tokens from the Component Document's
+`tokens` map, with component tokens taking precedence over theme tokens
+for identically named properties.
 
 Non-web renderers (PDF, native) MAY ignore this convention entirely.
 
