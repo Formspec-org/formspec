@@ -9,7 +9,7 @@ hr.formspec-divider,
 
 hr.formspec-divider {
   margin: 0.5rem 0;
-  color: var(--formspec-default-border);
+  color: color-mix(in srgb, var(--formspec-default-border-strong) 68%, var(--formspec-default-border));
 }
 
 .formspec-divider--labeled {
@@ -32,11 +32,46 @@ hr.formspec-divider {
   letter-spacing: 0.02em;
 }
 
+.formspec-group,
+.formspec-page {
+  position: relative;
+}
+
+.formspec-group {
+  padding: 0.45rem 0 1.1rem;
+}
+
+.formspec-group + .formspec-group {
+  margin-top: 0.35rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid color-mix(in srgb, var(--formspec-default-border-subtle) 78%, white);
+}
+
 .formspec-panel,
 .formspec-collapsible,
 .formspec-accordion-item {
-  border: 1px solid var(--formspec-default-border-muted);
-  background: color-mix(in srgb, var(--formspec-default-surface) 90%, white);
+  border: 1px solid color-mix(in srgb, var(--formspec-default-border-subtle) 84%, white);
+  background: var(--formspec-default-surface);
+}
+
+.formspec-repeat-instance {
+  border: 1px solid color-mix(in srgb, var(--formspec-default-border-subtle) 86%, white);
+  border-radius: var(--formspec-default-radius-sm);
+  background: color-mix(in srgb, var(--formspec-default-surface) 88%, var(--formspec-default-surface-quiet));
+}
+
+.formspec-repeat-instance-header {
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--formspec-default-border-muted) 78%, white);
+}
+
+.formspec-repeat-instance-label {
+  margin: 0;
+  color: var(--formspec-default-text-strong);
+  font-size: 0.8125rem;
+  font-weight: 650;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
 }
 
 .formspec-panel {
@@ -46,23 +81,32 @@ hr.formspec-divider {
 .formspec-panel-header {
   margin-bottom: 0;
   padding: 1rem 1.125rem 0.875rem;
-  border-bottom: 1px solid var(--formspec-default-border-muted);
+  border-bottom: 1px solid color-mix(in srgb, var(--formspec-default-border-muted) 80%, white);
+  background: var(--formspec-default-surface-muted);
+  color: var(--formspec-default-text-strong);
   font-weight: 650;
   letter-spacing: -0.01em;
 }
 
+.formspec-panel-header :where(h1, h2, h3, h4, h5, h6, p, span, strong) {
+  color: inherit;
+}
+
 .formspec-panel-body {
   padding: 1rem 1.125rem 1.125rem;
+  background: var(--formspec-default-surface);
 }
 
 .formspec-card {
-  margin-bottom: var(--formspec-spacing-lg, 1.5rem);
-  padding: calc(var(--formspec-spacing-lg, 1.5rem) + 0.125rem);
-  border: 1px solid color-mix(in srgb, var(--formspec-default-border-subtle) 80%, white);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 0;
+  padding: 1.35rem 1.4rem;
+  border: 1px solid color-mix(in srgb, var(--formspec-default-border-subtle) 84%, white);
   border-radius: var(--formspec-default-radius-md);
-  background:
-    linear-gradient(180deg, color-mix(in srgb, white 72%, var(--formspec-default-surface)) 0%, var(--formspec-default-surface) 100%);
-  box-shadow: var(--formspec-default-shadow-sm);
+  background: var(--formspec-default-surface);
+  box-shadow: var(--formspec-default-shadow-elevation-1);
 }
 
 .formspec-card[data-elevation="1"] {
@@ -89,20 +133,31 @@ hr.formspec-divider {
 .formspec-group-title {
   margin: 0 0 0.5rem;
   color: var(--formspec-default-text);
-  font-size: 1.2rem;
+  font-size: 1.18rem;
   font-weight: 650;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.028em;
+}
+
+.formspec-group-title {
+  margin-bottom: 0.95rem;
 }
 
 .formspec-card-title {
-  margin-bottom: 0.4rem;
+  margin-bottom: 0;
 }
 
 .formspec-card-subtitle {
-  margin: 0 0 1rem;
+  margin: 0;
   color: var(--formspec-default-text-subtle);
-  font-size: 0.875rem;
+  font-size: 0.84rem;
   line-height: 1.5;
+  max-width: 60ch;
+}
+
+.formspec-text {
+  margin: 0;
+  color: var(--formspec-default-text);
+  line-height: 1.6;
 }
 
 .formspec-alert {
@@ -119,25 +174,25 @@ hr.formspec-divider {
 }
 
 .formspec-alert--info {
-  color: #1565c0;
+  color: var(--formspec-default-info-text);
   background: var(--formspec-default-info-surface-soft);
   border-color: color-mix(in srgb, var(--formspec-default-info) 22%, white);
 }
 
 .formspec-alert--warning {
-  color: #e65100;
+  color: var(--formspec-default-warning-text);
   background: var(--formspec-default-warning-surface-soft);
   border-color: color-mix(in srgb, var(--formspec-default-warning) 26%, white);
 }
 
 .formspec-alert--error {
-  color: #b71c1c;
+  color: var(--formspec-default-danger-text);
   background: var(--formspec-default-danger-surface);
   border-color: color-mix(in srgb, var(--formspec-default-danger) 22%, white);
 }
 
 .formspec-alert--success {
-  color: #1b5e20;
+  color: var(--formspec-default-success-text);
   background: var(--formspec-default-success-surface);
   border-color: color-mix(in srgb, var(--formspec-default-success) 22%, white);
 }
@@ -150,9 +205,15 @@ hr.formspec-divider {
   position: absolute;
   top: 0.5rem;
   right: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
   margin-left: auto;
   padding: 0;
   border: none;
+  border-radius: var(--formspec-default-radius-sm);
   background: none;
   color: inherit;
   font-size: 16px;
@@ -161,6 +222,7 @@ hr.formspec-divider {
 
 .formspec-alert-close:hover,
 .formspec-alert-close:focus-visible {
+  background: color-mix(in srgb, currentColor 10%, transparent);
   opacity: 1;
 }
 
@@ -181,23 +243,23 @@ hr.formspec-divider {
 }
 
 .formspec-badge--primary {
-  color: #fff;
-  background: var(--formspec-default-primary);
+  color: var(--formspec-default-badge-primary-text);
+  background: var(--formspec-default-badge-primary-bg);
 }
 
 .formspec-badge--success {
-  color: #fff;
-  background: var(--formspec-default-success);
+  color: var(--formspec-default-badge-success-text);
+  background: var(--formspec-default-badge-success-bg);
 }
 
 .formspec-badge--warning {
-  color: #333;
-  background: #fbbc04;
+  color: var(--formspec-default-badge-warning-text);
+  background: var(--formspec-default-badge-warning-bg);
 }
 
 .formspec-badge--error {
-  color: #fff;
-  background: #ea4335;
+  color: var(--formspec-default-badge-error-text);
+  background: var(--formspec-default-badge-error-bg);
 }
 
 .formspec-progress-bar {
@@ -275,16 +337,17 @@ hr.formspec-divider {
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  padding: 0.9rem 1rem;
+  padding: 0.95rem 1rem;
   cursor: pointer;
   list-style: none;
   user-select: none;
+  color: var(--formspec-default-text-strong);
 }
 
 .formspec-collapsible summary {
   font-size: 0.9375rem;
-  font-weight: 600;
-  background: color-mix(in srgb, var(--formspec-default-surface-quiet) 78%, white);
+  font-weight: 560;
+  background: color-mix(in srgb, var(--formspec-default-surface-muted) 74%, white);
 }
 
 .formspec-collapsible summary:hover,
@@ -304,14 +367,14 @@ hr.formspec-divider {
 
 .formspec-collapsible summary::after {
   content: '+';
-  color: var(--formspec-default-primary);
+  color: var(--formspec-default-text-muted);
   font-size: 1rem;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .formspec-collapsible[open] > summary {
-  border-bottom: 1px solid var(--formspec-default-border-muted);
-  background: var(--formspec-default-surface-soft);
+  border-bottom: 1px solid color-mix(in srgb, var(--formspec-default-border-muted) 80%, white);
+  background: color-mix(in srgb, var(--formspec-default-primary) 4%, var(--formspec-default-surface-muted));
 }
 
 .formspec-collapsible[open] > summary::after {
@@ -321,6 +384,8 @@ hr.formspec-divider {
 .formspec-collapsible-content,
 .formspec-accordion-content {
   padding: 12px 14px;
+  background: var(--formspec-default-surface);
+  color: var(--formspec-default-text);
 }
 
 .formspec-collapsible-content {
@@ -338,13 +403,13 @@ hr.formspec-divider {
 }
 
 .formspec-accordion-item summary {
-  background: var(--formspec-default-surface-quiet);
-  font-weight: 600;
+  background: color-mix(in srgb, var(--formspec-default-surface-muted) 74%, white);
+  font-weight: 580;
 }
 
 .formspec-accordion-item summary::after {
   content: '\25BE';
-  color: #888;
+  color: var(--formspec-default-text-muted);
   font-size: 12px;
 }
 

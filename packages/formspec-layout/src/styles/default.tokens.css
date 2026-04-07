@@ -2,36 +2,56 @@
 
 .formspec-container {
   font-family: var(--formspec-font-family, "Instrument Sans", "Avenir Next", "Segoe UI", sans-serif);
-  font-size: 0.95rem;
-  line-height: 1.55;
+  font-size: 0.96rem;
+  line-height: 1.6;
   color: var(--formspec-color-foreground, #1f2521);
+  color-scheme: light;
   --formspec-default-text: var(--formspec-color-foreground, #1f2521);
-  --formspec-default-text-strong: #171c19;
+  --formspec-default-text-strong: #171b17;
   --formspec-default-text-muted: var(--formspec-color-muted, #6f6a61);
-  --formspec-default-text-subtle: var(--formspec-color-mutedForeground, #7b756b);
-  --formspec-default-text-faint: var(--formspec-color-foreground-muted, #8a847b);
+  --formspec-default-text-subtle: var(--formspec-color-mutedForeground, #736c62);
+  --formspec-default-text-faint: var(--formspec-color-foreground-muted, #746c61);
   --formspec-default-text-inverse: var(--formspec-color-primaryForeground, #fff);
-  --formspec-default-bg: var(--formspec-color-background, #f7f3eb);
+  --formspec-default-bg: var(--formspec-color-background, #f6f0e6);
   --formspec-default-surface: var(--formspec-color-card, #fffdfa);
   --formspec-default-surface-muted: var(--formspec-color-surface, #f4efe7);
-  --formspec-default-surface-subtle: #faf6f0;
-  --formspec-default-surface-soft: #f7f1e8;
-  --formspec-default-surface-quiet: #fdfaf4;
-  --formspec-default-primary-soft: var(--formspec-color-primary-light, #e3efe9);
+  --formspec-default-surface-subtle: #f8f2e9;
+  --formspec-default-surface-soft: #f4ede3;
+  --formspec-default-surface-quiet: #fcf8f1;
+  --formspec-default-primary-soft: var(--formspec-color-primary-light, #e3ece8);
   --formspec-default-border-input: var(--formspec-color-input, #b7aea1);
   --formspec-default-border: var(--formspec-color-border, #c9c1b4);
-  --formspec-default-border-strong: color-mix(in srgb, var(--formspec-default-border) 84%, #5d5548);
-  --formspec-default-border-subtle: color-mix(in srgb, var(--formspec-default-border) 58%, white);
-  --formspec-default-border-muted: #e4ddd2;
-  --formspec-default-border-control: #c7beaf;
+  --formspec-default-border-strong: color-mix(in srgb, var(--formspec-default-border) 82%, #5b5448);
+  --formspec-default-border-subtle: color-mix(in srgb, var(--formspec-default-border) 52%, white);
+  --formspec-default-border-muted: #e7e0d5;
+  --formspec-default-border-control: #cdc3b5;
   --formspec-default-focus: var(--formspec-color-ring, #1f6a5b);
   --formspec-default-primary: var(--formspec-color-primary, #1f6a5b);
-  --formspec-default-primary-strong: var(--formspec-color-primary-dark, #184f44);
-  --formspec-default-danger: var(--formspec-color-error, #d93025);
+  --formspec-default-primary-strong: var(--formspec-color-primary-dark, #1d443c);
+  --formspec-default-danger: var(--formspec-color-error, #c1281f);
   --formspec-default-danger-strong: #b1261d;
-  --formspec-default-success: #2f855a;
-  --formspec-default-warning: #b7791f;
-  --formspec-default-info: #2b6cb0;
+  --formspec-default-success: var(--formspec-color-success, #2f855a);
+  --formspec-default-warning: var(--formspec-color-warning, #946112);
+  --formspec-default-info: var(--formspec-color-info, #2b6cb0);
+  --formspec-default-primary-fill: var(--formspec-default-primary);
+  --formspec-default-primary-fill-strong: var(--formspec-default-primary-strong);
+  --formspec-default-success-fill: var(--formspec-default-success);
+  --formspec-default-danger-fill: var(--formspec-default-danger);
+  --formspec-default-success-text: #1b5e20;
+  --formspec-default-warning-text: var(--formspec-default-warning);
+  --formspec-default-info-text: var(--formspec-default-info);
+  --formspec-default-danger-text: var(--formspec-default-danger);
+  --formspec-default-badge-primary-bg: var(--formspec-default-primary-fill);
+  --formspec-default-badge-primary-text: var(--formspec-default-text-inverse);
+  --formspec-default-badge-success-bg: var(--formspec-default-success-fill);
+  --formspec-default-badge-success-text: var(--formspec-default-text-inverse);
+  --formspec-default-badge-warning-bg: #fbbc04;
+  --formspec-default-badge-warning-text: #333;
+  --formspec-default-badge-error-bg: var(--formspec-default-danger-fill);
+  --formspec-default-badge-error-text: var(--formspec-default-text-inverse);
+  --formspec-default-rating-empty: #d6ccbd;
+  --formspec-default-rating-hover: #cf9440;
+  --formspec-default-rating-active: #b7771f;
   --formspec-default-readonly-field-bg: var(--formspec-readonly-field-bg, #f7f3ec);
   --formspec-default-readonly-field-border: var(--formspec-readonly-field-border, #d8d0c3);
   --formspec-default-readonly-field-accent: var(--formspec-readonly-field-accent, #7d7366);
@@ -48,16 +68,113 @@
   --formspec-default-warning-surface-soft: #fdf5e7;
   --formspec-default-info-surface: #ecf4fb;
   --formspec-default-info-surface-soft: #f1f7fc;
-  --formspec-default-radius-sm: var(--formspec-radius-sm, 0.875rem);
-  --formspec-default-radius-md: var(--formspec-radius-md, 1.25rem);
+  --formspec-default-radius-sm: var(--formspec-radius-sm, 0.9rem);
+  --formspec-default-radius-md: var(--formspec-radius-md, 1.35rem);
   --formspec-default-radius-pill: 999px;
-  --formspec-default-shadow-sm: 0 8px 16px rgba(68, 56, 37, 0.05);
-  --formspec-default-shadow-md: 0 24px 48px rgba(68, 56, 37, 0.12), 0 6px 18px rgba(68, 56, 37, 0.08);
+  --formspec-default-shadow-sm: 0 10px 22px rgba(68, 56, 37, 0.045);
+  --formspec-default-shadow-md: 0 24px 48px rgba(68, 56, 37, 0.09), 0 6px 18px rgba(68, 56, 37, 0.06);
   --formspec-default-shadow-elevation-1: 0 10px 18px rgba(68, 56, 37, 0.05);
   --formspec-default-shadow-elevation-2: 0 14px 28px rgba(68, 56, 37, 0.08);
   --formspec-default-shadow-elevation-3: 0 20px 36px rgba(68, 56, 37, 0.1);
   --formspec-default-shadow-elevation-4: 0 26px 44px rgba(68, 56, 37, 0.12);
   --formspec-default-shadow-elevation-5: 0 32px 56px rgba(68, 56, 37, 0.14);
-  --formspec-default-focus-shadow: 0 0 0 4px color-mix(in srgb, var(--formspec-default-focus) 18%, transparent);
+  --formspec-default-focus-shadow: 0 0 0 4px color-mix(in srgb, var(--formspec-default-focus) 14%, transparent);
   --formspec-default-transition-fast: border-color 0.15s, box-shadow 0.15s, background-color 0.15s, color 0.15s;
+}
+
+.formspec-container.formspec-appearance-dark {
+  color: var(--formspec-color-dark-foreground, #f3ecdf);
+  color-scheme: dark;
+
+  /* Text — base tokens via color.dark.* Layer A */
+  --formspec-default-text: var(--formspec-color-dark-foreground, #f3ecdf);
+  --formspec-default-text-strong: #fffaf0;
+  --formspec-default-text-muted: var(--formspec-color-dark-muted, #c4b8a7);
+  --formspec-default-text-subtle: var(--formspec-color-dark-mutedForeground, #ad9f8d);
+  --formspec-default-text-faint: #948676;
+  --formspec-default-text-inverse: var(--formspec-color-dark-primaryForeground, #fff);
+
+  /* Surfaces — base tokens via color.dark.* Layer A */
+  --formspec-default-bg: var(--formspec-color-dark-background, #161311);
+  --formspec-default-surface: var(--formspec-color-dark-card, #211c19);
+  --formspec-default-surface-muted: var(--formspec-color-dark-surface, #2a241f);
+  --formspec-default-surface-subtle: #322b25;
+  --formspec-default-surface-soft: #2c2621;
+  --formspec-default-surface-quiet: #1b1714;
+  --formspec-default-primary-soft: color-mix(in srgb, var(--formspec-default-primary) 20%, var(--formspec-default-bg));
+
+  /* Borders — base tokens via color.dark.* Layer A, derivatives computed */
+  --formspec-default-border-input: var(--formspec-color-dark-input, #5c5247);
+  --formspec-default-border: var(--formspec-color-dark-border, #4f463d);
+  --formspec-default-border-strong: color-mix(in srgb, var(--formspec-default-border) 55%, #c0b4a5);
+  --formspec-default-border-subtle: color-mix(in srgb, var(--formspec-default-border) 70%, var(--formspec-default-bg));
+  --formspec-default-border-muted: #342d27;
+  --formspec-default-border-control: #665a4d;
+
+  /* Accents — base tokens via color.dark.* Layer A */
+  --formspec-default-focus: var(--formspec-color-dark-ring, #8fc6b7);
+  --formspec-default-primary: var(--formspec-color-dark-primary, #8bb8ac);
+  --formspec-default-primary-strong: #b6d7cf;
+  --formspec-default-danger: var(--formspec-color-dark-error, #ff8b7f);
+  --formspec-default-danger-strong: #ffb2a9;
+  --formspec-default-success: var(--formspec-color-dark-success, #79c89d);
+  --formspec-default-warning: var(--formspec-color-dark-warning, #e2b35c);
+  --formspec-default-info: var(--formspec-color-dark-info, #82b8f8);
+
+  /* Fills — reference light-mode base tokens (dark buttons use the saturated light-mode colors) */
+  --formspec-default-primary-fill: var(--formspec-color-primary, #1f6a5b);
+  --formspec-default-primary-fill-strong: #2d6f62;
+  --formspec-default-success-fill: var(--formspec-color-success, #2b724d);
+  --formspec-default-danger-fill: var(--formspec-color-error, #c1281f);
+
+  /* Status text */
+  --formspec-default-success-text: #c7efd3;
+  --formspec-default-warning-text: #ffe0a6;
+  --formspec-default-info-text: #d7eaff;
+  --formspec-default-danger-text: #ffc7bf;
+
+  /* Badges — derived from fills and text */
+  --formspec-default-badge-primary-bg: var(--formspec-default-primary-fill);
+  --formspec-default-badge-primary-text: var(--formspec-default-text-inverse);
+  --formspec-default-badge-success-bg: var(--formspec-default-success-fill);
+  --formspec-default-badge-success-text: var(--formspec-default-text-inverse);
+  --formspec-default-badge-warning-bg: #f0c15a;
+  --formspec-default-badge-warning-text: #24160a;
+  --formspec-default-badge-error-bg: var(--formspec-default-danger-fill);
+  --formspec-default-badge-error-text: var(--formspec-default-text-inverse);
+
+  /* Rating */
+  --formspec-default-rating-empty: #5f5448;
+  --formspec-default-rating-hover: #f0c15a;
+  --formspec-default-rating-active: #e2b35c;
+
+  /* Readonly */
+  --formspec-default-readonly-field-bg: #1d1916;
+  --formspec-default-readonly-field-border: #463d35;
+  --formspec-default-readonly-field-accent: #9f917f;
+  --formspec-default-readonly-badge-border: #5e5348;
+  --formspec-default-readonly-badge-bg: #2f2823;
+  --formspec-default-readonly-badge-text: #ddd2c4;
+  --formspec-default-readonly-input-bg: #211c18;
+  --formspec-default-readonly-input-border: #4a4037;
+  --formspec-default-readonly-input-text: #d8ccbd;
+
+  /* Status surfaces — computed from accents and background */
+  --formspec-default-danger-surface: color-mix(in srgb, var(--formspec-default-danger) 18%, var(--formspec-default-bg));
+  --formspec-default-danger-surface-soft: #2c1c19;
+  --formspec-default-success-surface: color-mix(in srgb, var(--formspec-default-success) 12%, var(--formspec-default-bg));
+  --formspec-default-warning-surface: color-mix(in srgb, var(--formspec-default-warning) 14%, var(--formspec-default-bg));
+  --formspec-default-warning-surface-soft: #241d14;
+  --formspec-default-info-surface: color-mix(in srgb, var(--formspec-default-info) 12%, var(--formspec-default-bg));
+  --formspec-default-info-surface-soft: #131c27;
+
+  /* Shadows */
+  --formspec-default-shadow-sm: 0 10px 22px rgba(0, 0, 0, 0.26);
+  --formspec-default-shadow-md: 0 24px 48px rgba(0, 0, 0, 0.34), 0 6px 18px rgba(0, 0, 0, 0.24);
+  --formspec-default-shadow-elevation-1: 0 10px 18px rgba(0, 0, 0, 0.24);
+  --formspec-default-shadow-elevation-2: 0 14px 28px rgba(0, 0, 0, 0.3);
+  --formspec-default-shadow-elevation-3: 0 20px 36px rgba(0, 0, 0, 0.34);
+  --formspec-default-shadow-elevation-4: 0 26px 44px rgba(0, 0, 0, 0.38);
+  --formspec-default-shadow-elevation-5: 0 32px 56px rgba(0, 0, 0, 0.44);
+  --formspec-default-focus-shadow: 0 0 0 4px color-mix(in srgb, var(--formspec-default-focus) 18%, transparent);
 }

@@ -20,6 +20,7 @@
       "default": "./dist/index.js"
     },
     "./default-theme": "./dist/default-theme.json",
+    "./token-registry": "./dist/token-registry.json",
     "./formspec-layout.css": "./dist/formspec-layout.css",
     "./formspec-default.css": "./dist/formspec-default.css"
   },

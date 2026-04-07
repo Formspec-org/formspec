@@ -3,67 +3,79 @@
 .formspec-modal-trigger,
 .formspec-popover-trigger,
 .formspec-repeat-add,
-.formspec-repeat-remove,
 .formspec-screener-continue,
 .formspec-submit,
-.formspec-datatable-add,
-.formspec-datatable-remove {
+.formspec-datatable-add {
   transition: var(--formspec-default-transition-fast);
 }
 
-.formspec-repeat-add,
-.formspec-repeat-remove {
-  padding: 0.675rem 1rem;
-  border: 1px solid transparent;
+.formspec-repeat-add {
+  padding: 0.72rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--formspec-default-border-control) 88%, white);
   border-radius: var(--formspec-default-radius-sm);
-  background: transparent;
+  background: color-mix(in srgb, var(--formspec-default-surface) 84%, white);
   font: inherit;
   font-size: 0.875rem;
   font-weight: 600;
   letter-spacing: 0.01em;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
 }
 
 .formspec-repeat-add {
-  border: 1px solid currentColor;
+  color: var(--formspec-default-primary);
 }
 
 .formspec-repeat-add,
 .formspec-submit,
 .formspec-screener-continue {
   color: var(--formspec-default-text-inverse);
-  background: var(--formspec-default-primary);
-  border-color: var(--formspec-default-primary);
+  background: var(--formspec-default-primary-fill);
+  border-color: var(--formspec-default-primary-fill);
 }
 
 .formspec-repeat-add:hover {
-  filter: brightness(0.9);
+  color: var(--formspec-default-text-inverse);
+  background: var(--formspec-default-primary-fill-strong);
 }
 
 .formspec-repeat-remove {
-  color: var(--formspec-default-danger);
-  border-color: var(--formspec-default-danger);
-  opacity: 0.85;
+  padding: 0.72rem 1rem;
+  font-size: 0.875rem;
+  letter-spacing: 0.01em;
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--formspec-default-danger-fill) 16%, transparent);
 }
 
 .formspec-repeat-remove:hover {
-  background: color-mix(in srgb, var(--formspec-default-danger) 8%, transparent);
+  box-shadow: 0 12px 22px color-mix(in srgb, var(--formspec-default-danger-fill) 22%, transparent);
 }
 
 .formspec-submit {
-  display: block;
-  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  width: auto;
+  min-width: 9.75rem;
+  align-self: flex-start;
   margin-top: 1rem;
-  padding: 0.85rem 1.25rem;
+  padding: 0.82rem 1.2rem;
   border: none;
   border-radius: var(--formspec-default-radius-sm);
+  appearance: none;
+  -webkit-appearance: none;
   font-family: inherit;
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   font-weight: 600;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.012em;
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--formspec-default-primary) 14%, transparent);
 }
 
 .formspec-submit:hover {
-  background: var(--formspec-default-primary-strong);
+  color: var(--formspec-default-text-inverse);
+  background: var(--formspec-default-primary-fill-strong);
+  box-shadow: 0 12px 22px color-mix(in srgb, var(--formspec-default-primary) 18%, transparent);
 }
 
 .formspec-modal,
@@ -119,6 +131,8 @@
   padding: 0;
   border: none;
   border-radius: var(--formspec-default-radius-sm);
+  appearance: none;
+  -webkit-appearance: none;
   background: transparent;
   color: var(--formspec-default-text-muted);
   font-size: 18px;
@@ -152,6 +166,8 @@
   padding: 0.625rem 1rem;
   border: 1px solid var(--formspec-default-primary);
   border-radius: var(--formspec-default-radius-sm);
+  appearance: none;
+  -webkit-appearance: none;
   background: color-mix(in srgb, var(--formspec-default-primary) 6%, white);
   color: var(--formspec-default-primary);
   font: inherit;
@@ -161,8 +177,8 @@
 
 .formspec-modal-trigger:hover,
 .formspec-popover-trigger:hover {
-  color: #fff;
-  background: var(--formspec-default-primary);
+  color: var(--formspec-default-text-inverse);
+  background: var(--formspec-default-primary-fill);
 }
 
 .formspec-popover {
@@ -198,34 +214,57 @@
 
 .formspec-tab-bar {
   margin-bottom: 1rem;
-  padding: 0.25rem;
-  border: 1px solid var(--formspec-default-border-subtle);
+  padding: 0.22rem;
+  border: 1px solid color-mix(in srgb, var(--formspec-default-border-subtle) 82%, white);
   border-radius: var(--formspec-default-radius-pill);
-  background: color-mix(in srgb, var(--formspec-default-surface-muted) 66%, white);
+  background: color-mix(in srgb, var(--formspec-default-surface-muted) 76%, white);
 }
 
 .formspec-tab {
   margin-bottom: 0;
-  padding: 0.6rem 0.9rem;
+  min-height: 2.5rem;
+  padding: 0.6rem 0.95rem;
   border: none;
   border-radius: var(--formspec-default-radius-pill);
+  appearance: none;
+  -webkit-appearance: none;
   background: none;
-  color: var(--formspec-default-text-muted);
+  color: var(--formspec-default-text-subtle);
   font: inherit;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   font-weight: 500;
+  transition: var(--formspec-default-transition-fast);
+}
+
+.formspec-tab:hover,
+.formspec-tab:focus-visible {
+  color: var(--formspec-default-text);
+  background: color-mix(in srgb, var(--formspec-default-surface) 82%, white);
 }
 
 .formspec-tab--active {
-  color: var(--formspec-default-primary);
+  color: var(--formspec-default-text-inverse);
   font-weight: 600;
-  background: var(--formspec-default-surface);
-  box-shadow: 0 1px 2px rgba(68, 56, 37, 0.08);
+  background: var(--formspec-default-primary-fill);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--formspec-default-primary-fill) 76%, black 8%);
+}
+
+.formspec-tab--active:hover,
+.formspec-tab--active:focus-visible {
+  color: var(--formspec-default-text-inverse);
+  background: var(--formspec-default-primary-fill-strong);
 }
 
 .formspec-tabs:not([data-position]) .formspec-tab-panels,
 .formspec-tabs[data-position="top"] .formspec-tab-panels {
-  padding-top: 0.75rem;
+  padding-top: 0.9rem;
+}
+
+.formspec-tabs[data-position="left"] .formspec-tab,
+.formspec-tabs[data-position="right"] .formspec-tab {
+  justify-content: flex-start;
+  min-width: 12rem;
+  text-align: left;
 }
 
 .formspec-page h2 {
@@ -248,12 +287,11 @@
   gap: 1rem;
   max-width: 860px;
   margin: 0 auto;
-  padding: 1.75rem;
-  border: 1px solid color-mix(in srgb, var(--formspec-default-border-subtle) 85%, white);
+  padding: 1.5rem 1.6rem;
+  border: 1px solid color-mix(in srgb, var(--formspec-default-border-subtle) 70%, white);
   border-radius: var(--formspec-default-radius-md);
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--formspec-default-surface-quiet) 70%, white) 0%, var(--formspec-default-surface) 100%);
-  box-shadow: var(--formspec-default-shadow-sm);
+  background: color-mix(in srgb, var(--formspec-default-surface) 62%, white);
+  box-shadow: 0 8px 18px rgba(68, 56, 37, 0.03);
 }
 
 .formspec-screener-heading {
@@ -285,9 +323,9 @@
   flex-direction: column;
   gap: 0.25rem;
   padding: 12px;
-  border: 1px solid color-mix(in srgb, var(--formspec-default-border-subtle) 82%, white);
+  border: 1px solid color-mix(in srgb, var(--formspec-default-border-subtle) 68%, white);
   border-radius: var(--formspec-default-radius-sm);
-  background: color-mix(in srgb, white 72%, var(--formspec-default-surface));
+  background: color-mix(in srgb, white 82%, var(--formspec-default-surface));
 }
 
 .formspec-screener-continue {
@@ -301,7 +339,7 @@
 }
 
 .formspec-screener-continue:hover {
-  background: var(--formspec-default-primary-strong);
+  background: var(--formspec-default-primary-fill-strong);
 }
 
 .formspec-screener-routed {
@@ -309,9 +347,9 @@
   flex-direction: column;
   gap: var(--formspec-spacing-md, 1rem);
   padding: var(--formspec-spacing-lg, 1.5rem);
-  border: 1px solid color-mix(in srgb, var(--formspec-default-border-subtle) 82%, white);
+  border: 1px solid color-mix(in srgb, var(--formspec-default-border-subtle) 68%, white);
   border-radius: var(--formspec-default-radius-md);
-  background: var(--formspec-default-surface);
+  background: color-mix(in srgb, var(--formspec-default-surface) 68%, white);
 }
 
 .formspec-wizard--with-sidenav {
@@ -323,7 +361,7 @@
 
 .formspec-wizard-sidenav {
   width: 216px;
-  background: color-mix(in srgb, var(--formspec-default-surface-quiet) 78%, white);
+  background: color-mix(in srgb, var(--formspec-default-surface-muted) 78%, var(--formspec-default-surface-quiet));
   border-right: 1px solid var(--formspec-default-border-subtle);
   transition: width 0.22s ease;
 }
@@ -333,9 +371,12 @@
 }
 
 .formspec-wizard-sidenav-toggle {
+  min-height: 2.75rem;
   padding: 0.85rem 1rem;
   border: none;
   border-bottom: 1px solid var(--formspec-default-border-subtle);
+  appearance: none;
+  -webkit-appearance: none;
   background: none;
   color: var(--formspec-default-text-subtle);
   transition: var(--formspec-default-transition-fast);
@@ -348,25 +389,25 @@
 .formspec-wizard-sidenav-toggle:hover,
 .formspec-wizard-sidenav-btn:hover {
   color: var(--formspec-default-text-strong);
+}
+
+.formspec-wizard-sidenav-item:hover {
   background: var(--formspec-default-surface-soft);
 }
 
 .formspec-wizard-sidenav-item {
-  margin: 0.25rem 0.5rem;
+  margin: 0.2rem 0.5rem;
   border-left: none;
   border-radius: var(--formspec-default-radius-sm);
   transition: var(--formspec-default-transition-fast);
 }
 
 .formspec-wizard-sidenav-item--active {
-  background: color-mix(in srgb, var(--formspec-default-primary) 8%, white);
+  background: color-mix(in srgb, var(--formspec-default-primary) 10%, var(--formspec-default-surface));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--formspec-default-primary) 20%, transparent);
 }
 
 .formspec-wizard-sidenav-item--completed {
-  opacity: 0.72;
-}
-
-.formspec-wizard-sidenav-item--completed:hover {
   opacity: 1;
 }
 
@@ -375,10 +416,13 @@
   align-items: center;
   gap: 10px;
   flex: 1;
-  padding: 0.75rem 0.875rem;
+  min-height: 2.75rem;
+  padding: 0.68rem 0.8rem;
   border: none;
+  appearance: none;
+  -webkit-appearance: none;
   background: none;
-  color: inherit;
+  color: var(--formspec-default-text);
   font: inherit;
   text-align: left;
   transition: var(--formspec-default-transition-fast);
@@ -402,26 +446,27 @@
 }
 
 .formspec-wizard-sidenav-step {
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   flex-shrink: 0;
-  background: color-mix(in srgb, var(--formspec-default-surface-muted) 76%, white);
-  color: var(--formspec-default-text-subtle);
-  font-size: 11px;
+  background: var(--formspec-default-surface-subtle);
+  color: var(--formspec-default-text);
+  border-color: var(--formspec-default-border-control);
+  font-size: 0.75rem;
   font-weight: 700;
   transition: var(--formspec-default-transition-fast);
 }
 
 .formspec-wizard-sidenav-item--active .formspec-wizard-sidenav-step {
-  color: #fff;
-  background: var(--formspec-default-primary);
-  border-color: var(--formspec-default-primary);
+  color: var(--formspec-default-text-inverse);
+  background: var(--formspec-default-primary-fill);
+  border-color: var(--formspec-default-primary-fill);
 }
 
 .formspec-wizard-sidenav-item--completed .formspec-wizard-sidenav-step {
-  color: #fff;
-  background: var(--formspec-default-success);
-  border-color: var(--formspec-default-success);
+  color: var(--formspec-default-text-inverse);
+  background: var(--formspec-default-success-fill);
+  border-color: var(--formspec-default-success-fill);
 }
 
 .formspec-wizard-sidenav-label {
@@ -429,7 +474,8 @@
   text-overflow: ellipsis;
   opacity: 1;
   color: var(--formspec-default-text);
-  font-size: 0.875rem;
+  font-size: 0.9rem;
+  line-height: 1.35;
   font-weight: 500;
   transition: opacity 0.15s ease;
 }
@@ -440,12 +486,13 @@
 }
 
 .formspec-wizard-sidenav-item--active .formspec-wizard-sidenav-label {
-  color: var(--formspec-default-primary-strong);
+  color: var(--formspec-default-text-strong);
   font-weight: 600;
 }
 
 .formspec-wizard-content {
-  padding: 1.5rem 1.75rem;
+  padding: 1.5rem 1.65rem 1.6rem;
+  background: var(--formspec-default-surface);
 }
 
 .formspec-wizard-steps {
@@ -454,30 +501,54 @@
 }
 
 .formspec-wizard-step-indicator {
-  margin: 0 0 0.75rem;
+  display: flex;
+  align-items: center;
+  min-height: 2.5rem;
+  margin: 0 0 1rem;
+  padding: 0 0 0.85rem;
+  border-bottom: 1px solid var(--formspec-default-border-subtle);
   font-size: 0.9375rem;
   font-weight: 600;
+  color: var(--formspec-default-text-strong);
+  letter-spacing: -0.01em;
+}
+
+.formspec-wizard-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--formspec-spacing-field, 0.75rem);
+}
+
+.formspec-wizard-panel .formspec-page > h2 {
+  margin: 0 0 0.35rem;
+  color: var(--formspec-default-text-strong);
+}
+
+.formspec-wizard-panel .formspec-page-description {
+  margin-bottom: 1rem;
   color: var(--formspec-default-text-muted);
 }
 
 .formspec-wizard-step {
-  width: 28px;
-  height: 28px;
-  background: color-mix(in srgb, var(--formspec-default-surface-muted) 76%, white);
-  color: var(--formspec-default-text-subtle);
-  font-size: 12px;
+  width: 30px;
+  height: 30px;
+  background: var(--formspec-default-surface-subtle);
+  color: var(--formspec-default-text);
+  border-color: var(--formspec-default-border-control);
+  font-size: 0.8125rem;
+  font-weight: 700;
 }
 
 .formspec-wizard-step--active {
-  color: #fff;
-  background: var(--formspec-default-primary);
-  border-color: var(--formspec-default-primary);
+  color: var(--formspec-default-text-inverse);
+  background: var(--formspec-default-primary-fill);
+  border-color: var(--formspec-default-primary-fill);
 }
 
 .formspec-wizard-step--completed {
-  color: #fff;
-  background: var(--formspec-default-success);
-  border-color: var(--formspec-default-success);
+  color: var(--formspec-default-text-inverse);
+  background: var(--formspec-default-success-fill);
+  border-color: var(--formspec-default-success-fill);
   font-size: 0;
 }
 
@@ -491,15 +562,16 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  margin-top: 0.25rem;
-  color: var(--formspec-default-text-muted);
-  font-size: 0.8125rem;
+  margin-top: 0.35rem;
+  color: var(--formspec-default-text);
+  font-size: 0.9375rem;
+  line-height: 1.4;
   text-align: center;
 }
 
 .formspec-wizard-step-label--active {
-  color: var(--formspec-default-primary);
-  font-weight: 600;
+  color: var(--formspec-default-text-strong);
+  font-weight: 560;
 }
 
 .formspec-spacer {

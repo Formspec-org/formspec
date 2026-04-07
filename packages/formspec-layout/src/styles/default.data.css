@@ -57,7 +57,7 @@
   border: 1px solid var(--formspec-default-border);
   border-radius: var(--formspec-default-radius-sm) 0 0 var(--formspec-default-radius-sm);
   background: var(--formspec-default-surface-soft);
-  color: #6b7280;
+  color: var(--formspec-default-text-muted);
   font-size: 0.875rem;
   white-space: nowrap;
 }
@@ -68,41 +68,33 @@
   border-bottom-left-radius: 0;
 }
 
-.formspec-datatable-add,
-.formspec-datatable-remove {
+.formspec-datatable-add {
   padding: 0.5rem 0.8rem;
   border: 1px solid transparent;
   border-radius: var(--formspec-default-radius-sm);
+  appearance: none;
+  -webkit-appearance: none;
   font: inherit;
   font-size: 0.8125rem;
   font-weight: 600;
   line-height: 1.2;
+  cursor: pointer;
   transition: var(--formspec-default-transition-fast);
-}
-
-.formspec-datatable-add {
   margin-top: 0.625rem;
   color: var(--formspec-default-text-inverse);
-  background: var(--formspec-default-primary);
-  border-color: var(--formspec-default-primary);
+  background: var(--formspec-default-primary-fill);
+  border-color: var(--formspec-default-primary-fill);
 }
 
 .formspec-datatable-add:hover {
-  background: var(--formspec-default-primary-strong);
-  border-color: var(--formspec-default-primary-strong);
+  color: var(--formspec-default-text-inverse);
+  background: var(--formspec-default-primary-fill-strong);
+  border-color: var(--formspec-default-primary-fill-strong);
 }
 
 .formspec-datatable-remove {
   display: block;
   margin: 0 auto;
-  color: var(--formspec-default-danger);
-  border-color: color-mix(in srgb, var(--formspec-default-danger) 40%, transparent);
-  background: color-mix(in srgb, var(--formspec-default-danger) 6%, white);
-}
-
-.formspec-datatable-remove:hover {
-  border-color: var(--formspec-default-danger);
-  background: color-mix(in srgb, var(--formspec-default-danger) 10%, white);
 }
 
 .formspec-row-number {
@@ -124,7 +116,7 @@
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--formspec-default-danger) 22%, white);
   border-radius: var(--formspec-default-radius-md);
-  background: #fffdfa;
+  background: var(--formspec-default-surface);
 }
 
 .formspec-validation-summary-header,
@@ -133,7 +125,7 @@
   padding: 0.875rem 1rem 0.75rem;
   border-bottom: 1px solid color-mix(in srgb, var(--formspec-default-danger) 22%, white);
   background: var(--formspec-default-danger-surface-soft);
-  color: #7f1d1d;
+  color: var(--formspec-default-danger-text);
   font-size: 0.9375rem;
   font-weight: 650;
   line-height: 1.35;
@@ -167,19 +159,19 @@
 }
 
 .formspec-shape-error {
-  color: #82071e;
-  background: #ffebe9;
+  color: var(--formspec-default-danger-text);
+  background: var(--formspec-default-danger-surface);
   border-left-color: var(--formspec-default-danger-strong);
 }
 
 .formspec-shape-warning {
-  color: #7d4e00;
+  color: var(--formspec-default-warning-text);
   background: var(--formspec-default-warning-surface);
   border-left-color: var(--formspec-default-warning);
 }
 
 .formspec-shape-info {
-  color: #0550ae;
+  color: var(--formspec-default-info-text);
   background: var(--formspec-default-info-surface);
   border-left-color: var(--formspec-default-info);
 }

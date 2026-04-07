@@ -23,23 +23,26 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.7rem 1.2rem;
+  padding: 0.74rem 1.15rem;
   border: none;
   border-radius: var(--formspec-default-radius-sm);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--formspec-default-primary) 88%, white) 0%, var(--formspec-default-primary-strong) 100%);
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--formspec-default-primary-fill);
   color: var(--formspec-default-text-inverse);
   font: inherit;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   font-weight: 600;
-  letter-spacing: 0.01em;
-  box-shadow: 0 8px 18px color-mix(in srgb, var(--formspec-default-primary) 18%, transparent);
+  letter-spacing: 0.012em;
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--formspec-default-primary) 14%, transparent);
   cursor: pointer;
   transition: var(--formspec-default-transition-fast);
 }
 
 .formspec-button-primary:hover:not(:disabled) {
-  background: linear-gradient(180deg, var(--formspec-default-primary) 0%, var(--formspec-default-primary-strong) 100%);
-  box-shadow: 0 12px 22px color-mix(in srgb, var(--formspec-default-primary) 22%, transparent);
+  color: var(--formspec-default-text-inverse);
+  background: var(--formspec-default-primary-fill-strong);
+  box-shadow: 0 12px 22px color-mix(in srgb, var(--formspec-default-primary) 18%, transparent);
 }
 
 .formspec-button-primary:disabled {
@@ -52,15 +55,17 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.7rem 1.15rem;
+  padding: 0.72rem 1.05rem;
   border: 1px solid color-mix(in srgb, var(--formspec-default-border-control) 84%, white);
   border-radius: var(--formspec-default-radius-sm);
-  background: color-mix(in srgb, var(--formspec-default-surface) 92%, white);
+  appearance: none;
+  -webkit-appearance: none;
+  background: color-mix(in srgb, var(--formspec-default-surface) 78%, white);
   color: var(--formspec-default-text);
   font: inherit;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   font-weight: 600;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.012em;
   cursor: pointer;
   transition: var(--formspec-default-transition-fast);
 }
@@ -72,5 +77,36 @@
 
 .formspec-button-secondary:disabled {
   opacity: 0.45;
+  cursor: default;
+}
+
+.formspec-button-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 0.8rem;
+  color: var(--formspec-default-text-inverse);
+  border: 1px solid var(--formspec-default-danger-fill);
+  border-color: var(--formspec-default-danger-fill);
+  border-radius: var(--formspec-default-radius-sm);
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--formspec-default-danger-fill);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: var(--formspec-default-transition-fast);
+}
+
+.formspec-button-danger:hover:not(:disabled) {
+  color: var(--formspec-default-text-inverse);
+  background: color-mix(in srgb, var(--formspec-default-danger-fill) 88%, black);
+  border-color: color-mix(in srgb, var(--formspec-default-danger-fill) 88%, black);
+}
+
+.formspec-button-danger:disabled {
+  opacity: 0.4;
   cursor: default;
 }

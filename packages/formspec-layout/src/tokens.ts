@@ -43,6 +43,15 @@ export function emitMergedThemeCssVars(
         ...(options.themeTokens || {}),
         ...(options.componentTokens || {}),
     };
+    const nextKeys = new Set(
+        Object.keys(merged).map((k) => `--formspec-${k.replace(/\./g, '-')}`),
+    );
+    for (let i = target.style.length - 1; i >= 0; i--) {
+        const prop = target.style[i];
+        if (prop.startsWith('--formspec-') && !nextKeys.has(prop)) {
+            target.style.removeProperty(prop);
+        }
+    }
     for (const [key, value] of Object.entries(merged)) {
         target.style.setProperty(`--formspec-${key.replace(/\./g, '-')}`, String(value));
     }
