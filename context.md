@@ -35,7 +35,7 @@ The specification is organized into three tiers:
 
 Two reference implementations exist: TypeScript (client-side engine + web component + React hooks) and Python (server-side evaluation, linting, mapping). A Rust shared kernel (compiled to WASM and PyO3) ensures identical evaluation across all platforms.
 
-**Project status:** Pre-release, open source (AGPL-3.0). No production users yet.
+**Project status:** Pre-release, open-core (Apache-2.0 runtime, BSL 1.1 authoring tools). No production users yet.
 
 ---
 
@@ -343,15 +343,15 @@ Formspec's accessibility model is built into the behavior layer, not bolted on a
 
 ## Licensing
 
-Formspec is licensed under AGPL-3.0. In plain language:
+Formspec uses an open-core licensing model:
 
-- **You can use it freely** — in government, nonprofit, or commercial settings. No cost. No usage limits.
-- **You can modify it** — fork it, extend it, adapt it to your needs.
-- **If you distribute a modified version or run it as a network service**, you must make your modifications available under the same license. This is the AGPL's copyleft requirement.
-- **Form definitions are data, not software.** Your JSON form definitions, responses, themes, and sidecar documents are not covered by the AGPL. They are your data. You do not need to open-source them.
-- **Using Formspec as a library** in a larger application does trigger the AGPL for the Formspec components, but your application code that calls the Formspec API is not automatically covered — consult your legal team for your specific deployment architecture.
+- **Runtime packages are Apache-2.0** — the specification, schemas, form engine, renderers (web component, React, Swift), FEL evaluator, layout algorithm, and all Rust crates needed to render and validate forms. You can embed these freely in any application, including proprietary and commercial products. No copyleft. Includes a patent grant.
+- **Authoring tools are BSL 1.1** — Studio, MCP server, chat interface, assist implementation, linter, and changeset analysis. You can use these for internal purposes, development, testing, and non-commercial work. The restriction: you cannot offer them as part of a competing hosted form-authoring service. On April 7, 2030 (or four years after each version's release), all BSL code converts automatically to Apache-2.0.
+- **Form definitions are your data.** Your JSON form definitions, responses, themes, mappings, and all other documents you create are yours. No license applies to them regardless of which tools you used.
 
-**Government AGPL concerns:** Some government procurement offices are cautious about AGPL. The key distinction: AGPL applies to the engine code, not to the form definitions or data you create with it. The specification itself is a public document. If AGPL is a blocker for your organization, dual licensing is on the roadmap — contact the maintainers.
+**Government procurement:** The runtime packages are Apache-2.0, which is universally accepted by government procurement offices. No copyleft concerns for the components you embed in your applications. The authoring tools (BSL) are relevant only if you're building a competing hosted form-builder — internal use is unrestricted.
+
+For commercial licensing of the authoring tools, contact licensing@formspec.org. Full details in [LICENSING.md](LICENSING.md).
 
 ---
 

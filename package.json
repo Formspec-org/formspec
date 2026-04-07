@@ -2,7 +2,7 @@
   "name": "formspec-workspace",
   "description": "Formspec monorepo — a JSON-native declarative form specification with dual TypeScript/Python reference implementations",
   "private": true,
-  "license": "AGPL-3.0-only",
+  "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Formspec-org/formspec.git"

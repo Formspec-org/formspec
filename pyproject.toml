@@ -7,12 +7,12 @@ name = "formspec-py"
 version = "0.1.0"
 requires-python = ">=3.12"
 description = "Formspec Python package — server-side FEL evaluation, validation, linting, and mapping"
-license = "AGPL-3.0-only"
+license = "Apache-2.0"
 readme = "src/formspec/README.md"
 authors = [{ name = "Michael Deeb" }]
 classifiers = [
     "Development Status :: 3 - Alpha",
-    "License :: OSI Approved :: GNU Affero General Public License v3",
+    "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
