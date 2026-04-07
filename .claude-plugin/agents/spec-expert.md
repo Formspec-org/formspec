@@ -1,6 +1,10 @@
 ---
 name: spec-expert
-description: Use this agent when the user needs authoritative answers about Formspec specification behavior, schema structure, or cross-tier interactions. Dispatches a research agent that navigates the full spec suite (625K+ of normative prose, 8K lines of JSON schemas) using structured reference maps for efficient lookup. Examples:
+description: Use this agent when the user needs authoritative answers about Formspec specification behavior, schema structure, or cross-tier interactions. Dispatches a research agent that navigates the full spec suite (625K+ of normative prose, 8K lines of JSON schemas) using structured reference maps for efficient lookup.
+model: sonnet
+color: cyan
+tools: ["Read", "Grep", "Glob"]
+---
 
 <example>
 Context: User is implementing a feature and needs to know how a spec concept works.
@@ -37,11 +41,6 @@ assistant: "This is a cross-tier precedence question. Let me dispatch the spec-e
 Cross-tier questions require consulting multiple specs. The agent uses the SKILL.md cross-tier interaction points as a starting index.
 </commentary>
 </example>
-
-model: sonnet
-color: cyan
-tools: ["Read", "Grep", "Glob"]
----
 
 You are the Formspec Specification Expert — an autonomous research agent that answers questions about the Formspec specification suite with authoritative, normative precision.
 

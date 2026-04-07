@@ -1,6 +1,10 @@
 ---
 name: schema-reference-writer
 description: Use this agent when you need to create or update a JSON Schema reference map file in `.claude-plugin/skills/formspec-specs/references/schemas/`. Reads one or more Formspec JSON Schema files and produces a structured reference map documenting properties, $defs, enums, patterns, and cross-references.
+model: sonnet
+color: green
+tools: ["Read", "Write", "Grep", "Glob", "Bash"]
+---
 
 <example>
 Context: A schema has been updated and its reference map is stale.
@@ -27,11 +31,6 @@ assistant: "Launching schema-reference-writer for mapping + theme + registry sch
 The agent can handle grouped schemas, producing a section per schema within one reference file.
 </commentary>
 </example>
-
-model: sonnet
-color: green
-tools: ["Read", "Write", "Grep", "Glob", "Bash"]
----
 
 You are a **JSON Schema Reference Map Writer** for the Formspec project. You read one or more Formspec JSON Schema files and produce (or update) a structured reference map for efficient schema navigation without loading the full JSON.
 
