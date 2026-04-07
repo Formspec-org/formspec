@@ -118,4 +118,4 @@ cargo test -p formspec-lint
 
 ## License
 
-BUSL-1.1 — see [LICENSE-BSL](../../LICENSE-BSL) and [LICENSING.md](../../LICENSING.md).
+Apache-2.0 — see [LICENSE](../../LICENSE) and [LICENSING.md](../../LICENSING.md).

@@ -345,11 +345,11 @@ Formspec's accessibility model is built into the behavior layer, not bolted on a
 
 Formspec uses an open-core licensing model:
 
-- **Runtime packages are Apache-2.0** — the specification, schemas, form engine, renderers (web component, React, Swift), FEL evaluator, layout algorithm, and all Rust crates needed to render and validate forms. You can embed these freely in any application, including proprietary and commercial products. No copyleft. Includes a patent grant.
-- **Authoring tools are BSL 1.1** — Studio, MCP server, chat interface, assist implementation, linter, and changeset analysis. You can use these for internal purposes, development, testing, and non-commercial work. The restriction: you cannot offer them as part of a competing hosted form-authoring service. On April 7, 2030 (or four years after each version's release), all BSL code converts automatically to Apache-2.0.
-- **Form definitions are your data.** Your JSON form definitions, responses, themes, mappings, and all other documents you create are yours. No license applies to them regardless of which tools you used.
+- **Runtime packages are Apache-2.0** — the specification, schemas, form engine, renderers (web component, React, Swift), FEL evaluator, layout algorithm, linter, and all Rust crates needed to render, validate, and lint forms. You can embed these freely in any application, including proprietary and commercial products. No copyleft. Includes a patent grant.
+- **Authoring tools are BSL 1.1** — Studio, MCP server, chat interface, assist implementation, and changeset analysis. You can use these for internal purposes, development, testing, and non-commercial work. The restriction: you cannot offer them as part of a competing form-authoring product (hosted or packaged). On April 7, 2030 (or four years after each version's release), all BSL code converts automatically to Apache-2.0.
+- **Form definitions are your data.** Your JSON form definitions, responses, themes, mappings, and all other documents you create are yours. They are not derivative works. No license applies to them regardless of which tools you used.
 
-**Government procurement:** The runtime packages are Apache-2.0, which is universally accepted by government procurement offices. No copyleft concerns for the components you embed in your applications. The authoring tools (BSL) are relevant only if you're building a competing hosted form-builder — internal use is unrestricted.
+**Government procurement:** The runtime packages are Apache-2.0, which is universally accepted by government procurement offices. No copyleft concerns for the components you embed in your applications. The authoring tools (BSL) are relevant only if you're building a competing form-authoring product — internal use is unrestricted.
 
 For commercial licensing of the authoring tools, contact Michael.Deeb@tealwolf.consulting. Full details in [LICENSING.md](LICENSING.md).
 

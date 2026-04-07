@@ -2,9 +2,15 @@
 
 Formspec uses an open-core licensing model. The specification, schemas, and runtime libraries are permissively licensed to maximize adoption. The authoring and tooling packages are source-available under a commercial-use restriction that converts to Apache-2.0 after four years.
 
-## Versions prior to this change
+## License history
 
-All versions released before this relicensing were published under AGPL-3.0-only. Those versions remain available under AGPL-3.0 terms. This license change applies to all subsequent releases.
+This project has been relicensed twice:
+
+1. **MIT** — original license at project inception
+2. **AGPL-3.0-only** — adopted during development
+3. **Apache-2.0 / BSL 1.1** — current open-core model (this version)
+
+Code obtained under a prior license remains available under those terms for the version at which it was obtained. This license change applies to all subsequent releases.
 
 ## Apache-2.0 — Specification, Schemas, and Runtime
 
@@ -26,6 +32,7 @@ The following are licensed under the [Apache License 2.0](LICENSE):
 - `fel-core` — FEL parser, evaluator, and dependency analysis
 - `formspec-core` — Path utils, schema validation, assembler
 - `formspec-eval` — Batch evaluator
+- `formspec-lint` — Static analysis pipeline
 - `formspec-wasm` — WASM bindings
 - `formspec-py` — Python (PyO3) bindings
 
@@ -50,17 +57,17 @@ The following are licensed under the [Business Source License 1.1](LICENSE-BSL):
 - `@formspec-org/assist` — Assist interoperability implementation
 
 **Rust crates:**
-- `formspec-lint` — Static analysis pipeline
 - `formspec-changeset` — Changeset dependency analysis
 
 **What the BSL allows:**
 - Internal use within your organization
 - Development, testing, and evaluation
 - Non-commercial and academic use
-- Any use that is not a competing hosted "Form Authoring Service"
+- Building internal tools, even commercially, as long as they are not offered to third parties as a form authoring product
+- Any use that is not a competing "Form Authoring Product" (hosted *or* packaged)
 
 **What requires a commercial license:**
-- Offering a hosted or managed service that allows third parties to create, edit, or manage Formspec form definitions using the BSL-licensed components
+- Offering a product — hosted, managed, on-premises, or packaged — that allows third parties to create, edit, or manage Formspec form definitions using the BSL-licensed components
 
 **Change date:** April 7, 2030 — on this date, all BSL-licensed code converts automatically to Apache-2.0.
 
@@ -68,8 +75,23 @@ For commercial licensing inquiries, contact Michael.Deeb@tealwolf.consulting.
 
 ## Form definitions are your data
 
-Your JSON form definitions, responses, themes, mappings, and all other Formspec documents you create are **your data**. They are not covered by any Formspec license. You own them completely regardless of which tools you used to create them.
+Your JSON form definitions, responses, themes, mappings, and all other Formspec documents you create are **your data**. They are not derivative works of Formspec. They are not covered by any Formspec license. You own them completely regardless of which tools you used to create them. This is stated explicitly in the [BSL license text](LICENSE-BSL).
+
+## Trademarks
+
+"Formspec," the Formspec logo, and "FEL" are trademarks of Michel Deeb / TealWolf Consulting LLC. The Apache-2.0 and BSL 1.1 licenses grant rights to the *code*, not to the name or brand.
+
+**You may:**
+- Use the name "Formspec" to accurately describe your project's relationship to Formspec (e.g., "built on Formspec," "compatible with Formspec," "uses the Formspec engine")
+- Use the name in technical documentation, blog posts, and conference talks
+
+**You may not:**
+- Use "Formspec" or confusingly similar names as the name of your own product, service, or company
+- Use the Formspec logo in a way that suggests endorsement or affiliation without written permission
+- Register domain names or social media accounts using "Formspec" without written permission
+
+For trademark use questions, contact Michael.Deeb@tealwolf.consulting.
 
 ## Contributing
 
-By submitting a contribution (pull request, patch, or other code) to this repository, you agree to license your contribution under the same license that applies to the package(s) you are modifying. We require a Contributor License Agreement (CLA) for all contributions — the CLA bot will guide you through this on your first pull request.
+By submitting a contribution to this repository, you agree to license your contribution under the same license that applies to the file(s) you are modifying, and you acknowledge that the maintainers may offer the project (including your contributions) under commercial license terms. See [CONTRIBUTING.md](CONTRIBUTING.md) for full terms.

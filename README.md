@@ -360,5 +360,5 @@ Created by [Michael Deeb](https://www.linkedin.com/in/michael-deeb/) at [TealWol
 
 Open-core model — see [LICENSING.md](LICENSING.md) for details.
 
-- **Runtime** (engine, renderers, FEL, schemas, specs): [Apache-2.0](LICENSE)
-- **Authoring tools** (studio, MCP, chat, linter): [BSL 1.1](LICENSE-BSL) — converts to Apache-2.0 on April 7, 2030
+- **Runtime** (engine, renderers, FEL, linter, schemas, specs): [Apache-2.0](LICENSE)
+- **Authoring tools** (studio, MCP, chat): [BSL 1.1](LICENSE-BSL) — converts to Apache-2.0 on April 7, 2030

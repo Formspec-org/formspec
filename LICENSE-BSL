@@ -7,12 +7,13 @@ Licensed Work:  Formspec Authoring Components
 Additional Use Grant:
 
 You may make use of the Licensed Work, provided that you do not use the
-Licensed Work for a Form Authoring Service.
+Licensed Work for a Form Authoring Product.
 
-A "Form Authoring Service" is a commercial offering that allows third parties
-to create, edit, or manage form definitions and that is provided as a hosted
-or managed service where the service operator (not the end user) controls
-the deployment of the Licensed Work.
+A "Form Authoring Product" is a commercial offering that allows third parties
+to create, edit, or manage form definitions and is made available either:
+(a) as a hosted or managed service, or
+(b) as a packaged product (on-premises, installable, or embedded)
+where the offering competes with the Licensor's own form authoring products.
 
 For clarity, the following uses are always permitted:
 - Internal use of the Licensed Work within your organization
@@ -20,6 +21,13 @@ For clarity, the following uses are always permitted:
 - Non-commercial and academic use
 - Use of the Licensed Work to render, fill, or submit forms (form rendering
   is covered by the Apache-2.0 licensed runtime packages, not this license)
+- Building internal tools that use the Licensed Work, even commercially,
+  as long as those tools are not offered to third parties as a form authoring
+  product
+
+For the avoidance of doubt, form definitions, responses, themes, mappings,
+and other data documents created using the Licensed Work are not derivative
+works of the Licensed Work. You own your data.
 
 Change Date:  April 7, 2030
 
