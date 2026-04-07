@@ -25,6 +25,8 @@ export interface IsolatedWebComponentStoryProps {
     touchAll?: boolean;
     /** Storybook-controlled appearance override. */
     appearance?: StoryAppearance;
+    /** When true, comparison stories remove adapter field-width caps so panes use the same measure. */
+    fillComparisonWidth?: boolean;
 }
 
 function useShadowRoot(stylesheets: string[], inlineStyles: string[]) {
@@ -74,6 +76,7 @@ export function IsolatedWebComponentStory({
     initialData,
     touchAll = false,
     appearance = 'system',
+    fillComparisonWidth = false,
 }: IsolatedWebComponentStoryProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const elementRef = useRef<FormspecRender | null>(null);
@@ -100,8 +103,29 @@ export function IsolatedWebComponentStory({
             `,
         ];
         if (adapter?.integrationCSS) styles.push(adapter.integrationCSS);
+        if (adapter?.name === 'uswds' && fillComparisonWidth) {
+            styles.push(`
+                .formspec-uswds-comparison-form {
+                    max-width: 100%;
+                }
+                .formspec-uswds-comparison-form .usa-form-group,
+                .formspec-uswds-comparison-form .usa-fieldset,
+                .formspec-uswds-comparison-form .usa-form-group > .usa-input-group,
+                .formspec-uswds-comparison-form .usa-form-group > .usa-range,
+                .formspec-uswds-comparison-form .usa-form-group > .usa-file-input {
+                    max-width: none !important;
+                }
+                .formspec-uswds-comparison-form .formspec-stack.grid-row.grid-gap > [class*='grid-col'] > .usa-form-group,
+                .formspec-uswds-comparison-form .formspec-stack.grid-row.grid-gap > [class*='grid-col'] > .usa-fieldset,
+                .formspec-uswds-comparison-form .formspec-stack.grid-row.grid-gap > [class*='grid-col'] > .usa-form-group > .usa-input-group,
+                .formspec-uswds-comparison-form .formspec-stack.grid-row.grid-gap > [class*='grid-col'] > .usa-form-group > .usa-range,
+                .formspec-uswds-comparison-form .formspec-stack.grid-row.grid-gap > [class*='grid-col'] > .usa-form-group > .usa-file-input {
+                    max-width: none !important;
+                }
+            `);
+        }
         return styles;
-    }, [adapter]);
+    }, [adapter, fillComparisonWidth]);
 
     const { hostRef, mountNode } = useShadowRoot(stylesheets, inlineStyles);
 
@@ -172,10 +196,10 @@ export function IsolatedWebComponentStory({
         adapter?.name === 'uswds' ? (
             <div className="isolated-story-root">
                 {/*
-                  Match RealUSWDSStory: .usa-form sets max-width (20rem at mobile-lg) and resets
-                  control max-width inside the form so field sizing matches official USWDS examples.
+                  Comparison-story wrapper: the adapter integration CSS widens `.usa-form` when it
+                  contains a Formspec container, so both panes render against the same available width.
                 */}
-                <form className="usa-form">
+                <form className={fillComparisonWidth ? 'usa-form formspec-uswds-comparison-form' : 'usa-form'}>
                     {definition?.title ? (
                         <h2 className={allDisplayOnly ? undefined : 'usa-sr-only'}>{definition.title}</h2>
                     ) : null}

@@ -19,7 +19,6 @@ export default defineConfig({
       { find: '@formspec-org/engine/fel-runtime', replacement: `${pkgSrc('formspec-engine')}/fel/fel-api-runtime.ts` },
       { find: '@formspec-org/engine/fel-tools', replacement: `${pkgSrc('formspec-engine')}/fel/fel-api-tools.ts` },
       { find: '@formspec-org/engine', replacement: `${pkgSrc('formspec-engine')}/index.ts` },
-      { find: '@formspec-org/layout/default-theme', replacement: `${pkgSrc('formspec-layout')}/default-theme.json` },
       { find: '@formspec-org/layout', replacement: `${pkgSrc('formspec-layout')}/index.ts` },
       { find: '@formspec-org/webcomponent/formspec-layout.css', replacement: `${pkgSrc('formspec-webcomponent')}/formspec-layout.css` },
       { find: '@formspec-org/webcomponent/formspec-default.css', replacement: `${pkgSrc('formspec-webcomponent')}/formspec-default.css` },

@@ -2,6 +2,8 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests',
+  /* Storybook lives on :6006 — run via `npm run test:storybook:dom` (playwright.storybook.config.ts). */
+  testIgnore: ['**/storybook/**'],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

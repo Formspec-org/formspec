@@ -51,6 +51,7 @@ export function USWDSSideBySideStory({
                     initialData={initialData}
                     touchAll={touchAll}
                     appearance={appearance}
+                    fillComparisonWidth
                 />
             )}
             rightPane={(
