@@ -1,7 +1,7 @@
 /** @filedesc FormspecForm — auto-renderer that walks LayoutNode tree into React elements. */
 import React, { useState, useCallback, useLayoutEffect, useRef } from 'react';
-import defaultThemeJson from '@formspec-org/layout/default-theme';
-import { emitMergedThemeCssVars } from '@formspec-org/layout';
+import { buildPlatformTheme, emitMergedThemeCssVars } from '@formspec-org/layout';
+const defaultThemeJson = buildPlatformTheme();
 import { FormspecProvider } from './context';
 import type { FormspecProviderProps } from './context';
 import { useFormspecContext } from './context';

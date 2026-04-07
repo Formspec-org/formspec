@@ -79,9 +79,9 @@ describe('Field spacing token ownership', () => {
     it('ships a single canonical dark token override block in the canonical CSS bundle', () => {
         expect(layoutCSS).toContain('color-scheme: light;');
         expect(layoutCSS).toContain('.formspec-container.formspec-appearance-dark');
-        expect(layoutCSS).toContain('--formspec-default-bg: #161311;');
-        expect(layoutCSS).toContain('--formspec-default-text: #f3ecdf;');
-        expect(layoutCSS).toContain('--formspec-default-surface: #211c19;');
+        expect(layoutCSS).toContain('--formspec-default-bg: var(--formspec-color-dark-background, #161311)');
+        expect(layoutCSS).toContain('--formspec-default-text: var(--formspec-color-dark-foreground, #f3ecdf)');
+        expect(layoutCSS).toContain('--formspec-default-surface: var(--formspec-color-dark-card, #211c19)');
         expect(layoutCSS).not.toContain('@media (prefers-color-scheme: dark)');
         expect(layoutCSS).not.toContain('.formspec-appearance-light .formspec-container');
         expect(layoutCSS).not.toContain('.formspec-appearance-dark .formspec-container');

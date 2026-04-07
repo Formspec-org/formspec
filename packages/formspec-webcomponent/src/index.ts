@@ -35,8 +35,8 @@ export type { ThemeDocument, PresentationBlock, ItemDescriptor, AccessibilityBlo
 export type { RenderContext, ComponentPlugin, ValidationTargetMetadata, ScreenerRoute, ScreenerRouteType, ScreenerStateSnapshot } from './types';
 
 // Default theme
-import defaultThemeJson from '@formspec-org/layout/default-theme';
-export { defaultThemeJson as defaultTheme };
+import { buildPlatformTheme } from '@formspec-org/layout';
+export const defaultTheme = buildPlatformTheme();
 
 // Headless adapter public API
 export type { RenderAdapter, AdapterRenderFn, AdapterContext } from './adapters/types';

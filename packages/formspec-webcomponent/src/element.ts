@@ -19,7 +19,8 @@ import {
     mergeFormPresentationForPlanning,
     type PlanContext,
 } from '@formspec-org/layout';
-import defaultThemeJson from '@formspec-org/layout/default-theme';
+import { buildPlatformTheme } from '@formspec-org/layout';
+const defaultThemeJson = buildPlatformTheme();
 
 // Extracted modules
 import {

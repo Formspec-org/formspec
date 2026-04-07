@@ -49,9 +49,8 @@ describe('Primary action button parity', () => {
     });
 
     it('keeps primary action text on the light foreground token in dark mode', () => {
-        expect(layoutCSS).toContain('--formspec-default-text-inverse: var(--formspec-color-primaryForeground, #fff);');
-        expect(layoutCSS).toContain('--formspec-default-primary-fill: var(--formspec-default-primary);');
-        expect(layoutCSS).toContain('--formspec-default-primary-fill-strong: var(--formspec-default-primary-strong);');
+        expect(layoutCSS).toContain('--formspec-default-text-inverse: var(--formspec-color-dark-primaryForeground, #ffffff)');
+        expect(layoutCSS).toContain('--formspec-default-primary-fill: var(--formspec-color-primary, #27594f)');
     });
 
     it('lets the file upload browse button inherit the shared secondary button colors', () => {
