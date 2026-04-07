@@ -1,0 +1,142 @@
+{
+  "$formspecTokenRegistry": "1.0",
+  "description": "Formspec platform token catalog — tokens consumed by the default CSS skin.",
+  "categories": {
+    "color": {
+      "description": "Color palette tokens for light and dark modes",
+      "type": "color",
+      "darkPrefix": "color.dark",
+      "tokens": {
+        "color.primary": {
+          "description": "Primary brand/accent color",
+          "default": "#27594f",
+          "dark": "#8bb8ac"
+        },
+        "color.primaryForeground": {
+          "description": "Text color on primary backgrounds",
+          "default": "#ffffff",
+          "dark": "#ffffff"
+        },
+        "color.foreground": {
+          "description": "Default text color",
+          "default": "#20241f",
+          "dark": "#f3ecdf"
+        },
+        "color.background": {
+          "description": "Page/form background color",
+          "default": "#f6f0e6",
+          "dark": "#161311"
+        },
+        "color.border": {
+          "description": "Default border color",
+          "default": "#d1c8ba",
+          "dark": "#4f463d"
+        },
+        "color.card": {
+          "description": "Card/panel surface color",
+          "default": "#fdfaf4",
+          "dark": "#211c19"
+        },
+        "color.muted": {
+          "description": "Muted text color",
+          "default": "#686158",
+          "dark": "#c4b8a7"
+        },
+        "color.mutedForeground": {
+          "description": "Subtle text color",
+          "default": "#736c62",
+          "dark": "#ad9f8d"
+        },
+        "color.error": {
+          "description": "Error/danger indicator color",
+          "default": "#c1281f",
+          "dark": "#ff8b7f"
+        },
+        "color.warning": {
+          "description": "Warning/caution indicator color",
+          "default": "#946112",
+          "dark": "#e2b35c"
+        },
+        "color.success": {
+          "description": "Success/confirmation indicator color",
+          "default": "#2f855a",
+          "dark": "#79c89d"
+        },
+        "color.info": {
+          "description": "Informational indicator color",
+          "default": "#2b6cb0",
+          "dark": "#82b8f8"
+        },
+        "color.ring": {
+          "description": "Focus ring color",
+          "default": "#27594f",
+          "dark": "#8fc6b7"
+        },
+        "color.input": {
+          "description": "Input border color",
+          "default": "#c0b6a8",
+          "dark": "#5c5247"
+        },
+        "color.surface": {
+          "description": "Muted surface/panel background",
+          "default": "#f2ece2",
+          "dark": "#2a241f"
+        }
+      }
+    },
+    "spacing": {
+      "description": "Layout spacing scale",
+      "type": "dimension",
+      "tokens": {
+        "spacing.xs": {
+          "description": "Extra-small spacing",
+          "default": "0.25rem"
+        },
+        "spacing.sm": {
+          "description": "Small spacing",
+          "default": "0.5rem"
+        },
+        "spacing.md": {
+          "description": "Medium spacing, used for container and grid gaps",
+          "default": "1rem"
+        },
+        "spacing.lg": {
+          "description": "Large spacing",
+          "default": "1.5rem"
+        },
+        "spacing.xl": {
+          "description": "Extra-large spacing",
+          "default": "2rem"
+        },
+        "spacing.field": {
+          "description": "Vertical gap between form fields",
+          "default": "0.75rem"
+        }
+      }
+    },
+    "radius": {
+      "description": "Border radius scale",
+      "type": "dimension",
+      "tokens": {
+        "radius.sm": {
+          "description": "Small border radius for inputs and controls",
+          "default": "0.9rem"
+        },
+        "radius.md": {
+          "description": "Medium border radius for cards and panels",
+          "default": "1.35rem"
+        }
+      }
+    },
+    "font": {
+      "description": "Typography tokens",
+      "type": "fontFamily",
+      "tokens": {
+        "font.family": {
+          "description": "Base font family stack",
+          "default": "\"Instrument Sans\", \"Avenir Next\", \"Segoe UI\", sans-serif"
+        }
+      }
+    }
+  }
+}

@@ -538,27 +538,30 @@ mod tests {
             "$formspecTheme": "1.0",
             "version": "1.0.0",
             "targetDefinition": { "url": DEF_URL },
-            "tokens": { "primary": "#000" },
+            "tokens": { "color.primary": "#000" },
             "selectors": [{
                 "match": "*",
-                "properties": { "color": "$token.primary", "bg": "$token.missing" }
+                "properties": { "color": "$token.color.primary", "bg": "$token.missing" }
             }]
         });
         let result = lint(&theme);
         assert_eq!(result.document_type, Some(DocumentType::Theme));
         assert!(result.diagnostics.iter().any(|d| d.code == "W704"));
-        let non_e101 = result
+        // Expect W704 (missing token ref), W708/W709 (registry checks), plus E101 from schema
+        // Filter to only W704 — the core check this test validates
+        let w704_count = result
             .diagnostics
             .iter()
-            .filter(|d| d.code != "E101")
+            .filter(|d| d.code == "W704")
             .count();
         assert_eq!(
-            non_e101,
+            w704_count,
             1,
-            "Only W704 expected (excluding any E101), got: {:?}",
+            "Exactly one W704 expected, got: {:?}",
             result
                 .diagnostics
                 .iter()
+                .filter(|d| d.code == "W704")
                 .map(|d| (&d.code, &d.message))
                 .collect::<Vec<_>>()
         );

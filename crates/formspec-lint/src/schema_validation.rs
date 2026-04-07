@@ -32,6 +32,7 @@ const VALIDATION_RESULT_SCHEMA: &str =
     include_str!("../schemas/validationResult.schema.json");
 const SCREENER_SCHEMA: &str = include_str!("../schemas/screener.schema.json");
 const DETERMINATION_SCHEMA: &str = include_str!("../schemas/determination.schema.json");
+const TOKEN_REGISTRY_SCHEMA: &str = include_str!("../schemas/token-registry.schema.json");
 
 // ── Schema text + $id pairs for cross-file $ref resolution ───────
 
@@ -49,6 +50,10 @@ const CROSS_REF_SCHEMAS: &[(&str, &str)] = &[
     (
         DEFINITION_SCHEMA,
         "https://formspec.org/schemas/definition/1.0",
+    ),
+    (
+        TOKEN_REGISTRY_SCHEMA,
+        "https://formspec.org/schemas/token-registry/1.0",
     ),
 ];
 

@@ -1,12 +1,16 @@
 //! Pass 6: Theme document semantic checks (W700-W711, E710).
 //!
-//! Validates token values by naming convention, token reference integrity,
-//! cross-artifact consistency (when a definition is provided), and page semantics.
+//! Validates token values against the embedded Token Registry, checks token
+//! reference integrity, cross-artifact consistency (when a definition is
+//! provided), and page semantics.
 //!
-//! Token classification, selector walks, and page rules beyond [`lint_theme`] are internal.
+//! The registry maps every platform token key to its semantic type (color,
+//! dimension, fontFamily, etc.) so validation uses authoritative type info
+//! instead of naming-convention heuristics.
 #![allow(clippy::missing_docs_in_private_items)]
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
+use std::sync::OnceLock;
 
 use serde_json::Value;
 
@@ -16,40 +20,89 @@ use crate::types::LintDiagnostic;
 
 const PASS: u8 = 6;
 
-// ── Token classification ────────────────────────────────────────
+// ── Token Registry ─────────────────────────────────────────────
 
-/// Token category inferred from its dotted name.
-#[derive(Debug, PartialEq)]
-enum TokenCategory {
-    Color,
-    Spacing,
-    FontWeight,
-    LineHeight,
-    Other,
+const TOKEN_REGISTRY_JSON: &str = include_str!("../schemas/token-registry.json");
+
+/// Parsed token registry mapping every platform token key to its semantic type.
+struct TokenRegistry {
+    /// Maps token key (e.g. "color.primary") to its type (e.g. "color").
+    token_types: HashMap<String, String>,
+    /// All known token keys (light + dark variants).
+    all_keys: HashSet<String>,
 }
 
-fn classify_token(name: &str) -> TokenCategory {
-    let lower = name.to_ascii_lowercase();
-    // Check prefix-based categories first, then substring/suffix.
-    if lower.starts_with("color") || lower.contains(".color") {
-        return TokenCategory::Color;
+impl TokenRegistry {
+    fn from_json(json: &Value) -> Self {
+        let mut token_types = HashMap::new();
+        let mut all_keys = HashSet::new();
+
+        if let Some(categories) = json.get("categories").and_then(|v| v.as_object()) {
+            for (cat_key, category) in categories {
+                let cat_type = category
+                    .get("type")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("unknown");
+
+                if let Some(tokens) = category.get("tokens").and_then(|v| v.as_object()) {
+                    for (token_key, entry) in tokens {
+                        let entry_type = entry
+                            .get("type")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or(cat_type);
+                        token_types.insert(token_key.clone(), entry_type.to_string());
+                        all_keys.insert(token_key.clone());
+                    }
+                }
+
+                // Register dark-mode keys derived from darkPrefix
+                if let Some(dark_prefix) = category.get("darkPrefix").and_then(|v| v.as_str())
+                    && let Some(tokens) = category.get("tokens").and_then(|v| v.as_object())
+                {
+                    for (token_key, entry) in tokens {
+                        if entry.get("dark").is_some()
+                            && let Some(suffix) = token_key
+                                .strip_prefix(cat_key.as_str())
+                                .and_then(|s| s.strip_prefix('.'))
+                        {
+                            let dark_key = format!("{dark_prefix}.{suffix}");
+                            token_types.insert(dark_key.clone(), "color".to_string());
+                            all_keys.insert(dark_key);
+                        }
+                    }
+                }
+            }
+        }
+
+        TokenRegistry {
+            token_types,
+            all_keys,
+        }
     }
-    if lower.starts_with("spacing")
-        || lower.starts_with("size")
-        || lower.starts_with("sizing")
-        || lower.contains(".spacing")
-        || lower.contains(".size")
-        || lower.contains(".sizing")
-    {
-        return TokenCategory::Spacing;
+
+    /// Look up the semantic type for a token key.
+    fn token_type(&self, key: &str) -> Option<&str> {
+        self.token_types.get(key).map(|s| s.as_str())
     }
-    if lower.contains("fontweight") || lower.ends_with(".weight") {
-        return TokenCategory::FontWeight;
+
+    /// Whether this key is a known platform token.
+    fn contains(&self, key: &str) -> bool {
+        self.all_keys.contains(key)
     }
-    if lower.contains("lineheight") || lower.ends_with(".line-height") {
-        return TokenCategory::LineHeight;
+
+    /// All known platform token keys.
+    fn all_keys(&self) -> &HashSet<String> {
+        &self.all_keys
     }
-    TokenCategory::Other
+}
+
+fn token_registry() -> &'static TokenRegistry {
+    static REGISTRY: OnceLock<TokenRegistry> = OnceLock::new();
+    REGISTRY.get_or_init(|| {
+        let json: Value = serde_json::from_str(TOKEN_REGISTRY_JSON)
+            .expect("embedded token registry is valid JSON");
+        TokenRegistry::from_json(&json)
+    })
 }
 
 // ── Value validators ────────────────────────────────────────────
@@ -371,17 +424,33 @@ pub fn lint_theme(theme: &Value, definition: Option<&Value>) -> Vec<LintDiagnost
         .map(|obj| obj.keys().cloned().collect())
         .unwrap_or_default();
 
-    // ── W700-W703: Token value validation ───────────────────────
+    // ── W700-W703, W708-W709: Token validation via registry ───────
+    let registry = token_registry();
+
     if let Some(tokens) = theme.get("tokens").and_then(|v| v.as_object()) {
         for (name, value) in tokens {
             let path = format!("$.tokens.{name}");
-            let category = classify_token(name);
+
+            // W708: unknown non-extension token
+            if !registry.contains(name) && !name.starts_with("x-") {
+                diags.push(LintDiagnostic::warning(
+                    "W708",
+                    PASS,
+                    &path,
+                    format!(
+                        "Token '{name}' is not a recognized platform token and does not use the 'x-' extension prefix"
+                    ),
+                ));
+            }
+
+            // Type-based value validation using registry
+            let token_type = registry.token_type(name);
             let value_str = match value {
                 Value::String(s) => Some(s.as_str()),
                 Value::Number(n) => {
-                    // Numbers are valid for line-height and font-weight; skip string checks for others.
-                    match category {
-                        TokenCategory::FontWeight => {
+                    // Numbers are valid for fontWeight and number types; validate inline.
+                    match token_type {
+                        Some("fontWeight") => {
                             let repr = n.to_string();
                             if !is_font_weight(&repr) {
                                 diags.push(LintDiagnostic::warning(
@@ -393,16 +462,18 @@ pub fn lint_theme(theme: &Value, definition: Option<&Value>) -> Vec<LintDiagnost
                             }
                             None
                         }
-                        TokenCategory::LineHeight => {
+                        Some("number") => {
                             if let Some(f) = n.as_f64()
                                 && f <= 0.0
                             {
                                 diags.push(LintDiagnostic::warning(
-                                        "W703",
-                                        PASS,
-                                        &path,
-                                        format!("Line height token '{name}' must be a positive number, got: {f}"),
-                                    ));
+                                    "W703",
+                                    PASS,
+                                    &path,
+                                    format!(
+                                        "Number token '{name}' must be a positive number, got: {f}"
+                                    ),
+                                ));
                             }
                             None
                         }
@@ -413,8 +484,8 @@ pub fn lint_theme(theme: &Value, definition: Option<&Value>) -> Vec<LintDiagnost
             };
 
             if let Some(s) = value_str {
-                match category {
-                    TokenCategory::Color => {
+                match token_type {
+                    Some("color") => {
                         if !is_css_color(s) {
                             diags.push(LintDiagnostic::warning(
                                 "W700",
@@ -424,17 +495,19 @@ pub fn lint_theme(theme: &Value, definition: Option<&Value>) -> Vec<LintDiagnost
                             ));
                         }
                     }
-                    TokenCategory::Spacing => {
+                    Some("dimension") => {
                         if !is_css_length(s) {
                             diags.push(LintDiagnostic::warning(
                                 "W701",
                                 PASS,
                                 &path,
-                                format!("Spacing/size token '{name}' has invalid CSS length value: '{s}'"),
+                                format!(
+                                    "Dimension token '{name}' has invalid CSS length value: '{s}'"
+                                ),
                             ));
                         }
                     }
-                    TokenCategory::FontWeight => {
+                    Some("fontWeight") => {
                         if !is_font_weight(s) {
                             diags.push(LintDiagnostic::warning(
                                 "W702",
@@ -444,18 +517,35 @@ pub fn lint_theme(theme: &Value, definition: Option<&Value>) -> Vec<LintDiagnost
                             ));
                         }
                     }
-                    TokenCategory::LineHeight => {
+                    Some("number") => {
                         if !is_line_height(s) {
                             diags.push(LintDiagnostic::warning(
                                 "W703",
                                 PASS,
                                 &path,
-                                format!("Line height token '{name}' must be a unitless positive number, got: '{s}'"),
+                                format!("Number token '{name}' must be a unitless positive number, got: '{s}'"),
                             ));
                         }
                     }
-                    TokenCategory::Other => {}
+                    // fontFamily, duration, opacity, shadow, unknown — no value validation
+                    _ => {}
                 }
+            }
+        }
+    }
+
+    // W709: missing platform tokens (informational)
+    if let Some(tokens) = theme.get("tokens").and_then(|v| v.as_object()) {
+        for key in registry.all_keys() {
+            if !tokens.contains_key(key.as_str()) {
+                diags.push(LintDiagnostic::info(
+                    "W709",
+                    PASS,
+                    "$.tokens",
+                    format!(
+                        "Platform token '{key}' not declared in theme (platform default will be used)"
+                    ),
+                ));
             }
         }
     }
@@ -620,10 +710,18 @@ mod tests {
     }
 
     #[test]
-    fn minimal_theme_with_empty_tokens_produces_no_diagnostics() {
+    fn minimal_theme_with_empty_tokens_only_emits_w709() {
+        // An empty tokens object causes W709 (info) for every platform token
         let theme = json!({ "tokens": {} });
         let diags = lint_theme(&theme, None);
-        assert!(diags.is_empty());
+        // All diagnostics should be W709 (info severity)
+        for d in &diags {
+            assert_eq!(d.code, "W709", "Only W709 expected, got {}", d.code);
+        }
+        assert!(
+            !diags.is_empty(),
+            "Should emit W709 for missing platform tokens"
+        );
     }
 
     // ── 2. Valid hex color — no W700 ────────────────────────────
@@ -634,7 +732,7 @@ mod tests {
             "tokens": {
                 "color.primary": "#0057B7",
                 "color.error": "#D32F2F",
-                "color.transparent": "#00000000"
+                "color.surface": "#00000000"
             }
         });
         let diags = lint_theme(&theme, None);
@@ -643,7 +741,8 @@ mod tests {
 
     #[test]
     fn valid_short_hex_color_no_w700() {
-        let theme = json!({ "tokens": { "color.bg": "#FFF" } });
+        // Use a known registry color token
+        let theme = json!({ "tokens": { "color.background": "#FFF" } });
         let diags = lint_theme(&theme, None);
         assert!(with_code(&diags, "W700").is_empty());
     }
@@ -652,10 +751,10 @@ mod tests {
     fn valid_functional_colors_no_w700() {
         let theme = json!({
             "tokens": {
-                "color.a": "rgb(255, 0, 0)",
-                "color.b": "rgba(0, 0, 0, 0.5)",
-                "color.c": "hsl(120, 50%, 50%)",
-                "color.d": "hsla(240, 100%, 50%, 0.7)"
+                "color.foreground": "rgb(255, 0, 0)",
+                "color.border": "rgba(0, 0, 0, 0.5)",
+                "color.card": "hsl(120, 50%, 50%)",
+                "color.muted": "hsla(240, 100%, 50%, 0.7)"
             }
         });
         let diags = lint_theme(&theme, None);
@@ -680,14 +779,14 @@ mod tests {
 
     #[test]
     fn invalid_hex_too_long_emits_w700() {
-        let theme = json!({ "tokens": { "color.x": "#1234567890" } });
+        let theme = json!({ "tokens": { "color.border": "#1234567890" } });
         let diags = lint_theme(&theme, None);
         assert_eq!(with_code(&diags, "W700").len(), 1);
     }
 
     #[test]
     fn invalid_hex_bad_chars_emits_w700() {
-        let theme = json!({ "tokens": { "color.x": "#GGHHII" } });
+        let theme = json!({ "tokens": { "color.border": "#GGHHII" } });
         let diags = lint_theme(&theme, None);
         assert_eq!(with_code(&diags, "W700").len(), 1);
     }
@@ -696,14 +795,15 @@ mod tests {
 
     #[test]
     fn valid_css_lengths_no_w701() {
+        // Use registry-known dimension tokens
         let theme = json!({
             "tokens": {
                 "spacing.sm": "8px",
                 "spacing.md": "1rem",
                 "spacing.lg": "50%",
-                "spacing.zero": "0",
-                "size.icon": "24px",
-                "sizing.header": "3em"
+                "spacing.xs": "0",
+                "radius.sm": "24px",
+                "radius.md": "3em"
             }
         });
         let diags = lint_theme(&theme, None);
@@ -712,9 +812,10 @@ mod tests {
 
     #[test]
     fn invalid_css_length_emits_w701() {
+        // Use a registry-known dimension token with invalid value
         let theme = json!({
             "tokens": {
-                "spacing.bad": "not-a-length"
+                "spacing.sm": "not-a-length"
             }
         });
         let diags = lint_theme(&theme, None);
@@ -726,111 +827,67 @@ mod tests {
     #[test]
     fn bare_number_string_invalid_length_emits_w701() {
         // "8" without a unit is not valid CSS length (only "0" is special)
-        let theme = json!({ "tokens": { "spacing.x": "8" } });
+        let theme = json!({ "tokens": { "spacing.md": "8" } });
         let diags = lint_theme(&theme, None);
         assert_eq!(with_code(&diags, "W701").len(), 1);
     }
 
-    // ── 5. Font weight validation ───────────────────────────────
+    // ── 5. Font weight validator ──────────────────────────────────
+    // The current platform registry has no fontWeight-typed tokens, so these
+    // test the validator directly. lint_theme() will dispatch to is_font_weight
+    // for any future registry token with type "fontWeight".
 
     #[test]
-    fn valid_font_weights_no_w702() {
-        let theme = json!({
-            "tokens": {
-                "typography.fontweight.body": "400",
-                "typography.fontweight.heading": "bold",
-                "typography.fontweight.light": "normal"
-            }
-        });
-        let diags = lint_theme(&theme, None);
-        assert!(with_code(&diags, "W702").is_empty());
+    fn valid_font_weights() {
+        assert!(is_font_weight("400"));
+        assert!(is_font_weight("bold"));
+        assert!(is_font_weight("normal"));
     }
 
     #[test]
     fn valid_font_weight_numeric_range() {
         for w in (100..=900).step_by(100) {
-            let theme = json!({ "tokens": { "typography.fontweight.x": w.to_string() } });
-            let diags = lint_theme(&theme, None);
-            assert!(
-                with_code(&diags, "W702").is_empty(),
-                "Weight {w} should be valid"
-            );
+            assert!(is_font_weight(&w.to_string()), "Weight {w} should be valid");
         }
     }
 
     #[test]
-    fn invalid_font_weight_350_emits_w702() {
-        let theme = json!({
-            "tokens": { "typography.fontweight.x": "350" }
-        });
-        let diags = lint_theme(&theme, None);
-        let w702 = with_code(&diags, "W702");
-        assert_eq!(w702.len(), 1);
-        assert!(w702[0].message.contains("350"));
+    fn invalid_font_weight_350() {
+        assert!(!is_font_weight("350"));
     }
 
     #[test]
     fn font_weight_zero_invalid() {
-        let theme = json!({ "tokens": { "typography.fontweight.x": "0" } });
-        let diags = lint_theme(&theme, None);
-        assert_eq!(with_code(&diags, "W702").len(), 1);
+        assert!(!is_font_weight("0"));
     }
 
     #[test]
     fn font_weight_1000_invalid() {
-        let theme = json!({ "tokens": { "typography.fontweight.x": "1000" } });
-        let diags = lint_theme(&theme, None);
-        assert_eq!(with_code(&diags, "W702").len(), 1);
+        assert!(!is_font_weight("1000"));
     }
 
-    // ── 6. Line height validation ───────────────────────────────
+    // ── 6. Line height / number validator ──────────────────────────
+    // No "number"-typed tokens in the current registry, so test the validator
+    // directly. lint_theme() dispatches to is_line_height for "number" type.
 
     #[test]
-    fn valid_line_height_no_w703() {
-        let theme = json!({
-            "tokens": { "typography.lineheight.body": "1.5" }
-        });
-        let diags = lint_theme(&theme, None);
-        assert!(with_code(&diags, "W703").is_empty());
+    fn valid_line_height() {
+        assert!(is_line_height("1.5"));
     }
 
     #[test]
     fn line_height_with_unit_invalid() {
-        let theme = json!({
-            "tokens": { "typography.lineheight.x": "1.5px" }
-        });
-        let diags = lint_theme(&theme, None);
-        let w703 = with_code(&diags, "W703");
-        assert_eq!(w703.len(), 1);
-        assert!(w703[0].message.contains("1.5px"));
+        assert!(!is_line_height("1.5px"));
     }
 
     #[test]
     fn line_height_zero_invalid() {
-        let theme = json!({ "tokens": { "typography.lineheight.x": "0" } });
-        let diags = lint_theme(&theme, None);
-        assert_eq!(with_code(&diags, "W703").len(), 1);
+        assert!(!is_line_height("0"));
     }
 
     #[test]
     fn line_height_negative_invalid() {
-        let theme = json!({ "tokens": { "typography.lineheight.x": "-1.2" } });
-        let diags = lint_theme(&theme, None);
-        assert_eq!(with_code(&diags, "W703").len(), 1);
-    }
-
-    #[test]
-    fn line_height_number_value_valid() {
-        let theme = json!({ "tokens": { "typography.lineheight.x": 1.5 } });
-        let diags = lint_theme(&theme, None);
-        assert!(with_code(&diags, "W703").is_empty());
-    }
-
-    #[test]
-    fn line_height_number_value_zero_invalid() {
-        let theme = json!({ "tokens": { "typography.lineheight.x": 0 } });
-        let diags = lint_theme(&theme, None);
-        assert_eq!(with_code(&diags, "W703").len(), 1);
+        assert!(!is_line_height("-1.2"));
     }
 
     // ── 7. Token reference missing — W704 ───────────────────────
@@ -917,6 +974,88 @@ mod tests {
         assert!(with_code(&diags, "W704").is_empty());
     }
 
+    // ── W708: Unknown non-extension token ────────────────────────
+
+    #[test]
+    fn w708_typo_token_emits_warning() {
+        let theme = json!({
+            "tokens": { "color.priary": "#000" }
+        });
+        let diags = lint_theme(&theme, None);
+        let w708 = with_code(&diags, "W708");
+        assert_eq!(w708.len(), 1);
+        assert!(w708[0].message.contains("color.priary"));
+    }
+
+    #[test]
+    fn w708_extension_token_no_warning() {
+        let theme = json!({
+            "tokens": { "x-custom.foo": "#abc" }
+        });
+        let diags = lint_theme(&theme, None);
+        assert!(
+            with_code(&diags, "W708").is_empty(),
+            "Extension tokens (x- prefix) should not emit W708"
+        );
+    }
+
+    #[test]
+    fn w708_known_token_no_warning() {
+        let theme = json!({
+            "tokens": { "color.primary": "#000" }
+        });
+        let diags = lint_theme(&theme, None);
+        assert!(with_code(&diags, "W708").is_empty());
+    }
+
+    // ── W709: Missing platform tokens (informational) ───────────
+
+    #[test]
+    fn w709_missing_platform_token_emits_info() {
+        // Provide one token but not all — W709 fires for missing ones
+        let theme = json!({
+            "tokens": { "color.primary": "#000" }
+        });
+        let diags = lint_theme(&theme, None);
+        let w709 = with_code(&diags, "W709");
+        // There are many registry tokens, so at least some should be missing
+        assert!(
+            !w709.is_empty(),
+            "Should emit W709 for missing platform tokens"
+        );
+        // Verify it mentions a known missing token
+        assert!(
+            w709.iter().any(|d| d.message.contains("color.error")
+                || d.message.contains("spacing.md")
+                || d.message.contains("color.background")),
+            "W709 should mention a specific missing token"
+        );
+    }
+
+    #[test]
+    fn w709_not_emitted_when_no_tokens_object() {
+        // W709 only fires when a tokens object exists
+        let theme = json!({});
+        let diags = lint_theme(&theme, None);
+        assert!(
+            with_code(&diags, "W709").is_empty(),
+            "W709 should not fire when tokens object is absent"
+        );
+    }
+
+    // ── W700 via registry dispatch ──────────────────────────────
+
+    #[test]
+    fn registry_dispatched_color_invalid_emits_w700() {
+        let theme = json!({
+            "tokens": { "color.primary": "not-a-color" }
+        });
+        let diags = lint_theme(&theme, None);
+        let w700 = with_code(&diags, "W700");
+        assert_eq!(w700.len(), 1);
+        assert!(w700[0].message.contains("not-a-color"));
+    }
+
     // ── 9. Duplicate page IDs — E710 ────────────────────────────
 
     #[test]
@@ -947,55 +1086,48 @@ mod tests {
         assert!(with_code(&diags, "E710").is_empty());
     }
 
-    // ── 10. Token name classification ───────────────────────────
+    // ── 10. Token registry lookup ─────────────────────────────────
 
     #[test]
-    fn classify_color_tokens() {
-        assert_eq!(classify_token("color.primary"), TokenCategory::Color);
-        assert_eq!(classify_token("Color.error"), TokenCategory::Color);
-        assert_eq!(classify_token("brand.color.accent"), TokenCategory::Color);
-        assert_eq!(classify_token("colorText"), TokenCategory::Color);
+    fn registry_knows_color_tokens() {
+        let reg = token_registry();
+        assert_eq!(reg.token_type("color.primary"), Some("color"));
+        assert_eq!(reg.token_type("color.error"), Some("color"));
+        assert_eq!(reg.token_type("color.background"), Some("color"));
+        assert!(reg.contains("color.primary"));
     }
 
     #[test]
-    fn classify_spacing_tokens() {
-        assert_eq!(classify_token("spacing.sm"), TokenCategory::Spacing);
-        assert_eq!(classify_token("size.icon"), TokenCategory::Spacing);
-        assert_eq!(classify_token("sizing.header"), TokenCategory::Spacing);
-        assert_eq!(classify_token("layout.spacing.gap"), TokenCategory::Spacing);
-        assert_eq!(classify_token("component.size.lg"), TokenCategory::Spacing);
+    fn registry_knows_dimension_tokens() {
+        let reg = token_registry();
+        assert_eq!(reg.token_type("spacing.sm"), Some("dimension"));
+        assert_eq!(reg.token_type("spacing.md"), Some("dimension"));
+        assert_eq!(reg.token_type("radius.sm"), Some("dimension"));
+        assert!(reg.contains("spacing.lg"));
     }
 
     #[test]
-    fn classify_font_weight_tokens() {
-        assert_eq!(
-            classify_token("typography.fontweight.body"),
-            TokenCategory::FontWeight
-        );
-        assert_eq!(classify_token("fontWeight"), TokenCategory::FontWeight);
-        assert_eq!(classify_token("heading.weight"), TokenCategory::FontWeight);
+    fn registry_knows_font_family_tokens() {
+        let reg = token_registry();
+        assert_eq!(reg.token_type("font.family"), Some("fontFamily"));
     }
 
     #[test]
-    fn classify_line_height_tokens() {
-        assert_eq!(
-            classify_token("typography.lineheight.body"),
-            TokenCategory::LineHeight
-        );
-        assert_eq!(
-            classify_token("body.line-height"),
-            TokenCategory::LineHeight
-        );
+    fn registry_unknown_token_returns_none() {
+        let reg = token_registry();
+        assert_eq!(reg.token_type("nonexistent.token"), None);
+        assert!(!reg.contains("nonexistent.token"));
     }
 
     #[test]
-    fn classify_other_tokens() {
-        assert_eq!(classify_token("border.radius"), TokenCategory::Other);
-        assert_eq!(classify_token("elevation.low"), TokenCategory::Other);
-        assert_eq!(
-            classify_token("typography.body.family"),
-            TokenCategory::Other
+    fn registry_includes_dark_mode_keys() {
+        let reg = token_registry();
+        // color category has darkPrefix "color.dark"
+        assert!(
+            reg.contains("color.dark.primary"),
+            "dark variant of color.primary"
         );
+        assert_eq!(reg.token_type("color.dark.primary"), Some("color"));
     }
 
     // ── 11. $token.X extraction ─────────────────────────────────
@@ -1196,7 +1328,7 @@ mod tests {
     #[test]
     fn all_diagnostics_are_pass_6() {
         let theme = json!({
-            "tokens": { "color.bad": "nope", "spacing.bad": "nah" },
+            "tokens": { "color.primary": "nope", "spacing.sm": "nah" },
             "defaults": { "style": { "x": "$token.ghost" } },
             "pages": [
                 { "id": "dup" },
@@ -1352,8 +1484,8 @@ mod tests {
         let theme = json!({
             "tokens": {
                 "color.primary": "red",
-                "color.secondary": "navy",
-                "color.bg": "transparent"
+                "color.error": "navy",
+                "color.background": "transparent"
             }
         });
         let diags = lint_theme(&theme, None);
@@ -1375,8 +1507,9 @@ mod tests {
     /// Spec: theme-spec.md §3.2 — #RGBA token should not emit W700.
     #[test]
     fn four_char_hex_token_no_w700() {
+        // Use a registry-known color token
         let theme = json!({
-            "tokens": { "color.overlay": "#0008" }
+            "tokens": { "color.ring": "#0008" }
         });
         let diags = lint_theme(&theme, None);
         assert!(
@@ -1443,20 +1576,17 @@ mod tests {
         assert!(w706[0].message.contains("missing_field"));
     }
 
-    // ── Number-typed token values ───────────────────────────────
+    // ── Number-typed token values (validator-level) ──────────────
+    // No fontWeight-typed tokens in current registry; test validators directly.
 
     #[test]
-    fn font_weight_number_value_valid() {
-        let theme = json!({ "tokens": { "typography.fontweight.x": 400 } });
-        let diags = lint_theme(&theme, None);
-        assert!(with_code(&diags, "W702").is_empty());
+    fn font_weight_number_400_valid() {
+        assert!(is_font_weight("400"));
     }
 
     #[test]
-    fn font_weight_number_value_invalid() {
-        let theme = json!({ "tokens": { "typography.fontweight.x": 350 } });
-        let diags = lint_theme(&theme, None);
-        assert_eq!(with_code(&diags, "W702").len(), 1);
+    fn font_weight_number_350_invalid() {
+        assert!(!is_font_weight("350"));
     }
 
     // ── Empty pages array ────────────────────────────────────────
