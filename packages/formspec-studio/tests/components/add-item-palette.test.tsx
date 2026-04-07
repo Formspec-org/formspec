@@ -218,5 +218,58 @@ describe('AddItemPalette', () => {
       expect(screen.queryByRole('button', { name: /^Integer\s/i })).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /^Card\s/i })).not.toBeInTheDocument();
     });
+
+    const catalogWithRegistryExtension = [
+      ...FIELD_TYPE_CATALOG,
+      {
+        label: 'Registry Test Type',
+        description: 'From extension registry',
+        icon: 'Rx',
+        color: 'text-accent',
+        itemType: 'field' as const,
+        dataType: 'string',
+        category: 'Extensions',
+        extra: { registryDataType: 'x-test-registry-type' },
+      },
+    ];
+
+    it('adds Extensions tab and lists registry types only there', () => {
+      render(
+        <AddItemPalette open={true} onClose={vi.fn()} onAdd={vi.fn()} catalog={catalogWithRegistryExtension} />,
+      );
+
+      expect(screen.getByRole('button', { name: /^Extensions$/ })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /^Registry Test Type\b/i })).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: /^Extensions$/ }));
+      expect(screen.getByRole('button', { name: /^Registry Test Type\b/i })).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: /^All$/ }));
+      expect(screen.queryByRole('button', { name: /^Registry Test Type\b/i })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^Text Short text\b/i })).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: /^Inputs$/ }));
+      expect(screen.queryByRole('button', { name: /^Registry Test Type\b/i })).not.toBeInTheDocument();
+    });
+
+    it('editor scope shows Standard and Extensions tabs when catalog has extensions', () => {
+      render(
+        <AddItemPalette
+          open={true}
+          onClose={vi.fn()}
+          onAdd={vi.fn()}
+          scope="editor"
+          catalog={catalogWithRegistryExtension}
+        />,
+      );
+
+      expect(screen.getByRole('button', { name: /^Standard$/ })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^Extensions$/ })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^Group\b/i })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /^Registry Test Type\b/i })).toBeNull();
+
+      fireEvent.click(screen.getByRole('button', { name: /^Extensions$/ }));
+      expect(screen.getByRole('button', { name: /^Registry Test Type\b/i })).toBeInTheDocument();
+    });
   });
 });

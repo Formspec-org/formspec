@@ -101,7 +101,10 @@ export interface LayoutAddItemSpec {
   itemType: 'field' | 'group' | 'display' | 'layout';
   label: string;
   key?: string;
+  /** Core data type when not using a registry extension. */
   dataType?: string;
+  /** Registry `dataType` extension name (e.g. `x-formspec-email`). */
+  registryDataType?: string;
   component?: string;
   repeatable?: boolean;
   presentation?: Record<string, unknown>;

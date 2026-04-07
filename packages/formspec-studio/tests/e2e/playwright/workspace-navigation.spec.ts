@@ -21,9 +21,8 @@ test.describe('Workspace Navigation — Tab Switching', () => {
     await expect(page.getByTestId('manage-section-data-sources')).toBeVisible();
   });
 
-  test('Layout Theme mode shows theme authoring in the blueprint sidebar', async ({ page }) => {
+  test('Layout tab shows theme authoring in the blueprint sidebar', async ({ page }) => {
     await switchTab(page, 'Layout');
-    await page.locator('[data-testid="layout-theme-toggle"]').getByRole('radio', { name: 'Theme' }).click();
     const sidebar = page.locator('[data-testid="blueprint-sidebar"]');
     await expect(sidebar.getByRole('button', { name: 'Colors' })).toBeVisible();
     await expect(sidebar.getByRole('button', { name: 'Typography' })).toBeVisible();

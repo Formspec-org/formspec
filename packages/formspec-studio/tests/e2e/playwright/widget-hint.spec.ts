@@ -1,10 +1,9 @@
 import { test, expect, type Page } from '@playwright/test';
 import { waitForApp, switchTab, importDefinition } from './helpers';
 
-/** Layout canvas shows fields only after they are placed from Unassigned; stay in Layout (not Theme) mode. */
+/** Layout canvas shows fields only after they are placed from Unassigned. */
 async function selectLayoutFieldBlock(page: Page, itemKey: string) {
   await switchTab(page, 'Layout');
-  await page.locator('[data-testid="layout-theme-toggle"]').getByRole('radio', { name: 'Layout' }).click();
   const block = page.locator(`[data-testid="layout-field-${itemKey}"]`);
   if (!(await block.isVisible().catch(() => false))) {
     await page.locator(`[data-testid="unassigned-${itemKey}"]`).getByRole('button', { name: /Add/i }).click();

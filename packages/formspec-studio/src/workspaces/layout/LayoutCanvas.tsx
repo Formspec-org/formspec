@@ -229,6 +229,7 @@ function useLayoutAddOperations(
       itemType: option.itemType,
       label: option.label,
       dataType: option.dataType,
+      registryDataType: typeof option.extra?.registryDataType === 'string' ? option.extra.registryDataType : undefined,
       component: option.component,
       repeatable: option.extra?.repeatable === true,
       presentation: (option.extra?.presentation as Record<string, unknown> | undefined) ?? undefined,

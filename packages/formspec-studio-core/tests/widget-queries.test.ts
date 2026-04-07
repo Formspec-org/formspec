@@ -71,11 +71,11 @@ describe('compatibleWidgets', () => {
     expect(widgets).toContain('RadioGroup');
   });
 
-  it('returns Toggle and Checkbox for boolean type', () => {
+  it('returns Toggle for boolean type', () => {
     const project = createProject();
     const widgets = project.compatibleWidgets('boolean');
     expect(widgets).toContain('Toggle');
-    expect(widgets).toContain('Checkbox');
+    expect(widgets).not.toContain('Checkbox');
   });
 
   it('returns an empty array for an unknown data type', () => {

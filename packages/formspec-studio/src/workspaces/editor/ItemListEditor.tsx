@@ -404,7 +404,9 @@ export function ItemListEditor({ config }: { config: ItemListEditorConfig }) {
       const kind = widgetHint ? WIDGET_HINT_TO_KIND[widgetHint] : undefined;
       onAddContent(insertedPath, opt.label, kind);
     } else if (opt.itemType === 'field') {
-      onAddField(key, opt.label, opt.dataType ?? 'string', addParentPath ?? undefined);
+      const fieldType =
+        typeof opt.extra?.registryDataType === 'string' ? opt.extra.registryDataType : (opt.dataType ?? 'string');
+      onAddField(key, opt.label, fieldType, addParentPath ?? undefined);
     }
 
     select(insertedPath, insertedType, { tab: selectionTab, focusInspector: true });

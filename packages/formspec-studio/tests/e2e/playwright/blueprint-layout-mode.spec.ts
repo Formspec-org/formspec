@@ -52,13 +52,14 @@ test.describe('Blueprint in Layout workspace', () => {
     await expect(sidebar.getByRole('heading', { name: 'Colors' })).toBeVisible();
   });
 
-  test('same theme blueprint list after toggling Layout ↔ Theme workspace mode', async ({ page }) => {
+  test('theme blueprint sections stay available while the layout canvas is in use', async ({ page }) => {
     await expect(page.getByTestId('blueprint-section-Colors')).toBeVisible();
-
-    await page.getByRole('radio', { name: 'Theme' }).click();
     await expect(page.getByTestId('blueprint-section-Typography')).toBeVisible();
 
-    await page.getByRole('radio', { name: 'Layout' }).click();
+    const workspace = page.locator('[data-testid="workspace-Layout"]');
+    await workspace.getByTestId('layout-field-name').click();
+
     await expect(page.getByTestId('blueprint-section-Typography')).toBeVisible();
+    await expect(page.getByTestId('blueprint-section-Colors')).toBeVisible();
   });
 });

@@ -38,17 +38,31 @@ import {
   type ItemChanges,
   type MetadataChanges,
   type WidgetInfo,
-  type FieldTypeCatalogEntry,
+  type FieldTypeCatalogEntry as FieldTypeAliasRow,
   type FELValidationResult,
   type FELSuggestion,
 } from './helper-types.js';
 import { resolveFieldType, resolveWidget, widgetHintFor, isTextareaWidget, _FIELD_TYPE_MAP } from './field-type-aliases.js';
-import { humanizeFEL, isLayoutId, nodeIdFromLayoutId, sanitizeIdentifier } from './authoring-helpers.js';
+import type { ResolvedFieldType } from './field-type-aliases.js';
+import {
+  getFieldTypeCatalog,
+  humanizeFEL,
+  isLayoutId,
+  nodeIdFromLayoutId,
+  registryExtensionPaletteEntries,
+  sanitizeIdentifier,
+  type FieldTypeCatalogEntry,
+} from './authoring-helpers.js';
 import { COMPATIBILITY_MATRIX, COMPONENT_TO_HINT } from '@formspec-org/types';
 import { analyzeFEL } from '@formspec-org/engine/fel-runtime';
 import { rewriteFELReferences } from '@formspec-org/engine/fel-tools';
 
 type ComponentNode = Record<string, unknown>;
+
+function felConstraintFromPattern(pattern: string): string {
+  const escaped = pattern.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  return `matches($, '${escaped}')`;
+}
 
 /**
  * Behavior-driven authoring API for Formspec.
@@ -283,12 +297,20 @@ export class Project {
   }
 
   /** Returns the field type alias table (all types the user can specify in addField). */
-  fieldTypeCatalog(): FieldTypeCatalogEntry[] {
+  fieldTypeCatalog(): FieldTypeAliasRow[] {
     return Object.entries(_FIELD_TYPE_MAP).map(([alias, entry]) => ({
       alias,
       dataType: entry.dataType,
       defaultWidget: entry.defaultWidget,
     }));
+  }
+
+  /** Built-in add-item palette rows plus registry `dataType` extensions from loaded registries. */
+  mergedFieldTypeCatalog(): FieldTypeCatalogEntry[] {
+    return [
+      ...getFieldTypeCatalog(),
+      ...registryExtensionPaletteEntries(this.core.allDataTypes(), (name) => this.core.resolveExtension(name)),
+    ];
   }
 
   /** Returns raw registry documents for passing to rendering consumers (e.g. <formspec-render>). */
@@ -580,15 +602,50 @@ export class Project {
 
     let effectiveParent: string | undefined;
     if (parentPath) {
-      effectiveParent = relativeParts.length > 0
-        ? `${parentPath}.${relativeParts.join('.')}`
-        : parentPath;
+      if (relativeParts.length > 0) {
+        const prefix = relativeParts.join('.');
+        // When the path prefix matches (or starts with) parentPath, the path
+        // is already absolute — don't prepend parentPath again.
+        if (prefix === parentPath || prefix.startsWith(parentPath + '.')) {
+          effectiveParent = prefix;
+        } else {
+          effectiveParent = `${parentPath}.${prefix}`;
+        }
+      } else {
+        effectiveParent = parentPath;
+      }
     } else {
       effectiveParent = relativeParts.length > 0 ? relativeParts.join('.') : undefined;
     }
 
     const fullPath = effectiveParent ? `${effectiveParent}.${key}` : key;
     return { key, parentPath: effectiveParent, fullPath };
+  }
+
+  /**
+   * Resolve authoring `type`: built-in alias ({@link resolveFieldType}) or registry `dataType` extension name.
+   */
+  private _resolveAuthoringFieldType(type: string): {
+    resolved: ResolvedFieldType;
+    extensionName?: string;
+    combinedConstraintExpr?: string;
+  } {
+    const ext = this.core.resolveExtension(type) as Record<string, unknown> | undefined;
+    if (ext && ext.category === 'dataType' && typeof ext.baseType === 'string') {
+      const resolved = resolveFieldType(ext.baseType);
+      const constraints = ext.constraints as { pattern?: string } | undefined;
+      let fromRegistry: string | undefined;
+      if (constraints?.pattern && typeof constraints.pattern === 'string') {
+        fromRegistry = felConstraintFromPattern(constraints.pattern);
+      }
+      return {
+        resolved,
+        extensionName: type,
+        combinedConstraintExpr: fromRegistry ?? resolved.constraintExpr,
+      };
+    }
+    const resolved = resolveFieldType(type);
+    return { resolved, combinedConstraintExpr: resolved.constraintExpr };
   }
 
   // ── Authoring methods ──
@@ -600,7 +657,7 @@ export class Project {
    */
   addField(path: string, label: string, type: string, props?: FieldProps): HelperResult {
     // Pre-validation
-    const resolved = resolveFieldType(type);
+    const { resolved, extensionName, combinedConstraintExpr } = this._resolveAuthoringFieldType(type);
     let resolvedWidget = resolved.defaultWidget;
     let widgetAlias: string | undefined;
 
@@ -647,6 +704,9 @@ export class Project {
       label,
       dataType: resolved.dataType,
     };
+    if (extensionName) {
+      addItemPayload.extensions = { [extensionName]: true };
+    }
     if (parentPath) addItemPayload.parentPath = parentPath;
     if (props?.insertIndex !== undefined) addItemPayload.insertIndex = props.insertIndex;
 
@@ -694,11 +754,11 @@ export class Project {
       });
     }
 
-    // Semantic type constraint (email, phone) — uses $ self-reference
-    if (resolved.constraintExpr) {
+    // Semantic type constraint (built-in aliases or registry pattern)
+    if (combinedConstraintExpr) {
       phase2.push({
         type: 'definition.setBind',
-        payload: { path: fullPath, properties: { constraint: resolved.constraintExpr } },
+        payload: { path: fullPath, properties: { constraint: combinedConstraintExpr } },
       });
     }
 
@@ -1233,19 +1293,34 @@ export class Project {
         });
         affectedPaths.push(target);
       }
-      // Also remove shapes that target this field path
+      // Normalize target so the comparison matches shapes stored with [*] wildcards.
+      // addValidation normalizes targets via _normalizeShapeTarget before storing,
+      // so we must apply the same normalization when searching for removal.
+      const normalizedTarget = this._normalizeShapeTarget(target);
+      const deletedShapeIds = new Set(
+        shapeById ? [target] : [],
+      );
       for (const shape of shapes) {
         const shapeTarget = (shape as any).target;
-        if (shapeTarget === target && (shape as any).id !== target) {
-          commands.push({ type: 'definition.deleteShape', payload: { id: (shape as any).id } });
-          affectedPaths.push((shape as any).id);
+        const shapeId = (shape as any).id as string;
+        if (deletedShapeIds.has(shapeId)) continue;
+        if (shapeTarget === target || shapeTarget === normalizedTarget) {
+          commands.push({ type: 'definition.deleteShape', payload: { id: shapeId } });
+          affectedPaths.push(shapeId);
+          deletedShapeIds.add(shapeId);
         }
       }
     }
 
-    if (commands.length > 0) {
-      this.core.dispatch(commands);
+    if (commands.length === 0) {
+      throw new HelperError(
+        'VALIDATION_NOT_FOUND',
+        `No validation found for target "${target}"`,
+        { target },
+      );
     }
+
+    this.core.dispatch(commands);
 
     return {
       summary: `Removed validation '${target}'`,
@@ -2450,20 +2525,36 @@ export class Project {
     };
   }
 
+  /**
+   * Resolve a definition item path to the NodeRef used in the component tree.
+   *
+   * Data items (field, group) use `{ bind: leafKey }`. Display items use
+   * `{ nodeId: leafKey }` because the reconciler creates them with `nodeId`
+   * instead of `bind`.
+   */
+  private _nodeRefForItem(target: string): { bind: string } | { nodeId: string } {
+    const leafKey = target.split('.').pop()!;
+    const item = this.core.itemAt(target);
+    if (item?.type === 'display') {
+      return { nodeId: leafKey };
+    }
+    return { bind: leafKey };
+  }
+
   /** Assign an item to a page. */
   placeOnPage(target: string, pageId: string, options?: PlacementOptions): HelperResult {
-    const leafKey = target.split('.').pop()!;
+    const sourceRef = this._nodeRefForItem(target);
     const commands: AnyCommand[] = [{
       type: 'component.moveNode',
       payload: {
-        source: { bind: leafKey },
+        source: sourceRef,
         targetParent: { nodeId: pageId },
       },
     }];
     if (options?.span !== undefined) {
       commands.push({
         type: 'component.setNodeProperty',
-        payload: { node: { bind: leafKey }, property: 'span', value: options.span },
+        payload: { node: sourceRef, property: 'span', value: options.span },
       });
     }
 
@@ -2478,11 +2569,11 @@ export class Project {
 
   /** Remove item from page assignment. */
   unplaceFromPage(target: string, pageId: string): HelperResult {
-    const leafKey = target.split('.').pop()!;
+    const sourceRef = this._nodeRefForItem(target);
     this.core.dispatch({
       type: 'component.moveNode',
       payload: {
-        source: { bind: leafKey },
+        source: sourceRef,
         targetParent: { nodeId: 'root' },
       },
     });
@@ -2619,36 +2710,16 @@ export class Project {
     const fullPath = parentPath ? `${parentPath}.${key}` : key;
 
     if (spec.itemType === 'field') {
-      const dataType = spec.dataType ?? 'string';
-      const addItemPayload: Record<string, unknown> = {
-        type: 'field',
-        key,
-        label: spec.label,
-        dataType,
-      };
-      if (parentPath) addItemPayload.parentPath = parentPath;
-
-      const phase1: AnyCommand[] = [
-        { type: 'definition.addItem', payload: addItemPayload },
-      ];
-      const phase2: AnyCommand[] = pageId
-        ? [{
-            type: 'component.moveNode',
-            payload: {
-              source: { bind: key },
-              targetParent: { nodeId: pageId },
-            },
-          }]
-        : [];
-
-      if (phase2.length > 0) this.core.batchWithRebuild(phase1, phase2);
-      else this.core.dispatch(phase1[0]);
-
+      const typeArg = spec.registryDataType ?? spec.dataType ?? 'string';
+      const addResult = this.addField(key, spec.label, typeArg, {
+        ...(parentPath ? { parentPath } : {}),
+        ...(pageId ? { page: pageId } : {}),
+      });
       return {
-        summary: `Added field '${spec.label}' to layout`,
+        summary: addResult.summary,
         action: { helper: 'addItemToLayout', params: { spec, pageId } },
-        affectedPaths: [fullPath],
-        createdId: fullPath,
+        affectedPaths: addResult.affectedPaths,
+        createdId: addResult.affectedPaths[0] ?? fullPath,
       };
     }
 
@@ -4035,11 +4106,21 @@ export class Project {
   /** Add a screener question. */
   addScreenField(key: string, label: string, type: string, props?: FieldProps): HelperResult {
     this._getScreener();
-    const resolved = resolveFieldType(type);
-    this.core.dispatch({
-      type: 'screener.addItem',
-      payload: { type: 'field', key, label, dataType: resolved.dataType },
-    });
+    const { resolved, extensionName, combinedConstraintExpr } = this._resolveAuthoringFieldType(type);
+    const payload: Record<string, unknown> = {
+      type: 'field',
+      key,
+      label,
+      dataType: resolved.dataType,
+    };
+    if (extensionName) payload.extensions = { [extensionName]: true };
+    this.core.dispatch({ type: 'screener.addItem', payload });
+    if (combinedConstraintExpr) {
+      this.core.dispatch({
+        type: 'screener.setBind',
+        payload: { path: key, properties: { constraint: combinedConstraintExpr } },
+      });
+    }
     return {
       summary: `Added screener field '${key}'`,
       action: { helper: 'addScreenField', params: { key, label, type } },
@@ -4259,8 +4340,11 @@ export class Project {
 
   /**
    * Generate plausible sample data for each field based on its data type.
+   * When overrides are provided, those values replace the generated defaults
+   * for matching field paths. Override keys that don't match any field path
+   * are silently ignored.
    */
-  generateSampleData(): Record<string, unknown> {
+  generateSampleData(overrides?: Record<string, unknown>): Record<string, unknown> {
     const data: Record<string, unknown> = {};
     const items = this.core.state.definition.items ?? [];
 
@@ -4275,6 +4359,12 @@ export class Project {
           continue;
         }
         if (item.type !== 'field') continue;
+
+        // Use override value when provided for this path
+        if (overrides && path in overrides) {
+          data[path] = overrides[path];
+          continue;
+        }
 
         const dt = item.dataType as string;
         if (dt === 'choice' || dt === 'multiChoice') {

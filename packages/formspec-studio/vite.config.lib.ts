@@ -16,7 +16,6 @@ export default defineConfig({
     alias: {
       '@formspec-org/studio-core': path.resolve(packagesRoot, 'formspec-studio-core/src/index.ts'),
       '@formspec-org/types': path.resolve(packagesRoot, 'formspec-types/src/index.ts'),
-      '@formspec-org/layout/default-theme': path.resolve(packagesRoot, 'formspec-layout/src/default-theme.json'),
       '@formspec-org/layout/token-registry': path.resolve(packagesRoot, 'formspec-layout/src/token-registry.json'),
       '@formspec-org/layout': path.resolve(packagesRoot, 'formspec-layout/src/index.ts'),
       '@formspec-org/chat': path.resolve(packagesRoot, 'formspec-chat/src/index.ts'),

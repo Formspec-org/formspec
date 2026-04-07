@@ -1,5 +1,6 @@
 /** @filedesc Normalizes project documents into the shapes expected by preview/render hosts. */
-import defaultThemeJson from '@formspec-org/layout/default-theme';
+import { buildPlatformTheme } from '@formspec-org/layout';
+const defaultThemeJson = buildPlatformTheme();
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
@@ -85,37 +86,34 @@ export function normalizeComponentDoc(doc: unknown, definition?: unknown): unkno
 
 export function normalizeThemeDoc(doc: unknown, definition: unknown): unknown {
   const theme = doc && typeof doc === 'object' ? (doc as Record<string, unknown>) : {};
-  const fallback = defaultThemeJson as Record<string, unknown>;
-  const { pages: _fallbackPages, ...fallbackWithoutPages } = fallback;
-  const { pages: _themePages, ...themeWithoutPages } = theme;
+  const fallback = defaultThemeJson;
   const definitionUrl =
     definition && typeof definition === 'object'
       ? (definition as Record<string, unknown>).url
       : undefined;
 
   return {
-    ...fallbackWithoutPages,
-    ...themeWithoutPages,
+    $formspecTheme: fallback.$formspecTheme,
+    version: fallback.version,
+    name: fallback.name,
     targetDefinition: {
-      ...(fallback.targetDefinition as Record<string, unknown> | undefined),
+      ...fallback.targetDefinition,
       ...((theme.targetDefinition as Record<string, unknown> | undefined) ?? {}),
       ...(definitionUrl ? { url: definitionUrl } : {}),
     },
     tokens: {
-      ...((fallback.tokens as Record<string, unknown> | undefined) ?? {}),
+      ...fallback.tokens,
       ...((theme.tokens as Record<string, unknown> | undefined) ?? {}),
     },
     defaults: {
-      ...((fallback.defaults as Record<string, unknown> | undefined) ?? {}),
+      ...fallback.defaults,
       ...((theme.defaults as Record<string, unknown> | undefined) ?? {}),
     },
     breakpoints: {
-      ...((fallback.breakpoints as Record<string, unknown> | undefined) ?? {}),
       ...((theme.breakpoints as Record<string, unknown> | undefined) ?? {}),
     },
     selectors: Array.isArray(theme.selectors) ? theme.selectors : fallback.selectors,
     items: {
-      ...((fallback.items as Record<string, unknown> | undefined) ?? {}),
       ...((theme.items as Record<string, unknown> | undefined) ?? {}),
     },
   };

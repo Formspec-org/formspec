@@ -146,7 +146,9 @@ export function StructureTree() {
       let insertedPath = parentPath ? `${parentPath}.${key}` : key;
 
       if (opt.itemType === 'field') {
-        const result = project.addField(key, opt.label, opt.dataType ?? 'string', {
+        const fieldType =
+          typeof opt.extra?.registryDataType === 'string' ? opt.extra.registryDataType : (opt.dataType ?? 'string');
+        const result = project.addField(key, opt.label, fieldType, {
           ...(parentPath ? { parentPath } : {}),
           ...(opt.extra as object | undefined),
         });

@@ -87,8 +87,8 @@ interface ShellProps {
 }
 
 /**
- * Blueprint sidebar inner — Layout tab always uses theme authoring sections (Colors, Typography, …)
- * for both layout and theme workspace modes. Must render inside <LayoutModeProvider>.
+ * Blueprint sidebar inner — Layout tab always uses theme authoring sections (Colors, Typography, …).
+ * Must render inside <LayoutModeProvider>.
  */
 function BlueprintSidebarInner({
   activeTab,
@@ -336,7 +336,7 @@ export function Shell({ colorScheme }: ShellProps = {}) {
     const onNavigateWorkspace = (event: Event) => {
       const detail = (event as CustomEvent<{ tab?: string; subTab?: string; view?: EditorView; section?: string }>).detail ?? {};
       let { tab, subTab, view, section } = detail;
-      // Theme workspace was merged into Layout (theme authoring sidebar + Layout/Theme mode toggle).
+      // Theme workspace was merged into Layout (theme authoring in the blueprint sidebar).
       if (tab === 'Theme') {
         tab = 'Layout';
       }

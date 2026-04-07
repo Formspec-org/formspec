@@ -1,6 +1,9 @@
 /** @filedesc Bootstraps a Studio project and wires context providers around the Shell. */
 import { useState, type ReactElement } from 'react';
-import { createProject, type Project, type FormDefinition } from '@formspec-org/studio-core';
+import { createProject, type CreateProjectOptions, type Project, type FormDefinition } from '@formspec-org/studio-core';
+import commonRegistry from '../../../../registries/formspec-common.registry.json';
+
+const COMMON_REGISTRY_URL = 'https://formspec.org/registries/formspec-common.registry.json';
 import { ProjectProvider } from '../state/ProjectContext';
 import { SelectionProvider } from '../state/useSelection';
 import { ActiveGroupProvider } from '../state/useActiveGroup';
@@ -37,10 +40,14 @@ function getHandoffBundle(): any | null {
   }
 }
 
-export function createStudioProject(seed?: Parameters<typeof createProject>[0]): Project {
+export function createStudioProject(seed?: CreateProjectOptions): Project {
   const handoffBundle = !seed ? getHandoffBundle() : null;
-  const finalSeed = seed ?? (handoffBundle ? { seed: handoffBundle } : { seed: { definition: exampleDefinition as FormDefinition } });
-  return createProject(finalSeed);
+  const options: CreateProjectOptions = seed ?? (handoffBundle ? { seed: handoffBundle } : { seed: { definition: exampleDefinition as FormDefinition } });
+  const bundledRegistry = { ...(commonRegistry as Record<string, unknown>), url: COMMON_REGISTRY_URL };
+  return createProject({
+    ...options,
+    registries: [...(options.registries ?? []), bundledRegistry],
+  });
 }
 
 interface StudioAppProps {

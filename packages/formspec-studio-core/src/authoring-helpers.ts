@@ -1,4 +1,5 @@
 /** @filedesc Shared authoring catalogs and tree helpers used by Studio and other clients. */
+import type { DataTypeInfo } from '@formspec-org/core';
 import type { FormBind, FormItem } from '@formspec-org/types';
 import {
   COMPATIBILITY_MATRIX,
@@ -257,6 +258,42 @@ export function getFieldTypeCatalog(): FieldTypeCatalogEntry[] {
     ...(entry.extra ? { extra: structuredClone(entry.extra) } : {}),
     ...(entry.keywords ? { keywords: [...entry.keywords] } : {}),
   }));
+}
+
+/**
+ * Map loaded registry `dataType` extensions into palette rows.
+ * `extra.registryDataType` is the extension name passed to `Project.addField`.
+ */
+export function registryExtensionPaletteEntries(
+  allTypes: DataTypeInfo[],
+  resolveExtension: (name: string) => Record<string, unknown> | undefined,
+): FieldTypeCatalogEntry[] {
+  const out: FieldTypeCatalogEntry[] = [];
+  for (const dt of allTypes) {
+    if (dt.source !== 'extension') continue;
+    const ext = resolveExtension(dt.name);
+    if (!ext || ext.category !== 'dataType') continue;
+    const baseType = typeof ext.baseType === 'string' ? ext.baseType : 'string';
+    const meta = ext.metadata as Record<string, unknown> | undefined;
+    const label =
+      typeof meta?.displayName === 'string' && meta.displayName.trim() !== ''
+        ? meta.displayName
+        : dt.name.replace(/^x-formspec-/, '').replace(/-/g, ' ');
+    const description = typeof ext.description === 'string' ? ext.description : '';
+    const info = dataTypeInfo(baseType);
+    out.push({
+      label,
+      description,
+      icon: info.icon,
+      color: info.color,
+      itemType: 'field',
+      dataType: baseType,
+      category: 'Extensions',
+      keywords: [dt.name, baseType, 'extension', 'registry'],
+      extra: { registryDataType: dt.name },
+    });
+  }
+  return out;
 }
 
 export function widgetHintForComponent(component: string, dataType?: string): string {

@@ -82,17 +82,6 @@ function layoutContainerByComponent(page: Page, component: string) {
   return page.locator(`[data-testid^="layout-container-"][data-component="${component}"]`);
 }
 
-async function clickPreviewField(page: Page, bind: string) {
-  const field = page.locator(`[data-testid="formspec-preview-host"] [data-bind="${bind}"]`);
-  await expect(field).toBeVisible();
-  const box = await field.boundingBox();
-  if (!box) {
-    throw new Error(`Preview field ${bind} is not visible`);
-  }
-
-  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-}
-
 test.describe('Layout Components in Wizard Mode', () => {
   test.beforeEach(async ({ page }) => {
     await waitForApp(page);
@@ -155,7 +144,7 @@ test.describe('Layout Components in Wizard Mode', () => {
   });
 });
 
-test.describe('Layout Theme Mode', () => {
+test.describe('Layout theme authoring (blueprint + preview)', () => {
   test.beforeEach(async ({ page }) => {
     await waitForApp(page);
     await importProject(page, THEME_PROJECT);
@@ -163,23 +152,14 @@ test.describe('Layout Theme Mode', () => {
     await page.waitForSelector('[data-testid="page-nav"]', { timeout: 5000 });
   });
 
-  test('switching to Theme mode shows the overlay and hides the right sidebar', async ({ page }) => {
-    await page.locator('[data-testid="layout-theme-toggle"]').getByRole('radio', { name: 'Theme' }).click();
-
-    await expect(page.locator('[data-testid="theme-authoring-overlay"]')).toBeVisible();
-    await expect(page.locator('[data-testid="properties-panel"]')).toHaveCount(0);
-  });
-
-  test('clicking a preview field in Theme mode opens the override popover', async ({ page }) => {
-    await page.locator('[data-testid="layout-theme-toggle"]').getByRole('radio', { name: 'Theme' }).click();
-
-    await clickPreviewField(page, 'name');
-
-    await expect(page.locator('[data-testid="theme-override-popover"]')).toBeVisible();
+  test('Layout tab shows live preview rail and theme controls in the blueprint sidebar', async ({ page }) => {
+    await expect(page.locator('[data-testid="layout-preview-panel"]')).toBeVisible();
+    const sidebar = page.locator('[data-testid="blueprint-sidebar"]');
+    await expect(sidebar.getByRole('button', { name: 'Colors' })).toBeVisible();
+    await expect(sidebar.getByRole('button', { name: 'Typography' })).toBeVisible();
   });
 
   test('editing the color token updates the preview host theme document', async ({ page }) => {
-    await page.locator('[data-testid="layout-theme-toggle"]').getByRole('radio', { name: 'Theme' }).click();
     const sidebar = page.locator('[data-testid="blueprint-sidebar"]');
 
     const colorInput = sidebar.locator('[data-testid="color-value-color.primary"]');
@@ -192,13 +172,6 @@ test.describe('Layout Theme Mode', () => {
       } | null;
       return preview?.themeDocument?.tokens?.['color.primary'] ?? null;
     })).toBe('#ef4444');
-  });
-
-  test('selector rules apply in the preview popover', async ({ page }) => {
-    await page.locator('[data-testid="layout-theme-toggle"]').getByRole('radio', { name: 'Theme' }).click();
-    await clickPreviewField(page, 'name');
-
-    await expect(page.locator('[data-testid="theme-override-popover"]')).toContainText('selector #1: field');
   });
 
   test('the header does not expose a Theme tab', async ({ page }) => {

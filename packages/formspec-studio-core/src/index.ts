@@ -85,6 +85,9 @@ export type {
   FieldDependents, ItemFilter, ItemSearchResult,
 } from '@formspec-org/core';
 
+// ── Shape display utilities (re-exported from formspec-core for consumers) ──
+export { describeShapeConstraint } from '@formspec-org/core';
+
 // ── Theme utilities (re-exported from formspec-core for consumers) ───
 export { resolveThemeCascade } from '@formspec-org/core';
 export type { ResolvedProperty } from '@formspec-org/core';

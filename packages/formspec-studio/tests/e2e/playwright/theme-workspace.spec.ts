@@ -29,11 +29,11 @@ const EMPTY_SELECTOR_SEED = {
   },
 };
 
-async function enterThemeMode(page: Page, state: Record<string, unknown>) {
+/** Theme authoring lives on the Layout tab blueprint sidebar (no separate Theme workspace or canvas toggle). */
+async function openLayoutWithThemeSidebar(page: Page, state: Record<string, unknown>) {
   await waitForApp(page);
   await importProject(page, state);
   await switchTab(page, 'Layout');
-  await page.locator('[data-testid="layout-theme-toggle"]').getByRole('radio', { name: 'Theme' }).click();
   await expect(page.locator('[data-testid="blueprint-sidebar"]')).toBeVisible();
 }
 
@@ -43,7 +43,7 @@ function themeSidebar(page: Page) {
 
 test.describe('Theme Workspace', () => {
   test.beforeEach(async ({ page }) => {
-    await enterThemeMode(page, SEED);
+    await openLayoutWithThemeSidebar(page, SEED);
   });
 
   test('shows the six theme blueprint sections', async ({ page }) => {
@@ -88,7 +88,7 @@ test.describe('Theme Workspace', () => {
   });
 
   test('adding a selector rule auto-expands the new row', async ({ page }) => {
-    await enterThemeMode(page, EMPTY_SELECTOR_SEED);
+    await openLayoutWithThemeSidebar(page, EMPTY_SELECTOR_SEED);
 
     const sidebar = themeSidebar(page);
     const fieldRulesButton = sidebar.getByRole('button', { name: 'Field Rules' });
@@ -114,7 +114,7 @@ test.describe('Theme Workspace', () => {
   });
 
   test('empty theme shows empty states', async ({ page }) => {
-    await enterThemeMode(page, {
+    await openLayoutWithThemeSidebar(page, {
       definition: SEED.definition,
       theme: {},
     });

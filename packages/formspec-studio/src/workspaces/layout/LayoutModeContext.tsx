@@ -1,6 +1,7 @@
-/** @filedesc Context for current Layout workspace mode (layout vs theme) — lets Shell hide right sidebar in Theme mode. */
+/** @filedesc Context for current Layout workspace mode (layout vs theme) — shared state for theme popovers and sidebar sync. */
 import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from 'react';
-import { type LayoutMode } from './LayoutThemeToggle';
+
+export type LayoutMode = 'layout' | 'theme';
 
 interface LayoutModeState {
   layoutMode: LayoutMode;

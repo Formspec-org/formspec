@@ -114,7 +114,6 @@ test.describe('Cross-Workspace Authoring', () => {
     await expect(responsePanel).toContainText('email');
 
     await switchTab(page, 'Layout');
-    await page.locator('[data-testid="layout-theme-toggle"]').getByRole('radio', { name: 'Theme' }).click();
     const themeSidebar = page.locator('[data-testid="blueprint-sidebar"]');
     await themeSidebar.getByRole('button', { name: 'Colors' }).click();
     const colorToken = themeSidebar.locator('[data-testid="color-token-color.primaryColor"]');

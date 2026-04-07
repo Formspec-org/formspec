@@ -98,6 +98,41 @@ describe('generateSampleData', () => {
     expect(Object.keys(data)).toEqual(['q1']);
     expect(data.q1).toBe('Sample paragraph text');
   });
+
+  it('applies overrides when provided', () => {
+    const project = createProject();
+    project.addField('name', 'Name', 'string');
+    project.addField('age', 'Age', 'integer');
+
+    const data = project.generateSampleData({ name: 'Alice' });
+
+    expect(data.name).toBe('Alice');
+    expect(data.age).toBe(42); // non-overridden field keeps default
+  });
+
+  it('overrides take precedence over generated values', () => {
+    const project = createProject();
+    project.addField('color', 'Color', 'choice', {
+      choices: [
+        { value: 'red', label: 'Red' },
+        { value: 'blue', label: 'Blue' },
+      ],
+    });
+
+    const data = project.generateSampleData({ color: 'green' });
+
+    expect(data.color).toBe('green');
+  });
+
+  it('ignores overrides for paths not in the form', () => {
+    const project = createProject();
+    project.addField('q1', 'Q1', 'text');
+
+    const data = project.generateSampleData({ nonexistent: 'value' });
+
+    expect(data).not.toHaveProperty('nonexistent');
+    expect(data.q1).toBe('Sample paragraph text');
+  });
 });
 
 describe('normalizeDefinition', () => {

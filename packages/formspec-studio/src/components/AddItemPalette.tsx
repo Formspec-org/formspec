@@ -1,12 +1,21 @@
 /** @filedesc Searchable palette for adding new field, group, display, and layout items to the form. */
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useContext, useMemo } from 'react';
 import { getFieldTypeCatalog, type FieldTypeCatalogEntry } from '@formspec-org/studio-core';
+import { ProjectContext } from '../state/ProjectContext';
 
 /** A user-visible field type option shown in the palette. */
 export type FieldTypeOption = FieldTypeCatalogEntry;
 
+/** Static built-in catalog (tests and Storybook without {@link ProjectProvider}). */
 export const FIELD_TYPE_CATALOG: FieldTypeOption[] = getFieldTypeCatalog();
-const CATEGORIES = [...new Set(FIELD_TYPE_CATALOG.map((f) => f.category))];
+
+const EXTENSIONS_CATEGORY = 'Extensions';
+
+function isExtensionCatalogEntry(opt: FieldTypeCatalogEntry): boolean {
+  return opt.category === EXTENSIONS_CATEGORY;
+}
+
+type PaletteTabId = 'all' | 'field' | 'layout' | 'display' | 'extensions' | 'standard';
 
 interface AddItemPaletteProps {
   open: boolean;
@@ -15,6 +24,8 @@ interface AddItemPaletteProps {
   title?: string;
   /** `editor` = fields + groups (definition). `layout` = display + layout components only — no definition items. */
   scope?: 'all' | 'editor' | 'layout';
+  /** Override catalog; when omitted, uses {@link Project.mergedFieldTypeCatalog} when inside {@link ProjectProvider}. */
+  catalog?: FieldTypeCatalogEntry[];
 }
 
 /**
@@ -24,40 +35,80 @@ interface AddItemPaletteProps {
  * search filter. Keyboard-navigable: arrows move focus, Enter confirms, Escape
  * closes. Clicking the backdrop also closes.
  */
-export function AddItemPalette({ open, onClose, onAdd, title, scope = 'all' }: AddItemPaletteProps) {
+export function AddItemPalette({ open, onClose, onAdd, title, scope = 'all', catalog: catalogProp }: AddItemPaletteProps) {
+  const project = useContext(ProjectContext);
+  const [, setPaletteTick] = useState(0);
+  useEffect(() => {
+    if (!project) return;
+    return project.onChange(() => setPaletteTick((t) => t + 1));
+  }, [project]);
+
+  const baseCatalog = useMemo(() => {
+    if (catalogProp) return catalogProp;
+    if (project) return project.mergedFieldTypeCatalog();
+    return getFieldTypeCatalog();
+  }, [catalogProp, project]);
+
+  const hasExtensions = useMemo(() => baseCatalog.some(isExtensionCatalogEntry), [baseCatalog]);
+
+  const categories = useMemo(
+    () => [...new Set(baseCatalog.map((f) => f.category))],
+    [baseCatalog],
+  );
+
   const [query, setQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'all' | 'field' | 'layout' | 'display'>('all');
+  const [activeTab, setActiveTab] = useState<PaletteTabId>('all');
   const [activeIdx, setActiveIdx] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
-  // Editor: definition items (fields + groups). Layout: presentation tree only (no fields or groups).
-  const availableTabs =
-    scope === 'editor' || scope === 'layout'
-      ? ([] as const)
-      : ([
-          { id: 'all', label: 'All' },
-          { id: 'field', label: 'Inputs' },
-          { id: 'layout', label: 'Layout' },
-          { id: 'display', label: 'Display' },
-        ] as const);
+
+  const availableTabs = useMemo((): ReadonlyArray<{ id: PaletteTabId; label: string }> => {
+    if (scope === 'layout') return [];
+    if (scope === 'editor') {
+      if (hasExtensions) {
+        return [
+          { id: 'standard', label: 'Standard' },
+          { id: 'extensions', label: 'Extensions' },
+        ];
+      }
+      return [];
+    }
+    const tabs: { id: PaletteTabId; label: string }[] = [
+      { id: 'all', label: 'All' },
+      { id: 'field', label: 'Inputs' },
+      { id: 'layout', label: 'Layout' },
+      { id: 'display', label: 'Display' },
+    ];
+    if (hasExtensions) tabs.push({ id: 'extensions', label: 'Extensions' });
+    return tabs;
+  }, [scope, hasExtensions]);
 
   // Reset state when opened
   useEffect(() => {
     if (open) {
       setQuery('');
-      setActiveTab('all');
+      setActiveTab(
+        scope === 'layout'
+          ? 'all'
+          : scope === 'editor' && hasExtensions
+            ? 'standard'
+            : 'all',
+      );
       setActiveIdx(0);
       setTimeout(() => inputRef.current?.focus(), 0);
     }
-  }, [open]);
+  }, [open, scope, hasExtensions]);
 
   useEffect(() => {
-    if ((scope === 'editor' || scope === 'layout') && activeTab !== 'all') {
+    if (scope === 'layout' && activeTab !== 'all') {
       setActiveTab('all');
     }
-  }, [activeTab, scope]);
+    if (!hasExtensions && (activeTab === 'extensions' || activeTab === 'standard')) {
+      setActiveTab('all');
+    }
+  }, [activeTab, scope, hasExtensions]);
 
-  const scopedCatalog = FIELD_TYPE_CATALOG.filter((opt) => {
+  const scopedCatalog = baseCatalog.filter((opt) => {
     if (scope === 'editor') {
       // Editor scope: fields and groups only — no layout containers or display/content items.
       if (opt.itemType === 'layout' || opt.itemType === 'display') return false;
@@ -70,13 +121,21 @@ export function AddItemPalette({ open, onClose, onAdd, title, scope = 'all' }: A
   });
 
   const filtered = scopedCatalog.filter((opt) => {
+    const isExt = isExtensionCatalogEntry(opt);
+
     // 1. Tab filter
-    if (activeTab !== 'all') {
-      if (activeTab === 'layout') {
-        if (opt.itemType !== 'layout' && opt.itemType !== 'group') return false;
-      } else if (opt.itemType !== activeTab) {
-        return false;
-      }
+    if (activeTab === 'extensions') {
+      if (!isExt) return false;
+    } else if (activeTab === 'standard') {
+      if (isExt) return false;
+    } else if (activeTab === 'all') {
+      if (hasExtensions && isExt) return false;
+    } else if (activeTab === 'field') {
+      if (opt.itemType !== 'field' || isExt) return false;
+    } else if (activeTab === 'layout') {
+      if (opt.itemType !== 'layout' && opt.itemType !== 'group') return false;
+    } else if (activeTab === 'display') {
+      if (opt.itemType !== 'display') return false;
     }
 
     // 2. Query filter
@@ -137,9 +196,15 @@ export function AddItemPalette({ open, onClose, onAdd, title, scope = 'all' }: A
         ? 'Search layout and content...'
         : 'Search types...';
   const grouped = showGrouped
-    ? CATEGORIES
+    ? categories
         .slice()
-        .sort((a, b) => (a === 'Structure' ? -1 : b === 'Structure' ? 1 : 0))
+        .sort((a, b) => {
+          if (a === 'Structure') return -1;
+          if (b === 'Structure') return 1;
+          if (a === EXTENSIONS_CATEGORY) return 1;
+          if (b === EXTENSIONS_CATEGORY) return -1;
+          return 0;
+        })
         .map((cat) => ({
           cat,
           items: filtered.filter((f) => f.category === cat),
@@ -199,12 +264,15 @@ export function AddItemPalette({ open, onClose, onAdd, title, scope = 'all' }: A
 
           {/* Tabs */}
           {availableTabs.length > 0 && (
-            <div className="flex gap-1 p-1 bg-subtle border border-border/50 rounded-lg">
+            <div
+              className={`flex gap-1 p-1 bg-subtle border border-border/50 rounded-lg ${availableTabs.length > 4 ? 'flex-wrap' : ''}`}
+            >
               {availableTabs.map((tab) => (
                 <button
                   key={tab.id}
+                  type="button"
                   onClick={() => { setActiveTab(tab.id); setActiveIdx(0); }}
-                  className={`flex-1 px-2 py-1.5 text-[11px] font-semibold rounded-md transition-all ${
+                  className={`min-w-0 flex-1 px-2 py-1.5 text-[11px] font-semibold rounded-md transition-all ${
                     activeTab === tab.id
                       ? 'bg-surface text-ink shadow-sm'
                       : 'text-muted hover:text-ink hover:bg-surface/50'
@@ -221,9 +289,11 @@ export function AddItemPalette({ open, onClose, onAdd, title, scope = 'all' }: A
         <div ref={listRef} className="overflow-y-auto flex-1 p-3">
           {filtered.length === 0 ? (
             <div className="py-8 text-center text-sm text-muted">
-              {scope === 'layout'
-                ? <>Nothing matches &ldquo;{query}&rdquo;</>
-                : <>No field types match &ldquo;{query}&rdquo;</>}
+              {activeTab === 'extensions' && !query.trim()
+                ? 'No extension types are loaded. Add a registry to the project to see them here.'
+                : scope === 'layout'
+                  ? <>Nothing matches &ldquo;{query}&rdquo;</>
+                  : <>No field types match &ldquo;{query}&rdquo;</>}
             </div>
           ) : (
             grouped.map(({ cat, items }, groupIdx) => (
@@ -243,7 +313,7 @@ export function AddItemPalette({ open, onClose, onAdd, title, scope = 'all' }: A
                     const isActive = flatIdx === activeIdx;
                     return (
                       <button
-                        key={`${opt.itemType}-${opt.dataType ?? opt.label}`}
+                        key={`${opt.itemType}-${String(opt.extra?.registryDataType ?? opt.dataType ?? opt.label)}`}
                         type="button"
                         data-active={isActive}
                         className={`flex items-start gap-3 px-3 py-2.5 rounded-lg text-left cursor-pointer transition-all border ${

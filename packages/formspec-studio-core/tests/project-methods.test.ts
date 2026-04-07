@@ -2444,7 +2444,7 @@ describe('updateItem widget sets widgetHint on definition', () => {
 });
 
 describe('updateItem widget change on boolean field', () => {
-  it('changes a boolean field from Toggle to Checkbox', () => {
+  it('changes a boolean field widget hint to checkbox (maps to Toggle)', () => {
     const project = createProject();
     project.addField('agreed', 'I agree', 'boolean');
 
@@ -2452,16 +2452,16 @@ describe('updateItem widget change on boolean field', () => {
     const nodeBefore = project.componentFor('agreed');
     expect(nodeBefore?.component).toBe('Toggle');
 
-    // Changing to Checkbox should work — Checkbox is a valid component
-    // for boolean fields in the webcomponent renderer
-    const result = project.updateItem('agreed', { widget: 'Checkbox' });
+    // 'checkbox' hint maps to Toggle (not a phantom Checkbox component)
+    const result = project.updateItem('agreed', { widget: 'checkbox' });
     expect(result.warnings).toBeUndefined();
 
-    // Both definition hint and component tree should update
+    // Definition hint stores the authoring alias
     const item = project.itemAt('agreed') as any;
     expect(item?.presentation?.widgetHint).toBe('checkbox');
+    // Component tree still shows Toggle (schema-valid component type)
     const nodeAfter = project.componentFor('agreed');
-    expect(nodeAfter?.component).toBe('Checkbox');
+    expect(nodeAfter?.component).toBe('Toggle');
   });
 });
 
@@ -3689,6 +3689,55 @@ describe('moveComponentNodeToIndex', () => {
   });
 });
 
+describe('mergedFieldTypeCatalog', () => {
+  it('includes registry dataType extensions', () => {
+    const project = createProject({
+      registries: [
+        {
+          url: 'https://example.test/reg',
+          entries: [
+            {
+              name: 'x-studio-palette-test',
+              category: 'dataType',
+              baseType: 'string',
+              description: 'Palette test extension',
+              metadata: { displayName: 'Palette Test' },
+            },
+          ],
+        },
+      ],
+    });
+    const merged = project.mergedFieldTypeCatalog();
+    const row = merged.find((e) => e.extra?.registryDataType === 'x-studio-palette-test');
+    expect(row).toBeDefined();
+    expect(row?.label).toBe('Palette Test');
+    expect(row?.category).toBe('Extensions');
+  });
+
+  it('addField accepts registry extension type name', () => {
+    const project = createProject({
+      registries: [
+        {
+          url: 'https://example.test/reg2',
+          entries: [
+            {
+              name: 'x-studio-addfield-test',
+              category: 'dataType',
+              baseType: 'string',
+              description: 'd',
+              constraints: { pattern: '^[a-z]+$' },
+            },
+          ],
+        },
+      ],
+    });
+    project.addField('f', 'F', 'x-studio-addfield-test');
+    const item = project.itemAt('f') as { dataType?: string; extensions?: Record<string, boolean> };
+    expect(item?.dataType).toBe('string');
+    expect(item?.extensions?.['x-studio-addfield-test']).toBe(true);
+  });
+});
+
 /** Helper: find a component tree node by nodeId (BFS). */
 function findNodeById(root: any, nodeId: string): any {
   if (!root) return undefined;
@@ -3710,3 +3759,169 @@ function findNodeByBind(root: any, bind: string): any {
   }
   return undefined;
 }
+
+// ── BUG-1: _resolvePath parentPath doubling ─────────────────────────
+
+describe('BUG-1: _resolvePath parentPath doubling', () => {
+  it('does not double the prefix when path already starts with parentPath', () => {
+    const project = createProject();
+    project.addGroup('parent', 'Parent');
+    // path "parent.child" already encodes the parent; parentPath is redundant
+    project.addGroup('parent.child', 'Child', { parentPath: 'parent' });
+    const parent = project.itemAt('parent');
+    expect(parent?.children).toHaveLength(1);
+    expect(parent?.children?.[0].key).toBe('child');
+  });
+
+  it('addField with redundant parentPath does not double', () => {
+    const project = createProject();
+    project.addGroup('section', 'Section');
+    project.addField('section.name', 'Name', 'string', { parentPath: 'section' });
+    expect(project.itemAt('section.name')).toBeDefined();
+    expect(project.itemAt('section.name')?.label).toBe('Name');
+  });
+
+  it('addContent with redundant parentPath does not double', () => {
+    const project = createProject();
+    project.addGroup('section', 'Section');
+    project.addContent('section.intro', 'Welcome text', 'paragraph', { parentPath: 'section' });
+    expect(project.itemAt('section.intro')).toBeDefined();
+  });
+
+  it('still works when path is relative (no overlap with parentPath)', () => {
+    const project = createProject();
+    project.addGroup('section', 'Section');
+    project.addField('name', 'Name', 'string', { parentPath: 'section' });
+    expect(project.itemAt('section.name')).toBeDefined();
+  });
+
+  it('still works with deeply nested redundant parentPath', () => {
+    const project = createProject();
+    project.addGroup('a', 'A');
+    project.addGroup('a.b', 'B');
+    project.addField('a.b.field', 'Field', 'string', { parentPath: 'a.b' });
+    expect(project.itemAt('a.b.field')).toBeDefined();
+    expect(project.itemAt('a.b.field')?.label).toBe('Field');
+  });
+});
+
+// ── BUG-10: placeOnPage for display/content items ──────────────────
+
+describe('BUG-10: placeOnPage for content/display items', () => {
+  it('places a content item on a page', () => {
+    const project = createProject();
+    project.addContent('intro', 'Welcome text', 'heading');
+    const { createdId } = project.addPage('Page 1');
+    // This should not throw "Source node not found"
+    project.placeOnPage('intro', createdId!);
+    const page = findPageNode(project, createdId!);
+    const children = (page?.children ?? []) as any[];
+    // The content node should be in the page (it uses nodeId, not bind)
+    expect(children.some((n: any) => n.nodeId === 'intro' || n.bind === 'intro')).toBe(true);
+  });
+
+  it('places a nested content item on a page', () => {
+    const project = createProject();
+    project.addGroup('section', 'Section');
+    project.addContent('section.instructions', 'Read these instructions', 'paragraph');
+    const { createdId } = project.addPage('Page 1');
+    // Should use nodeId "instructions" (leaf key) since display items use nodeId
+    project.placeOnPage('section.instructions', createdId!);
+    const page = findPageNode(project, createdId!);
+    const children = (page?.children ?? []) as any[];
+    expect(children.some((n: any) => n.nodeId === 'instructions' || n.bind === 'instructions')).toBe(true);
+  });
+
+  it('unplaces a content item from a page', () => {
+    const project = createProject();
+    project.addContent('intro', 'Welcome text', 'heading');
+    const { createdId } = project.addPage('Page 1');
+    project.placeOnPage('intro', createdId!);
+    project.unplaceFromPage('intro', createdId!);
+    const page = findPageNode(project, createdId!);
+    const children = (page?.children ?? []) as any[];
+    expect(children.some((n: any) => n.nodeId === 'intro')).toBe(false);
+  });
+});
+
+// ── FIX 9: removeValidation normalization + error handling ──────────
+
+describe('FIX-9: removeValidation normalization', () => {
+  it('removes shapes from repeatable group fields using un-normalized path', () => {
+    const project = createProject();
+    project.addGroup('expenses', 'Expenses');
+    project.makeRepeatable('expenses');
+    project.addField('expenses.receipt', 'Receipt', 'string');
+    // addValidation normalizes target to expenses[*].receipt
+    project.addValidation('expenses.receipt', "$expenses.receipt != ''", 'Required');
+
+    const shapesBefore = project.definition.shapes ?? [];
+    expect(shapesBefore.length).toBe(1);
+    expect((shapesBefore[0] as any).target).toBe('expenses[*].receipt');
+
+    // removeValidation with the un-normalized path should still find and remove it
+    project.removeValidation('expenses.receipt');
+    const shapesAfter = project.definition.shapes ?? [];
+    expect(shapesAfter.length).toBe(0);
+  });
+
+  it('removes all shapes targeting a field path (not just first)', () => {
+    const project = createProject();
+    project.addField('score', 'Score', 'integer');
+    project.addValidation('score', '$score > 0', 'Must be positive');
+    project.addValidation('score', '$score < 100', 'Must be under 100');
+
+    const shapesBefore = project.definition.shapes ?? [];
+    expect(shapesBefore.length).toBe(2);
+
+    project.removeValidation('score');
+    const shapesAfter = project.definition.shapes ?? [];
+    expect(shapesAfter.length).toBe(0);
+  });
+
+  it('throws VALIDATION_NOT_FOUND when target matches nothing', () => {
+    const project = createProject();
+    project.addField('name', 'Name', 'string');
+    // No validation on 'name', and 'name' has no bind constraint
+    expect(() => project.removeValidation('nonexistent_field')).toThrow(HelperError);
+  });
+});
+
+// ── BUG-11: listPages first-page groupPath ──────────────────────────
+
+describe('BUG-11: listPages groupPath for all pages', () => {
+  it('returns groupPath for both first and second page', () => {
+    const project = createProject();
+    project.addPage('Step 1', undefined, 'step1');
+    project.addPage('Step 2', undefined, 'step2');
+
+    const pages = project.listPages();
+    expect(pages).toHaveLength(2);
+    expect(pages[0].groupPath).toBe('step1');
+    expect(pages[1].groupPath).toBe('step2');
+  });
+
+  it('preserves first page groupPath after adding fields to it', () => {
+    const project = createProject();
+    project.addPage('Step 1', undefined, 'step1');
+    project.addPage('Step 2', undefined, 'step2');
+    // Adding a field triggers a tree rebuild
+    project.addField('name', 'Name', 'string', { parentPath: 'step1' });
+
+    const pages = project.listPages();
+    expect(pages[0].groupPath).toBe('step1');
+    expect(pages[1].groupPath).toBe('step2');
+  });
+
+  it('preserves first page groupPath after placing items on pages', () => {
+    const project = createProject();
+    project.addField('name', 'Name', 'string');
+    project.addPage('Step 1', undefined, 'step1');
+    project.addPage('Step 2', undefined, 'step2');
+    project.placeOnPage('name', 'step1');
+
+    const pages = project.listPages();
+    expect(pages[0].groupPath).toBe('step1');
+    expect(pages[1].groupPath).toBe('step2');
+  });
+});
