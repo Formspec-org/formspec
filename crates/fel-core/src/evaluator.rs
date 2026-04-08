@@ -1020,8 +1020,37 @@ impl<'a> Evaluator<'a> {
     }
 
     fn fn_min_max(&mut self, args: &[Expr], is_min: bool) -> FelValue {
-        let val = self.eval_arg(args, 0);
         let name = if is_min { "min" } else { "max" };
+
+        // Variadic scalar form: min(a, b, ...) — evaluate all args as an implicit array
+        if args.len() >= 2 {
+            let vals: Vec<FelValue> = args.iter().map(|a| self.eval(a)).collect();
+            let non_null: Vec<&FelValue> = vals.iter().filter(|v| !v.is_null()).collect();
+            if non_null.is_empty() {
+                return FelValue::Null;
+            }
+            let mut best = non_null[0].clone();
+            for elem in &non_null[1..] {
+                let cmp = match (&best, *elem) {
+                    (FelValue::Number(a), FelValue::Number(b)) => Some(a.cmp(b)),
+                    (FelValue::String(a), FelValue::String(b)) => Some(a.cmp(b)),
+                    (FelValue::Date(a), FelValue::Date(b)) => Some(a.ordinal().cmp(&b.ordinal())),
+                    _ => {
+                        self.diag(format!("{name}: mixed types"));
+                        return FelValue::Null;
+                    }
+                };
+                if let Some(ord) = cmp
+                    && ((is_min && ord.is_gt()) || (!is_min && ord.is_lt()))
+                {
+                    best = (*elem).clone();
+                }
+            }
+            return best;
+        }
+
+        // Aggregate form: min([1, 2, 3])
+        let val = self.eval_arg(args, 0);
         let arr = match self.get_array(&val, name) {
             Some(a) => a,
             None => return FelValue::Null,

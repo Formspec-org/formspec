@@ -208,34 +208,41 @@ fn project_repeat_field(data: &HashMap<String, FelValue>, segments: &[String]) -
         return None;
     }
 
-    let prefix = format!("{}[", segments[0]);
-    let suffix = format!(".{}", segments[1..].join("."));
-    let mut projected = Vec::new();
+    // Try each possible split point: the repeat group name could span 1..N-1 segments.
+    // For ["publications", "pub_entries", "pub_title"], try:
+    //   split=1 → prefix "publications["       suffix ".pub_entries.pub_title"
+    //   split=2 → prefix "publications.pub_entries[" suffix ".pub_title"
+    for split in 1..segments.len() {
+        let group_path = segments[..split].join(".");
+        let prefix = format!("{group_path}[");
+        let suffix = format!(".{}", segments[split..].join("."));
+        let mut projected = Vec::new();
 
-    for (key, value) in data {
-        let Some(rest) = key.strip_prefix(&prefix) else {
-            continue;
-        };
-        let Some((idx, tail)) = rest.split_once(']') else {
-            continue;
-        };
-        if tail != suffix {
-            continue;
+        for (key, value) in data {
+            let Some(rest) = key.strip_prefix(&prefix) else {
+                continue;
+            };
+            let Some((idx, tail)) = rest.split_once(']') else {
+                continue;
+            };
+            if tail != suffix {
+                continue;
+            }
+            let Ok(index) = idx.parse::<usize>() else {
+                continue;
+            };
+            projected.push((index, value.clone()));
         }
-        let Ok(index) = idx.parse::<usize>() else {
-            continue;
-        };
-        projected.push((index, value.clone()));
+
+        if !projected.is_empty() {
+            projected.sort_by_key(|(index, _)| *index);
+            return Some(FelValue::Array(
+                projected.into_iter().map(|(_, value)| value).collect(),
+            ));
+        }
     }
 
-    if projected.is_empty() {
-        return None;
-    }
-
-    projected.sort_by_key(|(index, _)| *index);
-    Some(FelValue::Array(
-        projected.into_iter().map(|(_, value)| value).collect(),
-    ))
+    None
 }
 
 #[allow(missing_docs)]
