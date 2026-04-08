@@ -40,6 +40,7 @@ export const contactFormComponentDoc = {
                 component: "Grid",
                 columns: 2,
                 gap: "16px",
+                rowGap: "16px",
                 children: [
                     { component: "TextInput", bind: "firstName" },
                     { component: "TextInput", bind: "lastName" },

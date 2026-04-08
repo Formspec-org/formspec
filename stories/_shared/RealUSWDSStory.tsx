@@ -2,7 +2,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import uswdsCssUrl from '@uswds/uswds/css/uswds.css?url';
-import { integrationCSS } from '../../packages/formspec-adapters/src/uswds/integration-css';
 import { getRealUswdsPreset, type RealUswdsRenderPreset } from './uswds-comparison-presets';
 
 type USWDSBehavior = {
@@ -42,12 +41,7 @@ const paneStyle: React.CSSProperties = {
     margin: '0 auto',
 };
 
-const comparisonFormStyle: React.CSSProperties = {
-    // The adapter story explicitly widens `usa-form` when it wraps a formspec container.
-    // Mirror that here so the side-by-side story compares component markup, not two
-    // different form-width policies.
-    maxWidth: '100%',
-};
+const tabsPanelTopPadding = '0.75rem';
 
 function requiredMark(required?: boolean) {
     if (!required) return null;
@@ -166,9 +160,11 @@ function renderDisplayItem(item: FormspecItem, path: string) {
     }
     if (widgetHint === 'divider') {
         return (
-            <div key={key} className="usa-prose width-full">
-                <hr className="border-top-1px border-base-lighter margin-y-4" />
-            </div>
+            <hr
+                key={key}
+                className="margin-y-4 width-full"
+                style={{ border: 0, borderTop: '1px solid #dfe1e2' }}
+            />
         );
     }
 
@@ -584,56 +580,38 @@ function RealUswdsRepeatableGroup({
 }) {
     const repeatCount = preset.repeats[path] ?? Math.max(1, item.minRepeat ?? 1);
     const groupLabel = item.label || path;
-    const baseId = toId(path);
-    const [openIndex, setOpenIndex] = useState(() => Math.max(0, repeatCount - 1));
-
-    useEffect(() => {
-        setOpenIndex((prev) => {
-            const last = Math.max(0, repeatCount - 1);
-            return prev >= repeatCount ? last : prev;
-        });
-    }, [repeatCount]);
 
     return (
-        <React.Fragment>
-            <div className="usa-accordion">
+        <div className="real-uswds-repeat">
+            <div className="real-uswds-repeat__list">
                 {Array.from({ length: repeatCount }).map((_, index) => {
                     const instancePath = `${path}[${index}]`;
-                    const contentId = `${baseId}-panel-${index}`;
-                    const isOpen = index === openIndex;
                     return (
-                        <React.Fragment key={instancePath}>
-                            <h4 className="usa-accordion__heading">
-                                <button
-                                    type="button"
-                                    className="usa-accordion__button"
-                                    aria-expanded={isOpen ? 'true' : 'false'}
-                                    aria-controls={contentId}
-                                    onClick={() => setOpenIndex(index)}
-                                >
-                                    {`${groupLabel} ${index + 1}`}
-                                </button>
-                            </h4>
-                            <div
-                                id={contentId}
-                                className="usa-accordion__content usa-prose"
-                                hidden={!isOpen}
-                            >
-                                {renderItems(item.children ?? [], instancePath, preset, blurErrors)}
-                                {index > 0 ? (
+                        <div
+                            key={instancePath}
+                            className="real-uswds-repeat__instance"
+                            role="group"
+                            aria-label={`${groupLabel} ${index + 1} of ${repeatCount}`}
+                        >
+                            <div className="real-uswds-repeat__header">
+                                <p className="real-uswds-repeat__label">{`${groupLabel} ${index + 1}`}</p>
+                                {repeatCount > 1 ? (
                                     <button className="usa-button usa-button--unstyled" type="button">
                                         Remove {groupLabel}
                                     </button>
                                 ) : null}
                             </div>
-                        </React.Fragment>
+                            <div className="real-uswds-repeat__fields">
+                                {renderItems(item.children ?? [], instancePath, preset, blurErrors)}
+                            </div>
+                        </div>
                     );
                 })}
             </div>
-            <button className="usa-button usa-button--outline margin-top-2" type="button">
-                Add another {groupLabel.toLowerCase()}
+            <button className="usa-button usa-button--outline real-uswds-repeat__add" type="button">
+                Add {groupLabel}
             </button>
-        </React.Fragment>
+        </div>
     );
 }
 
@@ -869,43 +847,41 @@ function renderCard(title: string, body: React.ReactNode) {
     );
 }
 
-/** Grid shell for form fields — `padding-x-0` avoids USWDS container gutters inside narrow `.usa-form` (adapter pane has no equivalent inset). */
-const REAL_USWDS_GRID_CONTAINER_CLASS = 'grid-container padding-x-0';
-
-/** USWDS form controls expect to live under `grid-container` → `grid-row` → `grid-col-*` (not only the page root). */
-function wrapRealUswdsGridCol12(children: React.ReactNode) {
-    return (
-        <div className={REAL_USWDS_GRID_CONTAINER_CLASS}>
-            <div className="grid-row grid-gap">
-                <div className="grid-col-12">{children}</div>
-            </div>
-        </div>
-    );
+function flattenRenderableChildren(children: React.ReactNode): React.ReactNode[] {
+    return React.Children.toArray(children).flatMap((child) => {
+        if (React.isValidElement(child) && child.type === React.Fragment) {
+            return React.Children.toArray(child.props.children);
+        }
+        return [child];
+    });
 }
 
-/** Match USWDS adapter grid: `grid-container` + `grid-row` + responsive `tablet:grid-col-*`. */
-function renderGrid(children: React.ReactNode, columns = 2) {
+function renderRealUswdsGrid(children: React.ReactNode, columns = 2, rowGap?: string) {
     const n = Math.max(1, Math.floor(columns));
     const cellClass =
         [2, 3, 4, 6].includes(n) ? `grid-col-12 tablet:grid-col-${12 / n}` : 'grid-col-12 tablet:grid-col-fill';
-    const kids = React.Children.toArray(children);
+    const kids = flattenRenderableChildren(children);
     return (
-        <div className={REAL_USWDS_GRID_CONTAINER_CLASS}>
-            <div className="grid-row grid-gap">
-                {kids.map((child, i) => (
-                    <div key={i} className={cellClass}>
-                        {child}
-                    </div>
-                ))}
-            </div>
+        <div
+            className="grid-row grid-gap real-uswds-grid"
+            style={rowGap ? { rowGap } : undefined}
+        >
+            {kids.map((child, index) => (
+                <div key={index} className={cellClass}>
+                    {child}
+                </div>
+            ))}
         </div>
     );
 }
 
-function renderComparisonStack(children: React.ReactNode) {
-    const kids = React.Children.toArray(children);
+function renderRealUswdsStack(children: React.ReactNode, gap = '16px') {
+    const kids = flattenRenderableChildren(children);
     return (
-        <div className="formspec-stack grid-row grid-gap">
+        <div
+            className="grid-row grid-gap real-uswds-stack"
+            style={{ ['--real-uswds-stack-gap' as any]: gap }}
+        >
             {kids.map((child, index) => (
                 <div key={index} className="grid-col-12">
                     {child}
@@ -971,11 +947,12 @@ function renderModalDemo(definition: any, preset: RenderPreset, blurErrors: Reco
                             <p id="real-uswds-modal-description">Provide the contact details that do not fit in the main form.</p>
                         </div>
                         <div style={{ marginTop: '1rem' }}>
-                            {wrapRealUswdsGridCol12(
+                            {renderRealUswdsStack(
                                 <>
                                     {renderBoundField(definition, 'email', preset, blurErrors)}
                                     {renderBoundField(definition, 'phone', preset, blurErrors)}
                                 </>,
+                                '16px',
                             )}
                         </div>
                         <div className="usa-modal__footer">
@@ -1001,8 +978,8 @@ function renderWizardDemo(definition: any, preset: RenderPreset, blurErrors: Rec
     const activeLabelId = 'real-uswds-wizard-step-1-label';
 
     return (
-        <div className="formspec-wizard">
-            <div className="formspec-uswds-wizard__content">
+        <div className="real-uswds-wizard">
+            <div className="real-uswds-wizard__content">
                 <nav className="usa-step-indicator" aria-label="Form progress">
                     <ol className="usa-step-indicator__segments">
                         <li className="usa-step-indicator__segment usa-step-indicator__segment--current">
@@ -1024,17 +1001,17 @@ function renderWizardDemo(definition: any, preset: RenderPreset, blurErrors: Rec
                     </div>
                 </nav>
                 <div
-                    className="formspec-wizard-panel"
+                    className="real-uswds-wizard__panel"
                     role="region"
                     aria-labelledby={activeLabelId}
                 >
-                    <h2 id={activeLabelId} className="usa-step-indicator__heading formspec-uswds-wizard__panel-heading">
+                    <h2 id={activeLabelId} className="usa-step-indicator__heading real-uswds-wizard__panel-heading">
                         Personal Info
                     </h2>
                     {renderBoundField(definition, 'firstName', preset, blurErrors)}
                     {renderBoundField(definition, 'lastName', preset, blurErrors)}
                 </div>
-                <div className="formspec-wizard-nav usa-button-group">
+                <div className="usa-button-group real-uswds-wizard__nav">
                     <button className="usa-button usa-button--outline" type="button" disabled>Previous</button>
                     <button className="usa-button" type="button">Next</button>
                 </div>
@@ -1047,7 +1024,7 @@ function TabsDemo({ definition, preset, blurErrors }: { definition: any, preset:
     const [activeTab, setActiveTab] = useState(0);
 
     return (
-        <div className="formspec-tabs">
+        <div className="real-uswds-tabs">
             <ul className="usa-button-group usa-button-group--segmented" role="tablist">
                 <li className="usa-button-group__item">
                     <button 
@@ -1072,21 +1049,23 @@ function TabsDemo({ definition, preset, blurErrors }: { definition: any, preset:
                     </button>
                 </li>
             </ul>
-            <div className="formspec-tab-panels">
+            <div className="real-uswds-tabs__panels">
                 <div role="tabpanel" style={{ display: activeTab === 0 ? 'block' : 'none' }}>
-                    {renderComparisonStack(
+                    {renderRealUswdsStack(
                         <>
                             {renderBoundField(definition, 'firstName', preset, blurErrors)}
                             {renderBoundField(definition, 'lastName', preset, blurErrors)}
                         </>,
+                        '12px',
                     )}
                 </div>
                 <div role="tabpanel" style={{ display: activeTab === 1 ? 'block' : 'none' }}>
-                    {renderComparisonStack(
+                    {renderRealUswdsStack(
                         <>
                             {renderBoundField(definition, 'email', preset, blurErrors)}
                             {renderBoundField(definition, 'phone', preset, blurErrors)}
                         </>,
+                        '12px',
                     )}
                 </div>
             </div>
@@ -1101,57 +1080,73 @@ function renderComponentDocumentUswds(
 ) {
     const items = Array.isArray(definition?.items) ? definition.items as FormspecItem[] : [];
     const preset = getRealUswdsPreset(definition);
+    const rootChildren = Array.isArray(componentDocument?.tree?.children) ? componentDocument.tree.children : [];
 
     switch (componentDocument?.name) {
-    case 'contact-grid':
+    case 'contact-grid': {
+        const contactGrid = rootChildren.find((child) => child?.component === 'Grid');
+        const contactGridColumns =
+            typeof contactGrid?.columns === 'number' ? contactGrid.columns : 2;
+        const contactGridRowGap =
+            typeof contactGrid?.rowGap === 'string'
+                ? contactGrid.rowGap
+                : typeof contactGrid?.gap === 'string'
+                    ? contactGrid.gap
+                    : undefined;
         return (
             <div>
-                {renderCard('Contact Information', renderGrid(
+                {renderCard('Contact Information', renderRealUswdsGrid(
                     <>
                         {renderBoundField(definition, 'firstName', preset, blurErrors)}
                         {renderBoundField(definition, 'lastName', preset, blurErrors)}
                         {renderBoundField(definition, 'email', preset, blurErrors)}
                         {renderBoundField(definition, 'phone', preset, blurErrors)}
                     </>,
+                    contactGridColumns,
+                    contactGridRowGap,
                 ))}
             </div>
         );
+    }
     case 'grouped-cards':
-        return (
-            <div style={{ display: 'grid', gap: '1rem' }}>
-                {renderCard('Personal Information', renderGrid(
+        return renderRealUswdsStack(
+            <>
+                {renderCard('Personal Information', renderRealUswdsGrid(
                     <>
                         {renderBoundField(definition, 'personal.name', preset, blurErrors)}
                         {renderBoundField(definition, 'personal.email', preset, blurErrors)}
                     </>,
                 ))}
-                {renderCard('Preferences', wrapRealUswdsGridCol12(
+                {renderCard('Preferences', (
                     <>
                         {renderBoundField(definition, 'preferences.newsletter', preset, blurErrors, 'Toggle')}
                         {renderBoundField(definition, 'preferences.debug', preset, blurErrors, 'Toggle')}
                         {renderBoundField(definition, 'preferences.timeout', preset, blurErrors, 'NumberInput')}
-                    </>,
+                    </>
                 ))}
-            </div>
+            </>,
+            '24px',
         );
     case 'collapsible-demo':
         return renderAccordion([
             {
                 title: 'Personal Details',
-                content: wrapRealUswdsGridCol12(
+                content: renderRealUswdsStack(
                     <>
                         {renderBoundField(definition, 'firstName', preset, blurErrors)}
                         {renderBoundField(definition, 'lastName', preset, blurErrors)}
                     </>,
+                    '12px',
                 ),
             },
             {
                 title: 'Contact Information',
-                content: wrapRealUswdsGridCol12(
+                content: renderRealUswdsStack(
                     <>
                         {renderBoundField(definition, 'email', preset, blurErrors)}
                         {renderBoundField(definition, 'phone', preset, blurErrors)}
                     </>,
+                    '12px',
                 ),
             },
         ], { allowMultiple: true, idBase: 'collapsible', openIndices: [0] });
@@ -1159,20 +1154,22 @@ function renderComponentDocumentUswds(
         return renderAccordion([
             {
                 title: 'Personal Details',
-                content: wrapRealUswdsGridCol12(
+                content: renderRealUswdsStack(
                     <>
                         {renderBoundField(definition, 'firstName', preset, blurErrors)}
                         {renderBoundField(definition, 'lastName', preset, blurErrors)}
                     </>,
+                    '12px',
                 ),
             },
             {
                 title: 'Contact Information',
-                content: wrapRealUswdsGridCol12(
+                content: renderRealUswdsStack(
                     <>
                         {renderBoundField(definition, 'email', preset, blurErrors)}
                         {renderBoundField(definition, 'phone', preset, blurErrors)}
                     </>,
+                    '12px',
                 ),
             },
         ], { idBase: 'accordion', openIndices: [0] });
@@ -1180,25 +1177,30 @@ function renderComponentDocumentUswds(
         return renderAccordion([
             {
                 title: 'Personal Details',
-                content: wrapRealUswdsGridCol12(
+                content: renderRealUswdsStack(
                     <>
                         {renderBoundField(definition, 'firstName', preset, blurErrors)}
                         {renderBoundField(definition, 'lastName', preset, blurErrors)}
                     </>,
+                    '12px',
                 ),
             },
             {
                 title: 'Contact Information',
-                content: wrapRealUswdsGridCol12(
+                content: renderRealUswdsStack(
                     <>
                         {renderBoundField(definition, 'email', preset, blurErrors)}
                         {renderBoundField(definition, 'phone', preset, blurErrors)}
                     </>,
+                    '12px',
                 ),
             },
             {
                 title: 'Preferences',
-                content: wrapRealUswdsGridCol12(renderBoundField(definition, 'newsletter', preset, blurErrors, 'Toggle')),
+                content: renderRealUswdsStack(
+                    renderBoundField(definition, 'newsletter', preset, blurErrors, 'Toggle'),
+                    '12px',
+                ),
             },
         ], { allowMultiple: true, idBase: 'accordion-multi', openIndices: [0] });
     case 'panel-demo':
@@ -1208,13 +1210,14 @@ function renderComponentDocumentUswds(
                     {renderCard('Help', <p style={{ margin: 0 }}>Fill in your contact details. All fields are optional unless marked required.</p>)}
                 </div>
                 <div>
-                    {wrapRealUswdsGridCol12(
+                    {renderRealUswdsStack(
                         <>
                             {renderBoundField(definition, 'firstName', preset, blurErrors)}
                             {renderBoundField(definition, 'lastName', preset, blurErrors)}
                             {renderBoundField(definition, 'email', preset, blurErrors)}
                             {renderBoundField(definition, 'phone', preset, blurErrors)}
                         </>,
+                        '12px',
                     )}
                 </div>
             </div>
@@ -1222,16 +1225,26 @@ function renderComponentDocumentUswds(
     case 'modal-demo':
         return (
             <>
-                {renderBoundField(definition, 'firstName', preset, blurErrors)}
-                {renderBoundField(definition, 'lastName', preset, blurErrors)}
+                {renderRealUswdsStack(
+                    <>
+                        {renderBoundField(definition, 'firstName', preset, blurErrors)}
+                        {renderBoundField(definition, 'lastName', preset, blurErrors)}
+                    </>,
+                    '16px',
+                )}
                 {renderModalDemo(definition, preset, blurErrors)}
             </>
         );
     case 'popover-demo':
         return (
             <>
-                {renderBoundField(definition, 'firstName', preset, blurErrors)}
-                {renderBoundField(definition, 'lastName', preset, blurErrors)}
+                {renderRealUswdsStack(
+                    <>
+                        {renderBoundField(definition, 'firstName', preset, blurErrors)}
+                        {renderBoundField(definition, 'lastName', preset, blurErrors)}
+                    </>,
+                    '16px',
+                )}
                 <div style={{ marginTop: '1rem' }}>
                     <button
                         type="button"
@@ -1253,12 +1266,12 @@ function renderComponentDocumentUswds(
     }
 
     const displayOnly = items.length > 0 && items.every((item) => item.type === 'display');
+    const renderedItems = renderItems(items, '', preset, blurErrors);
 
     return (
         <>
-            {displayOnly && definition?.title ? <h2>{definition.title}</h2> : null}
             {renderValidationSummary(blurErrors)}
-            {renderItems(items, '', preset, blurErrors)}
+            {displayOnly ? renderRealUswdsStack(renderedItems, '24px') : renderRealUswdsStack(renderedItems, '16px')}
         </>
     );
 }
@@ -1269,6 +1282,25 @@ function renderRealUSWDS(
     blurErrors: Record<string, string>,
 ) {
     return renderComponentDocumentUswds(definition, componentDocument ?? null, blurErrors);
+}
+
+function usesWideRealUswdsShell(componentDocument?: any) {
+    return [
+        'contact-grid',
+        'grouped-cards',
+        'collapsible-demo',
+        'accordion-demo',
+        'accordion-multi-demo',
+        'panel-demo',
+        'modal-demo',
+        'popover-demo',
+        'wizard-demo',
+        'tabs-demo',
+    ].includes(componentDocument?.name ?? '');
+}
+
+function definitionHasRepeatableGroups(items: FormspecItem[]): boolean {
+    return items.some((item) => item.repeatable || definitionHasRepeatableGroups(item.children ?? []));
 }
 
 function collectBehaviorNames(items: FormspecItem[], names: Set<string>) {
@@ -1348,6 +1380,15 @@ function useShadowRoot(stylesheets: string[], inlineStyles: string[]) {
 export function RealUSWDSStory({ definition, componentDocument, showSubmit = true, maxWidth = 640 }: RealUSWDSStoryProps) {
     const preset = useMemo(() => getRealUswdsPreset(definition), [definition]);
     const [blurFieldErrors, setBlurFieldErrors] = useState<Record<string, string>>({});
+    const items = useMemo(() => (Array.isArray(definition?.items) ? definition.items : []), [definition]);
+    const allDisplayOnly = useMemo(
+        () => items.length > 0 && items.every((item: { type?: string }) => item.type === 'display'),
+        [items],
+    );
+    const hasRepeatableGroups = useMemo(
+        () => definitionHasRepeatableGroups(items),
+        [items],
+    );
 
     useEffect(() => {
         setBlurFieldErrors({});
@@ -1359,42 +1400,135 @@ export function RealUSWDSStory({ definition, componentDocument, showSubmit = tru
     );
     const stylesheets = useMemo(() => [uswdsCssUrl], []);
     const inlineStyles = useMemo(() => [
-        integrationCSS,
-        `
-            .formspec-uswds-comparison-form {
-                max-width: 100%;
-            }
-            .formspec-uswds-comparison-form .usa-form-group,
-            .formspec-uswds-comparison-form .usa-fieldset,
-            .formspec-uswds-comparison-form .usa-form-group > .usa-input-group,
-            .formspec-uswds-comparison-form .usa-form-group > .usa-range,
-            .formspec-uswds-comparison-form .usa-form-group > .usa-file-input {
-                max-width: none !important;
-            }
-            .formspec-uswds-comparison-form .formspec-stack.grid-row.grid-gap > [class*='grid-col'] > .usa-form-group,
-            .formspec-uswds-comparison-form .formspec-stack.grid-row.grid-gap > [class*='grid-col'] > .usa-fieldset,
-            .formspec-uswds-comparison-form .formspec-stack.grid-row.grid-gap > [class*='grid-col'] > .usa-form-group > .usa-input-group,
-            .formspec-uswds-comparison-form .formspec-stack.grid-row.grid-gap > [class*='grid-col'] > .usa-form-group > .usa-range,
-            .formspec-uswds-comparison-form .formspec-stack.grid-row.grid-gap > [class*='grid-col'] > .usa-form-group > .usa-file-input {
-                max-width: none !important;
-            }
-        `,
         `
             :host {
                 display: block;
+            }
+            .story-root,
+            .story-root *,
+            .story-root *::before,
+            .story-root *::after {
+                box-sizing: border-box;
             }
             .story-root {
                 display: block;
                 padding: 0;
                 color: #1b1b1b;
             }
+            .story-root .usa-card__container {
+                margin-left: 0.5rem;
+                margin-right: 0.5rem;
+            }
+            .story-root .usa-card__header {
+                padding: 1.5rem 1.5rem 0.5rem;
+            }
+            .story-root .usa-card__body {
+                padding: 0.5rem 1.5rem 1.5rem;
+            }
+            .real-uswds-grid > [class*='grid-col'] > .usa-form-group,
+            .real-uswds-stack > [class*='grid-col'] > .usa-form-group {
+                display: flex;
+                flex-direction: column;
+                margin-top: 0;
+            }
+            .real-uswds-grid > [class*='grid-col'] > .usa-form-group > .usa-label,
+            .real-uswds-stack > [class*='grid-col'] > .usa-form-group > .usa-label {
+                margin-top: 0;
+            }
+            .real-uswds-stack > [class*='grid-col'] + [class*='grid-col'] {
+                margin-top: var(--real-uswds-stack-gap, 1rem);
+            }
+            .real-uswds-repeat {
+                display: flex;
+                flex-direction: column;
+            }
+            .real-uswds-repeat__list {
+                display: flex;
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+            .real-uswds-repeat__instance {
+                display: flex;
+                flex-direction: column;
+                gap: 0.75rem;
+                padding: 0.9375rem 1rem 1rem;
+            }
+            .real-uswds-repeat__header {
+                align-items: flex-start;
+                display: flex;
+                gap: 0.75rem;
+                justify-content: space-between;
+            }
+            .real-uswds-repeat__label {
+                margin: 0;
+            }
+            .real-uswds-repeat__header .usa-button {
+                margin-top: 0;
+            }
+            .real-uswds-repeat__fields {
+                display: flex;
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+            .real-uswds-repeat__fields > .usa-form-group {
+                margin-top: 0;
+            }
+            .real-uswds-repeat__add {
+                align-self: flex-start;
+                margin-top: 1rem;
+            }
+            .real-uswds-tabs__panels {
+                padding-top: ${tabsPanelTopPadding};
+            }
+            .real-uswds-wizard .usa-step-indicator__heading {
+                font-size: 1rem;
+            }
+            .real-uswds-wizard .usa-step-indicator__current-step {
+                width: 2rem;
+                height: 2rem;
+                padding: 0;
+                font-size: 0.875rem;
+                line-height: 2rem;
+            }
+            .real-uswds-wizard .usa-step-indicator__heading-text {
+                font-weight: 700;
+            }
+            .real-uswds-wizard__content {
+                display: flex;
+                flex-direction: column;
+                gap: 1rem;
+            }
+            .real-uswds-wizard__panel {
+                border: 1px solid #dfe1e2;
+                border-radius: 0.25rem;
+                max-width: 32rem;
+                padding: 1rem;
+            }
+            .real-uswds-wizard__panel-heading {
+                margin-top: 0;
+                margin-bottom: 1rem;
+            }
+            .real-uswds-wizard__nav.usa-button-group {
+                align-items: center;
+                flex-wrap: wrap;
+                justify-content: space-between;
+            }
         `,
     ], []);
     const { hostRef, mountNode } = useShadowRoot(stylesheets, inlineStyles);
     const enhancedRootRef = useRef<HTMLDivElement | null>(null);
-    const usesFullWidthComparisonShell = componentDocument?.name === 'wizard-demo'
-        || componentDocument?.name === 'tabs-demo';
     const shouldRenderOuterSubmit = showSubmit && componentDocument?.name !== 'wizard-demo';
+    const formClassName = useMemo(
+        () =>
+            [
+                'usa-form',
+                'usa-form--large',
+                usesWideRealUswdsShell(componentDocument) || allDisplayOnly || hasRepeatableGroups ? 'maxw-none' : '',
+            ]
+                .filter(Boolean)
+                .join(' '),
+        [allDisplayOnly, componentDocument, hasRepeatableGroups],
+    );
 
     useEffect(() => {
         if (!enhancedRootRef.current) return;
@@ -1420,35 +1554,16 @@ export function RealUSWDSStory({ definition, componentDocument, showSubmit = tru
             {mountNode ? createPortal(
                 <div ref={enhancedRootRef}>
                     <form
-                        className="usa-form formspec-uswds-comparison-form"
-                        style={comparisonFormStyle}
+                        className={formClassName}
                         onBlurCapture={(e) => handleRealUswdsFormBlur(e, definition, preset, setBlurFieldErrors)}
                     >
-                        {usesFullWidthComparisonShell ? (
-                            <>
-                                {definition?.title ? <h2 className="usa-sr-only">{definition.title}</h2> : null}
-                                {rendered}
-                                {shouldRenderOuterSubmit ? (
-                                    <button className="usa-button" type="submit" style={{ marginTop: '1.5rem' }}>
-                                        Submit
-                                    </button>
-                                ) : null}
-                            </>
-                        ) : (
-                            <div className={REAL_USWDS_GRID_CONTAINER_CLASS}>
-                                <div className="grid-row grid-gap">
-                                    <div className="grid-col-12">
-                                        {definition?.title ? <h2 className="usa-sr-only">{definition.title}</h2> : null}
-                                        {rendered}
-                                        {shouldRenderOuterSubmit ? (
-                                            <button className="usa-button" type="submit" style={{ marginTop: '1.5rem' }}>
-                                                Submit
-                                            </button>
-                                        ) : null}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
+                        {definition?.title ? <h2 className={allDisplayOnly ? undefined : 'usa-sr-only'}>{definition.title}</h2> : null}
+                        {rendered}
+                        {shouldRenderOuterSubmit ? (
+                            <button className="usa-button" type="submit" style={{ marginTop: '1.5rem' }}>
+                                Submit
+                            </button>
+                        ) : null}
                     </form>
                 </div>,
                 mountNode,
