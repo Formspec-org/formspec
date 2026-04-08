@@ -212,7 +212,7 @@ describe('USWDS comparison story layout', () => {
 
         expect(shadowRoot).toBeTruthy();
         expect(styleText).toContain('.real-uswds-tabs__panels');
-        expect(styleText).toContain('padding-top: 0.75rem');
+        expect(styleText).toContain('padding-top: 1.5rem');
         expect(styleText).toContain('.real-uswds-wizard__content');
         expect(styleText).toContain('.real-uswds-stack >');
         expect(styleText).not.toContain('.formspec-uswds-comparison-form');
@@ -255,7 +255,7 @@ describe('USWDS comparison story layout', () => {
             .join('\n');
 
         expect(shadowRoot).toBeTruthy();
-        expect(styleText).toContain('.formspec-tab-panels{padding-top:.75rem}');
+        expect(styleText).toContain('.formspec-tab-panels{padding-top:1.5rem}');
     });
 
     it('does not nest full Page layout sections inside adapter wizard panels', async () => {

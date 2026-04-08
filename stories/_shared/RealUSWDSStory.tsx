@@ -41,7 +41,7 @@ const paneStyle: React.CSSProperties = {
     margin: '0 auto',
 };
 
-const tabsPanelTopPadding = '0.75rem';
+const tabsPanelTopPadding = '1.5rem';
 
 function requiredMark(required?: boolean) {
     if (!required) return null;
