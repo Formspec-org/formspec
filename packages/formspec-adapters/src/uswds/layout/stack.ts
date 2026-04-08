@@ -21,7 +21,14 @@ export function renderUSWDSStack(behavior: StackLayoutBehavior, parent: HTMLElem
         .filter(Boolean)
         .join(' ');
     if (comp.align) row.dataset.align = comp.align;
-    if (comp.gap) row.style.gap = String(host.resolveToken(comp.gap));
+    if (comp.gap) {
+        const resolvedGap = String(host.resolveToken(comp.gap));
+        if (horizontal) {
+            row.style.columnGap = resolvedGap;
+        } else {
+            row.style.setProperty('--formspec-uswds-stack-gap', resolvedGap);
+        }
+    }
 
     actx.applyCssClass(row, comp);
     actx.applyAccessibility(row, comp);

@@ -30,7 +30,6 @@ export function renderUSWDSGrid(behavior: GridLayoutBehavior, parent: HTMLElemen
     const row = document.createElement('div');
     if (comp.id) row.id = comp.id;
     row.className = USWDS_LAYOUT_ROW_CLASS;
-    if (comp.gap) row.style.gap = String(host.resolveToken(comp.gap));
     if (comp.rowGap) row.style.rowGap = String(host.resolveToken(comp.rowGap));
 
     actx.applyCssClass(row, comp);

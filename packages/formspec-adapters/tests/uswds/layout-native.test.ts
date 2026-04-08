@@ -70,6 +70,19 @@ describe('USWDS layout natives', () => {
         expect(parent.querySelector('.grid-col-12')).toBeTruthy();
     });
 
+    it('renderUSWDSStack vertical stores custom stack spacing as a CSS variable instead of flex gap', () => {
+        const parent = document.createElement('div');
+        const behavior: StackLayoutBehavior = {
+            comp: { gap: '12px', children: [{ component: 'TextInput', bind: 'a' }] },
+            host: layoutHost(),
+        };
+        renderUSWDSStack(behavior, parent, mockAdapterContext());
+        const row = parent.querySelector('.formspec-stack.grid-row.grid-gap') as HTMLDivElement | null;
+        expect(row).not.toBeNull();
+        expect(row?.style.gap).toBe('');
+        expect(row?.style.getPropertyValue('--formspec-uswds-stack-gap')).toBe('12px');
+    });
+
     it('renderUSWDSStack horizontal uses fill cells when children do not declare widths', () => {
         const parent = document.createElement('div');
         const behavior: StackLayoutBehavior = {
@@ -80,6 +93,19 @@ describe('USWDS layout natives', () => {
         const cell = parent.querySelector('[class*="tablet:grid-col-fill"]');
         expect(cell).toBeTruthy();
         expect(cell!.className).toContain('grid-col-12');
+    });
+
+    it('renderUSWDSStack horizontal keeps spacing in columnGap for side-by-side layouts', () => {
+        const parent = document.createElement('div');
+        const behavior: StackLayoutBehavior = {
+            comp: { direction: 'horizontal', gap: '24px', children: [{ component: 'TextInput', bind: 'a' }] },
+            host: layoutHost(),
+        };
+        renderUSWDSStack(behavior, parent, mockAdapterContext());
+        const row = parent.querySelector('.formspec-stack.grid-row.grid-gap') as HTMLDivElement | null;
+        expect(row).not.toBeNull();
+        expect(row?.style.columnGap).toBe('24px');
+        expect(row?.style.gap).toBe('');
     });
 
     it('renderUSWDSStack horizontal lets only explicit-width children use auto columns', () => {

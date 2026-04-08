@@ -52,6 +52,7 @@ $fs-wizard-circle-size: units(4) !default;
 $fs-wizard-circle-font-size: 0.875rem !default;
 $fs-wizard-panel-max-width: 32rem !default;
 $fs-wizard-panel-radius: radius('md') !default;
+$fs-tabs-panel-padding-top: 0.75rem !default;
 $fs-divider-margin: units(4) 0 !default;
 $fs-trailing-checkbox-size: 1.25rem !default;
 
@@ -126,8 +127,8 @@ $fs-trailing-checkbox-size: 1.25rem !default;
   margin-top: 0;
 }
 
-.formspec-stack.grid-row.grid-gap .usa-form-group {
-  margin-top: units(3);
+.formspec-stack:not(.formspec-stack--horizontal).grid-row.grid-gap > [class*='grid-col'] + [class*='grid-col'] {
+  margin-top: var(--formspec-uswds-stack-gap, #{units(3)});
 }
 
 .grid-row.grid-gap > [class*='grid-col'] > .usa-form-group {
@@ -279,7 +280,7 @@ dialog.usa-modal::backdrop {
 }
 
 .formspec-tab-panels {
-  padding-top: units(2);
+  padding-top: $fs-tabs-panel-padding-top;
 }
 
 .formspec-wizard .usa-step-indicator__heading {

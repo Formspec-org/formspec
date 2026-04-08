@@ -19,7 +19,6 @@ export function renderUSWDSColumns(behavior: ColumnsLayoutBehavior, parent: HTML
     const row = document.createElement('div');
     if (comp.id) row.id = comp.id;
     row.className = USWDS_LAYOUT_ROW_CLASS;
-    if (comp.gap) row.style.gap = String(host.resolveToken(comp.gap));
 
     actx.applyCssClass(row, comp);
     actx.applyAccessibility(row, comp);
