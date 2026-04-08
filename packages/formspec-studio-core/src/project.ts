@@ -45,6 +45,8 @@ import {
 import { resolveFieldType, resolveWidget, widgetHintFor, isTextareaWidget, _FIELD_TYPE_MAP } from './field-type-aliases.js';
 import type { ResolvedFieldType } from './field-type-aliases.js';
 import {
+  findComponentNodeById,
+  findComponentNodeByRef,
   getFieldTypeCatalog,
   humanizeFEL,
   isLayoutId,
@@ -56,6 +58,7 @@ import {
 import { COMPATIBILITY_MATRIX, COMPONENT_TO_HINT } from '@formspec-org/types';
 import { analyzeFEL } from '@formspec-org/engine/fel-runtime';
 import { rewriteFELReferences } from '@formspec-org/engine/fel-tools';
+import { createFormEngine, type FormspecDefinition, type IFormEngine } from '@formspec-org/engine/render';
 
 type ComponentNode = Record<string, unknown>;
 
@@ -253,7 +256,7 @@ export class Project {
   }
 
   /** Convert a FEL expression to a human-readable English string. */
-  humanizeFELExpression(expression: string): string {
+  humanizeFELExpression(expression: string): { text: string; supported: boolean } {
     return humanizeFEL(expression);
   }
 
@@ -623,6 +626,35 @@ export class Project {
   }
 
   /**
+   * Ensure `leafKey` is unique across the entire item tree.
+   * The Rust linter catches this as E200; this surfaces the error at authoring time.
+   */
+  private _assertGlobalKeyUniqueness(leafKey: string): void {
+    const items = this.core.state.definition.items ?? [];
+    const existingPath = this._findKeyInItems(items, leafKey, '');
+    if (existingPath !== null) {
+      throw new HelperError(
+        'DUPLICATE_KEY',
+        `Duplicate item key '${leafKey}' — keys must be unique across the entire form. Consider using a prefixed key like 'parentGroup_${leafKey}' instead.`,
+        { key: leafKey, existingPath },
+      );
+    }
+  }
+
+  /** Walk the item tree to find any item with the given leaf key. Returns its full path or null. */
+  private _findKeyInItems(items: any[], leafKey: string, prefix: string): string | null {
+    for (const item of items) {
+      const path = prefix ? `${prefix}.${item.key}` : item.key;
+      if (item.key === leafKey) return path;
+      if (item.children?.length) {
+        const found = this._findKeyInItems(item.children, leafKey, path);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+
+  /**
    * Resolve authoring `type`: built-in alias ({@link resolveFieldType}) or registry `dataType` extension name.
    */
   private _resolveAuthoringFieldType(type: string): {
@@ -690,12 +722,14 @@ export class Project {
 
     const { key, parentPath, fullPath } = this._resolvePath(path, baseParent);
 
-    // Check for duplicate key
+    // Check for duplicate full path
     if (this.core.itemAt(fullPath)) {
       throw new HelperError('DUPLICATE_KEY', `An item with key "${fullPath}" already exists`, {
         path: fullPath,
       });
     }
+    // Check for global leaf key uniqueness (Rust linter E200)
+    this._assertGlobalKeyUniqueness(key);
 
     // Build phase1: definition.addItem
     const addItemPayload: Record<string, unknown> = {
@@ -854,6 +888,7 @@ export class Project {
         path: fullPath,
       });
     }
+    this._assertGlobalKeyUniqueness(key);
 
     const addItemPayload: Record<string, unknown> = {
       type: 'group',
@@ -923,6 +958,7 @@ export class Project {
         path: fullPath,
       });
     }
+    this._assertGlobalKeyUniqueness(key);
 
     const payload: Record<string, unknown> = {
       type: 'display',
@@ -2807,30 +2843,61 @@ export class Project {
     'inline': { component: 'Stack', props: { direction: 'horizontal' } },
   };
 
+  /** Find the component tree parent node ref that contains a given bind or nodeId. */
+  private _findComponentParentRef(tree: any, ref: { bind?: string; nodeId?: string }): { nodeId: string } | { bind: string } | null {
+    const walk = (node: any): any | null => {
+      for (const child of node.children ?? []) {
+        if ((ref.bind && child.bind === ref.bind) || (ref.nodeId && child.nodeId === ref.nodeId)) {
+          return node;
+        }
+        const deeper = walk(child);
+        if (deeper) return deeper;
+      }
+      return null;
+    };
+    const parent = walk(tree);
+    if (!parent) return null;
+    if (parent.nodeId) return { nodeId: parent.nodeId };
+    if (parent.bind) return { bind: parent.bind };
+    return null;
+  }
+
   /** Apply spatial layout to targets. */
   applyLayout(targets: string | string[], arrangement: LayoutArrangement): HelperResult {
     const targetArray = Array.isArray(targets) ? targets : [targets];
     const layout = Project._LAYOUT_MAP[arrangement];
 
-    // Create layout container
+    // Find the common parent of the target items in the component tree
+    const tree = this.core.state.component?.tree;
+    let parentRef: { nodeId: string } | { bind: string } = { nodeId: 'root' };
+    if (tree) {
+      const targetRefs = targetArray.map(t => ({ bind: t.split('.').pop()! }));
+      const parentRefs = targetRefs
+        .map(ref => this._findComponentParentRef(tree, ref))
+        .filter((r): r is NonNullable<typeof r> => r !== null);
+      // Use the first target's parent if all parents match, otherwise fall back to root
+      if (parentRefs.length > 0 && parentRefs.every(r => JSON.stringify(r) === JSON.stringify(parentRefs[0]))) {
+        parentRef = parentRefs[0];
+      }
+    }
+
+    // Create layout container under the common parent
     const addPayload: Record<string, unknown> = {
-      parent: { nodeId: 'root' },
+      parent: parentRef,
       component: layout.component,
     };
     if (layout.props) addPayload.props = layout.props;
 
-    const commands: AnyCommand[] = [
-      { type: 'component.addNode', payload: addPayload },
-    ];
-
-    // Move each target into the layout container (deferred — need nodeRef from first command)
     // Since we can't get the nodeRef mid-batch, we dispatch the addNode first, then moveNode
-    this.core.dispatch(commands[0]);
+    this.core.dispatch({ type: 'component.addNode', payload: addPayload });
 
-    // Now find the created node — it should be the last child of root
-    const tree = this.core.state.component?.tree;
-    const rootChildren = (tree as any)?.children ?? [];
-    const lastChild = rootChildren[rootChildren.length - 1];
+    // Find the created node — it should be the last child of the parent
+    const updatedTree = this.core.state.component?.tree;
+    const parentNode = 'nodeId' in parentRef
+      ? findComponentNodeById(updatedTree as any, parentRef.nodeId)
+      : findComponentNodeByRef(updatedTree as any, parentRef);
+    const parentChildren = (parentNode as any)?.children ?? [];
+    const lastChild = parentChildren[parentChildren.length - 1];
     const containerRef = lastChild?.nodeId
       ? { nodeId: lastChild.nodeId }
       : lastChild?.bind
@@ -2851,8 +2918,13 @@ export class Project {
       this.core.dispatch(moveCommands);
     }
 
+    // U10: Include affected paths in summary
+    const pathList = targetArray.length <= 3
+      ? targetArray.join(', ')
+      : `${targetArray.slice(0, 3).join(', ')} and ${targetArray.length - 3} more`;
+
     return {
-      summary: `Applied ${arrangement} layout to ${targetArray.length} item(s)`,
+      summary: `Applied ${arrangement} layout to ${pathList} (${targetArray.length} item${targetArray.length !== 1 ? 's' : ''})`,
       action: { helper: 'applyLayout', params: { targets: targetArray, arrangement } },
       affectedPaths: targetArray,
     };
@@ -4190,7 +4262,7 @@ export class Project {
     this._getScreener();
     this.core.dispatch({ type: 'screener.addPhase', payload: { id, strategy, label } });
     return {
-      summary: `Added evaluation phase '${id}' (${strategy})`,
+      summary: `Added evaluation phase '${id}' (${strategy ?? '(unspecified)'})`,
       action: { helper: 'addEvaluationPhase', params: { id, strategy, label } },
       affectedPaths: [],
     };
@@ -4241,7 +4313,7 @@ export class Project {
     if (route.score) this._validateFEL(route.score);
     this.core.dispatch({ type: 'screener.addRoute', payload: { phaseId, route, insertIndex } });
     return {
-      summary: `Added route to '${route.target}' in phase '${phaseId}'`,
+      summary: `Added route to '${route.target ?? '(unspecified)'}' in phase '${phaseId}'`,
       action: { helper: 'addScreenRoute', params: { phaseId, ...route } },
       affectedPaths: [],
     };
@@ -4338,21 +4410,63 @@ export class Project {
     multiChoice: ['option1'],
   };
 
+  /** Generate a context-aware sample value for a field. */
+  private static _sampleValueForField(item: any, fieldIndex: number): unknown {
+    const dt = item.dataType as string;
+    const key = (item.key as string).toLowerCase();
+    const options = item.options as Array<{ value: string }> | undefined;
+
+    if (dt === 'choice' || dt === 'multiChoice') {
+      if (options?.length) {
+        return dt === 'multiChoice' ? [options[0].value] : options[0].value;
+      }
+      return dt === 'multiChoice' ? ['option1'] : 'option1';
+    }
+
+    // Key-based heuristics for string/text fields
+    if (dt === 'string' || dt === 'text') {
+      if (key.includes('email')) return 'sample@example.com';
+      if (key.includes('phone') || key.includes('tel')) return '+1-555-0100';
+      if (key.includes('name') && key.includes('first')) return 'Jane';
+      if (key.includes('name') && key.includes('last')) return 'Doe';
+      if (key.includes('name')) return 'Jane Doe';
+    }
+
+    // Respect min/max constraints for numeric types
+    if (dt === 'integer' || dt === 'decimal') {
+      const min = typeof item.min === 'number' ? item.min : undefined;
+      const max = typeof item.max === 'number' ? item.max : undefined;
+      const baseValue = dt === 'integer' ? (10 + fieldIndex) : parseFloat((1.5 + fieldIndex * 0.7).toFixed(2));
+      if (min !== undefined && max !== undefined) {
+        return dt === 'integer' ? Math.round((min + max) / 2) : parseFloat(((min + max) / 2).toFixed(2));
+      }
+      if (min !== undefined && baseValue < min) return min;
+      if (max !== undefined && baseValue > max) return max;
+      return baseValue;
+    }
+
+    return Project._SAMPLE_VALUES[dt] ?? 'Sample text';
+  }
+
   /**
    * Generate plausible sample data for each field based on its data type.
    * When overrides are provided, those values replace the generated defaults
    * for matching field paths. Override keys that don't match any field path
    * are silently ignored.
+   *
+   * Fields hidden by show_when/relevant conditions are excluded from the
+   * result. Relevance is evaluated by loading the sample data into a
+   * FormEngine and reading its relevance signals.
    */
   generateSampleData(overrides?: Record<string, unknown>): Record<string, unknown> {
     const data: Record<string, unknown> = {};
     const items = this.core.state.definition.items ?? [];
+    let fieldIndex = 0;
 
     const walkItems = (itemList: any[], prefix: string) => {
       for (const item of itemList) {
         const path = prefix ? `${prefix}.${item.key}` : item.key;
         if (item.type === 'group') {
-          // Recurse into children
           if (item.children?.length) {
             walkItems(item.children, path);
           }
@@ -4363,26 +4477,49 @@ export class Project {
         // Use override value when provided for this path
         if (overrides && path in overrides) {
           data[path] = overrides[path];
+          fieldIndex++;
           continue;
         }
 
-        const dt = item.dataType as string;
-        if (dt === 'choice' || dt === 'multiChoice') {
-          // Use first option if available
-          const options = item.options as Array<{ value: string }> | undefined;
-          if (options?.length) {
-            data[path] = dt === 'multiChoice' ? [options[0].value] : options[0].value;
-          } else {
-            data[path] = dt === 'multiChoice' ? ['option1'] : 'option1';
-          }
-        } else {
-          data[path] = Project._SAMPLE_VALUES[dt] ?? 'Sample text';
-        }
+        data[path] = Project._sampleValueForField(item, fieldIndex);
+        fieldIndex++;
       }
     };
 
     walkItems(items as any[], '');
-    return data;
+    return Project._filterByRelevance(this.export().definition, data);
+  }
+
+  /**
+   * Load sample data into a FormEngine and strip fields whose
+   * show_when/relevant condition evaluates to false.
+   */
+  private static _filterByRelevance(
+    definition: unknown,
+    data: Record<string, unknown>,
+  ): Record<string, unknown> {
+    let engine: IFormEngine;
+    try {
+      engine = createFormEngine(definition as FormspecDefinition);
+    } catch {
+      // If the definition can't produce a valid engine (e.g. degenerate form),
+      // fall back to returning unfiltered data rather than crashing.
+      return data;
+    }
+
+    for (const [path, value] of Object.entries(data)) {
+      if (value !== undefined) {
+        engine.setValue(path, value);
+      }
+    }
+
+    const filtered: Record<string, unknown> = {};
+    for (const [path, value] of Object.entries(data)) {
+      if (engine.isPathRelevant(path)) {
+        filtered[path] = value;
+      }
+    }
+    return filtered;
   }
 
   /**

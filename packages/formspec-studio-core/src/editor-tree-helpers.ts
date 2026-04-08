@@ -28,8 +28,8 @@ export interface MissingPropertyAction {
 }
 
 export function summarizeExpression(expression: string): string {
-  const humanized = humanizeFEL(expression).trim();
-  return humanized || expression;
+  const { text } = humanizeFEL(expression);
+  return text.trim() || expression;
 }
 
 /** Display prePopulate source in tree summaries (leading @; matches inline editor). */

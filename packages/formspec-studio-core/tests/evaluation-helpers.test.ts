@@ -1,6 +1,17 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { createProject } from '../src/project.js';
 import { previewForm, validateResponse } from '../src/evaluation-helpers.js';
+import type { FormDefinition } from '../src/types.js';
+
+function loadChaosDefinition(formName: string): FormDefinition {
+  const defPath = resolve(
+    import.meta.dirname,
+    `../../../thoughts/chaos-test/2026-04-07/${formName}/${formName}.definition.json`,
+  );
+  return JSON.parse(readFileSync(defPath, 'utf-8')) as FormDefinition;
+}
 
 describe('previewForm', () => {
   it('returns visible fields for a simple form', () => {
@@ -1018,5 +1029,149 @@ describe('previewForm — multichoice and repeat groups coexist', () => {
     // Items valid, but tags empty + required → invalid
     expect(report.valid).toBe(false);
     expect(report.results.some(r => r.path === 'tags')).toBe(true);
+  });
+});
+
+describe('previewForm — chaos test: calculated fields return null (B1)', () => {
+  it('faculty-survey: seniority_score calculates from years_at_institution', () => {
+    const definition = loadChaosDefinition('faculty-survey');
+    const project = createProject({ seed: { definition }, enableChangesets: false });
+
+    const preview = previewForm(project, {
+      demographics: {
+        full_name: 'Dr. Rina Patel',
+        email: 'rpatel@university.edu',
+        department: 'cs',
+        respondent_type: 'faculty',
+        years_at_institution: 8,
+        hire_date: '2018-09-01',
+        academic_rank: 'associate',
+      },
+    });
+
+    // seniority_score = min(20, coalesce($demographics.years_at_institution, 0) * 2) = min(20, 16) = 16
+    const seniorityScore = preview.currentValues['eligibility.seniority_score'];
+    expect(seniorityScore).not.toBeNull();
+    expect(seniorityScore).not.toBeUndefined();
+    expect(seniorityScore).toBe(16);
+  });
+
+  it('faculty-survey: all eligibility scores calculate with realistic data', () => {
+    const definition = loadChaosDefinition('faculty-survey');
+    const project = createProject({ seed: { definition }, enableChangesets: false });
+
+    const preview = previewForm(project, {
+      demographics: {
+        full_name: 'Dr. Rina Patel',
+        email: 'rpatel@university.edu',
+        department: 'cs',
+        respondent_type: 'faculty',
+        years_at_institution: 8,
+        hire_date: '2018-09-01',
+        academic_rank: 'associate',
+      },
+      research: {
+        has_active_grants: true,
+        num_grants: 3,
+        total_funding: { amount: 450000, currency: 'USD' },
+        primary_research_area: 'computational',
+        lab_members: 6,
+        research_statement: 'AI and formal methods for program verification.',
+      },
+      publications: {
+        pub_entries: [
+          {
+            pub_title: 'Neural Verification Methods',
+            journal_name: 'IEEE TSE',
+            pub_year: 2025,
+            pub_type: 'journal',
+            doi: '10.1234/example1',
+            peer_reviewed: true,
+          },
+          {
+            pub_title: 'Formal Methods in AI Safety',
+            journal_name: 'ICSE 2025',
+            pub_year: 2025,
+            pub_type: 'conference',
+            doi: '10.1234/example2',
+            peer_reviewed: true,
+          },
+        ],
+      },
+      teaching: {
+        num_advisees: 4,
+        num_committees: 2,
+        courses: [
+          {
+            course_code: 'CS601',
+            course_title: 'Advanced Formal Methods',
+            semester: 'fall_2025',
+            enrollment: 25,
+            is_graduate: true,
+          },
+          {
+            course_code: 'CS201',
+            course_title: 'Intro to Programming',
+            semester: 'spring_2026',
+            enrollment: 120,
+            is_graduate: false,
+          },
+        ],
+      },
+    });
+
+    // pub_count = count($publications.pub_entries.pub_title) = 2
+    expect(preview.currentValues['eligibility.pub_count']).not.toBeNull();
+    expect(preview.currentValues['eligibility.pub_count']).toBe(2);
+
+    // peer_reviewed_count = countWhere($publications.pub_entries.peer_reviewed, true) = 2
+    expect(preview.currentValues['eligibility.peer_reviewed_count']).not.toBeNull();
+    expect(preview.currentValues['eligibility.peer_reviewed_count']).toBe(2);
+
+    // research_score = min(50, 3*5 + 2*3 + 10) = min(50, 31) = 31
+    expect(preview.currentValues['eligibility.research_score']).not.toBeNull();
+    expect(preview.currentValues['eligibility.research_score']).toBe(31);
+
+    // teaching_score = min(30, 2*5 + 4*2 + 2) = min(30, 20) = 20
+    expect(preview.currentValues['eligibility.teaching_score']).not.toBeNull();
+    expect(preview.currentValues['eligibility.teaching_score']).toBe(20);
+
+    // seniority_score = min(20, 8*2) = min(20, 16) = 16
+    expect(preview.currentValues['eligibility.seniority_score']).not.toBeNull();
+    expect(preview.currentValues['eligibility.seniority_score']).toBe(16);
+
+    // total_score = 31 + 20 + 16 = 67
+    expect(preview.currentValues['eligibility.total_score']).not.toBeNull();
+    expect(preview.currentValues['eligibility.total_score']).toBe(67);
+
+    // eligible = "No - Score below threshold" (67 < 70)
+    expect(preview.currentValues['eligibility.eligible']).not.toBeNull();
+    expect(preview.currentValues['eligibility.eligible']).toBe('No - Score below threshold');
+  });
+
+  it('quarterly-budget: line_total calculates from quantity * unit_cost', () => {
+    const definition = loadChaosDefinition('quarterly-budget-request');
+    const project = createProject({ seed: { definition }, enableChangesets: false });
+
+    const preview = previewForm(project, {
+      line_items: {
+        items: [
+          {
+            description: 'Laptop',
+            category: 'equipment',
+            quantity: 5,
+            unit_cost: { amount: 1200, currency: 'USD' },
+          },
+        ],
+      },
+    });
+
+    // The calculate expression uses absolute paths ($line_items.items.quantity)
+    // which resolve to the repeat-instance value in within-instance bind context.
+    // Verify the engine produces a non-null result (the exact value depends on
+    // FEL repeat-scope resolution for number * money).
+    const lineTotal = preview.currentValues['line_items.items[0].line_total'];
+    expect(lineTotal).not.toBeNull();
+    expect(lineTotal).not.toBeUndefined();
   });
 });

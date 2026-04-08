@@ -151,10 +151,10 @@ describe('authoring-helpers', () => {
     ]);
   });
 
-  it('humanizes simple FEL comparisons', () => {
-    expect(humanizeFEL('$age >= 18')).toBe('Age is at least 18');
-    expect(humanizeFEL('$isActive = false')).toBe('Is Active is No');
-    expect(humanizeFEL('count($items)')).toBe('count($items)');
+  it('humanizes simple FEL comparisons and reports support', () => {
+    expect(humanizeFEL('$age >= 18')).toEqual({ text: 'Age is at least 18', supported: true });
+    expect(humanizeFEL('$isActive = false')).toEqual({ text: 'Is Active is No', supported: true });
+    expect(humanizeFEL('count($items)')).toEqual({ text: 'count($items)', supported: false });
   });
 
   it('returns the canonical add-item catalog with layout and display entries intact', () => {

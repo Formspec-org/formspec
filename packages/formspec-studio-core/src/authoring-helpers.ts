@@ -653,14 +653,14 @@ const OP_MAP: Record<string, string> = {
   '<=': 'is at most',
 };
 
-export function humanizeFEL(expression: string): string {
+export function humanizeFEL(expression: string): { text: string; supported: boolean } {
   const trimmed = expression.trim();
   const match = trimmed.match(/^(\$\w+)\s*(!=|>=|<=|=|>|<)\s*(.+)$/);
-  if (!match) return trimmed;
+  if (!match) return { text: trimmed, supported: false };
 
   const [, ref, op, value] = match;
   const humanOp = OP_MAP[op];
-  if (!humanOp) return trimmed;
+  if (!humanOp) return { text: trimmed, supported: false };
 
-  return `${humanizeRef(ref)} ${humanOp} ${humanizeValue(value.trim())}`;
+  return { text: `${humanizeRef(ref)} ${humanOp} ${humanizeValue(value.trim())}`, supported: true };
 }

@@ -260,20 +260,13 @@ describe('M1: renameVariable error handling', () => {
 
 // ── M6: AMBIGUOUS_ITEM_KEY includes detail ────────────────────────
 
-describe('M6: AMBIGUOUS_ITEM_KEY warning detail', () => {
-  it('applyStyle AMBIGUOUS_ITEM_KEY warning includes detail', () => {
+describe('M6: duplicate leaf key blocked at authoring time (Rust E200)', () => {
+  it('addField rejects duplicate leaf key across different parents', () => {
     const project = createProject();
     project.addGroup('contacts', 'Contacts');
     project.addField('contacts.name', 'Contact Name', 'text');
-    project.addField('name', 'Name', 'text');
-    const result = project.applyStyle('name', { widget: 'card' });
-    const w = result.warnings?.find(w => w.code === 'AMBIGUOUS_ITEM_KEY');
-    expect(w).toBeDefined();
-    expect(w?.detail).toBeDefined();
-    expect((w?.detail as any)?.leafKey).toBe('name');
-    expect((w?.detail as any)?.conflictingPaths).toEqual(
-      expect.arrayContaining(['name', 'contacts.name']),
-    );
+    // Root-level 'name' collides with 'contacts.name' leaf key
+    expect(() => project.addField('name', 'Name', 'text')).toThrow(/Duplicate item key 'name'/);
   });
 });
 

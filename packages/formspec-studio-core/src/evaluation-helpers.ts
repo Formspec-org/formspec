@@ -199,6 +199,7 @@ function toInternalPath(path: string): string {
 export function previewForm(
   project: Project,
   scenario?: Record<string, unknown>,
+  options?: { validationMode?: 'continuous' | 'submit' | 'none' },
 ): {
   visibleFields: string[];
   hiddenFields: { path: string; hiddenBy?: string }[];
@@ -239,15 +240,19 @@ export function previewForm(
     }
   }
 
-  // Build validation state from the full report (submit mode) so all shapes — including
-  // submit-timing ones — are included. When multiple results target the same field:
+  // Build validation state from the report so shapes are included. When multiple results
+  // target the same field:
   //   1. Error severity beats warning/info
   //   2. Among same severity, "required" constraintKind wins outright
   //   3. Among same severity, shape source beats bind source (custom messages override defaults)
   //   4. Otherwise first result at the winning severity wins
   type Entry = { severity: 'error' | 'warning' | 'info'; message: string; constraintKind?: string; source?: string };
   const validationState: Record<string, Entry> = {};
-  const report = engine.getValidationReport({ mode: 'submit' });
+  const validationMode = options?.validationMode ?? 'submit';
+  const skipValidation = validationMode === 'none';
+  const report = skipValidation
+    ? { results: [] as ValidationReport['results'] }
+    : engine.getValidationReport({ mode: validationMode });
 
   const severityRank = { error: 2, warning: 1, info: 0 } as const;
 
@@ -285,23 +290,45 @@ export function previewForm(
   const treeRoot = comp?.tree;
   const pageNodes: any[] = treeRoot?.children?.filter((n: any) => n.component === 'Page') ?? [];
   const visibleFieldSet = new Set(visibleFields);
+  const hiddenFieldSet = new Set(hiddenFields.map(h => h.path));
+  const requiredFieldSet = new Set(requiredFields);
   const pages = pageNodes.map((n: any) => {
     // Collect bound keys owned by this page (equivalent of regions)
     const boundKeys: string[] = (n.children ?? [])
       .map((c: any) => c.bind)
       .filter(Boolean);
 
+    const fieldBelongsToPage = (fieldPath: string) =>
+      boundKeys.some(rk => fieldPath === rk || fieldPath.startsWith(rk + '.') || fieldPath.startsWith(rk + '['));
+
     // Count validation entries whose path falls under one of this page's bound items
     // and whose field is visible (not hidden by a show_when condition)
     let errors = 0;
     let warnings = 0;
     for (const [fieldPath, entry] of Object.entries(cleanState)) {
-      if (!boundKeys.some(rk => fieldPath === rk || fieldPath.startsWith(rk + '.') || fieldPath.startsWith(rk + '['))) {
-        continue;
-      }
+      if (!fieldBelongsToPage(fieldPath)) continue;
       if (!visibleFieldSet.has(fieldPath)) continue;
       if (entry.severity === 'error') errors++;
       else if (entry.severity === 'warning') warnings++;
+    }
+
+    // Derive page status from field visibility, validation, and required state
+    const allPageFieldsHidden = boundKeys.length > 0 &&
+      boundKeys.every(rk => hiddenFieldSet.has(rk));
+    let status: 'active' | 'complete' | 'incomplete' | 'unreachable';
+    if (allPageFieldsHidden) {
+      status = 'unreachable';
+    } else if (errors > 0) {
+      status = 'incomplete';
+    } else {
+      // Check if any required visible field on this page has an empty value
+      const hasEmptyRequired = [...requiredFieldSet].some(rp => {
+        if (!fieldBelongsToPage(rp)) return false;
+        if (!visibleFieldSet.has(rp)) return false;
+        const val = currentValues[rp];
+        return val === undefined || val === null || val === '';
+      });
+      status = hasEmptyRequired ? 'incomplete' : 'complete';
     }
 
     return {
@@ -309,7 +336,7 @@ export function previewForm(
       title: (n.title as string) ?? '',
       validationErrors: errors,
       validationWarnings: warnings,
-      status: 'active' as const,
+      status,
     };
   });
 

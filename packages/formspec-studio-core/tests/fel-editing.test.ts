@@ -146,49 +146,49 @@ describe('felAutocompleteSuggestions', () => {
 describe('humanizeFELExpression', () => {
   it('translates equality comparison', () => {
     const project = createProject();
-    expect(project.humanizeFELExpression('$evHist = true')).toBe('Ev Hist is Yes');
+    expect(project.humanizeFELExpression('$evHist = true')).toEqual({ text: 'Ev Hist is Yes', supported: true });
   });
 
   it('translates not-equal comparison', () => {
     const project = createProject();
-    expect(project.humanizeFELExpression('$status != "active"')).toBe('Status is not "active"');
+    expect(project.humanizeFELExpression('$status != "active"')).toEqual({ text: 'Status is not "active"', supported: true });
   });
 
   it('translates numeric comparison', () => {
     const project = createProject();
-    expect(project.humanizeFELExpression('$age >= 18')).toBe('Age is at least 18');
+    expect(project.humanizeFELExpression('$age >= 18')).toEqual({ text: 'Age is at least 18', supported: true });
   });
 
   it('translates less-than comparison', () => {
     const project = createProject();
-    expect(project.humanizeFELExpression('$score < 50')).toBe('Score is less than 50');
+    expect(project.humanizeFELExpression('$score < 50')).toEqual({ text: 'Score is less than 50', supported: true });
   });
 
   it('translates boolean true/false', () => {
     const project = createProject();
-    expect(project.humanizeFELExpression('$isActive = true')).toBe('Is Active is Yes');
-    expect(project.humanizeFELExpression('$isActive = false')).toBe('Is Active is No');
+    expect(project.humanizeFELExpression('$isActive = true')).toEqual({ text: 'Is Active is Yes', supported: true });
+    expect(project.humanizeFELExpression('$isActive = false')).toEqual({ text: 'Is Active is No', supported: true });
   });
 
-  it('returns raw expression for complex FEL', () => {
+  it('returns raw expression for complex FEL with supported: false', () => {
     const project = createProject();
     const expr = 'if($a > 1, $b + $c, $d)';
-    expect(project.humanizeFELExpression(expr)).toBe(expr);
+    expect(project.humanizeFELExpression(expr)).toEqual({ text: expr, supported: false });
   });
 
-  it('returns raw expression for function calls', () => {
+  it('returns raw expression for function calls with supported: false', () => {
     const project = createProject();
     const expr = 'count($items)';
-    expect(project.humanizeFELExpression(expr)).toBe(expr);
+    expect(project.humanizeFELExpression(expr)).toEqual({ text: expr, supported: false });
   });
 
   it('translates greater-than', () => {
     const project = createProject();
-    expect(project.humanizeFELExpression('$age > 21')).toBe('Age is greater than 21');
+    expect(project.humanizeFELExpression('$age > 21')).toEqual({ text: 'Age is greater than 21', supported: true });
   });
 
   it('translates at most', () => {
     const project = createProject();
-    expect(project.humanizeFELExpression('$count <= 100')).toBe('Count is at most 100');
+    expect(project.humanizeFELExpression('$count <= 100')).toEqual({ text: 'Count is at most 100', supported: true });
   });
 });

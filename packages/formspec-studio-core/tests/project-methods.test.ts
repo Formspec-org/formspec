@@ -1751,16 +1751,14 @@ describe('applyStyle', () => {
     expect(result.affectedPaths[0]).toBe('name');
   });
 
-  it('emits AMBIGUOUS_ITEM_KEY warning when leaf key shared by multiple items', () => {
+  it('rejects duplicate leaf key at addField time (global uniqueness, Rust E200)', () => {
     const project = createProject();
     project.addGroup('group1', 'Group 1');
     project.addGroup('group2', 'Group 2');
     project.addField('group1.name', 'Name 1', 'text');
-    project.addField('group2.name', 'Name 2', 'text');
-    // Both fields have leaf key 'name' — applying style should warn
-    const result = project.applyStyle('group1.name', { width: '50%' });
-    expect(result.warnings).toBeDefined();
-    expect(result.warnings!.some(w => w.code === 'AMBIGUOUS_ITEM_KEY')).toBe(true);
+    // Second field with same leaf key 'name' in a different group should be rejected
+    expect(() => project.addField('group2.name', 'Name 2', 'text')).toThrow(HelperError);
+    expect(() => project.addField('group2.name', 'Name 2', 'text')).toThrow(/Duplicate item key 'name'/);
   });
 });
 

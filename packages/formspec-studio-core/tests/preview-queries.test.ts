@@ -14,10 +14,10 @@ describe('generateSampleData', () => {
 
     const data = project.generateSampleData();
 
-    expect(data.name).toBe('Sample text');
+    expect(data.name).toBe('Jane Doe'); // key contains "name"
     expect(data.bio).toBe('Sample paragraph text');
-    expect(data.age).toBe(42);
-    expect(data.score).toBe(3.14);
+    expect(data.age).toBe(12); // varied: 10 + fieldIndex(2)
+    expect(data.score).toBe(3.6); // varied: 1.5 + fieldIndex(3)*0.7
     expect(data.active).toBe(true);
     expect(data.dob).toBe('2024-01-15');
   });
@@ -73,9 +73,9 @@ describe('generateSampleData', () => {
 
     const data = project.generateSampleData();
 
-    // Group fields should use their full path
-    expect(data['contact.email']).toBe('Sample text');
-    expect(data['contact.phone']).toBe('Sample text');
+    // Group fields should use their full path; key-based heuristics apply
+    expect(data['contact.email']).toBe('sample@example.com'); // key contains "email"
+    expect(data['contact.phone']).toBe('+1-555-0100'); // key contains "phone"
   });
 
   it('returns empty object for project with no fields', () => {
@@ -107,7 +107,7 @@ describe('generateSampleData', () => {
     const data = project.generateSampleData({ name: 'Alice' });
 
     expect(data.name).toBe('Alice');
-    expect(data.age).toBe(42); // non-overridden field keeps default
+    expect(data.age).toBe(11); // non-overridden field: 10 + fieldIndex(1)
   });
 
   it('overrides take precedence over generated values', () => {
@@ -132,6 +132,72 @@ describe('generateSampleData', () => {
 
     expect(data).not.toHaveProperty('nonexistent');
     expect(data.q1).toBe('Sample paragraph text');
+  });
+
+  it('excludes fields hidden by show_when conditions', () => {
+    const project = createProject();
+    project.addField('type', 'Type', 'choice', {
+      choices: [
+        { value: 'personal', label: 'Personal' },
+        { value: 'business', label: 'Business' },
+      ],
+    });
+    project.addField('company_name', 'Company Name', 'string');
+    project.showWhen('company_name', '$type = \'business\'');
+
+    // Sample data picks first option ('personal'), so company_name should be hidden
+    const data = project.generateSampleData();
+
+    expect(data.type).toBe('personal');
+    expect(data).not.toHaveProperty('company_name');
+  });
+
+  it('includes conditionally-visible fields when override satisfies the condition', () => {
+    const project = createProject();
+    project.addField('type', 'Type', 'choice', {
+      choices: [
+        { value: 'personal', label: 'Personal' },
+        { value: 'business', label: 'Business' },
+      ],
+    });
+    project.addField('company_name', 'Company Name', 'string');
+    project.showWhen('company_name', '$type = \'business\'');
+
+    // Override makes the condition true
+    const data = project.generateSampleData({ type: 'business' });
+
+    expect(data.type).toBe('business');
+    expect(data).toHaveProperty('company_name');
+  });
+
+  it('excludes fields inside a hidden group', () => {
+    const project = createProject();
+    project.addField('show_details', 'Show Details', 'boolean');
+    project.addGroup('details', 'Details');
+    project.addField('details.name', 'Name', 'string');
+    project.addField('details.email', 'Email', 'email');
+    project.showWhen('details', '$show_details = true');
+
+    // boolean defaults to true in sample data, but show_details condition
+    // checks for true, so we need to override to false to hide the group
+    const data = project.generateSampleData({ show_details: false });
+
+    expect(data).not.toHaveProperty('details.name');
+    expect(data).not.toHaveProperty('details.email');
+  });
+
+  it('keeps unconditional fields when other fields are hidden', () => {
+    const project = createProject();
+    project.addField('always_visible', 'Always', 'text');
+    project.addField('toggle', 'Toggle', 'boolean');
+    project.addField('conditional', 'Conditional', 'text');
+    project.showWhen('conditional', '$toggle = true');
+
+    // toggle defaults to true in sample data, conditional should be visible
+    const data = project.generateSampleData();
+
+    expect(data).toHaveProperty('always_visible');
+    expect(data).toHaveProperty('conditional');
   });
 });
 
