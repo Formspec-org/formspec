@@ -13,7 +13,7 @@ const SCHEMAS_DIR = resolve(__dirname, '../../../schemas');
 
 const SCHEMA_FILES = [
   'definition', 'component', 'theme', 'mapping', 'registry',
-  'response', 'validationReport', 'validationResult', 'fel-functions',
+  'response', 'validation-report', 'validation-result', 'fel-functions',
   'token-registry',
 ];
 

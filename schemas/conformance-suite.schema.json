@@ -22,7 +22,7 @@
         "EXTENSION_RETIRED",
         "EXTENSION_DEPRECATED"
       ],
-      "description": "Standard validation result codes that both Python and TypeScript runtimes MUST emit identically. The first seven are reserved built-in codes from validationResult.schema.json. The remaining are registry extension codes. Shape-level and external codes (e.g., 'BUDGET_SUM_MISMATCH', 'EIN_NOT_FOUND') are user-defined and not constrained here."
+      "description": "Standard validation result codes that both Python and TypeScript runtimes MUST emit identically. The first seven are reserved built-in codes from validation-result.schema.json. The remaining are registry extension codes. Shape-level and external codes (e.g., 'BUDGET_SUM_MISMATCH', 'EIN_NOT_FOUND') are user-defined and not constrained here."
     }
   },
   "type": "object",
