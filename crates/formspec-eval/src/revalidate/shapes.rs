@@ -6,7 +6,7 @@ use std::collections::{HashMap, HashSet};
 use fel_core::{EvalResult, FelValue, FormspecEnvironment, fel_to_json};
 use serde_json::Value;
 
-use crate::fel_json::json_to_runtime_fel;
+use crate::fel_json::json_to_runtime_fel_typed;
 use crate::rebuild::{
     expand_wildcard_path, instantiate_wildcard_expr, is_wildcard_bind, wildcard_base,
 };
@@ -74,8 +74,11 @@ pub(super) fn validate_shape(
     if !target.is_empty()
         && let Some(target_val) = values.get(target)
     {
-        env.data
-            .insert(String::new(), json_to_runtime_fel(target_val));
+        let data_type = find_item_by_path(items, target).and_then(|i| i.data_type.as_deref());
+        env.data.insert(
+            String::new(),
+            json_to_runtime_fel_typed(target_val, data_type),
+        );
     }
 
     let sid = shape.get("id").and_then(|v| v.as_str()).map(str::to_string);
@@ -162,7 +165,9 @@ fn validate_wildcard_shape(
         // Build a row-scoped environment: instantiate [*] references in the constraint
         let prev_dollar = env.data.remove("");
         if let Some(val) = values.get(concrete_path.as_str()) {
-            env.data.insert(String::new(), json_to_runtime_fel(val));
+            let data_type =
+                find_item_by_path(items, concrete_path.as_str()).and_then(|i| i.data_type.as_deref());
+            env.data.insert(String::new(), json_to_runtime_fel_typed(val, data_type));
         }
 
         let active = shape

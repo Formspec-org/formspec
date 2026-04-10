@@ -12,7 +12,7 @@ use url::Url;
 use fel_core::{FormspecEnvironment, evaluate, parse};
 
 use crate::convert::resolve_value_by_path;
-use crate::fel_json::json_to_runtime_fel;
+use crate::fel_json::json_to_runtime_fel_typed;
 use crate::rebuild::detect_repeat_count;
 use crate::types::{
     ExtensionConstraint, ItemInfo, ValidationResult, resolve_qualified_repeat_refs,
@@ -179,9 +179,12 @@ pub(super) fn validate_items(
         {
             let normalized_expr = resolve_qualified_repeat_refs(expr, &item.path);
             let saved_aliases = bind_sibling_aliases(env, values, &item.path);
-            // Temporarily bind bare $ to this field's value
+            // Temporarily bind bare $ to this field's value (typed like env fields — S2.1.3)
             let prev_dollar = env.data.remove("");
-            env.data.insert(String::new(), json_to_runtime_fel(&val));
+            env.data.insert(
+                String::new(),
+                json_to_runtime_fel_typed(&val, item.data_type.as_deref()),
+            );
 
             match parse(&normalized_expr) {
                 Ok(parsed) => {
