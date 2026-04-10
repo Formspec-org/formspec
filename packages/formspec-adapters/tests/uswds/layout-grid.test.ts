@@ -134,4 +134,9 @@ describe('USWDS integrationCSS layout grid', () => {
         expect(integrationCSS).toMatch(/\.formspec-stack:not\(\.formspec-stack--horizontal\)\.grid-row\.grid-gap>\[class\*=grid-col\]\+\[class\*=grid-col\]\{margin-top:var\(--formspec-uswds-stack-gap,\s*1\.5rem\)\}/);
         expect(integrationCSS).not.toContain('.formspec-stack.grid-row.grid-gap .usa-form-group{margin-top:1.5rem}');
     });
+
+    it('does not re-cap stack rows inside USWDS grid cells to a custom field max width', async () => {
+        const { integrationCSS } = await import('../../src/uswds/integration-css');
+        expect(integrationCSS).not.toMatch(/\.formspec-stack\.grid-row\.grid-gap>\[class\*=grid-col\]>\.usa-form-group,[^}]*\{max-width:30rem\}/);
+    });
 });

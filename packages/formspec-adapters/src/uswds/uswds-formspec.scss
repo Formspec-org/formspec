@@ -97,21 +97,13 @@ $fs-trailing-checkbox-size: 1.25rem !default;
   max-width: $fs-field-max-width;
 }
 
-// Inside USWDS flex rows: cells are full width; stack rows keep readable field max-width.
+// Inside USWDS flex rows: let the form shell control width, like stock USWDS.
 .grid-row.grid-gap > [class*='grid-col'] > .usa-form-group,
 .grid-row.grid-gap > [class*='grid-col'] > .usa-fieldset,
 .grid-row.grid-gap > [class*='grid-col'] > .usa-form-group > .usa-input-group,
 .grid-row.grid-gap > [class*='grid-col'] > .usa-form-group > .usa-range,
 .grid-row.grid-gap > [class*='grid-col'] > .usa-form-group > .usa-file-input {
   max-width: none;
-}
-
-.formspec-stack.grid-row.grid-gap > [class*='grid-col'] > .usa-form-group,
-.formspec-stack.grid-row.grid-gap > [class*='grid-col'] > .usa-fieldset,
-.formspec-stack.grid-row.grid-gap > [class*='grid-col'] > .usa-form-group > .usa-input-group,
-.formspec-stack.grid-row.grid-gap > [class*='grid-col'] > .usa-form-group > .usa-range,
-.formspec-stack.grid-row.grid-gap > [class*='grid-col'] > .usa-form-group > .usa-file-input {
-  max-width: $fs-field-max-width;
 }
 
 .formspec-grid .usa-form-group,
