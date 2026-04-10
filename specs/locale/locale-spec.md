@@ -1,3 +1,10 @@
+---
+title: Formspec Locale Specification
+version: 1.0.0-draft.1
+date: 2026-04-09
+status: draft
+---
+
 # Formspec Locale Specification v1.0
 
 **Version:** 1.0.0-draft.1

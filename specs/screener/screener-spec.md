@@ -1,3 +1,10 @@
+---
+title: Formspec Screener Specification
+version: 1.0.0-draft.1
+date: 2026-04-09
+status: draft
+---
+
 # Formspec Screener Specification v1.0
 
 **Version:** 1.0.0-draft.1

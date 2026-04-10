@@ -1,3 +1,10 @@
+---
+title: Formspec Theme Specification
+version: 1.0.0-draft.1
+date: 2026-04-09
+status: draft
+---
+
 # Formspec Theme Specification v1.0
 
 ## Status of This Document

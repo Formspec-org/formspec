@@ -1,3 +1,10 @@
+---
+title: Formspec Changelog Format
+version: 1.0.0-draft.1
+date: 2026-04-09
+status: draft
+---
+
 # Formspec Changelog Format v1.0
 
 **Status:** Draft · **Companion to:** Formspec v1.0 · **Date:** 2025-07

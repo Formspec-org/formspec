@@ -1,3 +1,10 @@
+---
+title: Respondent Ledger Add-On Specification
+version: 0.1.0-draft
+date: 2026-04-09
+status: draft
+---
+
 # Respondent Ledger Add-On Specification v0.1
 
 **Status:** Draft  

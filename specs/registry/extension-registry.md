@@ -1,3 +1,10 @@
+---
+title: Formspec Extension Registry
+version: 1.0.0-draft.1
+date: 2026-04-09
+status: draft
+---
+
 # Formspec Extension Registry v1.0
 
 **Version:** 1.0.0-draft.1  
@@ -431,7 +438,7 @@ in Formspec v1.0 §1) that additionally implements the following behaviors:
 
 ---
 
-## Appendix A — Registry Entry JSON Schema
+## Appendix A: Registry Entry JSON Schema
 
 The following JSON Schema defines the structure of a single Registry Entry.
 The full Registry Document schema wraps this in an `entries` array alongside
@@ -571,7 +578,7 @@ the top-level `$formspecRegistry`, `publisher`, and `published` properties.
 
 ---
 
-## Appendix B — References
+## Appendix B: References
 
 | Tag | Reference |
 |---|---|
