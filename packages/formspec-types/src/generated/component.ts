@@ -183,10 +183,9 @@ export interface ComponentDocument {
   };
   tree: AnyComponent3;
   /**
-   * This interface was referenced by `ComponentDocument`'s JSON-Schema definition
-   * via the `patternProperty` "^x-".
+   * Document-level extension properties. All keys MUST be prefixed with 'x-'.
    */
-  [k: string]: unknown;
+  extensions?: {};
 }
 /**
  * Binding to the target Formspec Definition and optional compatibility range.

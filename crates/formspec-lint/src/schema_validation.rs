@@ -27,9 +27,9 @@ const MAPPING_SCHEMA: &str = include_str!("../schemas/mapping.schema.json");
 const CHANGELOG_SCHEMA: &str = include_str!("../schemas/changelog.schema.json");
 const REGISTRY_SCHEMA: &str = include_str!("../schemas/registry.schema.json");
 const VALIDATION_REPORT_SCHEMA: &str =
-    include_str!("../schemas/validationReport.schema.json");
+    include_str!("../schemas/validation-report.schema.json");
 const VALIDATION_RESULT_SCHEMA: &str =
-    include_str!("../schemas/validationResult.schema.json");
+    include_str!("../schemas/validation-result.schema.json");
 const SCREENER_SCHEMA: &str = include_str!("../schemas/screener.schema.json");
 const DETERMINATION_SCHEMA: &str = include_str!("../schemas/determination.schema.json");
 const TOKEN_REGISTRY_SCHEMA: &str = include_str!("../schemas/token-registry.schema.json");

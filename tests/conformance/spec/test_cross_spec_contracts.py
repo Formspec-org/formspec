@@ -21,8 +21,8 @@ def _load(name):
 
 DEF_S = _load("definition.schema.json")
 RESP_S = _load("response.schema.json")
-VR_S = _load("validationReport.schema.json")
-VR_RESULT_S = _load("validationResult.schema.json")
+VR_S = _load("validation-report.schema.json")
+VR_RESULT_S = _load("validation-result.schema.json")
 MAP_S = _load("mapping.schema.json")
 REG_S = _load("registry.schema.json")
 THEME_S = _load("theme.schema.json")
@@ -107,17 +107,23 @@ class TestCrossSchemaConsistency:
         assert set(VR_RESULT_S["required"]) == {"$formspecValidationResult", "path", "severity", "constraintKind", "message"}
 
     def test_definition_response_use_propertynames_extensions(self):
-        """Definition, Response, Registry use extensions.propertyNames pattern."""
-        for name, schema in [("definition", DEF_S), ("response", RESP_S), ("registry", REG_S)]:
+        """Definition, Response, Registry, Mapping, Component, References, Ontology use extensions.propertyNames pattern."""
+        REFS_S = _load("references.schema.json")
+        ONT_S = _load("ontology.schema.json")
+        COMP_S = _load("component.schema.json")
+        for name, schema in [
+            ("definition", DEF_S), ("response", RESP_S), ("registry", REG_S),
+            ("mapping", MAP_S), ("component", COMP_S), ("references", REFS_S), ("ontology", ONT_S),
+        ]:
             ext = schema["properties"].get("extensions", {})
             pn = ext.get("propertyNames", {}).get("pattern")
             assert pn == "^x-", f"{name} extensions missing propertyNames ^x-"
 
-    def test_mapping_uses_pattern_properties_not_extensions_object(self):
-        """Mapping schema uses patternProperties, not an extensions sub-object."""
-        assert "^x-" in MAP_S.get("patternProperties", {})
-        # Mapping does NOT have an 'extensions' property
-        assert "extensions" not in MAP_S.get("properties", {})
+    def test_mapping_uses_extensions_object(self):
+        """Mapping schema uses an extensions property with propertyNames pattern."""
+        ext = MAP_S["properties"].get("extensions", {})
+        pn = ext.get("propertyNames", {}).get("pattern")
+        assert pn == "^x-", "mapping extensions missing propertyNames ^x-"
 
     @pytest.mark.parametrize("name,schema", list(ALL_SCHEMAS.items()))
     def test_all_schemas_have_id(self, name, schema):
@@ -616,14 +622,16 @@ class TestMappingTopLevel:
     def test_ms3_1__additional_properties_false(self):
         assert MAP_S["additionalProperties"] is False
 
-    def test_ms3_1__pattern_properties_x_prefix(self):
-        assert "^x-" in MAP_S.get("patternProperties", {})
+    def test_ms3_1__extensions_property_x_prefix(self):
+        ext = MAP_S["properties"].get("extensions", {})
+        pn = ext.get("propertyNames", {}).get("pattern")
+        assert pn == "^x-", "mapping extensions property missing propertyNames ^x-"
 
     def test_ms3_1__closed_world_property_set(self):
         expected = {
             "$formspecMapping", "version", "$schema", "definitionRef", "definitionVersion",
             "targetSchema", "direction", "autoMap", "defaults", "rules",
-            "adapters", "conformanceLevel",
+            "adapters", "conformanceLevel", "extensions",
         }
         assert _prop_keys(MAP_S) == expected
 

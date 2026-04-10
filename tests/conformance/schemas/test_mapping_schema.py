@@ -58,7 +58,7 @@ class TestMappingMinimalValid:
     def test_full_mapping_all_optional_fields(self):
         doc = _minimal_mapping(
             **{
-                "$schema": "https://formspec.org/schemas/mapping/v1",
+                "$schema": "https://formspec.org/schemas/mapping/1.0",
                 "direction": "forward",
                 "defaults": {"foo": "bar"},
                 "autoMap": True,

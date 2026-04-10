@@ -133,7 +133,7 @@ Neither runtime imports or wraps the other. They deploy and test independently, 
 
 | Tier | Spec | Schema |
 |------|------|--------|
-| Core | [Core Spec](specs/core/spec.md) · [FEL Grammar](specs/fel/fel-grammar.md) | [`definition`](schemas/definition.schema.json) · [`response`](schemas/response.schema.json) · [`validationReport`](schemas/validationReport.schema.json) |
+| Core | [Core Spec](specs/core/spec.md) · [FEL Grammar](specs/fel/fel-grammar.md) | [`definition`](schemas/definition.schema.json) · [`response`](schemas/response.schema.json) · [`validationReport`](schemas/validation-report.schema.json) |
 | Theme | [Theme Spec](specs/theme/theme-spec.md) | [`theme`](schemas/theme.schema.json) |
 | Components | [Component Spec](specs/component/component-spec.md) | [`component`](schemas/component.schema.json) |
 | Mapping | [Mapping DSL](specs/mapping/mapping-spec.md) | [`mapping`](schemas/mapping.schema.json) |
@@ -150,8 +150,8 @@ Neither runtime imports or wraps the other. They deploy and test independently, 
 `schemas/` — 19 JSON Schema files (the structural source of truth):
 [`definition`](schemas/definition.schema.json) ·
 [`response`](schemas/response.schema.json) ·
-[`validationReport`](schemas/validationReport.schema.json) ·
-[`validationResult`](schemas/validationResult.schema.json) ·
+[`validationReport`](schemas/validation-report.schema.json) ·
+[`validationResult`](schemas/validation-result.schema.json) ·
 [`theme`](schemas/theme.schema.json) ·
 [`component`](schemas/component.schema.json) ·
 [`mapping`](schemas/mapping.schema.json) ·

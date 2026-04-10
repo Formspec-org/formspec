@@ -2740,9 +2740,9 @@ at a point in time.
 #### 5.4.1 ValidationReport Properties
 
 The canonical structural contract for ValidationReport properties is generated
-from `schemas/validationReport.schema.json`:
+from `schemas/validation-report.schema.json`:
 
-<!-- schema-ref:start id=core-validation-report-top-level schema=schemas/validationReport.schema.json pointers=# -->
+<!-- schema-ref:start id=core-validation-report-top-level schema=schemas/validation-report.schema.json pointers=# -->
 <!-- generated:schema-ref id=core-validation-report-top-level -->
 | Pointer | Field | Type | Required | Notes | Description |
 |---|---|---|---|---|---|

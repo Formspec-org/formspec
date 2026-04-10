@@ -1,3 +1,10 @@
+---
+title: Formspec Component Specification
+version: 1.0.0-draft.1
+date: 2026-04-09
+status: draft
+---
+
 # Formspec Component Specification v1.0
 
 ## Status of This Document
@@ -248,6 +255,7 @@ Component Document that omits a REQUIRED property.
 | `#/properties/breakpoints` | `breakpoints` | <code>&#36;ref</code> | no | <code>&#36;ref</code>: <code>#/&#36;defs/Breakpoints</code> | Named viewport breakpoints for responsive prop overrides. Keys are breakpoint names; values are minimum viewport widths in pixels. Mobile-first cascade: base props apply to all widths, then overrides merge in ascending order. |
 | `#/properties/components` | `components` | <code>object</code> | no | — | Registry of custom component templates. Keys are PascalCase names (MUST NOT collide with built-in names). Each template has params and a tree that is instantiated with {param} interpolation. |
 | `#/properties/description` | `description` | <code>string</code> | no | — | Human-readable description. |
+| `#/properties/extensions` | `extensions` | <code>object</code> | no | — | Document-level extension properties. All keys MUST be prefixed with 'x-'. |
 | `#/properties/name` | `name` | <code>string</code> | no | — | Machine-friendly short identifier. |
 | `#/properties/targetDefinition` | `targetDefinition` | <code>&#36;ref</code> | yes | <code>&#36;ref</code>: <code>#/&#36;defs/TargetDefinition</code>; critical | Binding to the target Formspec Definition and optional compatibility range. |
 | `#/properties/title` | `title` | <code>string</code> | no | — | Human-readable name. |

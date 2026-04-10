@@ -22,8 +22,8 @@ from tests.unit.support.schema_fixtures import build_schema_registry, load_schem
 
 DEFINITION_SCHEMA = load_schema("definition.schema.json")
 RESPONSE_SCHEMA = load_schema("response.schema.json")
-VALIDATION_REPORT_SCHEMA = load_schema("validationReport.schema.json")
-VALIDATION_RESULT_SCHEMA = load_schema("validationResult.schema.json")
+VALIDATION_REPORT_SCHEMA = load_schema("validation-report.schema.json")
+VALIDATION_RESULT_SCHEMA = load_schema("validation-result.schema.json")
 MAPPING_SCHEMA = load_schema("mapping.schema.json")
 REGISTRY_SCHEMA = load_schema("registry.schema.json")
 

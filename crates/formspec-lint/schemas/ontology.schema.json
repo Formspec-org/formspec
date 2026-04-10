@@ -10,9 +10,6 @@
     "targetDefinition"
   ],
   "additionalProperties": false,
-  "patternProperties": {
-    "^x-": {}
-  },
   "properties": {
     "$formspecOntology": {
       "type": "string",

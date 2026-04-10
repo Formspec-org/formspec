@@ -1,4 +1,4 @@
-"""Conformance tests for Formspec response.schema.json and validationReport.schema.json."""
+"""Conformance tests for Formspec response.schema.json and validation-report.schema.json."""
 
 import json
 from copy import deepcopy
@@ -13,8 +13,8 @@ from tests.unit.support.schema_fixtures import build_schema_registry, load_schem
 # ---------------------------------------------------------------------------
 
 RESPONSE_SCHEMA = load_schema("response.schema.json")
-VALIDATION_REPORT_SCHEMA = load_schema("validationReport.schema.json")
-VALIDATION_RESULT_SCHEMA = load_schema("validationResult.schema.json")
+VALIDATION_REPORT_SCHEMA = load_schema("validation-report.schema.json")
+VALIDATION_RESULT_SCHEMA = load_schema("validation-result.schema.json")
 
 # Build a resolver/registry so schemas can resolve cross-schema $refs.
 _REGISTRY = build_schema_registry(RESPONSE_SCHEMA, VALIDATION_REPORT_SCHEMA, VALIDATION_RESULT_SCHEMA)

@@ -1,3 +1,10 @@
+---
+title: Formspec Mapping DSL
+version: 1.0.0-draft.1
+date: 2026-04-09
+status: draft
+---
+
 # Formspec Mapping DSL v1.0 — Bidirectional Data Transformation for Formspec Responses
 
 **Version:** 1.0.0-draft.1  
@@ -607,6 +614,7 @@ The root of a Mapping Document is a JSON object. The following table enumerates 
 | `#/properties/definitionRef` | `definitionRef` | <code>string</code> | yes | critical | URI or stable identifier of the Formspec Definition this mapping targets. Corresponds to the Definition's 'url' property — the canonical identity that is stable across versions. |
 | `#/properties/definitionVersion` | `definitionVersion` | <code>string</code> | yes | critical | Semver range of compatible Formspec Definition versions per node-semver syntax. An implementation MUST refuse to execute a Mapping Document when the resolved Definition version does not satisfy this range. |
 | `#/properties/direction` | `direction` | <code>string</code> | no | enum: <code>"forward"</code>, <code>"reverse"</code>, <code>"both"</code>; default: <code>"forward"</code>; critical | Execution direction. 'forward': Response→External (default), reverse execution MUST raise an error. 'reverse': External→Response only, forward execution MUST raise an error. 'both': rules are evaluated in either direction; each Field Rule MAY supply an explicit reverse override. |
+| `#/properties/extensions` | `extensions` | <code>object</code> | no | — | Document-level extension properties. All keys MUST be prefixed with 'x-'. |
 | `#/properties/rules` | `rules` | <code>array</code> | yes | critical | Ordered array of Field Rule objects. Rules are sorted by priority (descending, stable sort) before execution. Equal-priority rules retain document order. When two rules write to the same targetPath, last-write-wins. MUST contain at least one element. |
 | `#/properties/targetSchema` | `targetSchema` | <code>&#36;ref</code> | yes | <code>&#36;ref</code>: <code>#/&#36;defs/TargetSchema</code>; critical | Descriptor for the external system schema targeted by this mapping. Determines the adapter used for serialization and the path syntax rules for targetPath values. |
 | `#/properties/version` | `version` | <code>string</code> | yes | pattern: <code>^(0&#124;[1-9]\d*)\.(0&#124;[1-9]\d*)\.(0&#124;[1-9]\d*)&#36;</code>; critical | Semantic version of this Mapping Document. Independent of both the Formspec Definition version and the DSL specification version. Implementations SHOULD use this for cache invalidation and change detection. |
@@ -1821,7 +1829,7 @@ Maps a Formspec grant form (`applicant_name`, `ein`, `budget_total`,
 
 ```json
 {
-  "$schema": "https://formspec.org/schemas/mapping/v1",
+  "$schema": "https://formspec.org/schemas/mapping/1.0",
   "version": "1.0.0",
   "definitionRef": "https://grants.example.gov/forms/sf-424",
   "definitionVersion": ">=3.0.0 <4.0.0",
@@ -1870,7 +1878,7 @@ delimited allergy list.
 
 ```json
 {
-  "$schema": "https://formspec.org/schemas/mapping/v1",
+  "$schema": "https://formspec.org/schemas/mapping/1.0",
   "version": "1.0.0",
   "definitionRef": "https://clinic.example.com/forms/intake",
   "definitionVersion": "1.x",
@@ -1910,7 +1918,7 @@ Observation][fhir-obs] resource.
 
 ```json
 {
-  "$schema": "https://formspec.org/schemas/mapping/v1",
+  "$schema": "https://formspec.org/schemas/mapping/1.0",
   "version": "1.0.0",
   "definitionRef": "https://ehr.example.com/forms/vitals",
   "definitionVersion": "2.x",
@@ -1986,7 +1994,7 @@ Given a §6.7 migration descriptor *D* with source version *V_src*:
 
 ```json
 {
-  "$schema": "https://formspec.org/schemas/mapping/v1",
+  "$schema": "https://formspec.org/schemas/mapping/1.0",
   "version": "1.0.0",
   "definitionRef": "https://example.gov/forms/expenditure-report",
   "definitionVersion": "2.1.0",

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://formspec.org/schemas/changelog/v1",
+  "$id": "https://formspec.org/schemas/changelog/1.0",
   "title": "Formspec Changelog Document",
   "description": "Enumerates differences between two versions of a Formspec Definition. Each change is an atomic record describing an addition, removal, modification, move, or rename of a definition element (item, bind, shape, optionSet, dataSource, screener, migration, or metadata). Impact classification (breaking/compatible/cosmetic) drives semver governance and migration generation.",
   "type": "object",

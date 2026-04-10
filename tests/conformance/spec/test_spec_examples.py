@@ -172,7 +172,7 @@ for spec_file in SPEC_FILES:
 
 DEFINITION_SCHEMA = load_schema("definition.schema.json")
 RESPONSE_SCHEMA = load_schema("response.schema.json")
-VALIDATION_REPORT_SCHEMA = load_schema("validationReport.schema.json")
+VALIDATION_REPORT_SCHEMA = load_schema("validation-report.schema.json")
 MAPPING_SCHEMA = load_schema("mapping.schema.json")
 REGISTRY_SCHEMA = load_schema("registry.schema.json")
 THEME_SCHEMA = load_schema("theme.schema.json")

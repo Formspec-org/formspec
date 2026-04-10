@@ -11,9 +11,6 @@
     "tree"
   ],
   "additionalProperties": false,
-  "patternProperties": {
-    "^x-": {}
-  },
   "properties": {
     "$formspecComponent": {
       "type": "string",
@@ -117,6 +114,11 @@
         "critical": true,
         "intent": "Entry point for all component layout and binding declarations."
       }
+    },
+    "extensions": {
+      "type": "object",
+      "propertyNames": { "pattern": "^x-" },
+      "description": "Document-level extension properties. All keys MUST be prefixed with 'x-'."
     }
   },
 

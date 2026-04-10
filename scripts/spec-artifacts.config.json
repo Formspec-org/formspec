@@ -58,7 +58,7 @@
     },
     {
       "spec": "specs/core/spec.md",
-      "schema": "schemas/validationReport.schema.json",
+      "schema": "schemas/validation-report.schema.json",
       "bluf": "specs/core/validation-report-spec.bluf.md",
       "llm": "specs/core/validation-report-spec.llm.md",
       "semanticCapsule": "specs/core/validation-report-spec.semantic.md",
@@ -69,7 +69,7 @@
       ],
       "conformanceEssentials": [
         "A conforming validation report must include valid, results, counts, and timestamp.",
-        "ValidationReport results entries must conform to the shared validationResult.schema.json schema.",
+        "ValidationReport results entries must conform to the shared validation-result.schema.json schema.",
         "Processors should reject reports where required severity counts are missing or invalid."
       ]
     },

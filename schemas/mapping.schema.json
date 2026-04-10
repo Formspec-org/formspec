@@ -1,12 +1,11 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://formspec.org/schemas/mapping/v1",
+  "$id": "https://formspec.org/schemas/mapping/1.0",
   "title": "Formspec Mapping Document",
   "description": "A Formspec Mapping DSL v1.0 document describing bidirectional data transformation between a Formspec Response and an external schema. A Mapping Document is a standalone JSON artifact — not embedded in a Definition — that declares field-level correspondences, structural reorganizations, type coercions, value translations, and conditional logic sufficient to convert a Response into an API payload, database record, CSV export, or XML document, and to reverse that transformation when importing. All computed transforms use the Formspec Expression Language (FEL). The DSL generalizes the version-migration fieldMap from §6.7 of the core specification.",
   "type": "object",
   "required": ["$formspecMapping", "version", "definitionRef", "definitionVersion", "targetSchema", "rules"],
   "additionalProperties": false,
-  "patternProperties": { "^x-": {} },
   "properties": {
     "$formspecMapping": {
       "type": "string",
@@ -22,7 +21,7 @@
       "type": "string",
       "format": "uri",
       "description": "URI identifying the version of the Mapping DSL specification this document conforms to.",
-      "examples": ["https://formspec.org/schemas/mapping/v1"]
+      "examples": ["https://formspec.org/schemas/mapping/1.0"]
     },
     "version": {
       "type": "string",
@@ -157,6 +156,11 @@
         { "json": { "pretty": true, "nullHandling": "omit" } },
         { "csv": { "delimiter": ",", "header": true, "lineEnding": "lf" } }
       ]
+    },
+    "extensions": {
+      "type": "object",
+      "propertyNames": { "pattern": "^x-" },
+      "description": "Document-level extension properties. All keys MUST be prefixed with 'x-'."
     }
   },
 

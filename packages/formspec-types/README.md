@@ -47,7 +47,7 @@ The augmented types above (`FormItem`, `FormBind`, `FormDefinition`, `FormScreen
 
 `FormResponse` — a completed or in-progress form submission, pinned to a specific definition version.
 
-### Validation (`schemas/validationReport.schema.json`, `schemas/validationResult.schema.json`)
+### Validation (`schemas/validation-report.schema.json`, `schemas/validation-result.schema.json`)
 
 `ValidationReport` — aggregated validation output with `valid`, `results`, and `counts`.
 `ValidationResult` / `FormspecValidationResult` — a single validation finding with path, severity, and constraint kind.

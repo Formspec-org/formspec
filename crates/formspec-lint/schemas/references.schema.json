@@ -11,9 +11,6 @@
     "references"
   ],
   "additionalProperties": false,
-  "patternProperties": {
-    "^x-": {}
-  },
   "properties": {
     "$formspecReferences": {
       "type": "string",
@@ -103,6 +100,11 @@
         "critical": true,
         "intent": "The reference bindings that connect resources to definition items."
       }
+    },
+    "extensions": {
+      "type": "object",
+      "propertyNames": { "pattern": "^x-" },
+      "description": "Document-level extension properties. All keys MUST be prefixed with 'x-'."
     }
   },
 

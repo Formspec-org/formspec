@@ -49,7 +49,7 @@ def response_schema() -> dict:
 
 @pytest.fixture(scope="session")
 def validation_report_schema() -> dict:
-    return load_schema("validationReport.schema.json")
+    return load_schema("validation-report.schema.json")
 
 
 @pytest.fixture(scope="session")
@@ -79,7 +79,7 @@ def changelog_schema() -> dict:
 
 @pytest.fixture(scope="session")
 def validation_result_schema() -> dict:
-    return load_schema("validationResult.schema.json")
+    return load_schema("validation-result.schema.json")
 
 
 @pytest.fixture(scope="session")

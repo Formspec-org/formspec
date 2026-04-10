@@ -931,6 +931,15 @@ either direction; each Field Rule MAY supply an explicit reverse
 override.</td>
 </tr>
 <tr>
+<td><code>#/properties/extensions</code></td>
+<td><code>extensions</code></td>
+<td><code>object</code></td>
+<td>no</td>
+<td>—</td>
+<td>Document-level extension properties. All keys MUST be prefixed with
+‘x-’.</td>
+</tr>
+<tr>
 <td><code>#/properties/rules</code></td>
 <td><code>rules</code></td>
 <td><code>array</code></td>
@@ -3284,7 +3293,7 @@ repeat, <code>narrative</code>) to a federal API payload
 <code>projectDescription</code>).</p>
 <div class="sourceCode" id="cb39"><pre
 class="sourceCode json"><code class="sourceCode json"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
-<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;$schema&quot;</span><span class="fu">:</span> <span class="st">&quot;https://formspec.org/schemas/mapping/v1&quot;</span><span class="fu">,</span></span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;$schema&quot;</span><span class="fu">:</span> <span class="st">&quot;https://formspec.org/schemas/mapping/1.0&quot;</span><span class="fu">,</span></span>
 <span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;version&quot;</span><span class="fu">:</span> <span class="st">&quot;1.0.0&quot;</span><span class="fu">,</span></span>
 <span id="cb39-4"><a href="#cb39-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;definitionRef&quot;</span><span class="fu">:</span> <span class="st">&quot;https://grants.example.gov/forms/sf-424&quot;</span><span class="fu">,</span></span>
 <span id="cb39-5"><a href="#cb39-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;definitionVersion&quot;</span><span class="fu">:</span> <span class="st">&quot;&gt;=3.0.0 &lt;4.0.0&quot;</span><span class="fu">,</span></span>
@@ -3331,7 +3340,7 @@ Export</h3>
 CSV with positional medication columns and a delimited allergy list.</p>
 <div class="sourceCode" id="cb40"><pre
 class="sourceCode json"><code class="sourceCode json"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
-<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;$schema&quot;</span><span class="fu">:</span> <span class="st">&quot;https://formspec.org/schemas/mapping/v1&quot;</span><span class="fu">,</span></span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;$schema&quot;</span><span class="fu">:</span> <span class="st">&quot;https://formspec.org/schemas/mapping/1.0&quot;</span><span class="fu">,</span></span>
 <span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;version&quot;</span><span class="fu">:</span> <span class="st">&quot;1.0.0&quot;</span><span class="fu">,</span></span>
 <span id="cb40-4"><a href="#cb40-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;definitionRef&quot;</span><span class="fu">:</span> <span class="st">&quot;https://clinic.example.com/forms/intake&quot;</span><span class="fu">,</span></span>
 <span id="cb40-5"><a href="#cb40-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;definitionVersion&quot;</span><span class="fu">:</span> <span class="st">&quot;1.x&quot;</span><span class="fu">,</span></span>
@@ -3368,7 +3377,7 @@ href="https://www.hl7.org/fhir/observation.html">HL7 FHIR
 Observation</a> resource.</p>
 <div class="sourceCode" id="cb41"><pre
 class="sourceCode json"><code class="sourceCode json"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
-<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;$schema&quot;</span><span class="fu">:</span> <span class="st">&quot;https://formspec.org/schemas/mapping/v1&quot;</span><span class="fu">,</span></span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;$schema&quot;</span><span class="fu">:</span> <span class="st">&quot;https://formspec.org/schemas/mapping/1.0&quot;</span><span class="fu">,</span></span>
 <span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;version&quot;</span><span class="fu">:</span> <span class="st">&quot;1.0.0&quot;</span><span class="fu">,</span></span>
 <span id="cb41-4"><a href="#cb41-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;definitionRef&quot;</span><span class="fu">:</span> <span class="st">&quot;https://ehr.example.com/forms/vitals&quot;</span><span class="fu">,</span></span>
 <span id="cb41-5"><a href="#cb41-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;definitionVersion&quot;</span><span class="fu">:</span> <span class="st">&quot;2.x&quot;</span><span class="fu">,</span></span>
@@ -3446,7 +3455,7 @@ class="sourceCode json"><code class="sourceCode json"><span id="cb42-1"><a href=
 <p><strong>Equivalent Mapping Document:</strong></p>
 <div class="sourceCode" id="cb43"><pre
 class="sourceCode json"><code class="sourceCode json"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
-<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;$schema&quot;</span><span class="fu">:</span> <span class="st">&quot;https://formspec.org/schemas/mapping/v1&quot;</span><span class="fu">,</span></span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;$schema&quot;</span><span class="fu">:</span> <span class="st">&quot;https://formspec.org/schemas/mapping/1.0&quot;</span><span class="fu">,</span></span>
 <span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;version&quot;</span><span class="fu">:</span> <span class="st">&quot;1.0.0&quot;</span><span class="fu">,</span></span>
 <span id="cb43-4"><a href="#cb43-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;definitionRef&quot;</span><span class="fu">:</span> <span class="st">&quot;https://example.gov/forms/expenditure-report&quot;</span><span class="fu">,</span></span>
 <span id="cb43-5"><a href="#cb43-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;definitionVersion&quot;</span><span class="fu">:</span> <span class="st">&quot;2.1.0&quot;</span><span class="fu">,</span></span>

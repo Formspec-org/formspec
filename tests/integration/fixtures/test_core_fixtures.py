@@ -474,8 +474,8 @@ AMENDED_SUBMISSION_PATH = GRANT_APP_DIR / "fixtures/submission-amended.json"
 STOPPED_SUBMISSION_PATH = GRANT_APP_DIR / "fixtures/submission-stopped.json"
 
 RESPONSE_SCHEMA = load_schema("response.schema.json")
-VALIDATION_REPORT_SCHEMA = load_schema("validationReport.schema.json")
-VALIDATION_RESULT_SCHEMA = load_schema("validationResult.schema.json")
+VALIDATION_REPORT_SCHEMA = load_schema("validation-report.schema.json")
+VALIDATION_RESULT_SCHEMA = load_schema("validation-result.schema.json")
 _REGISTRY = build_schema_registry(
     RESPONSE_SCHEMA,
     VALIDATION_REPORT_SCHEMA,

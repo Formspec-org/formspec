@@ -6,7 +6,7 @@
  */
 
 /* eslint-disable */
-import type { ValidationResult as FormspecValidationResult } from './validationResult.js';
+import type { ValidationResult as FormspecValidationResult } from './validation-result.js';
 export type { FormspecValidationResult };
 /**
  * A Formspec Response document — a completed or in-progress Instance pinned to a specific Definition version (§2.1.6). A Response is the unit of data capture: the filled-in form. It references exactly one Definition by the immutable tuple (definitionUrl, definitionVersion). A conformant processor MUST reject a Response whose definitionVersion does not match any known Definition at the given definitionUrl. Responses are always validated against their pinned Definition version, even if a newer version exists (Response Pinning Rule VP-01). The tuple (definitionUrl, definitionVersion) combined with the Response 'id' uniquely identifies a single form submission across all systems.
