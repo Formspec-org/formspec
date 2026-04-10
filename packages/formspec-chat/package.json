@@ -14,7 +14,7 @@
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "files": ["dist"],
+  "files": ["dist", "src/definition-schema.json"],
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@google/genai": "^1.0.0",
+    "openai": "^4.0.0",
     "@formspec-org/types": "*"
   },
   "devDependencies": {

@@ -12,102 +12,31 @@ import type {
   ChatMessage, Attachment, SourceTrace,
   ConversationResponse, ToolContext, RefinementResult, ToolCallRecord,
 } from './types.js';
-import type { FormDefinition } from '@formspec-org/types';
 import { TemplateLibrary } from './template-library.js';
+import { deriveScaffoldSchema, scaffoldOutputToDefinition } from './scaffold-schema.js';
+import definitionSchema from './definition-schema.json' with { type: 'json' };
 
 const library = new TemplateLibrary();
+const SCAFFOLD_RESPONSE_SCHEMA = deriveScaffoldSchema(definitionSchema, 'gemini');
 
 // ── System prompt ────────────────────────────────────────────────────
 
-const SYSTEM_PROMPT = `You are a form design assistant. You generate Formspec form definitions as JSON.
+const SYSTEM_PROMPT = `You are a form design assistant that generates Formspec form definitions.
 
-Formspec is a declarative form specification. A form definition has a "title" and an array of "items".
-
-Each item is one of:
-- **field**: A data-collecting element. Properties: key (snake_case), type: "field", label (human-readable), dataType (one of: "string", "text", "number", "integer", "decimal", "boolean", "date", "email", "choice", "multiChoice"). For choice/multiChoice fields, include an "options" array of { "value": string, "label": string }.
-- **group**: A container for related fields. Properties: key (snake_case), type: "group", label (human-readable), children (array of items).
+Formspec is a declarative form specification. Generate a JSON object with a descriptive "title" and an "items" array. The response schema defines the structure — follow it exactly.
 
 Rules:
 - Use descriptive snake_case keys (e.g., "first_name", "date_of_birth")
-- Every field must have a label and dataType
 - Group related fields logically (e.g., address fields in an "address" group)
-- Use appropriate dataTypes: "email" for emails, "date" for dates, "integer" for whole numbers, "decimal" for money, "boolean" for yes/no, "choice" for single-select, "multiChoice" for multi-select
-- Generate a meaningful title that describes the form's purpose
+- For choice/multiChoice fields, always include an "options" array
+- Omit "options" for non-choice fields
+- Omit "children" for fields — only groups have children`;
 
-Respond with a JSON object containing "title" (string) and "items" (array of items).`;
-
-// ── Response schema for Gemini structured output ─────────────────────
-
-// Gemini doesn't support $ref in response schemas, so we inline one level of
-// nesting: top-level items can be groups with children, but children are leaf items.
-// The system prompt encourages flat groups which covers most real forms.
-
-const OPTION_SCHEMA = {
-  type: 'object' as const,
-  properties: {
-    value: { type: 'string' as const },
-    label: { type: 'string' as const },
-  },
-  required: ['value', 'label'] as const,
-};
-
-const EXTENSIONS_SCHEMA = {
-  type: 'object' as const,
-  description: 'Registry extension declarations, e.g. { "x-formspec-email": true }',
-  additionalProperties: { type: 'boolean' as const },
-};
-
-const LEAF_ITEM_SCHEMA = {
-  type: 'object' as const,
-  properties: {
-    key: { type: 'string' as const },
-    type: { type: 'string' as const, enum: ['field', 'group'] },
-    label: { type: 'string' as const },
-    dataType: { type: 'string' as const },
-    options: { type: 'array' as const, items: OPTION_SCHEMA },
-    extensions: EXTENSIONS_SCHEMA,
-  },
-  required: ['key', 'type', 'label'] as const,
-};
-
-const ITEM_SCHEMA = {
-  type: 'object' as const,
-  properties: {
-    key: { type: 'string' as const },
-    type: { type: 'string' as const, enum: ['field', 'group'] },
-    label: { type: 'string' as const },
-    dataType: { type: 'string' as const },
-    options: { type: 'array' as const, items: OPTION_SCHEMA },
-    extensions: EXTENSIONS_SCHEMA,
-    children: { type: 'array' as const, items: LEAF_ITEM_SCHEMA },
-  },
-  required: ['key', 'type', 'label'] as const,
-};
-
-const RESPONSE_SCHEMA = {
-  type: 'object' as const,
-  properties: {
-    title: { type: 'string' as const },
-    items: {
-      type: 'array' as const,
-      items: ITEM_SCHEMA,
-    },
-  },
-  required: ['title', 'items'],
-};
+// Scaffold response schema is derived from the canonical definition.schema.json
+// at module load time via deriveScaffoldSchema() — see import above.
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
-function wrapAsDefinition(parsed: { title: string; items: any[] }): FormDefinition {
-  return {
-    $formspec: '1.0',
-    url: `urn:formspec:chat:${Date.now()}`,
-    version: '0.1.0',
-    status: 'draft',
-    title: parsed.title,
-    items: parsed.items,
-  } as FormDefinition;
-}
 
 function flattenItemKeys(items: any[]): string[] {
   const keys: string[] = [];
@@ -157,9 +86,16 @@ Rules:
 
 const INTERVIEW_RESPONSE_SCHEMA = {
   type: 'object' as const,
+  description: 'Interview response with a conversational message and a readiness signal.',
   properties: {
-    message: { type: 'string' as const },
-    readyToScaffold: { type: 'boolean' as const },
+    message: {
+      type: 'string' as const,
+      description: 'Conversational response to the user. Ask 1-2 focused follow-up questions, or confirm readiness to generate.',
+    },
+    readyToScaffold: {
+      type: 'boolean' as const,
+      description: 'True when enough information has been gathered (clear purpose + some field ideas). False to continue the interview.',
+    },
   },
   required: ['message', 'readyToScaffold'],
 };
@@ -200,7 +136,7 @@ export class GeminiAdapter implements AIAdapter {
         config: {
           systemInstruction: INTERVIEW_SYSTEM_PROMPT,
           responseMimeType: 'application/json',
-          responseSchema: INTERVIEW_RESPONSE_SCHEMA,
+          responseJsonSchema: INTERVIEW_RESPONSE_SCHEMA,
         },
       });
 
@@ -364,7 +300,7 @@ When done with all changes, respond with a brief summary of what you did.`;
       config: {
         systemInstruction: this.scaffoldPrompt,
         responseMimeType: 'application/json' as const,
-        responseSchema: RESPONSE_SCHEMA,
+        responseJsonSchema: SCAFFOLD_RESPONSE_SCHEMA,
         maxOutputTokens: 65536,
       },
     };
@@ -401,7 +337,7 @@ When done with all changes, respond with a brief summary of what you did.`;
       }
 
       const parsed = JSON.parse(text);
-      const definition = wrapAsDefinition(parsed);
+      const definition = scaffoldOutputToDefinition(parsed);
 
       const msgId = messages.find(m => m.role === 'user')?.id ?? 'unknown';
       const traces: SourceTrace[] = flattenItemKeys(parsed.items).map(key => ({
@@ -425,14 +361,14 @@ When done with all changes, respond with a brief summary of what you did.`;
       config: {
         systemInstruction: this.scaffoldPrompt,
         responseMimeType: 'application/json',
-        responseSchema: RESPONSE_SCHEMA,
+        responseJsonSchema: SCAFFOLD_RESPONSE_SCHEMA,
         maxOutputTokens: 65536,
       },
     });
 
     const text = extractText(response);
     const parsed = JSON.parse(text);
-    const definition = wrapAsDefinition(parsed);
+    const definition = scaffoldOutputToDefinition(parsed);
 
     const traces: SourceTrace[] = flattenItemKeys(parsed.items).map(key => ({
       elementPath: key,

@@ -1,62 +1,70 @@
-# formspec-chat
+# @formspec-org/chat
 
-Pure TypeScript core for conversational form building. Provides session orchestration, AI adapter integration, source tracing, issue tracking, definition diffing, template management, and session persistence. No React or DOM dependencies.
+Conversational form builder core. AI adapter interfaces, session orchestration, source tracing, issue tracking, template library, and session persistence. No React or DOM dependencies.
 
 ## Install
 
 ```bash
-npm install formspec-chat
+npm install @formspec-org/chat
+```
+
+## Architecture
+
+`formspec-chat` is a thin conversation orchestrator. It does **not** own a Project or MCP server — the host (e.g. Formspec Studio) provides a `ToolContext` that connects the session to whatever tool surface is available.
+
+**Three-phase lifecycle:**
+
+1. **Interview** — `AIAdapter.chat()` conducts a guided conversation. The adapter signals `readyToScaffold` when enough information is gathered.
+2. **Scaffold** — `AIAdapter.generateScaffold()` produces a `FormDefinition` from the conversation, a template, or an uploaded file.
+3. **Refine** — `AIAdapter.refineForm()` modifies the existing form via tool calls routed through the host-provided `ToolContext`.
+
+```
+ChatSession               Orchestrates the interview -> scaffold -> refine loop.
+  +-- AIAdapter            Interface for any AI provider.
+  |     +-- GeminiAdapter  Production adapter (Google Gemini, structured output + tool-use).
+  |     +-- MockAdapter    Offline test adapter. Template-based scaffolding, no real refinement.
+  +-- SourceTraceManager   Provenance: links each form element to the message/upload/template that created it.
+  +-- IssueQueue           Tracks problems, contradictions, and low-confidence elements.
+  +-- ToolContext           Host-injected. Routes tool calls to the MCP server the host owns.
+
+TemplateLibrary            Five built-in archetypes for quick-start scaffolding.
+SessionStore               Serializes sessions via a StorageBackend (localStorage, in-memory map, etc).
+extractRegistryHints       Extracts extension registry info into compact text for AI prompt injection.
+diff(old, new)             Structural diff between two FormDefinitions (added/removed/modified keys).
 ```
 
 ## Quick Usage
 
 ```typescript
-import {
-  ChatSession,
-  DeterministicAdapter,
-  SessionStore,
-  TemplateLibrary,
-} from 'formspec-chat';
+import { ChatSession, MockAdapter } from '@formspec-org/chat';
 
 // Create a session with the offline adapter
-const session = new ChatSession({ adapter: new DeterministicAdapter() });
+const session = new ChatSession({ adapter: new MockAdapter() });
 
-// Send a message — generates an initial scaffold on the first call,
-// then refines the form on subsequent calls
+// Interview phase — send messages, adapter guides the conversation
 const reply = await session.sendMessage('I need a patient intake form');
+// reply.content is the AI's response
+// session.isReadyToScaffold() becomes true when the adapter has enough info
 
-// Access the generated definition
+// Generate the form
+await session.scaffold();
 const definition = session.getDefinition();
 
-// Export as JSON
-const json = session.exportJSON();
+// For refinement, the host must provide a ToolContext
+session.setToolContext(toolContext);
+await session.sendMessage('Add an email field with validation');
 
-// Persist the session
+// Export
+const json = session.exportJSON();
+const bundle = session.exportBundle(); // definition + component + theme + mapping
+
+// Persist
 const store = new SessionStore(localStorage);
 store.save(session.toState());
 
-// Restore it later
+// Restore (host must call setToolContext() again after restore)
 const state = store.load(session.id);
-const restored = ChatSession.fromState(state, new DeterministicAdapter());
-```
-
-## Architecture
-
-```
-ChatSession          Orchestrates the conversation loop.
-  ├── AIAdapter      Interface. Plug in any AI provider.
-  │     └── DeterministicAdapter  Offline fallback. Uses templates + heuristics.
-  ├── SourceTraceManager  Tracks provenance: which message or upload produced each field.
-  ├── IssueQueue     Collects problems (missing config, contradictions, low confidence).
-  └── diff()         Computes added/removed/modified keys between two definitions.
-
-TemplateLibrary      Five built-in archetypes (housing intake, grant application,
-                     patient intake, compliance checklist, employee onboarding).
-
-SessionStore         Serializes and loads sessions via a StorageBackend interface.
-                     Accepts localStorage in the browser or any in-memory map in tests.
-
-validateProviderConfig  Validates a ProviderConfig before passing it to an adapter.
+const restored = await ChatSession.fromState(state, new MockAdapter());
 ```
 
 ## API
@@ -64,15 +72,28 @@ validateProviderConfig  Validates a ProviderConfig before passing it to an adapt
 ### `ChatSession`
 
 ```typescript
-new ChatSession(options: { adapter: AIAdapter; id?: string })
+new ChatSession(options: {
+  adapter: AIAdapter;
+  id?: string;
+  buildBundle?: (definition: FormDefinition) => ProjectBundle;
+})
 ```
+
+The `buildBundle` callback is injected by the host to convert a bare definition into a full ProjectBundle (definition + component tree + theme + mapping). When omitted, `getBundle()` returns null.
 
 | Method | Returns | Description |
 |---|---|---|
-| `sendMessage(content)` | `Promise<ChatMessage>` | Send a user turn. Generates a scaffold on the first call; refines on subsequent calls. |
-| `startFromTemplate(templateId)` | `Promise<void>` | Initialize from a built-in template. |
+| `sendMessage(content)` | `Promise<ChatMessage>` | Send a user message. Runs interview (pre-scaffold) or refinement (post-scaffold). |
+| `scaffold()` | `Promise<void>` | Generate a form from the conversation so far. Streams progress via `getScaffoldingText()`. |
+| `startFromTemplate(id)` | `Promise<void>` | Initialize from a built-in template. |
 | `startFromUpload(attachment)` | `Promise<void>` | Extract structure from an uploaded file, then scaffold. |
-| `getDefinition()` | `FormDefinition \| null` | Current form definition. |
+| `regenerate()` | `Promise<void>` | Discard the current form and re-scaffold from the full conversation history. |
+| `setToolContext(ctx)` | `void` | Inject a `ToolContext` for MCP-backed refinement. Required before `sendMessage` can refine. |
+| `getToolContext()` | `ToolContext \| null` | Returns the current tool context, or null. |
+| `getDefinition()` | `FormDefinition \| null` | Current form definition, or null if not yet scaffolded. |
+| `hasDefinition()` | `boolean` | Whether a definition exists. |
+| `isReadyToScaffold()` | `boolean` | Whether the interview has gathered enough info. |
+| `getBundle()` | `ProjectBundle \| null` | Full project bundle, or null if `buildBundle` was not provided. |
 | `getLastDiff()` | `DefinitionDiff \| null` | Structural diff from the most recent refinement. |
 | `getMessages()` | `ChatMessage[]` | Full message history. |
 | `getTraces()` | `SourceTrace[]` | All source traces. |
@@ -82,35 +103,60 @@ new ChatSession(options: { adapter: AIAdapter; id?: string })
 | `resolveIssue(id)` | `void` | Mark an issue resolved. |
 | `deferIssue(id)` | `void` | Mark an issue deferred. |
 | `exportJSON()` | `FormDefinition` | Export the current definition. Throws if none exists. |
-| `toState()` | `ChatSessionState` | Serialize the full session for storage. |
-| `onChange(listener)` | `() => void` | Subscribe to state changes. Returns an unsubscribe function. |
-| `ChatSession.fromState(state, adapter)` | `ChatSession` | Restore a session from serialized state. |
+| `exportBundle()` | `ProjectBundle` | Export the full bundle. Throws if none exists. |
+| `getDebugLog()` | `DebugEntry[]` | Raw debug log of all adapter calls (sent/received/error). |
+| `getScaffoldingText()` | `string \| null` | Partial JSON while scaffold is streaming, null otherwise. |
+| `truncate(messageId, includeSelf?)` | `void` | Remove messages after (or including) the given ID. |
+| `onChange(listener)` | `() => void` | Subscribe to state changes. Returns unsubscribe function. |
+| `toState()` | `ChatSessionState` | Serialize session for persistence. |
+| `ChatSession.fromState(state, adapter, buildBundle?)` | `Promise<ChatSession>` | Restore from serialized state. Note: no `ToolContext` — host must call `setToolContext()`. |
 
 ### `AIAdapter` interface
 
-Implement this interface to connect any AI provider.
-
 ```typescript
 interface AIAdapter {
-  generateScaffold(request: ScaffoldRequest): Promise<ScaffoldResult>;
-  refineForm(messages: ChatMessage[], current: FormDefinition, instruction: string): Promise<ScaffoldResult>;
+  chat(messages: ChatMessage[]): Promise<ConversationResponse>;
+  generateScaffold(request: ScaffoldRequest, onProgress?: ScaffoldProgressCallback): Promise<ScaffoldResult>;
+  refineForm(messages: ChatMessage[], instruction: string, toolContext: ToolContext): Promise<RefinementResult>;
   extractFromFile(attachment: Attachment): Promise<string>;
   isAvailable(): Promise<boolean>;
 }
 ```
 
-`ScaffoldRequest` is a discriminated union:
+| Method | Purpose |
+|---|---|
+| `chat` | Interview phase. Returns `{ message, readyToScaffold }`. |
+| `generateScaffold` | Produce a `FormDefinition` from conversation, template, or upload. Accepts an optional progress callback for streaming. |
+| `refineForm` | Modify an existing form via tool calls. Receives the host's `ToolContext` with tool declarations and a `callTool` dispatcher. Returns a summary message and a log of tool calls executed. |
+| `extractFromFile` | Extract structured content from an uploaded file attachment. |
+| `isAvailable` | Check if credentials/model are available. |
+
+### `ToolContext`
+
+The host (e.g. Studio) provides this after scaffolding so the adapter can discover and invoke tools.
 
 ```typescript
-type ScaffoldRequest =
-  | { type: 'template'; templateId: string }
-  | { type: 'conversation'; messages: ChatMessage[] }
-  | { type: 'upload'; extractedContent: string };
+interface ToolContext {
+  tools: ToolDeclaration[];
+  callTool(name: string, args: Record<string, unknown>): Promise<ToolCallResult>;
+  getProjectSnapshot?(): Promise<{ definition: FormDefinition } | null>;
+}
 ```
 
-### `DeterministicAdapter`
+### `GeminiAdapter`
 
-Offline fallback. Always available — no API key required. Matches conversation text to one of five built-in templates using keyword scoring. Cannot meaningfully refine forms; returns an info-level issue when `refineForm` is called.
+Production adapter using Google Gemini. Uses structured output (JSON schema) for scaffolding and function calling for refinement.
+
+```typescript
+new GeminiAdapter(apiKey: string, model?: string, registryHints?: string)
+```
+
+- `model` defaults to `'gemini-3-flash-preview'`
+- `registryHints` is a text block from `extractRegistryHints()` injected into the scaffold prompt
+
+### `MockAdapter`
+
+Offline test adapter. Uses templates for scaffold generation and simple heuristics for conversation-based scaffolding. Cannot meaningfully refine forms. No API key required.
 
 ### `SourceTraceManager`
 
@@ -118,15 +164,15 @@ Tracks which message, upload, or template produced each form element.
 
 ```typescript
 manager.addTrace(trace)
-manager.getTracesForElement(path)     // by field path
-manager.getTracesForSource(sourceId)  // by message or attachment ID
+manager.getTracesForElement(path)
+manager.getTracesForSource(sourceId)
 manager.removeTracesForElement(path)
 manager.toJSON() / SourceTraceManager.fromJSON(data)
 ```
 
 ### `IssueQueue`
 
-Collects and tracks problems found during generation.
+Tracks problems found during generation.
 
 ```typescript
 queue.addIssue({ severity, category, title, description, sourceIds })
@@ -139,16 +185,13 @@ queue.getIssueCount()   // { open, resolved, deferred }
 queue.toJSON() / IssueQueue.fromJSON(data)
 ```
 
-Issue severities: `'error' | 'warning' | 'info'`
-Issue categories: `'missing-config' | 'contradiction' | 'low-confidence' | 'validation'`
+Severities: `'error' | 'warning' | 'info'`
+Categories: `'missing-config' | 'contradiction' | 'low-confidence' | 'validation'`
 
 ### `diff(oldDef, newDef)`
 
-Computes a structural diff between two form definitions.
-
 ```typescript
-const { added, removed, modified } = diff(previousDefinition, newDefinition);
-// added, removed, modified are string[] of item keys
+const { added, removed, modified } = diff(previousDef, newDef);
 ```
 
 ### `TemplateLibrary`
@@ -159,7 +202,7 @@ library.getAll()       // Template[]
 library.getById(id)    // Template | undefined
 ```
 
-Built-in template IDs: `housing-intake`, `grant-application`, `patient-intake`, `compliance-checklist`, `employee-onboarding`.
+Built-in IDs: `housing-intake`, `grant-application`, `patient-intake`, `compliance-checklist`, `employee-onboarding`.
 
 ### `SessionStore`
 
@@ -168,40 +211,29 @@ const store = new SessionStore(backend);  // backend implements StorageBackend
 store.save(state)
 store.load(id)    // ChatSessionState | null
 store.delete(id)
-store.list()      // SessionSummary[], most recent first
+store.list()      // SessionSummary[]
 ```
 
-`StorageBackend` requires only `getItem`, `setItem`, and `removeItem`. Pass `localStorage` in the browser or a `Map`-backed object in tests.
+`StorageBackend` requires `getItem`, `setItem`, `removeItem`. Pass `localStorage` in the browser or a `Map`-backed object in tests.
+
+### `extractRegistryHints`
+
+Extracts a compact text block from a registry document for AI prompt injection. Groups entries by category (dataType, constraint, function) with usage examples.
+
+```typescript
+import { extractRegistryHints } from '@formspec-org/chat';
+const hints = extractRegistryHints(registryDoc);
+// Pass to GeminiAdapter constructor as registryHints
+```
 
 ### `validateProviderConfig`
 
 ```typescript
-const errors = validateProviderConfig({ provider: 'anthropic', apiKey: '...' });
+const errors = validateProviderConfig({ provider: 'google', apiKey: '...' });
 // ProviderValidationError[] — empty means valid
-```
-
-Valid providers: `'anthropic' | 'google' | 'openai'`
-
-## Types
-
-All types export from the package root:
-
-```typescript
-import type {
-  ChatMessage, Attachment,
-  SourceTrace, SourceType,
-  Issue, IssueSeverity, IssueCategory, IssueStatus,
-  ScaffoldResult, ScaffoldRequest,
-  AIAdapter,
-  ProviderConfig, ProviderType,
-  Template,
-  ChatSessionState, ChatProjectSnapshot,
-  StorageBackend, SessionSummary,
-} from 'formspec-chat';
 ```
 
 ## Dependencies
 
-- `formspec-types` — shared Formspec type definitions (peer dependency)
-
-No runtime dependencies beyond `formspec-types`. No React, no DOM.
+- `@formspec-org/types` — shared Formspec type definitions
+- `@google/genai` — Google Gemini SDK (used by `GeminiAdapter`)

@@ -1,0 +1,1636 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://formspec.org/schemas/definition/1.0",
+  "title": "Formspec Definition",
+  "description": "A Formspec Definition document per the Formspec v1.0 specification. A Definition is a versioned, self-contained JSON document that completely describes the structure, behavior, and constraints of a data-collection instrument. The tuple (url, version) uniquely identifies a Definition across all systems. Definitions are organized into three layers: Structure (Items), Behavior (Binds + Shapes), and Presentation (advisory hints). A conformant processor implements the four-phase processing cycle: Rebuild → Recalculate → Revalidate → Notify.",
+  "type": "object",
+  "required": [
+    "$formspec",
+    "url",
+    "version",
+    "status",
+    "title",
+    "items"
+  ],
+  "properties": {
+    "$formspec": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Definition specification version. MUST be '1.0'.",
+      "examples": [
+        "1.0"
+      ],
+      "x-lm": {
+        "critical": true,
+        "intent": "Version pin for definition schema compatibility."
+      }
+    },
+    "url": {
+      "type": "string",
+      "format": "uri",
+      "description": "Canonical URI identifier of the logical form. Stable across versions — all versions of the same form share this URL. Combined with 'version' to form the immutable identity tuple. Referenced by Responses via definitionUrl.",
+      "examples": [
+        "https://example.gov/forms/annual-report",
+        "https://grants.example.gov/forms/sf-425"
+      ],
+      "x-lm": {
+        "critical": true,
+        "intent": "Stable identifier of the form across versions."
+      }
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Version identifier of this specific Definition document. Interpretation governed by versionAlgorithm (default: semver). Once a Definition reaches 'active' status, its content MUST NOT be modified — any change requires a new version.",
+      "examples": [
+        "2025.1.0",
+        "1.0.0-rc.1",
+        "2025.06.01",
+        "42"
+      ],
+      "x-lm": {
+        "critical": true,
+        "intent": "Version component of the immutable (url, version) identity tuple."
+      }
+    },
+    "versionAlgorithm": {
+      "type": "string",
+      "enum": [
+        "semver",
+        "date",
+        "integer",
+        "natural"
+      ],
+      "default": "semver",
+      "description": "Controls how version strings are interpreted and compared. 'semver': MAJOR.MINOR.PATCH per semver.org (pre-release labels supported). 'date': YYYY.MM.DD chronological comparison. 'integer': numeric comparison of non-negative integers. 'natural': equality-only comparison, no ordering defined.",
+      "examples": [
+        "semver"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "active",
+        "retired"
+      ],
+      "description": "Definition lifecycle state. Transitions: draft → active → retired. Backward transitions are forbidden for the same version. 'draft': under development, not for production. 'active': in production, content is immutable. 'retired': no longer used for new data collection, but existing Responses remain valid.",
+      "examples": [
+        "draft",
+        "active"
+      ],
+      "x-lm": {
+        "critical": true,
+        "intent": "Controls publication lifecycle and authoring/production usage."
+      }
+    },
+    "derivedFrom": {
+      "oneOf": [
+        {
+          "type": "string",
+          "format": "uri"
+        },
+        {
+          "type": "object",
+          "required": [
+            "url"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "version": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      ],
+      "description": "Parent definition this form is derived from. Informational only — does NOT imply behavioral inheritance or runtime linkage. Enables change analysis, pre-population from parent Responses, and lineage tracking. A plain URI string indicates derivation from the logical form in general; an object with url+version pins to a specific version.",
+      "examples": [
+        "https://example.gov/forms/annual-report",
+        {
+          "url": "https://example.gov/forms/annual-report",
+          "version": "2024.1.0"
+        }
+      ]
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^[a-zA-Z][a-zA-Z0-9\\-]*$",
+      "description": "Machine-readable short name for the definition. Must start with a letter, may contain letters, digits, and hyphens. Unlike 'url', this is a local identifier for tooling convenience, not a globally unique reference.",
+      "examples": [
+        "annual-report",
+        "sf-425-short"
+      ]
+    },
+    "title": {
+      "type": "string",
+      "description": "Human-readable definition title. Displayed by authoring tools and form renderers.",
+      "examples": [
+        "Annual Financial Report",
+        "Patient Intake Form"
+      ],
+      "x-lm": {
+        "critical": true,
+        "intent": "Display name used by authoring and rendering tools."
+      }
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable description of the form's purpose and scope.",
+      "examples": [
+        "Collects annual financial reporting data for federal grant recipients."
+      ]
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Publication or last-modified date of this Definition version, in ISO 8601 date format (YYYY-MM-DD).",
+      "examples": [
+        "2025-07-10"
+      ]
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Item"
+      },
+      "description": "Root item tree defining the form's structural content. Items form a tree: each Item may have 'children' (groups) creating nested hierarchy. Three item types exist: 'field' (captures data), 'group' (structural container, optionally repeatable), 'display' (read-only presentational content). The item tree determines the shape of the Instance (form data).",
+      "examples": [
+        [
+          {
+            "key": "projectName",
+            "type": "field",
+            "label": "Project Name",
+            "dataType": "string"
+          }
+        ]
+      ],
+      "x-lm": {
+        "critical": true,
+        "intent": "Primary structural definition of the form content."
+      }
+    },
+    "binds": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Bind"
+      },
+      "description": "Behavioral declarations that attach reactive FEL expressions to data nodes by path. Binds are the bridge between items (structure) and behavior (logic). Each Bind targets one or more nodes and may declare: calculate (computed value), relevant (conditional visibility), required (dynamic requiredness), readonly (edit protection), constraint (per-field validation), default (re-relevance value). Binds are evaluated reactively whenever dependencies change.",
+      "examples": [
+        [
+          {
+            "path": "totalBudget",
+            "calculate": "sum($lineItems[*].amount)",
+            "readonly": "true"
+          },
+          {
+            "path": "lineItems[*].amount",
+            "required": "true",
+            "constraint": "$ > 0",
+            "constraintMessage": "Amount must be positive."
+          },
+          {
+            "path": "spouseInfo",
+            "relevant": "$filingStatus = 'married'"
+          }
+        ]
+      ],
+      "x-lm": {
+        "critical": true,
+        "intent": "Reactive behavioral layer — all form logic (calculations, visibility, validation) is expressed here."
+      }
+    },
+    "shapes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Shape"
+      },
+      "description": "Named, composable validation rule sets (inspired by W3C SHACL). Shapes provide cross-field and form-level validation beyond per-field Bind constraints. Each Shape targets a data path, evaluates a FEL constraint expression, and produces structured ValidationResult entries with severity, message, and code on failure. Shapes compose via 'and', 'or', 'not', 'xone' operators. Only error-severity results block submission; warnings and info are advisory.",
+      "examples": [
+        [
+          {
+            "id": "budget-balances",
+            "target": "totalBudget",
+            "severity": "error",
+            "constraint": "$totalBudget = $awardAmount",
+            "message": "Total budget must equal the authorized award amount.",
+            "code": "BUDGET_MISMATCH"
+          }
+        ]
+      ]
+    },
+    "instances": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/Instance"
+      },
+      "description": "Named secondary data sources available to FEL expressions at runtime via @instance('name'). Instances provide lookup tables, prior-year data, and external reference data. The property name is the instance identifier used in @instance() references. Secondary instances are read-only by default during form completion.",
+      "examples": [
+        {
+          "priorYear": {
+            "source": "https://api.example.gov/responses/2024/{{entityId}}",
+            "schema": {
+              "totalExpenditure": "decimal"
+            },
+            "data": {
+              "totalExpenditure": 200000.00
+            }
+          }
+        }
+      ]
+    },
+    "variables": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Variable"
+      },
+      "description": "Named computed values with lexical scoping, continuously recalculated when dependencies change. Variables provide intermediate calculations reusable across Binds, Shapes, and other expressions without repetition. Referenced in FEL expressions as @variableName. MUST NOT form circular dependencies.",
+      "examples": [
+        [
+          {
+            "name": "totalDirect",
+            "expression": "sum($lineItems[*].amount)",
+            "scope": "#"
+          },
+          {
+            "name": "indirectAmount",
+            "expression": "@totalDirect * $indirectRate",
+            "scope": "budgetSection"
+          }
+        ]
+      ]
+    },
+    "nonRelevantBehavior": {
+      "type": "string",
+      "enum": [
+        "remove",
+        "empty",
+        "keep"
+      ],
+      "default": "remove",
+      "description": "Form-wide default for how non-relevant fields are treated in submitted Response data. 'remove' (DEFAULT): non-relevant nodes and descendants excluded from Response. 'empty': retained but values set to null. 'keep': retained with current values. Per-Bind overrides via Bind.nonRelevantBehavior take precedence. Regardless of this setting, non-relevant fields are always exempt from validation."
+    },
+    "optionSets": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/OptionSet"
+      },
+      "description": "Named, reusable option lists for choice and multiChoice fields. The property name is the set identifier, referenced by Field items via the 'optionSet' property. Avoids duplicating the same options across multiple fields.",
+      "examples": [
+        {
+          "yesNoNa": {
+            "options": [
+              {
+                "value": "yes",
+                "label": "Yes"
+              },
+              {
+                "value": "no",
+                "label": "No"
+              },
+              {
+                "value": "na",
+                "label": "Not Applicable"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "migrations": {
+      "$ref": "#/$defs/Migrations",
+      "description": "Declares how to transform Responses from prior versions into this version's structure. Migration produces a new Response pinned to the target version; the original is preserved. Fields not in fieldMap are carried forward by path matching or dropped."
+    },
+    "extensions": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^x-"
+      },
+      "description": "Domain-specific extension data. All keys MUST be prefixed with 'x-'. Processors MUST ignore unrecognized extensions without error. Extensions MUST NOT alter core semantics (required, relevant, readonly, calculate, validation). Preserved on round-trip.",
+      "examples": [
+        {
+          "x-gov-grants": {
+            "version": "2.0",
+            "cfdaNumber": true
+          },
+          "x-analytics": {
+            "trackFocus": true
+          }
+        }
+      ]
+    },
+    "formPresentation": {
+      "type": "object",
+      "description": "Form-wide presentation defaults. All properties OPTIONAL and advisory — a conforming processor MAY ignore any or all. These are Tier 1 baseline hints; overridden by Theme (Tier 2) and Component (Tier 3) specifications. MUST NOT affect data capture, validation, or submission semantics.",
+      "additionalProperties": false,
+      "properties": {
+        "pageMode": {
+          "type": "string",
+          "enum": [
+            "single",
+            "wizard",
+            "tabs"
+          ],
+          "default": "single",
+          "description": "How top-level groups are paginated. 'single': all items on one page. 'wizard': sequential steps with navigation controls. 'tabs': tabbed sections. Processors that don't support the declared mode SHOULD fall back to 'single'."
+        },
+        "labelPosition": {
+          "type": "string",
+          "enum": [
+            "top",
+            "start",
+            "hidden"
+          ],
+          "default": "top",
+          "description": "Default label placement for all Fields. 'top': label above input. 'start': label to the leading side (left in LTR, right in RTL). 'hidden': label suppressed visually but MUST remain in accessible markup."
+        },
+        "density": {
+          "type": "string",
+          "enum": [
+            "compact",
+            "comfortable",
+            "spacious"
+          ],
+          "default": "comfortable",
+          "description": "Spacing density hint for the overall form layout."
+        },
+        "defaultCurrency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$",
+          "description": "Default ISO 4217 currency code applied to all money fields that do not declare their own currency. When set, the currency input on MoneyInput widgets is pre-filled and locked to this value.",
+          "examples": [
+            "USD",
+            "EUR",
+            "GBP"
+          ],
+          "x-lm": {
+            "critical": true,
+            "intent": "Prevents authors from repeating the currency code in every money() FEL expression and every MoneyInput component."
+          }
+        },
+        "direction": {
+          "type": "string",
+          "enum": [
+            "ltr",
+            "rtl",
+            "auto"
+          ],
+          "default": "ltr",
+          "description": "Base text direction. 'auto' derives direction from the active locale code (RTL for ar, he, fa, ur, ps, sd, yi)."
+        },
+        "showProgress": {
+          "type": "boolean",
+          "default": true,
+          "description": "Wizard mode: display a step progress indicator."
+        },
+        "allowSkip": {
+          "type": "boolean",
+          "default": false,
+          "description": "Wizard mode: allow navigating forward without validating the current page."
+        },
+        "sidenav": {
+          "type": "boolean",
+          "default": false,
+          "description": "Wizard mode: render a vertical side navigation listing all steps instead of the default horizontal progress bar."
+        },
+        "defaultTab": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0,
+          "description": "Tabs mode: zero-based index of the initially selected tab."
+        },
+        "tabPosition": {
+          "type": "string",
+          "enum": ["top", "bottom", "left", "right"],
+          "default": "top",
+          "description": "Tabs mode: position of the tab bar relative to the content."
+        }
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "Item": {
+      "type": "object",
+      "description": "A node in the form's structural tree. Every Item has a key (stable machine identifier unique across the entire Definition), a type ('field', 'group', or 'display'), and a label (human-readable). The type determines which additional properties apply. Items form a tree via the 'children' property on groups. The item tree determines the shape of the Instance (form data): fields produce values, groups produce JSON objects (or arrays if repeatable), display items produce nothing.",
+      "required": [
+        "key",
+        "type",
+        "label"
+      ],
+      "properties": {
+        "key": {
+          "type": "string",
+          "pattern": "^[a-zA-Z][a-zA-Z0-9_]*$",
+          "description": "Stable identifier for this Item. MUST be unique across the entire Definition (not merely among siblings). Used in Bind paths, Shape targets, FEL field references ($key), and to bridge Definition items to Response data nodes. MUST NOT change across versions if the semantic meaning is preserved.",
+          "examples": [
+            "firstName",
+            "budget_section",
+            "line_items"
+          ]
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "group",
+            "field",
+            "display"
+          ],
+          "description": "Item type. 'field': captures a single data value (requires dataType). 'group': structural container with children, optionally repeatable. 'display': read-only presentational content (instructions, headings) — no data, no children."
+        },
+        "label": {
+          "type": "string",
+          "description": "Primary human-readable label. Implementations MUST display this (or a 'labels' alternative) when rendering the Item."
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable help text. Implementations SHOULD make this available on demand (e.g., tooltip or help icon)."
+        },
+        "hint": {
+          "type": "string",
+          "description": "Short instructional text displayed alongside the input (e.g., below the label or as placeholder guidance). Distinct from 'description', which is typically shown on demand.",
+          "examples": [
+            "Enter your 9-digit EIN in XX-XXXXXXX format"
+          ]
+        },
+        "labels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Alternative display labels keyed by context name. Well-known contexts: 'short' (abbreviated), 'pdf' (print layout), 'csv' (column header), 'accessibility' (screen reader). Implementations MAY define additional context names.",
+          "examples": [
+            {
+              "short": "Budget",
+              "pdf": "Section III: Budget Information"
+            }
+          ]
+        },
+        "extensions": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^x-"
+          },
+          "description": "Item-level extension data. All keys MUST be prefixed with 'x-'. MUST NOT alter core semantics."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "group"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "key": true,
+              "type": true,
+              "label": true,
+              "description": true,
+              "hint": true,
+              "labels": true,
+              "extensions": true,
+              "children": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/Item"
+                },
+                "description": "Ordered list of child Items forming the sub-tree rooted at this Group."
+              },
+              "repeatable": {
+                "type": "boolean",
+                "default": false,
+                "description": "When true, this Group represents a one-to-many collection. Each repetition creates an independent copy of the Group's children in the Response data (as a JSON array of objects). Users can add/remove instances within minRepeat/maxRepeat bounds."
+              },
+              "minRepeat": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Minimum number of repetitions. Only meaningful when repeatable is true. If > 0, the processor MUST pre-populate that many empty instances on Response creation. Default: 0.",
+                "examples": [
+                  1
+                ]
+              },
+              "maxRepeat": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Maximum number of repetitions. Only meaningful when repeatable is true. Absent means unbounded. When present, MUST be >= minRepeat. Processors MUST prevent adding instances beyond this limit.",
+                "examples": [
+                  50
+                ]
+              },
+              "$ref": {
+                "type": "string",
+                "format": "uri",
+                "description": "Canonical reference (url|version syntax) to another Definition for modular composition. All root-level Items from the referenced Definition are included as children of this Group. A fragment (#key) selects a single item by key. Resolved at assembly/publish time into a self-contained Definition.",
+                "examples": [
+                  "https://example.gov/forms/common/demographics|1.0.0",
+                  "https://example.gov/forms/common/demographics|1.0.0#mailing_address"
+                ]
+              },
+              "keyPrefix": {
+                "type": "string",
+                "pattern": "^[a-zA-Z][a-zA-Z0-9_]*$",
+                "description": "String prepended to every key imported via $ref. Prevents key collisions when including the same Definition multiple times or when keys conflict with the host. Applied during assembly to all imported keys, Bind paths, Shape targets, and variable scopes.",
+                "examples": [
+                  "demo_",
+                  "addr_"
+                ]
+              },
+              "presentation": {
+                "$ref": "#/$defs/Presentation"
+              }
+            },
+            "additionalProperties": false,
+            "anyOf": [
+              {
+                "required": [
+                  "children"
+                ]
+              },
+              {
+                "required": [
+                  "$ref"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "field"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "key": true,
+              "type": true,
+              "label": true,
+              "description": true,
+              "hint": true,
+              "labels": true,
+              "extensions": true,
+              "dataType": {
+                "type": "string",
+                "description": "The value type of this Field. Determines JSON representation, FEL type, valid operations, and default widget. 'string': single-line text. 'text': multi-line text. 'integer': whole number (no fraction). 'decimal': number with optional fractional part (use 'precision' to control decimal places). 'boolean': true/false. 'date': ISO 8601 YYYY-MM-DD. 'dateTime': ISO 8601 date-time. 'time': ISO 8601 HH:MM:SS. 'uri': valid URI per RFC 3986. 'attachment': file reference object {contentType, url/data}. 'choice': single selection (stored as string value key). 'multiChoice': multiple selections (stored as array of string value keys). 'money': monetary value {amount: string, currency: string} — use money() FEL function to produce values.",
+                "enum": [
+                  "string",
+                  "text",
+                  "integer",
+                  "decimal",
+                  "boolean",
+                  "date",
+                  "dateTime",
+                  "time",
+                  "uri",
+                  "attachment",
+                  "choice",
+                  "multiChoice",
+                  "money"
+                ],
+                "examples": [
+                  "string",
+                  "decimal",
+                  "choice"
+                ],
+                "x-lm": {
+                  "critical": true,
+                  "intent": "Determines the field's JSON representation, FEL type, validation behavior, and default widget selection."
+                }
+              },
+              "currency": {
+                "type": "string",
+                "pattern": "^[A-Z]{3}$",
+                "description": "ISO 4217 currency code for this money field. Overrides formPresentation.defaultCurrency. Only meaningful when dataType is 'money'. When neither currency nor defaultCurrency is set, currency is captured from user input.",
+                "examples": [
+                  "USD",
+                  "EUR"
+                ]
+              },
+              "precision": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Number of decimal places for decimal fields. Implementations SHOULD round or constrain input to this precision. Applied in both setValue and computed signals.",
+                "examples": [
+                  2,
+                  0
+                ]
+              },
+              "prefix": {
+                "type": "string",
+                "description": "Display prefix rendered before the input (e.g., '$'). Presentation hint only — the prefix MUST NOT appear in the stored data value.",
+                "examples": [
+                  "$",
+                  "€"
+                ]
+              },
+              "suffix": {
+                "type": "string",
+                "description": "Display suffix rendered after the input (e.g., '%', 'kg'). Presentation hint only — the suffix MUST NOT appear in the stored data value.",
+                "examples": [
+                  "%",
+                  "kg",
+                  "lbs"
+                ]
+              },
+              "options": {
+                "oneOf": [
+                  {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/OptionEntry"
+                    }
+                  },
+                  {
+                    "type": "string",
+                    "format": "uri"
+                  }
+                ],
+                "description": "Valid values for choice or multiChoice fields. Either an inline array of {value, label} objects, or a URI referencing an external option set. When both 'options' and 'optionSet' are present, optionSet takes precedence."
+              },
+              "optionSet": {
+                "type": "string",
+                "description": "Name of a top-level option set declared in 'optionSets'. Alternative to inline 'options' for reusable option lists. When both are present, optionSet takes precedence.",
+                "examples": [
+                  "yesNoNa",
+                  "stateCodesUS"
+                ]
+              },
+              "initialValue": {
+                "description": "Initial value assigned when a new Response is created or a new repeat instance is added. May be a literal value (any JSON value conforming to the field's dataType) or an expression string prefixed with '=' (e.g., '=today()', '=@instance(\"entity\").name'). Evaluated ONCE at creation time — NOT reactively re-evaluated (use Bind calculate for that). Distinct from Bind 'default' which applies on relevance transitions.",
+                "examples": [
+                  0,
+                  "",
+                  "=today()",
+                  "=@instance('entity').name"
+                ]
+              },
+              "semanticType": {
+                "type": "string",
+                "description": "Domain meaning annotation. Purely metadata — MUST NOT affect validation or behavior. The value may be a freeform namespaced identifier (e.g., 'us-gov:ein'), a URI (e.g., 'https://schema.org/birthDate'), or the name of a loaded registry entry with category 'concept' (e.g., 'x-onto-ein'). When the value matches a loaded concept registry entry, processors SHOULD resolve it to the entry's concept metadata. Supports intelligent widget selection, data classification, cross-form alignment, and interoperability mapping.",
+                "examples": [
+                  "us-gov:ein",
+                  "x-onto-ein",
+                  "https://schema.org/birthDate",
+                  "ietf:email"
+                ]
+              },
+              "prePopulate": {
+                "type": "object",
+                "description": "Pre-population declaration. Loads a value from a secondary instance at Response creation. Syntactic sugar: equivalent to an initialValue expression plus a readonly bind. When both prePopulate and initialValue are present, prePopulate takes precedence.",
+                "properties": {
+                  "instance": {
+                    "type": "string",
+                    "description": "Name of the secondary instance to read from (must match a key in 'instances')."
+                  },
+                  "path": {
+                    "type": "string",
+                    "description": "Dot-notation path within the instance to read the value from."
+                  },
+                  "editable": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "When false, the field is locked (readonly) after pre-population."
+                  }
+                },
+                "required": [
+                  "instance",
+                  "path"
+                ],
+                "additionalProperties": false,
+                "examples": [
+                  {
+                    "instance": "priorYear",
+                    "path": "totalExpenditure",
+                    "editable": false
+                  }
+                ]
+              },
+              "children": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/Item"
+                },
+                "description": "Child items for dependent sub-questions. When present, the children are contextually tied to this Field's value. Child field paths use the full dotted path: parentKey.childKey."
+              },
+              "presentation": {
+                "$ref": "#/$defs/Presentation"
+              }
+            },
+            "required": [
+              "dataType"
+            ],
+            "additionalProperties": false,
+            "allOf": [
+              {
+                "if": {
+                  "not": {
+                    "properties": { "dataType": { "const": "money" } },
+                    "required": ["dataType"]
+                  }
+                },
+                "then": {
+                  "properties": { "currency": false }
+                }
+              },
+              {
+                "if": {
+                  "not": {
+                    "properties": { "dataType": { "enum": ["decimal", "money"] } },
+                    "required": ["dataType"]
+                  }
+                },
+                "then": {
+                  "properties": { "precision": false }
+                }
+              },
+              {
+                "if": {
+                  "not": {
+                    "properties": { "dataType": { "enum": ["choice", "multiChoice"] } },
+                    "required": ["dataType"]
+                  }
+                },
+                "then": {
+                  "properties": { "options": false, "optionSet": false }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "display"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "key": true,
+              "type": true,
+              "label": true,
+              "description": true,
+              "hint": true,
+              "labels": true,
+              "extensions": true,
+              "presentation": {
+                "$ref": "#/$defs/Presentation"
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      ]
+    },
+    "Bind": {
+      "type": "object",
+      "description": "A behavioral declaration attached to one or more data nodes by path. Binds are the bridge between structure (Items) and behavior (reactive expressions). All FEL expressions within a Bind are evaluated in the context of the node identified by 'path'. Binds are evaluated reactively: when a referenced value changes, affected Binds are re-evaluated in dependency-graph order. Inheritance: relevant is AND-inherited (child is non-relevant if any ancestor is), readonly is OR-inherited (child is readonly if any ancestor is), required and constraint are NOT inherited.",
+      "required": [
+        "path"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Path expression identifying the target data node(s). Uses dot notation for nesting and [*] for all instances of a repeatable group. MUST resolve to at least one Item key in the Definition. Examples: 'fieldKey', 'group.field', 'repeat[*].field', 'groupA.groupB[*].field'.",
+          "examples": [
+            "firstName",
+            "budget.totalAmount",
+            "lineItems[*].amount",
+            "budget.lineItems[*].description"
+          ],
+          "x-lm": {
+            "critical": true,
+            "intent": "Determines which data nodes this Bind's expressions apply to and the evaluation context for those expressions."
+          }
+        },
+        "calculate": {
+          "$ref": "#/$defs/FELExpression",
+          "description": "FEL expression whose result replaces the node's value on each recalculation cycle. The field is implicitly readonly (unless readonly is explicitly 'false'). Re-evaluated whenever any dependency changes. Each field MUST have at most one calculate Bind.",
+          "examples": [
+            "sum($lineItems[*].amount)",
+            "$price * $quantity",
+            "$firstName & ' ' & $lastName",
+            "if($filingStatus = 'married', $income * 0.75, $income)"
+          ]
+        },
+        "relevant": {
+          "$ref": "#/$defs/FELExpression",
+          "description": "FEL expression returning boolean. When false, the target node (and all descendants if a group) is non-relevant: hidden from user, excluded from validation, and its submission behavior is governed by nonRelevantBehavior. AND-inherited: if any ancestor is non-relevant, all descendants are too. Null result treated as true (field remains visible).",
+          "examples": [
+            "$hasSubcontracts = true",
+            "$awardAmount >= 500000",
+            "$filingStatus = 'married'"
+          ]
+        },
+        "required": {
+          "$ref": "#/$defs/FELExpression",
+          "description": "FEL expression returning boolean. When true, the node MUST have a non-null, non-empty-string value for validation to pass. Evaluated dynamically — a field may be required only under certain conditions. Null result treated as false (field is not required). NOT inherited.",
+          "examples": [
+            "true",
+            "$includeSection = true",
+            "$awardType = 'grant'"
+          ]
+        },
+        "readonly": {
+          "$ref": "#/$defs/FELExpression",
+          "description": "FEL expression returning boolean. When true, the field MUST NOT be modified by user input (but MAY still be modified by calculate). OR-inherited: if any ancestor is readonly, all descendants are too. Null result treated as false (field is editable). Fields with a calculate Bind are implicitly readonly.",
+          "examples": [
+            "true",
+            "$status = 'submitted'"
+          ]
+        },
+        "constraint": {
+          "$ref": "#/$defs/FELExpression",
+          "description": "FEL expression returning boolean. Per-field validation predicate evaluated after type and required checks. The token '$' (bare dollar sign) within this expression is bound to the current value of the targeted node. Constraint passes when expression evaluates to true. Null result treated as true (constraint passes). NOT inherited.",
+          "examples": [
+            "$ > 0",
+            "$ >= $minAmount and $ <= $maxAmount",
+            "matches($, '^[0-9]{2}-[0-9]{7}$')",
+            "length($) <= 500"
+          ]
+        },
+        "constraintMessage": {
+          "type": "string",
+          "description": "Human-readable message displayed when 'constraint' evaluates to false. If absent, a generic failure message is generated by the processor.",
+          "examples": [
+            "Amount must be greater than zero.",
+            "EIN must be in XX-XXXXXXX format (e.g., 12-3456789)."
+          ]
+        },
+        "default": {
+          "description": "Value to assign when a previously non-relevant node becomes relevant again. Distinct from Field initialValue (which is applied once at Response creation). Applied on each non-relevant → relevant transition. May be a literal value or a FEL expression string.",
+          "examples": [
+            0,
+            "",
+            "=today()"
+          ]
+        },
+        "whitespace": {
+          "type": "string",
+          "enum": [
+            "preserve",
+            "trim",
+            "normalize",
+            "remove"
+          ],
+          "default": "preserve",
+          "description": "Controls how text values are normalized on input. Applied BEFORE storage and BEFORE validation. 'preserve' (DEFAULT): no modification. 'trim': remove leading/trailing whitespace. 'normalize': trim then collapse internal runs to single space. 'remove': remove all whitespace (useful for identifiers like phone numbers, EINs). Integer/decimal fields always trim regardless."
+        },
+        "excludedValue": {
+          "type": "string",
+          "enum": [
+            "preserve",
+            "null"
+          ],
+          "default": "preserve",
+          "description": "Controls what downstream FEL expressions see when this field is non-relevant. 'preserve' (DEFAULT): expressions see the field's last value. 'null': expressions see null. This controls the in-memory evaluation model; nonRelevantBehavior controls the serialized output."
+        },
+        "nonRelevantBehavior": {
+          "type": "string",
+          "enum": [
+            "remove",
+            "empty",
+            "keep"
+          ],
+          "description": "Per-path override of the Definition-level nonRelevantBehavior. Takes precedence over the Definition default. 'remove': exclude from Response. 'empty': retain but set to null. 'keep': retain with current value."
+        },
+        "disabledDisplay": {
+          "type": "string",
+          "enum": [
+            "hidden",
+            "protected"
+          ],
+          "default": "hidden",
+          "description": "Presentation hint for non-relevant items. 'hidden' (DEFAULT): removed from visual layout. 'protected': remains visible but rendered as disabled/greyed-out. Borrowed from FHIR R5 Questionnaire."
+        },
+        "extensions": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^x-"
+          },
+          "description": "Bind-level extension data. All keys MUST be prefixed with 'x-'. MUST NOT alter core semantics."
+        }
+      },
+      "additionalProperties": false
+    },
+    "Shape": {
+      "type": "object",
+      "description": "A named, composable validation rule set (inspired by W3C SHACL). Shapes provide cross-field and form-level validation beyond per-field Bind constraints. Each Shape targets data node(s) by path, evaluates a FEL constraint expression, and produces structured ValidationResult entries on failure. Shapes compose via logical operators (and, or, not, xone) where elements can be either shape IDs (referencing other shapes) or inline FEL boolean expressions. MUST have at least one of: constraint, and, or, not, xone.",
+      "required": [
+        "id",
+        "target",
+        "message"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-zA-Z][a-zA-Z0-9_\\-]*$",
+          "description": "Unique identifier for this Shape within the Definition. Used in composition operators to reference this Shape from other Shapes, and reported in ValidationResult.shapeId.",
+          "examples": [
+            "budget-balances",
+            "date_range_valid",
+            "contact-info-complete"
+          ]
+        },
+        "target": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Path expression identifying the data node(s) this Shape validates. Same path syntax as Bind.path. The special value '#' targets the entire Response root for form-level validation. For repeats, use [*] notation.",
+          "examples": [
+            "totalBudget",
+            "lineItems[*].amount",
+            "#",
+            "endDate"
+          ]
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "error",
+            "warning",
+            "info"
+          ],
+          "default": "error",
+          "description": "Severity of the ValidationResult produced when this Shape fails. 'error': data is invalid, MUST be resolved before submission (blocks completion). 'warning': data is suspect, SHOULD be reviewed but does not block submission. 'info': informational observation, no action required."
+        },
+        "constraint": {
+          "$ref": "#/$defs/FELExpression",
+          "description": "FEL expression returning boolean. Evaluates to true when data is valid, false when invalid. REQUIRED unless the Shape uses composition operators (and/or/not/xone). If both constraint and a composition operator are present, they combine with implicit AND.",
+          "examples": [
+            "$endDate >= $startDate",
+            "$totalBudget = $awardAmount",
+            "sum($lineItems[*].amount) > 0"
+          ]
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable failure message displayed when the constraint evaluates to false. MAY contain {{expression}} interpolation sequences, where expression is a FEL expression evaluated in the Shape's target context.",
+          "examples": [
+            "End date must not precede start date.",
+            "Total budget ({{$totalBudget}}) must equal the authorized award amount ({{$awardAmount}}).",
+            "Provide either email or phone number."
+          ]
+        },
+        "code": {
+          "type": "string",
+          "description": "Machine-readable error code for programmatic handling, localization lookups, and API responses. Processors SHOULD use standard built-in codes (REQUIRED, TYPE_MISMATCH, MIN_REPEAT, MAX_REPEAT, CONSTRAINT_FAILED, SHAPE_FAILED) when no specific code is declared.",
+          "examples": [
+            "BUDGET_MISMATCH",
+            "DATE_RANGE_001",
+            "EIN_NOT_FOUND"
+          ]
+        },
+        "context": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/FELExpression"
+          },
+          "description": "Additional context data included in the ValidationResult on failure. Keys are context field names; values are FEL expression strings evaluated in the Shape's target context at failure time. Useful for diagnostic and programmatic handling.",
+          "examples": [
+            {
+              "expectedTotal": "$awardAmount",
+              "actualTotal": "$totalBudget"
+            }
+          ]
+        },
+        "activeWhen": {
+          "$ref": "#/$defs/FELExpression",
+          "description": "FEL expression returning boolean. When present, the shape is evaluated only when this expression is true. When absent or true, always evaluated (subject to non-relevant suppression). When false, the shape is skipped entirely — produces no results. Evaluated during Revalidate before the constraint. Independent of target relevance; non-relevant suppression takes precedence.",
+          "examples": [
+            "$status = 'submitted'",
+            "$includeDetailedValidation = true"
+          ]
+        },
+        "timing": {
+          "type": "string",
+          "enum": [
+            "continuous",
+            "submit",
+            "demand"
+          ],
+          "default": "continuous",
+          "description": "Controls when this shape is evaluated. 'continuous' (DEFAULT): evaluated whenever any dependency changes. 'submit': evaluated only when submission is requested. 'demand': evaluated only when explicitly requested by the application. The global validation mode overrides: 'disabled' suppresses all; 'deferred' defers all; 'continuous' respects individual timing."
+        },
+        "and": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Logical AND composition. ALL elements must pass for this Shape to pass. Elements can be shape IDs (referencing other shapes in this Definition) or inline FEL boolean expressions. If both 'constraint' and 'and' are present, they combine with implicit AND.",
+          "examples": [
+            [
+              "dateRangeValid",
+              "dateRangeReasonable"
+            ],
+            [
+              "present($email)",
+              "present($phone)"
+            ]
+          ]
+        },
+        "or": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Logical OR composition. AT LEAST ONE element must pass for this Shape to pass. Elements can be shape IDs or inline FEL boolean expressions.",
+          "examples": [
+            [
+              "hasEmail",
+              "hasPhone"
+            ],
+            [
+              "present($email)",
+              "present($phone)"
+            ]
+          ]
+        },
+        "not": {
+          "type": "string",
+          "description": "Logical NOT composition. The referenced shape or inline FEL expression MUST FAIL for this Shape to pass. Value is a shape ID or an inline FEL boolean expression.",
+          "examples": [
+            "duplicateDetected",
+            "present($conflictingField)"
+          ]
+        },
+        "xone": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Exclusive-OR composition. EXACTLY ONE element must pass for this Shape to pass. Elements can be shape IDs or inline FEL boolean expressions."
+        },
+        "extensions": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^x-"
+          },
+          "description": "Shape-level extension data. All keys MUST be prefixed with 'x-'."
+        }
+      },
+      "additionalProperties": false,
+      "anyOf": [
+        {
+          "required": [
+            "constraint"
+          ]
+        },
+        {
+          "required": [
+            "and"
+          ]
+        },
+        {
+          "required": [
+            "or"
+          ]
+        },
+        {
+          "required": [
+            "not"
+          ]
+        },
+        {
+          "required": [
+            "xone"
+          ]
+        }
+      ]
+    },
+    "Instance": {
+      "type": "object",
+      "description": "A named secondary data source available to FEL expressions via @instance('name'). Provides lookup tables, prior-year data, configuration values, and external reference data. At least one of 'source' or 'data' MUST be present. When both exist, 'data' serves as the fallback when 'source' is unavailable. Secondary instances are read-only by default during form completion; a calculate Bind MUST NOT target a path within a read-only instance.",
+      "properties": {
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of this instance's purpose and contents."
+        },
+        "source": {
+          "type": "string",
+          "format": "uri-template",
+          "description": "URL from which to fetch the instance data at runtime. The response MUST be JSON. MAY contain {{paramName}} template variables resolved by the implementation at runtime. The processor MUST fetch the data before the first Rebuild phase; if the fetch fails and no 'data' fallback exists, @instance() returns null.",
+          "examples": [
+            "https://api.example.gov/responses/2024/{{entityId}}",
+            "https://api.example.gov/reference/states"
+          ]
+        },
+        "static": {
+          "type": "boolean",
+          "default": false,
+          "description": "If true, the instance data does not change during a single form session. Implementations MAY cache static instance data aggressively."
+        },
+        "data": {
+          "description": "Inline instance data embedded directly in the Definition. Suitable for small, static lookup tables (country codes, status enums). If both 'source' and 'data' are present, 'data' is the fallback. If only 'data', the instance is fully inline.",
+          "examples": [
+            [
+              {
+                "code": "US",
+                "label": "United States"
+              },
+              {
+                "code": "GB",
+                "label": "United Kingdom"
+              }
+            ],
+            {
+              "totalExpenditure": 200000.00,
+              "entityName": "Acme Corp"
+            }
+          ]
+        },
+        "schema": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Type declarations for the instance's fields. Keys are field names; values are dataType strings (same as Field dataTypes: string, decimal, integer, date, etc.). Informative — aids tooling and type-checking but processors are NOT required to validate instance data against it.",
+          "examples": [
+            {
+              "totalExpenditure": "decimal",
+              "entityName": "string"
+            }
+          ]
+        },
+        "readonly": {
+          "type": "boolean",
+          "default": true,
+          "description": "If true (DEFAULT), the instance MUST NOT be modified by calculate Binds or any mechanism during form execution. When false, the instance acts as a writable scratch-pad for intermediate calculations that should not be submitted."
+        },
+        "extensions": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^x-"
+          },
+          "description": "Instance-level extension data. All keys MUST be prefixed with 'x-'."
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "source"
+          ]
+        },
+        {
+          "required": [
+            "data"
+          ]
+        }
+      ],
+      "additionalProperties": false
+    },
+    "Variable": {
+      "type": "object",
+      "description": "A named computed value with lexical scoping. Variables provide intermediate calculations reusable across multiple Binds, Shapes, and other expressions. Continuously recalculated when dependencies change (analogous to XForms calculate / FHIR SDC calculatedExpression). MUST NOT form circular dependencies. For one-time initialization, use Field initialValue instead.",
+      "required": [
+        "name",
+        "expression"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-zA-Z][a-zA-Z0-9_]*$",
+          "description": "Variable name. Referenced in FEL expressions as @name. MUST be unique within its scope.",
+          "examples": [
+            "totalDirect",
+            "indirectAmount",
+            "priorYearTotal"
+          ]
+        },
+        "expression": {
+          "$ref": "#/$defs/FELExpression",
+          "description": "FEL expression that computes this variable's value. Evaluated in the context of the scope item. Re-evaluated whenever any dependency changes.",
+          "examples": [
+            "sum($lineItems[*].amount)",
+            "@totalDirect * $indirectRate",
+            "@instance('priorYear').totalExpenditure"
+          ]
+        },
+        "scope": {
+          "type": "string",
+          "default": "#",
+          "description": "The Item key this variable is scoped to. The variable is visible to expressions on that Item and all its descendants. The special value '#' means definition-wide scope (visible everywhere). Default: '#'.",
+          "examples": [
+            "#",
+            "budgetSection",
+            "personnelGroup"
+          ]
+        },
+        "extensions": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^x-"
+          },
+          "description": "Variable-level extension data. All keys MUST be prefixed with 'x-'."
+        }
+      },
+      "additionalProperties": false
+    },
+    "OptionSet": {
+      "type": "object",
+      "description": "A named, reusable option list for choice and multiChoice fields. Defined either inline (via 'options' array) or by reference (via 'source' URI). At least one of 'options' or 'source' MUST be present. Referenced by Field items via the 'optionSet' property.",
+      "properties": {
+        "options": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/OptionEntry"
+          },
+          "description": "Inline list of permitted values. Each entry has a machine-readable 'value' and a human-readable 'label'."
+        },
+        "source": {
+          "type": "string",
+          "format": "uri",
+          "description": "External endpoint returning an array of option objects. Used with valueField and labelField to map the response to {value, label} pairs.",
+          "examples": [
+            "https://api.sam.gov/agencies"
+          ]
+        },
+        "valueField": {
+          "type": "string",
+          "default": "value",
+          "description": "When using 'source', the JSON property name for the option value in the external response. Default: 'value'.",
+          "examples": [
+            "code",
+            "id"
+          ]
+        },
+        "labelField": {
+          "type": "string",
+          "default": "label",
+          "description": "When using 'source', the JSON property name for the option label in the external response. Default: 'label'.",
+          "examples": [
+            "name",
+            "displayName"
+          ]
+        },
+        "extensions": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^x-"
+          }
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "options"
+          ]
+        },
+        {
+          "required": [
+            "source"
+          ]
+        }
+      ],
+      "additionalProperties": false
+    },
+    "OptionEntry": {
+      "type": "object",
+      "description": "A single permitted value for a choice or multiChoice field. The 'value' is the machine-readable key stored in the Response data; the 'label' is the human-readable text displayed to users.",
+      "required": [
+        "value",
+        "label"
+      ],
+      "properties": {
+        "value": {
+          "type": "string",
+          "description": "Machine-readable key stored in the Response data when this option is selected.",
+          "examples": [
+            "yes",
+            "personnel",
+            "US"
+          ]
+        },
+        "label": {
+          "type": "string",
+          "description": "Human-readable text displayed to the user for this option.",
+          "examples": [
+            "Yes",
+            "Personnel",
+            "United States"
+          ]
+        },
+        "keywords": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Extra type-ahead strings for combobox/searchable Select filtering (abbreviations, codes, alternate names). Matched case-insensitively in addition to label and value.",
+          "examples": [["US", "USA"], ["UK", "GB", "Britain"]]
+        },
+        "extensions": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^x-"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "Migrations": {
+      "type": "object",
+      "description": "Declares how to transform Responses from prior Definition versions into this version's structure. Addresses breaking changes (field renames, restructuring, removed fields) between major versions. Migration produces a new Response pinned to the target version; the original is preserved unchanged.",
+      "properties": {
+        "from": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/MigrationDescriptor"
+          },
+          "description": "Migration descriptors keyed by source version string. Each entry describes how to transform a Response from that specific prior version into the current version's structure.",
+          "examples": [
+            {
+              "2.1.0": {
+                "description": "Restructured budget section; split other_costs into subcategories",
+                "fieldMap": [
+                  {
+                    "source": "expenditures.otherCosts",
+                    "target": "expenditures.miscellaneous.total",
+                    "transform": "preserve"
+                  },
+                  {
+                    "source": "indirectRate",
+                    "target": null,
+                    "transform": "drop"
+                  }
+                ],
+                "defaults": {
+                  "expenditures.miscellaneous.description": "",
+                  "reporting.frequency": "quarterly"
+                }
+              }
+            }
+          ]
+        },
+        "extensions": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^x-"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "MigrationDescriptor": {
+      "type": "object",
+      "description": "Describes how to transform Responses from a single prior version into the current version. Contains field mapping rules and default values for new fields. Fields present in the source but absent from fieldMap are carried forward by path matching (if the path exists in target) or dropped (if it doesn't). The migrated Response's status SHOULD be reset to 'in-progress'.",
+      "properties": {
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of what changed in this version migration.",
+          "examples": [
+            "Restructured budget section; split other_costs into subcategories"
+          ]
+        },
+        "fieldMap": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "source",
+              "target",
+              "transform"
+            ],
+            "properties": {
+              "source": {
+                "type": "string",
+                "description": "Field path in the source (prior) version's instance data.",
+                "examples": [
+                  "expenditures.otherCosts",
+                  "indirectRate"
+                ]
+              },
+              "target": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Field path in the target (current) version. Null means the field is dropped.",
+                "examples": [
+                  "expenditures.miscellaneous.total",
+                  null
+                ]
+              },
+              "transform": {
+                "type": "string",
+                "enum": [
+                  "preserve",
+                  "drop",
+                  "expression"
+                ],
+                "description": "'preserve': copy value as-is to target path. 'drop': discard the source value. 'expression': apply a FEL transform (requires 'expression' property)."
+              },
+              "expression": {
+                "$ref": "#/$defs/FELExpression",
+                "description": "FEL expression when transform is 'expression'. '$' is bound to the source field's value; '@source' is bound to the entire source response data.",
+                "examples": [
+                  "round($ * 100, 2)",
+                  "@source.budget.total * 0.52"
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "description": "Ordered list of field mapping rules describing how each source field maps to the target version."
+        },
+        "defaults": {
+          "type": "object",
+          "description": "Default values for new fields that have no source mapping. Keys are target field paths; values are literal defaults.",
+          "examples": [
+            {
+              "reporting.frequency": "quarterly",
+              "newSection.enabled": false
+            }
+          ]
+        },
+        "extensions": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^x-"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "Presentation": {
+      "type": "object",
+      "description": "Advisory presentation hints for an Item. All properties OPTIONAL. A conforming processor MAY ignore any property. Unknown top-level keys MUST be ignored (forward-compatibility). Nested sub-objects (layout, styleHints, accessibility) do NOT permit additional properties. Presentation hints MUST NOT affect data capture, validation, calculation, or submission semantics. These are Tier 1 hints; overridden by Theme (Tier 2) and Component (Tier 3) specifications. Properties do NOT cascade from parent Group to child Items.",
+      "additionalProperties": true,
+      "properties": {
+        "widgetHint": {
+          "type": "string",
+          "description": "Preferred UI control. Compatibility is determined by the Item's type and dataType. Groups: 'section' (default), 'card', 'accordion', 'tab'. Display: 'paragraph' (default), 'heading', 'divider', 'banner'. Fields by dataType — string: 'textInput'|'password'|'color'; text: 'textarea'|'richText'; integer: 'numberInput'|'stepper'|'slider'|'rating'; decimal: 'numberInput'|'slider'; boolean: 'checkbox'|'toggle'|'yesNo'; date: 'datePicker'|'dateInput'; time: 'timePicker'|'timeInput'; choice: 'dropdown'|'radio'|'autocomplete'|'segmented'|'likert'; multiChoice: 'checkboxGroup'|'multiSelect'|'autocomplete'; money: 'moneyInput'. Custom values MUST be prefixed with 'x-'. Incompatible or unrecognized values are ignored; processor uses its default widget.",
+          "examples": [
+            "radio",
+            "textarea",
+            "card",
+            "heading",
+            "slider"
+          ]
+        },
+        "layout": {
+          "type": "object",
+          "description": "Spatial arrangement hints. Group-level properties control how children are arranged; field/display-level properties control grid positioning within a parent.",
+          "additionalProperties": false,
+          "properties": {
+            "flow": {
+              "type": "string",
+              "enum": [
+                "stack",
+                "grid",
+                "inline"
+              ],
+              "default": "stack",
+              "description": "How children are arranged within a Group. 'stack': vertical sequence. 'grid': multi-column grid (use 'columns' to set count). 'inline': horizontal flow."
+            },
+            "columns": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 12,
+              "description": "Column count when flow is 'grid'. Ignored otherwise. Based on a 12-column grid system.",
+              "examples": [
+                2,
+                3,
+                4
+              ]
+            },
+            "colSpan": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 12,
+              "description": "Grid columns this item spans within a parent Group with flow 'grid'. Only meaningful in a grid context.",
+              "examples": [
+                6,
+                4
+              ]
+            },
+            "newRow": {
+              "type": "boolean",
+              "default": false,
+              "description": "Force this item to start a new grid row."
+            },
+            "collapsible": {
+              "type": "boolean",
+              "default": false,
+              "description": "Whether a group can be collapsed/expanded by the user."
+            },
+            "collapsedByDefault": {
+              "type": "boolean",
+              "default": false,
+              "description": "Initial collapsed state. Ignored if collapsible is not true."
+            },
+            "page": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Named wizard step or tab. Groups with the same page value are rendered together. Only meaningful when formPresentation.pageMode is 'wizard' or 'tabs'. Groups without a page attach to the preceding page.",
+              "examples": [
+                "Applicant Info",
+                "Budget",
+                "Review & Submit"
+              ]
+            }
+          }
+        },
+        "styleHints": {
+          "type": "object",
+          "description": "Semantic visual tokens mapped by renderers to their own palette and sizing. These are NOT CSS — they express intent, not implementation.",
+          "additionalProperties": false,
+          "properties": {
+            "emphasis": {
+              "type": "string",
+              "enum": [
+                "primary",
+                "success",
+                "warning",
+                "danger",
+                "muted"
+              ],
+              "description": "Semantic importance or tone. 'primary': highlighted/prominent. 'success': positive/complete. 'warning': needs attention. 'danger': critical/error-related. 'muted': de-emphasized."
+            },
+            "size": {
+              "type": "string",
+              "enum": [
+                "compact",
+                "default",
+                "large"
+              ],
+              "default": "default",
+              "description": "Relative sizing of the item's visual treatment."
+            }
+          }
+        },
+        "accessibility": {
+          "type": "object",
+          "description": "Metadata for assistive technologies. Named after ARIA concepts but this specification does NOT require ARIA. Non-web renderers SHOULD map to equivalent platform accessibility APIs.",
+          "additionalProperties": false,
+          "properties": {
+            "role": {
+              "type": "string",
+              "description": "Semantic role hint. Well-known values: 'alert', 'status', 'navigation', 'complementary', 'region'. Renderers SHOULD map to platform-equivalent accessibility APIs (ARIA on web, UIAccessibility on iOS, etc.).",
+              "examples": [
+                "alert",
+                "status",
+                "region"
+              ]
+            },
+            "description": {
+              "type": "string",
+              "description": "Screen-reader-only supplemental description. Distinct from the Item's hint and description (which are visible text); this is for assistive-technology-only context.",
+              "examples": [
+                "Enter total revenue for the fiscal year including all sources"
+              ]
+            },
+            "liveRegion": {
+              "type": "string",
+              "enum": [
+                "off",
+                "polite",
+                "assertive"
+              ],
+              "default": "off",
+              "description": "How aggressively to announce value changes to assistive technology. 'off': no announcements. 'polite': announce when idle. 'assertive': announce immediately, interrupting current speech. Most useful for dynamic/calculated fields."
+            }
+          }
+        }
+      }
+    },
+    "FELExpression": {
+      "type": "string",
+      "minLength": 1,
+      "description": "A Formspec Expression Language (FEL) v1.0 expression. FEL is a small, deterministic, side-effect-free language for form logic — no statements, loops, variable assignment, or I/O. Strictly typed: no truthy/falsy coercion.\n\nFIELD REFERENCES: '$' = current node value (used in constraint binds); '$field' = field value from nearest scope; '$group.field' = nested path; '$repeat[n].field' = 1-based index into repeat; '$repeat[*].field' = array of all values across repeat instances.\n\nCONTEXT REFERENCES: '@index' = 1-based repeat position; '@count' = repeat instance count; '@current' = current repeat instance object; '@instance(\"name\")' = secondary data source by name; '@varName' = variable from definition's variables array.\n\nOPERATORS (lowest to highest precedence): (0) let x = e in e, if e then e else e; (1) ? : ternary; (2) or; (3) and; (4) = != equality; (5) < > <= >= comparison; (6) in, not in (right operand must be array); (7) ?? null-coalescing; (8) + - arithmetic, & string concatenation; (9) * / % multiply/divide/modulo; (10) not, - (unary prefix). Postfix .field and [index] bind tightest.\n\nKEY RULES: Arithmetic requires number operands. String concatenation uses '&' (not '+'). Logical operators require boolean operands. null = null is true. Division by zero produces null + diagnostic. Cross-type comparison is a type error.\n\nLITERALS: Strings in single or double quotes with backslash escapes for backslash, quotes, newline, return, tab, and unicode (4 hex digits). Numbers with decimal semantics (0.1 + 0.2 = 0.3), no leading/trailing dot. Booleans: true, false. null. Dates: @2025-01-15. DateTimes: @2025-01-15T09:30:00Z. Arrays: [1, 2, 3]. Objects: {key: expr}.\n\nBUILT-IN FUNCTIONS (~40+): Aggregates — sum, count, countWhere, avg, min, max (operate on arrays, skip nulls). String — length, contains, startsWith, endsWith, substring (1-based), replace (literal), upper, lower, trim, matches (regex), format (positional {0} {1}). Numeric — round (banker's rounding), floor, ceil, abs, power. Date — today, now, year, month, day, dateDiff (unit: 'years'/'months'/'days'), dateAdd, hours, minutes, seconds, time, timeDiff. Logical — if(cond, then, else) with short-circuit evaluation, coalesce (first non-null), empty (null/empty-string/empty-array), present (inverse), selected (multiChoice contains value). Type-checking — isNumber, isString, isDate, isNull, typeOf. Money — money(amount, currency), moneyAmount, moneyCurrency, moneyAdd (same currency required), moneySum. MIP queries — valid($path), relevant($path), readonly($path), required($path). Repeat navigation — prev(), next() return adjacent rows or null, parent() returns enclosing context.\n\nNULL PROPAGATION: null propagates through most operations (null + 5 is null, null < 5 is null). Bind-context defaults: relevant null treated as true (show), required null as false (not required), readonly null as false (editable), constraint null as true (passes). Special null handling: coalesce/empty/present/isNull/typeOf accept null; aggregates skip nulls; ?? returns right operand when left is null; string(null) yields empty string; boolean(null) yields false; length(null) yields 0.\n\nARRAY OPS: Equal-length arrays with binary operator produce element-wise result. Scalar + array broadcasts scalar. Different-length arrays produce error. Example: sum($items[*].qty * $items[*].price).\n\nTYPES: Primitives: string, number (decimal, min 18 significant digits), boolean, date, money ({amount: string, currency: string}), null. Compound: array (homogeneous). No implicit coercion — use explicit casts: number(), string(), boolean(), date(). Empty string and null are distinct values.\n\nRESERVED WORDS (cannot be used as function names): true, false, null, and, or, not, in, if, then, else, let.",
+      "examples": [
+        "sum($lineItems[*].amount)",
+        "$price * $quantity",
+        "$filingStatus = 'married'",
+        "if($age >= 18, 'adult', 'minor')",
+        "$firstName & ' ' & $lastName",
+        "$ > 0 and $ <= 1000000",
+        "today()",
+        "@instance('priorYear').totalExpenditure",
+        "not empty($email) or not empty($phone)",
+        "let total = sum($items[*].amount) in total > 0 and total <= $maxBudget"
+      ],
+      "x-lm": {
+        "critical": true,
+        "intent": "FEL expression — the language for all form logic including calculations, conditional visibility, validation constraints, and computed variables.",
+        "ref": "schemas/fel-functions.schema.json"
+      }
+    }
+  }
+}
