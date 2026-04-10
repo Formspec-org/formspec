@@ -1,115 +1,110 @@
-# Editor/Layout Split — Post-Review TODO
+# Formspec — Consolidated TODO
 
-Issues identified by Formspec Scout and Spec Expert reviews of the 12 commits on `feat/editor-layout-split`.
+**Validated 2026-04-10** against the current codebase by formspec-scout.
 
-## Resolved (studio-core extraction review)
+Sources: editor/layout split review, chaos-test phase 1 findings + phase 4 follow-ups, layout DnD review, studio plans.
 
-The following issues were found and fixed during the studio-core greenfield review:
+## Open
 
-- ~~Non-spec dataTypes in TYPE_MAP (`binary`, `select1`, `select`, `barcode`, `geopoint`)~~ — replaced with spec-normative types
-- ~~`(project as any).core.dispatch()` x3 in layout-context-operations~~ — added `wrapComponentNode`, `reorderComponentNode`, `deleteComponentNode` to Project
-- ~~Missing `text` (Long Text) entry in FIELD_TYPE_CATALOG~~ — added
-- ~~`item.choices` non-spec fallback in editor-tree-helpers~~ — removed, uses `options` only
-- ~~Cross-package `default-theme.json` import~~ — added sub-path export `@formspec-org/webcomponent/default-theme`
-- ~~Unnecessary `@formspec-org/layout` dependency~~ — imports from `@formspec-org/types` instead
-- ~~Incomplete re-export wrapper (`field-helpers.ts`)~~ — added missing `normalizeBindEntries`, `normalizeBindsView`, `getFieldTypeCatalog`
-- ~~14 direct imports into `formspec-studio-core/src/`~~ — all redirected through wrappers or `@formspec-org/studio-core`
-- ~~Duplicate test files (keyboard, fel-editor-utils, layout-context-menu)~~ — deleted from studio, canonical copies in studio-core
+*No open items.*
 
-## Medium Priority
+## Track / Monitor
 
-### 1. Screener `required` bind only handles literal `"true"`
-- **File**: `packages/formspec-react/src/screener/use-screener.ts:31`
-- **Problem**: `isItemRequired` checks `b.required === 'true' || b.required === true`. Per CoreSpec S4.3.1, `required` is a FEL expression string. Dynamic expressions like `"$awardType = 'grant'"` are silently ignored.
-- **Fix**: Evaluate `required` through the FEL pipeline (`engine.evaluateExpression()`) or document as a known screener limitation.
+### 14. `materializePagedLayout` — by design
+- **Source**: editor/layout split review
+- **File**: `packages/formspec-studio/src/workspaces/layout/LayoutCanvas.tsx:361-380`
+- **Status**: Guarded by `useRef<boolean>` flag — no-op after first call. Negligible overhead.
 
-### ~~2. FIELD_TYPE_CATALOG widgetHint values use PascalCase instead of spec lowercase~~
-- **Fixed**: `'Heading'` → `'heading'`, `'Divider'` → `'divider'` (CoreSpec §4.2.5.1). Spacer moved from `itemType:'display'` with fake widgetHint to `itemType:'layout'` with `component:'Spacer'` (Component Spec §5.5).
+### 19. Component tree reconciles on every dispatch
+- **Source**: editor/layout split review
+- **File**: `packages/formspec-core/src/raw-project.ts:350-373`
+- **Action**: Monitor. Resolution path documented: add dirty flag. Not yet implemented.
 
-### ~~3. JSON adapter `pretty` defaults to `true`; spec default is `false`~~
-- **Fixed**: Changed `options.pretty !== false ? 2 : undefined` to `options.pretty ? 2 : undefined` (Mapping Spec §6.2 default=false). Studio passes `pretty: true` explicitly when it wants pretty output.
-
-### 4. Screener route type inference is heuristic-based
-- **File**: `packages/formspec-react/src/screener/use-screener.ts:127-143`
-- **Problem**: Infers internal vs. external routing by comparing target URLs to the definition URL. If a definition URL changes post-authoring, the route type could silently flip.
-- **Fix**: Add explicit `routeType: 'internal' | 'external'` to the screener route schema. Keep the heuristic as a backwards-compatible fallback.
-
-### 5. Eliminate `lib/` re-export wrappers — use `@formspec-org/studio-core` directly
-- **Files**: `packages/formspec-studio/src/lib/field-helpers.ts`, `src/lib/fel-editor-utils.ts`, `src/lib/keyboard.ts`, `src/workspaces/layout/layout-context-operations.ts`, `src/workspaces/preview/preview-documents.ts`
-- **Problem**: These files are thin re-export wrappers that still import from relative `../../../formspec-studio-core/src/` paths, bypassing the published package boundary. The resolved item above redirected 14 direct imports *through* these wrappers rather than to `@formspec-org/studio-core` directly — the wrappers are an intermediate state. As studio-core reorganizes its internal file layout, these relative src/ paths will silently break. Several workspace components also bypass the wrappers and import studio-core src/ paths directly: `MappingPreview.tsx`, `UnassignedTray.tsx`, `LogicTab.tsx`, `DataSources.tsx`, `OptionSets.tsx`, `CommandPalette.tsx`, `AddItemPalette.tsx`, `StatusBar.tsx`, `DefinitionTreeEditor.tsx`.
-- **Fix**: Update all consumers to import from `@formspec-org/studio-core`. Delete the now-redundant wrapper files.
-
-### ~~6. `src/chat/` (v1) and `tests/chat/` are dead code — false test coverage~~
-- **Fixed**: Deleted `src/chat/` (8 source files) and `tests/chat/` (8 test files). Verified `main-chat.tsx` and `Shell.tsx` import only from `chat-v2/`. The integrated `components/ChatPanel.tsx` (which imports from `@formspec-org/chat`) is unaffected.
-
-### ~~7. `PropertiesPanel.tsx` is a dead prototype scaffold~~
-- **Fixed**: Deleted `PropertiesPanel.tsx` and its test. Zero production imports confirmed.
-
-## Low Priority
-
-### ~~8. `Spacer` is not a valid display widgetHint~~
-- **Fixed**: Resolved as part of item 2. Spacer moved from `itemType:'display'` with fake widgetHint to `itemType:'layout'` with `component:'Spacer'` (Component Spec §5.5).
-
-### ~~9. ITEM_TYPE_WIDGETS group list missing `Tabs`~~
-- **Fixed**: Added `'Tabs'` to `ITEM_TYPE_WIDGETS.group`. CoreSpec §4.2.5.1 `tab` group hint → Tabs component (ComponentSpec §6.2).
-
-### 10. Row summaries/pills don't surface secondary bind properties
-- **File**: `packages/formspec-studio-core/src/editor-tree-helpers.ts:75-92,105-114`
-- **Problem**: `buildRowSummaries` and `buildStatusPills` cover the 6 primary MIPs but omit `default`, `whitespace`, `excludedValue`, `nonRelevantBehavior`, `disabledDisplay` (all normative per CoreSpec S4.3.1).
-- **Fix**: Add pills/summaries for at least `default` (re-relevance value). Others are rarely used and could be deferred.
-
-### 11. Missing CSV `encoding` option in AdapterOptions
-- **File**: `packages/formspec-studio-core/src/mapping-serialization.ts:3-17`
-- **Problem**: Mapping Spec S6.4 defines `encoding: string, default "utf-8"`. The AdapterOptions type omits it.
-- **Fix**: Add `encoding?: string` to AdapterOptions. Acceptable to leave unimplemented in the JS string serializer since encoding only matters at byte-level transport.
-
-### 12. `isStudioGeneratedComponentDoc` — not dead code, but usage is subtle
-- **File**: `packages/formspec-layout/src/planner.ts:756`
-- **Problem (original claim — INCORRECT)**: Originally reported as always returning `false`. However, `formspec-layout` is a standalone package — `formspec-react` passes `componentDocument` directly to `planComponentTree` without going through `RawProject._syncComponentTree`. A raw component document without `$formspecComponent` will hit the `== null` branch and return `true`. The function guards against applying auto-generation to externally-authored documents.
-- **Action**: Keep. Add a comment clarifying the standalone planner use case. The test fixtures at lines 449/516/570 exercise a real path for direct planner usage (not via `RawProject`).
-
-### 13. Story fixtures use PascalCase widgetHints (systemic)
-- **File**: `stories/helpers/definitions.ts`
-- **Problem**: Contact form fixture uses `"Checkbox"` (PascalCase). CoreSpec S4.2.5.1 requires camelCase: `"checkbox"`. This is systemic — the file also uses `"CheckboxGroup"` (should be `"checkboxGroup"`), `"NumberInput"` (should be `"numberInput"`), and references `component: "Checkbox"` which does not exist in the Component schema (only `Toggle` and `CheckboxGroup` exist for boolean/multiChoice rendering).
-- **Fix**: Audit all widgetHint values in story fixtures for camelCase compliance. Fix component references to use valid Component spec names.
-
-### 14. `materializePagedLayout` called on every interaction (minor perf)
-- **File**: `packages/formspec-studio/src/workspaces/layout/LayoutCanvas.tsx:~119`
-- **Problem (original claim — overstated)**: Originally reported as a race condition. In React 18+, all state updates within a synchronous event handler are batched — there is no actual race. The real issue is that `materializePagedLayout` is called before every interaction rather than once. After the first call, subsequent calls find zero synthetic pages and become no-ops, so correctness is not affected — only minor perf overhead.
-- **Fix**: Materialize once on first interaction using a `useRef` flag, not before every action.
-
-### 15. `@faker-js/faker` is a production dependency (~6MB)
-- **File**: `packages/formspec-studio-core/package.json`
-- **Problem**: Only used by `mapping-sample-data.ts` for preview sample generation. All consumers of `@formspec-org/studio-core` inherit the weight.
-- **Fix**: Move to dynamic `import()` for lazy loading, or relocate `mapping-sample-data.ts` back to `formspec-studio`.
-
-### ~~16. Upstream `COMPONENT_TO_HINT` maps `Collapsible` → `'accordion'`~~
-- **Fixed**: Removed `Collapsible: 'accordion'` from `COMPONENT_TO_HINT`. Collapsible (ComponentSpec §5.17) has no Tier 1 widgetHint; the lossy round-trip `Collapsible → 'accordion' → Accordion` is eliminated.
-
-### 17. Test file naming ambiguity in `tests/styles/`
-- **Files**: `packages/formspec-studio/tests/styles/theme-tokens.test.ts`, `tests/styles/theme-tokens.test.tsx`
-- **Problem**: Two files with the same stem but different extensions and completely different strategies: `.ts` scans source files for disallowed token usage (static analysis, pure Node); `.tsx` renders components to verify token values resolve correctly (integration test). Same name causes discoverability confusion and potential test runner ambiguity.
-- **Fix**: Rename to `theme-token-usage.test.ts` and `theme-token-rendering.test.tsx`.
-
-### 18. Orphaned E2E spec outside `playwright/` subdir
-- **File**: `packages/formspec-studio/tests/e2e/chat-e2e.spec.ts`
-- **Problem**: All 26 other Playwright specs live in `tests/e2e/playwright/`. This file sits at the parent `e2e/` level and may be excluded by the Playwright config glob if it targets only `playwright/**/*.spec.ts`.
-- **Fix**: Move to `tests/e2e/playwright/chat-e2e.spec.ts` and verify `playwright.config.ts` picks it up.
-
-## Track / Document
-
-### 19. Component tree always reconciles on every dispatch
-- **File**: `packages/formspec-core/src/raw-project.ts:247`
-- **Problem**: `_syncComponentTree` runs unconditionally. Previously gated by `!hasAuthoredComponentTree`. Reconciler is incremental so cost is proportional to tree size.
-- **Action**: Monitor. Add a dirty flag or definition-hash check if perf becomes a concern on large forms.
-
-### 20. `SubmitButton` lacks dedicated spec prose section (pre-existing)
-- **File**: `specs/component/component-spec.md`
-- **Problem**: Fully defined in schema but has no subsection in ComponentSpec S5/S6. Normative Appendix B lists 33 components (post-Wizard removal at S5.4 [Reserved]); the reference map header says 34. SubmitButton has `"category": "display"`, `"level": "core"` in schema — should appear in S5 among Core Display components.
-- **Action**: Add a `SubmitButton` subsection to ComponentSpec S5 (Core Components). Reconcile the 33 vs 34 component count discrepancy in Appendix B.
-- **Additional**: Appendix B lists Accordion as "Bind: Forbidden" but S6.3 prose and schema say "Bind: Optional (repeatable group key)". Fix the Appendix B entry.
-
-### 21. ~25 pre-existing `as any` casts in `project.ts`
+### 21. ~32 `as any` casts in `project.ts` (worsened)
+- **Source**: editor/layout split review
 - **File**: `packages/formspec-studio-core/src/project.ts`
-- **Problem**: Type gaps in `IProjectCore` force `as any` for properties like `tree`, `screener`, `selectors`, `defaults`. Pre-existing debt, not a regression.
-- **Action**: Track. Resolve as `IProjectCore` interface is refined with more granular typed accessors.
+- **Action**: Track. Resolve as `IProjectCore` interface is refined. Count grew from ~25 to 32.
+
+### LayoutContainer dual-droppable
+- **Source**: layout DnD review (2026-04-07)
+- **File**: `packages/formspec-studio/src/workspaces/layout/LayoutContainer.tsx:194-209`
+- **Status**: `useSortable` + `useDroppable(container-drop)` on same element. No code change until a mis-hit is reproduced.
+
+## Resolved
+
+<details>
+<summary>Resolved items from editor/layout split review (click to expand)</summary>
+
+### Studio-core extraction review (batch)
+- ~~Non-spec dataTypes in TYPE_MAP~~ — replaced with spec-normative types
+- ~~`(project as any).core.dispatch()` x3~~ — added typed methods to Project
+- ~~Missing `text` (Long Text) entry in FIELD_TYPE_CATALOG~~ — added
+- ~~`item.choices` non-spec fallback~~ — removed, uses `options` only
+- ~~Cross-package `default-theme.json` import~~ — added sub-path export
+- ~~Unnecessary `@formspec-org/layout` dependency~~ — imports from `@formspec-org/types`
+- ~~Incomplete re-export wrapper (`field-helpers.ts`)~~ — added missing exports
+- ~~14 direct imports into `formspec-studio-core/src/`~~ — redirected
+- ~~Duplicate test files~~ — deleted, canonical copies in studio-core
+
+### Individual items
+- **1.** ~~Screener `required` literal-only~~ — evaluates FEL via `evalFEL`
+- **2.** ~~PascalCase widgetHints~~ — corrected to camelCase
+- **3.** ~~JSON adapter `pretty` default~~ — changed to spec default `false`
+- **4.** ~~Screener route heuristic fallback~~ — heuristic documented with trade-off comment
+- **5.** ~~`lib/` re-export wrappers~~ — eliminated
+- **6.** ~~`src/chat/` v1 dead code~~ — deleted
+- **7.** ~~`PropertiesPanel.tsx` dead prototype~~ — deleted
+- **8.** ~~`Spacer` invalid widgetHint~~ — moved to layout
+- **9.** ~~ITEM_TYPE_WIDGETS missing `Tabs`~~ — added
+- **10.** ~~Row summaries secondary bind properties~~ — `nonRelevantBehavior` pill added (keep/empty)
+- **11.** ~~Missing CSV `encoding` option~~ — added
+- **12.** ~~`isStudioGeneratedComponentDoc` comment~~ — JSDoc added
+- **13.** ~~Story fixtures PascalCase~~ — corrected
+- **15.** ~~`@faker-js/faker` prod dep~~ — removed
+- **16.** ~~`COMPONENT_TO_HINT` Collapsible→accordion~~ — removed
+- **17.** ~~Test file naming ambiguity~~ — renamed
+- **18.** ~~Orphaned E2E spec~~ — moved
+- **20.** ~~`SubmitButton` spec prose~~ — S5.19 added
+
+</details>
+
+<details>
+<summary>Resolved items from chaos-test + DnD review + studio plans (click to expand)</summary>
+
+- ~~ARCH-3: `analyze_fel_with_field_types` end-to-end~~ — full chain wired: WASM → bridge → API → parseFEL with `FEL_TYPE_MISMATCH`
+- ~~Sigil hint ($name vs @name)~~ — `expression-index.ts:129` emits `FEL_SIGIL_HINT`
+- ~~BUG-5: Shape per-row evaluation~~ — `shapes.rs:117-227` evaluates per-instance correctly
+- ~~UX-5: Theme token validation/listing~~ — `theme.ts:64` validates, `:73` lists
+- ~~CONF-3: Variables in bind expressions~~ — `parseFEL` includes variables in known refs
+- ~~addPage standalone-only refactor~~ — code matches plan; `standalone` option and `groupKey` removed
+- ~~BUG-1: `parentPath` doubles path~~ — fixed in `_resolvePath`
+- ~~BUG-2: Date comparison with `today()`~~ — `json_to_runtime_fel_typed` coerces dates
+- ~~BUG-4: Conditional required on calculated fields~~ — `refresh_required_state()` re-evaluates after calculate
+- ~~BUG-6: Required fires on repeat template at 0 instances~~ — `repeat_expand.rs` clears children
+- ~~BUG-7: `remove_rule` ambiguous~~ — `removeValidation` normalizes target
+- ~~BUG-8: `sample_data` ignores scenario~~ — `generateSampleData(overrides?)` added
+- ~~BUG-9: Cross-document audit leaf key~~ — broken check removed
+- ~~BUG-10: Content items not findable by `placeOnPage`~~ — `_nodeRefForItem()` added
+- ~~BUG-12: Save omits `status`~~ — `createDefaultDefinition` includes `status: 'draft'`
+- ~~BUG-13: Unknown `Checkbox` component~~ — mapped to `Toggle`
+- ~~BUG-14: Unevaluated `widgetHint` on component nodes~~ — allowlist export strips it
+- ~~BUG-16: Repeat component unevaluated props~~ — allowlist export strips them
+- ~~UX-1: No shape listing~~ — `formspec_describe(mode: 'shapes')` added
+- ~~UX-2: `choices` silently ignored~~ — `.strict()` on Zod schemas
+- ~~UX-3: Sample data dates~~ — dynamic today() dates, nested repeat arrays
+- ~~UX-4: `formspec_create` skips bootstrap~~ — guide shows both paths
+- ~~UX-6: `humanize` FEL limitation~~ — MCP surfaces `note` explaining supported patterns
+- ~~UX-7: Flat sample data for repeat groups~~ — nested arrays with 2 sample instances
+- ~~UX-8: Content appended at end~~ — `insertIndex` added to content schema
+- ~~UX-9: `describe` vs `place` identifier mismatch~~ — `id` → `page_id`
+- ~~UX-10: No unsaved indicator~~ — `isDirty` / `markClean()` on Project, surfaced in MCP statistics
+- ~~CONF-1: Three parent-context mechanisms~~ — precedence notes in tool descriptions
+- ~~CONF-2: Money diagnostic gap~~ — evaluator.rs now suggests `moneyAmount()` for money/number and money/money ordering
+- ~~BUG-3: Money comparison diagnostic~~ — evaluator.rs suggests `moneyAmount()` in all money comparison failures
+- ~~FIX 8: FEL rewrite for repeat wildcard shapes~~ — `addValidation` rewrites FEL at write time via `rewriteFELReferences`/`rewriteMessageTemplate`
+- ~~Sortable-only E2E test gap~~ — skip reasons documented (dnd-kit simulation limitation)
+- ~~Layout DnD Finding 1: Sibling fallback~~ — `siblingIndicesForTreeReorder` derives from tree
+- ~~Layout DnD Finding 3: Stale `isDragging` comment~~ — fixed
+- ~~Layout DnD Finding 5: `bind:` prefix encoding~~ — JSDoc added
+
+</details>
