@@ -266,6 +266,12 @@ export function buildStatusPills(
   if (item.prePopulate) pills.push({ text: 'linked', color: 'amber', specTerm: 'prePopulate' });
   if (binds.constraint) pills.push({ text: 'validates', color: 'error', specTerm: 'constraint', ...(w('constraint') && { warn: true }) });
   if (showLockedPill) pills.push({ text: 'locked', color: 'muted', specTerm: 'readonly', ...(w('readonly') && { warn: true }) });
+  // nonRelevantBehavior: only show when set to a non-default value (default is 'remove')
+  if (binds.nonRelevantBehavior === 'keep') {
+    pills.push({ text: 'keeps value', color: 'muted', specTerm: 'nonRelevantBehavior' });
+  } else if (binds.nonRelevantBehavior === 'empty') {
+    pills.push({ text: 'clears value', color: 'muted', specTerm: 'nonRelevantBehavior' });
+  }
   return pills;
 }
 

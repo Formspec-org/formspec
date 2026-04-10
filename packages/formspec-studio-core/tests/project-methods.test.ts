@@ -1556,6 +1556,17 @@ describe('placeOnPage', () => {
     const page = findPageNode(project, createdId!);
     expect(getBoundChildren(page).some((n: any) => n.bind === 'name')).toBe(true);
   });
+
+  it('re-places a field after Remove from Tree removed its component node', () => {
+    const project = createProject();
+    project.addField('name', 'Name', 'text');
+    const { createdId } = project.addPage('Page 1');
+    project.placeOnPage('name', createdId!);
+    project.deleteComponentNode({ bind: 'name' });
+    project.placeOnPage('name', createdId!);
+    const page = findPageNode(project, createdId!);
+    expect(getBoundChildren(page).some((n: any) => n.bind === 'name')).toBe(true);
+  });
 });
 
 describe('unplaceFromPage', () => {
@@ -3861,5 +3872,41 @@ describe('BUG-11: listPages groupPath for all pages', () => {
     const pages = project.listPages();
     expect(pages[0].groupPath).toBe('contact');
     expect(pages[1].groupPath).toBeUndefined();
+  });
+});
+
+describe('isDirty tracking', () => {
+  it('starts clean', () => {
+    const project = createProject();
+    expect(project.isDirty).toBe(false);
+  });
+
+  it('becomes dirty after adding a field', () => {
+    const project = createProject();
+    project.addField('name', 'Name', 'string');
+    expect(project.isDirty).toBe(true);
+  });
+
+  it('becomes clean after markClean()', () => {
+    const project = createProject();
+    project.addField('name', 'Name', 'string');
+    expect(project.isDirty).toBe(true);
+    project.markClean();
+    expect(project.isDirty).toBe(false);
+  });
+
+  it('becomes dirty again after another mutation following markClean()', () => {
+    const project = createProject();
+    project.addField('name', 'Name', 'string');
+    project.markClean();
+    project.addField('age', 'Age', 'integer');
+    expect(project.isDirty).toBe(true);
+  });
+
+  it('is included in statistics()', () => {
+    const project = createProject();
+    expect(project.statistics().isDirty).toBe(false);
+    project.addField('name', 'Name', 'string');
+    expect(project.statistics().isDirty).toBe(true);
   });
 });

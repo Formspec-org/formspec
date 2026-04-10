@@ -76,11 +76,14 @@ function felConstraintFromPattern(pattern: string): string {
  */
 export class Project {
   private _proposals: ProposalManager | null = null;
+  private _isDirty = false;
 
   constructor(
     private readonly core: IProjectCore,
     private readonly _recorderControl?: ChangesetRecorderControl,
   ) {
+    // Track dirty state: any mutation through core.dispatch marks as dirty
+    this.core.onChange(() => { this._isDirty = true; });
     if (_recorderControl) {
       this._proposals = new ProposalManager(
         core,
@@ -99,6 +102,12 @@ export class Project {
 
   /** Access the ProposalManager for changeset operations. Null if not enabled. */
   get proposals(): ProposalManager | null { return this._proposals; }
+
+  /** True when the project has unsaved mutations since the last markClean() or creation. */
+  get isDirty(): boolean { return this._isDirty; }
+
+  /** Reset the dirty flag (call after saving/publishing). */
+  markClean(): void { this._isDirty = false; }
 
   // ── Read-only state getters (for rendering) ────────────────
 
@@ -139,7 +148,9 @@ export class Project {
   bindFor(path: string): Record<string, unknown> | undefined { return this.core.bindFor(path); }
   variableNames(): string[] { return this.core.variableNames(); }
   instanceNames(): string[] { return this.core.instanceNames(); }
-  statistics(): ProjectStatistics { return this.core.statistics(); }
+  statistics(): ProjectStatistics & { isDirty: boolean } {
+    return { ...this.core.statistics(), isDirty: this._isDirty };
+  }
   commandHistory(): readonly LogEntry[] { return this.core.log; }
   export(): ProjectBundle { return this.core.export() as unknown as ProjectBundle; }
   diagnose(): Diagnostics { return this.core.diagnose(); }
@@ -2537,9 +2548,23 @@ export class Project {
     return { bind: leafKey };
   }
 
+  /**
+   * When the component node for a definition item is missing (e.g. after
+   * Remove from Tree), rebuild bound nodes from the definition before moveNode.
+   */
+  private _ensureComponentNodeExistsForMove(sourceRef: { bind?: string; nodeId?: string }): void {
+    const tree = this.core.state.component?.tree as ComponentNode | undefined;
+    if (findComponentNodeByRef(tree as any, sourceRef)) return;
+    this.core.dispatch({
+      type: 'component.reconcileFromDefinition',
+      payload: {},
+    } as AnyCommand);
+  }
+
   /** Assign an item to a page. */
   placeOnPage(target: string, pageId: string, options?: PlacementOptions): HelperResult {
     const sourceRef = this._nodeRefForItem(target);
+    this._ensureComponentNodeExistsForMove(sourceRef);
     const commands: AnyCommand[] = [{
       type: 'component.moveNode',
       payload: {
@@ -2566,6 +2591,7 @@ export class Project {
   /** Remove item from page assignment. */
   unplaceFromPage(target: string, pageId: string): HelperResult {
     const sourceRef = this._nodeRefForItem(target);
+    this._ensureComponentNodeExistsForMove(sourceRef);
     this.core.dispatch({
       type: 'component.moveNode',
       payload: {
@@ -4366,21 +4392,24 @@ export class Project {
 
   // ── Preview / Query Methods ──
 
-  /** Default sample values by data type. */
-  private static readonly _SAMPLE_VALUES: Record<string, unknown> = {
-    string: 'Sample text',
-    text: 'Sample paragraph text',
-    integer: 42,
-    decimal: 3.14,
-    boolean: true,
-    date: '2024-01-15',
-    time: '09:00:00',
-    dateTime: '2024-01-15T09:00:00Z',
-    uri: 'https://example.com',
-    attachment: 'sample-file.pdf',
-    money: { amount: 100, currency: 'USD' },
-    multiChoice: ['option1'],
-  };
+  /** Default sample values by data type. Uses today's date for date/dateTime. */
+  private static _sampleValues(): Record<string, unknown> {
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    return {
+      string: 'Sample text',
+      text: 'Sample paragraph text',
+      integer: 42,
+      decimal: 3.14,
+      boolean: true,
+      date: today,
+      time: '09:00:00',
+      dateTime: `${today}T09:00:00Z`,
+      uri: 'https://example.com',
+      attachment: 'sample-file.pdf',
+      money: { amount: 100, currency: 'USD' },
+      multiChoice: ['option1'],
+    };
+  }
 
   /** Generate a context-aware sample value for a field. */
   private static _sampleValueForField(item: any, fieldIndex: number): unknown {
@@ -4417,7 +4446,7 @@ export class Project {
       return baseValue;
     }
 
-    return Project._SAMPLE_VALUES[dt] ?? 'Sample text';
+    return Project._sampleValues()[dt] ?? 'Sample text';
   }
 
   /**
@@ -4435,10 +4464,47 @@ export class Project {
     const items = this.core.state.definition.items ?? [];
     let fieldIndex = 0;
 
+    /** Build a sample instance object from a group's children. */
+    const buildInstance = (children: any[]): Record<string, unknown> => {
+      const instance: Record<string, unknown> = {};
+      for (const child of children) {
+        if (child.type === 'group') {
+          if (child.repeatable && child.children?.length) {
+            instance[child.key] = [buildInstance(child.children), buildInstance(child.children)];
+          } else if (child.children?.length) {
+            // Nested non-repeatable group: flatten children into instance
+            const nested = buildInstance(child.children);
+            for (const [k, v] of Object.entries(nested)) {
+              instance[`${child.key}.${k}`] = v;
+            }
+          }
+          continue;
+        }
+        if (child.type !== 'field') continue;
+        if (overrides) {
+          // Check for override by leaf key within the repeat
+          const overrideKey = child.key as string;
+          if (overrideKey in overrides) {
+            instance[child.key] = overrides[overrideKey];
+            fieldIndex++;
+            continue;
+          }
+        }
+        instance[child.key] = Project._sampleValueForField(child, fieldIndex);
+        fieldIndex++;
+      }
+      return instance;
+    };
+
     const walkItems = (itemList: any[], prefix: string) => {
       for (const item of itemList) {
         const path = prefix ? `${prefix}.${item.key}` : item.key;
         if (item.type === 'group') {
+          if (item.repeatable && item.children?.length) {
+            // Repeatable group: generate nested array with 2 sample instances
+            data[path] = [buildInstance(item.children), buildInstance(item.children)];
+            continue;
+          }
           if (item.children?.length) {
             walkItems(item.children, path);
           }

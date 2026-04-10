@@ -48,7 +48,11 @@ export function handleFel(
       }
       case 'humanize': {
         const humanized = project.humanizeFELExpression(params.expression!);
-        return successResponse({ humanized, original: params.expression });
+        const response: Record<string, unknown> = { humanized, original: params.expression };
+        if (!humanized.supported) {
+          response.note = 'Humanize currently supports simple binary comparisons only (e.g. "$field > value"). Complex expressions with function calls, boolean logic, or nesting are returned as-is.';
+        }
+        return successResponse(response);
       }
     }
   } catch (err) {

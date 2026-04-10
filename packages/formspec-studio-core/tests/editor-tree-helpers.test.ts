@@ -126,6 +126,38 @@ describe('editor-tree-helpers', () => {
     expect(optionsEntry?.value).toBe('2 choices');
   });
 
+  it('surfaces nonRelevantBehavior as a status pill when set to non-default value', () => {
+    const pills = buildStatusPills(
+      { relevant: '$active', nonRelevantBehavior: 'keep' },
+      { key: 'notes', type: 'field' } as any,
+    );
+    expect(pills).toContainEqual({ text: 'keeps value', color: 'muted', specTerm: 'nonRelevantBehavior' });
+  });
+
+  it('surfaces nonRelevantBehavior "empty" as a status pill', () => {
+    const pills = buildStatusPills(
+      { relevant: '$active', nonRelevantBehavior: 'empty' },
+      { key: 'notes', type: 'field' } as any,
+    );
+    expect(pills).toContainEqual({ text: 'clears value', color: 'muted', specTerm: 'nonRelevantBehavior' });
+  });
+
+  it('does not show nonRelevantBehavior pill when set to default "remove"', () => {
+    const pills = buildStatusPills(
+      { relevant: '$active', nonRelevantBehavior: 'remove' },
+      { key: 'notes', type: 'field' } as any,
+    );
+    expect(pills.find(p => p.specTerm === 'nonRelevantBehavior')).toBeUndefined();
+  });
+
+  it('does not show nonRelevantBehavior pill when not set', () => {
+    const pills = buildStatusPills(
+      { relevant: '$active' },
+      { key: 'notes', type: 'field' } as any,
+    );
+    expect(pills.find(p => p.specTerm === 'nonRelevantBehavior')).toBeUndefined();
+  });
+
   it('surfaces default bind as a status pill with specTerm', () => {
     const pills = buildStatusPills(
       { default: '42' },

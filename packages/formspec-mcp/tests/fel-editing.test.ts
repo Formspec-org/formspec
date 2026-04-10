@@ -123,16 +123,19 @@ describe('handleFel — humanize', () => {
     const data = parseResult(result);
 
     expect(data).toHaveProperty('humanized');
-    expect(data.humanized).toBe('Age is at least 18');
+    expect(data.humanized).toEqual({ text: 'Age is at least 18', supported: true });
+    expect(data.original).toBe('$age >= 18');
   });
 
-  it('returns the raw expression for complex FEL', () => {
+  it('returns the raw expression for complex FEL with a note about supported patterns', () => {
     const { registry, projectId } = registryWithProject();
 
-    const result = handleFel(registry, projectId, { action: 'humanize', expression: 'if($a > 1, $b, $c)' });
+    const expr = 'if($a > 1, $b, $c)';
+    const result = handleFel(registry, projectId, { action: 'humanize', expression: expr });
     const data = parseResult(result);
 
-    expect(data.humanized).toBe('if($a > 1, $b, $c)');
+    expect(data.humanized).toEqual({ text: expr, supported: false });
+    expect(data.note).toMatch(/binary comparison/i);
   });
 
   it('translates boolean literals', () => {
@@ -141,6 +144,6 @@ describe('handleFel — humanize', () => {
     const result = handleFel(registry, projectId, { action: 'humanize', expression: '$active = true' });
     const data = parseResult(result);
 
-    expect(data.humanized).toBe('Active is Yes');
+    expect(data.humanized).toEqual({ text: 'Active is Yes', supported: true });
   });
 });

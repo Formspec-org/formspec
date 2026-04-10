@@ -778,10 +778,15 @@ impl<'a> Evaluator<'a> {
             (FelValue::Number(a), FelValue::Number(b)) => a.cmp(b),
             (FelValue::String(a), FelValue::String(b)) => a.cmp(b),
             (FelValue::Date(a), FelValue::Date(b)) => a.ordinal().cmp(&b.ordinal()),
-            // 9f: Money vs Number comparison — specific diagnostic
+            // 9f: Money vs Number comparison — specific diagnostic with fix suggestion
             (FelValue::Money(_), FelValue::Number(_))
             | (FelValue::Number(_), FelValue::Money(_)) => {
-                self.diag("Type error: cannot compare money with number");
+                self.diag("Type error: cannot compare money with number directly. Use moneyAmount($field) to extract the numeric amount.");
+                return FelValue::Null;
+            }
+            // Money vs Money ordering — only equality is supported
+            (FelValue::Money(_), FelValue::Money(_)) => {
+                self.diag("Type error: cannot order money values directly. Use moneyAmount($field) to extract the numeric amount for ordering comparisons.");
                 return FelValue::Null;
             }
             _ => {

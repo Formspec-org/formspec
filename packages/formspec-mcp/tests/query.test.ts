@@ -144,6 +144,27 @@ describe('handleDescribe — structure', () => {
     expect(data.componentNodes).toBeDefined();
     expect(data.statistics.componentNodeCount).toBe(data.componentNodes.length);
   });
+
+  it('surfaces isDirty flag in statistics', () => {
+    const { registry, projectId, project } = registryWithProject();
+
+    // New project should not be dirty
+    const cleanResult = handleDescribe(registry, projectId, 'structure');
+    const cleanData = parseResult(cleanResult);
+    expect(cleanData.statistics.isDirty).toBe(false);
+
+    // After mutation
+    project.addField('q1', 'Q1', 'text');
+    const dirtyResult = handleDescribe(registry, projectId, 'structure');
+    const dirtyData = parseResult(dirtyResult);
+    expect(dirtyData.statistics.isDirty).toBe(true);
+
+    // After markClean
+    project.markClean();
+    const afterClean = handleDescribe(registry, projectId, 'structure');
+    const afterCleanData = parseResult(afterClean);
+    expect(afterCleanData.statistics.isDirty).toBe(false);
+  });
 });
 
 // ── handleDescribe — shapes mode ──────────────────────────────

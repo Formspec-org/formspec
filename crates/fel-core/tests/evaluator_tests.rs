@@ -841,6 +841,13 @@ fn test_money_number_comparison_returns_null_with_diagnostic() {
         "diagnostic message should mention money/number mismatch, got: {}",
         result.diagnostics[0].message
     );
+    assert!(
+        result.diagnostics[0]
+            .message
+            .contains("moneyAmount("),
+        "diagnostic should suggest moneyAmount(), got: {}",
+        result.diagnostics[0].message
+    );
 }
 
 #[test]
@@ -851,6 +858,30 @@ fn test_number_money_comparison_returns_null_with_diagnostic() {
     let result = evaluate(&expr, &env);
     assert_eq!(result.value, FelValue::Null);
     assert!(!result.diagnostics.is_empty());
+    assert!(
+        result.diagnostics[0]
+            .message
+            .contains("moneyAmount("),
+        "diagnostic should suggest moneyAmount(), got: {}",
+        result.diagnostics[0].message
+    );
+}
+
+#[test]
+fn test_money_money_ordering_returns_null_with_diagnostic() {
+    // money > money should return Null with diagnostic (only equality is supported)
+    let expr = parse("money(200, 'USD') > money(100, 'USD')").unwrap();
+    let env = MapEnvironment::new();
+    let result = evaluate(&expr, &env);
+    assert_eq!(result.value, FelValue::Null);
+    assert!(!result.diagnostics.is_empty(), "should have diagnostic for money ordering");
+    assert!(
+        result.diagnostics[0]
+            .message
+            .contains("moneyAmount("),
+        "diagnostic should suggest moneyAmount() for money ordering, got: {}",
+        result.diagnostics[0].message
+    );
 }
 
 // ── GAP-1: *Where predicate aggregate functions ─────────────────

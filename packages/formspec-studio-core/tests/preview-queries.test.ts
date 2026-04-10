@@ -19,7 +19,9 @@ describe('generateSampleData', () => {
     expect(data.age).toBe(12); // varied: 10 + fieldIndex(2)
     expect(data.score).toBe(3.6); // varied: 1.5 + fieldIndex(3)*0.7
     expect(data.active).toBe(true);
-    expect(data.dob).toBe('2024-01-15');
+    // date should be today's date in ISO format, not a hardcoded value
+    expect(data.dob).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(data.dob).toBe(new Date().toISOString().slice(0, 10));
   });
 
   it('generates sample values for time-related types', () => {
@@ -30,7 +32,9 @@ describe('generateSampleData', () => {
     const data = project.generateSampleData();
 
     expect(data.t).toBe('09:00:00');
-    expect(data.dt).toBe('2024-01-15T09:00:00Z');
+    // dateTime should include today's date with a time component
+    expect(data.dt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
+    expect((data.dt as string).slice(0, 10)).toBe(new Date().toISOString().slice(0, 10));
   });
 
   it('uses first choice value for select fields', () => {
@@ -184,6 +188,40 @@ describe('generateSampleData', () => {
 
     expect(data).not.toHaveProperty('details.name');
     expect(data).not.toHaveProperty('details.email');
+  });
+
+  it('generates nested arrays for repeatable groups', () => {
+    const project = createProject();
+    project.addGroup('line_items', 'Line Items');
+    project.addField('line_items.description', 'Description', 'string');
+    project.addField('line_items.amount', 'Amount', 'decimal');
+    project.makeRepeatable('line_items');
+
+    const data = project.generateSampleData();
+
+    // Should produce a nested array, not flat dot-path keys
+    expect(data).not.toHaveProperty('line_items.description');
+    expect(data).not.toHaveProperty('line_items.amount');
+    expect(Array.isArray(data.line_items)).toBe(true);
+    const instances = data.line_items as Record<string, unknown>[];
+    expect(instances.length).toBeGreaterThanOrEqual(1);
+    expect(instances.length).toBeLessThanOrEqual(2);
+    expect(instances[0]).toHaveProperty('description');
+    expect(instances[0]).toHaveProperty('amount');
+    expect(typeof instances[0].description).toBe('string');
+    expect(typeof instances[0].amount).toBe('number');
+  });
+
+  it('generates nested arrays with 2 instances for repeatable groups', () => {
+    const project = createProject();
+    project.addGroup('items', 'Items');
+    project.addField('items.name', 'Name', 'string');
+    project.makeRepeatable('items');
+
+    const data = project.generateSampleData();
+
+    const instances = data.items as Record<string, unknown>[];
+    expect(instances.length).toBe(2);
   });
 
   it('keeps unconditional fields when other fields are hidden', () => {

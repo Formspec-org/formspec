@@ -187,6 +187,11 @@ export function useScreener(
             // Explicit routeType takes precedence over heuristics
             routeType = matchedRoute.routeType;
         } else {
+            // Heuristic fallback: infer route type from URL comparison.
+            // Prefer using an explicit `routeType` on route definitions instead
+            // of relying on this path — the URL comparison can misclassify routes
+            // when the definition URL changes or when external routes happen to
+            // share the same base URL.
             const defUrl = definition?.url;
             if (defUrl && result.target === defUrl) {
                 routeType = 'internal';
