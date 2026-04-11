@@ -136,7 +136,7 @@ interface ComponentPlugin {
 
 ## Render Adapters
 
-Input components use a **headless behavior/adapter architecture** (see [ADR 0046](../../thoughts/adr/0046-headless-component-adapters.md)). Each component is split into:
+Input components use a **headless behavior/adapter architecture** (see [ADR 0046](../../thoughts/archive/adr/0046-headless-component-adapters.md)). Each component is split into:
 
 - **Behavior hook** — owns reactive signal wiring, value coercion, ARIA state management, touched tracking, and validation display. Never creates DOM.
 - **Render adapter** — owns DOM structure and CSS class names. Never imports `@preact/signals-core`. Calls `behavior.bind(refs)` after building DOM to wire everything up.

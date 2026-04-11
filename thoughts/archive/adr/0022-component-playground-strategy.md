@@ -5,7 +5,7 @@
 **Updated**: 2026-02-24  
 **Authors**: Codex (AI), exedev  
 **Deciders**: exedev  
-**Depends on**: [ADR-0019: Theme Cascade Implementation and Default Theme](../../adr/0019-theme-cascade-default-theme.md), [ADR-0020: CSS Integration and Design System Interop](../../adr/0020-css-integration-and-design-system-interop.md), [ADR-0021: Holistic Kitchen-Sink E2E Conformance Plan](0021-holistic-kitchen-sink-e2e-conformance-plan.md)
+**Depends on**: [ADR-0019: Theme Cascade Implementation and Default Theme](0019-theme-cascade-default-theme.md), [ADR-0020: CSS Integration and Design System Interop](0020-css-integration-and-design-system-interop.md), [ADR-0021: Holistic Kitchen-Sink E2E Conformance Plan](0021-holistic-kitchen-sink-e2e-conformance-plan.md)
 
 ---
 

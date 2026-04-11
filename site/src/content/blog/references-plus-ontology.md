@@ -178,7 +178,7 @@ Each document is authored by the team that owns that context. They merge additiv
 
 ## The agent that reads the bibliography
 
-The vision that motivated the [References ADR](https://github.com/Formspec-org/formspec/blob/main/thoughts/adr/0047-form-references.md) was straightforward: forms exist in context, and that context should be machine-readable. But the combination with the Ontology spec creates something more powerful than either piece alone.
+The vision that motivated the [References ADR](https://github.com/Formspec-org/formspec/blob/main/thoughts/archive/adr/0047-form-references.md) was straightforward: forms exist in context, and that context should be machine-readable. But the combination with the Ontology spec creates something more powerful than either piece alone.
 
 An AI agent filling or assisting with a form now has:
 

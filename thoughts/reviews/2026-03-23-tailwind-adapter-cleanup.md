@@ -123,6 +123,6 @@ This cleanup will make the Tailwind adapter a much better reference implementati
 
 **Related Documents**:
 
-- `thoughts/adr/0049-tailwind-css-adapter.md`
+- `thoughts/archive/adr/0049-tailwind-css-adapter.md`
 - `packages/formspec-adapters/README.md`
 - `examples/tailwind-demo/index.html`

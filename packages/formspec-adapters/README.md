@@ -4,7 +4,7 @@ Render adapter library for `formspec-webcomponent`. Each adapter provides design
 
 ## How Adapters Work
 
-Formspec's webcomponent uses a headless behavior/adapter architecture ([ADR 0046](../../thoughts/adr/0046-headless-component-adapters.md)):
+Formspec's webcomponent uses a headless behavior/adapter architecture ([ADR 0046](../../thoughts/archive/adr/0046-headless-component-adapters.md)):
 
 ```
 behavior hook  →  FieldBehavior contract  ←  render adapter

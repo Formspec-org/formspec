@@ -6,7 +6,7 @@ Formspec is not a security specification, but its design embeds several properti
 
 ### 1.1 FEL Sandboxing (Strongest Existing Property)
 
-The single most important security decision in formspec's history is documented in ADR 0011 (`thoughts/adr/0011-hardening-plan.md`): the elimination of `eval()` and `new Function()` from the FEL evaluator. The original prototype used JavaScript's native eval to execute expressions. The hardened implementation replaced this with a formal lexer/parser/interpreter pipeline (Chevrotain in TypeScript, hand-rolled recursive descent in Rust, standalone parser in Python).
+The single most important security decision in formspec's history is documented in ADR 0011 (`thoughts/archive/adr/0011-hardening-plan.md`): the elimination of `eval()` and `new Function()` from the FEL evaluator. The original prototype used JavaScript's native eval to execute expressions. The hardened implementation replaced this with a formal lexer/parser/interpreter pipeline (Chevrotain in TypeScript, hand-rolled recursive descent in Rust, standalone parser in Python).
 
 FEL is designed as a **closed sandbox** by specification:
 - No statements, loops, or variable assignment

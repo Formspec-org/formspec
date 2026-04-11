@@ -1,9 +1,11 @@
-# Archive — superseded or historical thoughts
+# Archive — closed and superseded thoughts
 
-Documents moved here are **retained for history** (superseded ADRs, duplicate drafts, design-only precursors to shipped work, merged Phase 11 inputs). Prefer active ADRs in `thoughts/adr/`, plans in `thoughts/plans/`, and the Phase 11 index at `thoughts/specs/2026-04-11-formspec-wos-phase11-integration-master.md`.
+Material here is **read-only history**: superseded decision precursors, **implemented** ADRs, **completed** execution plans, and **delivered** design specs that are now reflected in canonical `specs/`, `schemas/`, and code.
+
+**Active** proposals and open work: [`thoughts/README.md`](../README.md) → `thoughts/adr/`, `thoughts/plans/`, `thoughts/specs/`.
 
 | Subfolder | Contents |
 |-----------|----------|
-| [`adr/`](adr/) | Superseded presentation-layer ADRs, removed playground strategy, historical conformance matrix, duplicate marketing/blog drafts, superseded E2E ADR |
-| [`plans/`](plans/) | Superseded design-only precursors, archived Rust transition plan, superseded WASM/pages plans |
-| [`specs/`](specs/) | Merged into Phase 11 master (`integration-gaps`, `wos-s15` proposal); early assist brainstorm |
+| [`adr/`](adr/) | Shipped or historical ADRs (tier plans, linter, E2E, WASM split, adapters, WOS boundary, grant example, etc.) plus earlier superseded records |
+| [`plans/`](plans/) | Finished implementation plans (grant example, engine/WASM migration, Studio splits, mapping DSL, layout editor, registry theme gen, …) |
+| [`specs/`](specs/) | Delivered PRDs (MCP, core/studio split, assist interop, layout workspace, Phase 11 precursors, …) |

@@ -63,10 +63,10 @@ The specification is organized into three tiers: Core (data & logic), Theme (pre
   - `packages/formspec-mcp/API.llm.md` — TypeScript MCP server API reference (tool declarations, server setup).
   - `packages/formspec-studio-core/API.llm.md` — TypeScript studio-core API reference (Project, helpers, evaluation).
 - **`thoughts/`** — All plans, ADRs, research, and design artifacts. **Never put plans in `docs/`.** See `thoughts/README.md` for full index.
-  - `thoughts/adr/` — Architecture decision records (decisions with Status). `NNNN-short-name.md`. Next free id: **0061** (some duplicate numbers exist on disk; see `thoughts/README.md`).
-  - `thoughts/plans/` — Implementation and execution plans. `YYYY-MM-DD-short-name.md`.
-  - `thoughts/specs/` — Design specifications and PRDs. `YYYY-MM-DD-short-name.md`.
-  - `thoughts/archive/` — Superseded or merged precursors (ADRs, plans, specs); keep deep links pointed here after moves.
+  - `thoughts/adr/` — **Active** ADRs (Proposed / in-flight / accepted-but-not-landed). Implemented and historical ADRs live in `thoughts/archive/adr/`. Next free id: **0061** (duplicate `0047` / `0048` / `0053` slugs on disk — see `thoughts/README.md`).
+  - `thoughts/plans/` — **Active** implementation plans. Completed plans: `thoughts/archive/plans/`.
+  - `thoughts/specs/` — **Active** design specs. Delivered / merged specs: `thoughts/archive/specs/`.
+  - `thoughts/archive/` — **Implemented**, superseded, or merged precursors. `npm run docs:check` enforces that tracked links use `thoughts/archive/...` for files stored here.
   - `thoughts/reviews/` — Code reviews, audits, post-mortems. `YYYY-MM-DD-short-name.md`.
   - `thoughts/research/` — Exploratory research, comparative analysis, external doc captures.
   - `thoughts/studio/` — Formspec Studio subdomain (plans, bugs, designs).

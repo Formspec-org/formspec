@@ -1863,7 +1863,7 @@ git commit -m "refactor: delete field-input.ts — replaced by behavior hooks + 
 
 **Files:**
 - Modify: `packages/formspec-webcomponent/src/index.ts` — export new public API
-- Update: `thoughts/adr/0046-headless-component-adapters.md` — mark status as Accepted
+- Update: `thoughts/archive/adr/0046-headless-component-adapters.md` — mark status as Accepted
 
 - [ ] **Step 1: Export public API from index.ts**
 
@@ -1876,7 +1876,7 @@ export type { FieldBehavior, FieldRefs, ResolvedPresentationBlock } from './beha
 
 - [ ] **Step 2: Update ADR status**
 
-Change status from `Proposed` to `Accepted` in `thoughts/adr/0046-headless-component-adapters.md`.
+Change status from `Proposed` to `Accepted` in `thoughts/archive/adr/0046-headless-component-adapters.md`.
 
 - [ ] **Step 3: Final full test run**
 
@@ -1886,7 +1886,7 @@ Expected: ALL PASS, build clean
 - [ ] **Step 4: Commit**
 
 ```bash
-git add packages/formspec-webcomponent/src/index.ts thoughts/adr/0046-headless-component-adapters.md
+git add packages/formspec-webcomponent/src/index.ts thoughts/archive/adr/0046-headless-component-adapters.md
 git commit -m "feat: export headless adapter public API, mark ADR 0046 as Accepted"
 ```
 

@@ -4,7 +4,7 @@
 **Date**: 2026-02-26
 **Authors**: Claude (AI), exedev
 **Deciders**: exedev
-**Supersedes**: [ADR-0021: Holistic Kitchen-Sink E2E Conformance Plan](../archive/adr/0021-holistic-kitchen-sink-e2e-conformance-plan.md)
+**Supersedes**: [ADR-0021: Holistic Kitchen-Sink E2E Conformance Plan](0021-holistic-kitchen-sink-e2e-conformance-plan.md)
 **Depends on**: [ADR-0017: Playwright E2E Reorganization](0017-playwright-e2e-reorganization-and-deduplication.md)
 
 ---
@@ -408,5 +408,5 @@ This ADR is considered implemented when:
 
 - `examples/grant-application/` — primary example app
 - `tests/e2e/playwright/helpers/grant-app.ts` — grant app harness
-- `thoughts/adr/0017-playwright-e2e-reorganization-and-deduplication.md`
+- `thoughts/archive/adr/0017-playwright-e2e-reorganization-and-deduplication.md`
 - `thoughts/archive/adr/0021-holistic-kitchen-sink-e2e-conformance-plan.md` (superseded)

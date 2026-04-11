@@ -50,7 +50,7 @@ Phase 11 is not “close gaps between documents.” It is **make multi-document 
 |---|-----|-------------------|---------------------|
 | **1** | **Formspec coprocessor** — no specified WOS↔Formspec handoff | Critical | **Landed** in WOS Runtime §12.9 / §15, Kernel §9.2 / §11.3, `wos-kernel.schema.json`, `wos-case-instance.schema.json`, and typed Rust model. Backlog behavior questions are closed; the P11-BL-050 publication-rule checklist is treated as complete for this handoff. |
 | **2** | **`every` / `some` / `duration`** missing from Core catalog | High | **Resolved** in Formspec: Core §3.5, `fel-functions.schema.json`, fel-core, Python/WASM/engine tests. |
-| **3** | **Record arrays + predicates** (string vs expression `$`) | High | **Resolved** in Core §3.5.1: FEL expression predicates; **`$.field`** on object elements; WOS examples updated (`ai-integration.md`). **ADR-0060** (`thoughts/adr/0060-fel-constraint-self-dollar-nesting.md`): constraint `$` vs predicate `$`. |
+| **3** | **Record arrays + predicates** (string vs expression `$`) | High | **Resolved** in Core §3.5.1: FEL expression predicates; **`$.field`** on object elements; WOS examples updated (`ai-integration.md`). **ADR-0060** (`thoughts/archive/adr/0060-fel-constraint-self-dollar-nesting.md`): constraint `$` vs predicate `$`. |
 
 ---
 

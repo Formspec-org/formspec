@@ -1484,7 +1484,7 @@ parse_xfdf(xfdf_xml) -> str
 
 ## References
 
-- `thoughts/adr/0050-wasm-runtime-tools-split.md` — WASM module split architecture
+- `thoughts/archive/adr/0050-wasm-runtime-tools-split.md` — WASM module split architecture
 - `thoughts/adr/0051-pdf-acroform-generation.md` — PDF generation architecture (partially superseded)
 - `thoughts/research/2026-03-24-planner-spec-divergences.md` — Spec/implementation divergence register
 - `specs/theme/theme-spec.md` — Theme cascade, tokens, widgets, pages

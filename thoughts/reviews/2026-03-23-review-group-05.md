@@ -56,7 +56,7 @@ Change to `private static` or at minimum `readonly static`. The public visibilit
 
 ### Low (Plan tracking): Several ADR 0050 / plan checklist items not yet marked complete
 
-**File:** `thoughts/plans/2026-03-23-wasm-runtime-tools-split.md`
+**File:** `thoughts/archive/plans/2026-03-23-wasm-runtime-tools-split.md`
 
 **Details:**
 The plan correctly tracks completion status. A number of items are still open that should be resolved or tracked as explicit follow-up tasks before the branch merges to main:

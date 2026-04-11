@@ -34,7 +34,7 @@ When the script is run post-build, these generated glue files will appear in the
 
 ### Medium: ADR acceptance criteria §Measure-and-gate is not satisfiable until Rust crate split
 
-**File:** `thoughts/adr/0050-wasm-runtime-tools-split.md:156`, `thoughts/reviews/2026-03-23-wasm-split-baseline.md`
+**File:** `thoughts/archive/adr/0050-wasm-runtime-tools-split.md:156`, `thoughts/reviews/2026-03-23-wasm-split-baseline.md`
 
 **Details:** ADR acceptance criterion reads: "Recorded baseline measurements show a clear runtime size reduction versus the current monolith." The baseline doc correctly acknowledges that both artifacts are currently built from the same `crates/formspec-wasm` crate, so their `.wasm` sizes differ by only a few bytes (3,400,310 vs 3,400,302 raw). This criterion cannot be met in the current tree.
 
@@ -42,7 +42,7 @@ The baseline doc is honest about this, and the plan has the Rust crate split as 
 
 This is not a mistake in the ADR logic; the decision to split modules is sound independent of the size win. But the framing creates a gap: the ADR says "Accepted" and has passing structural criteria (init flow, isolation tests) but the core measurable win is still outstanding.
 
-**Recommendation:** Add a brief "Implementation Status" note to the ADR (or a linked section) stating: "Structural split complete as of 2026-03-23; Rust crate/feature split (which delivers the actual size reduction) is in progress per `thoughts/plans/2026-03-23-wasm-runtime-tools-split.md` §3." This keeps the ADR honest without requiring re-work.
+**Recommendation:** Add a brief "Implementation Status" note to the ADR (or a linked section) stating: "Structural split complete as of 2026-03-23; Rust crate/feature split (which delivers the actual size reduction) is in progress per `thoughts/archive/plans/2026-03-23-wasm-runtime-tools-split.md` §3." This keeps the ADR honest without requiring re-work.
 
 ---
 
@@ -74,7 +74,7 @@ The slight inconsistency: the split plan (§6, open items) notes that `Makefile 
 
 ## Detailed Notes by File
 
-### `thoughts/adr/0050-wasm-runtime-tools-split.md`
+### `thoughts/archive/adr/0050-wasm-runtime-tools-split.md`
 
 Well-structured. The context section correctly identifies the problem (monolith payload, tooling deps in runtime path). The decision is narrow — it decides on module ownership and loading strategy, not on crate architecture. Alternative §3 correctly preserves the two-crates vs. one-crate-with-features decision for the implementation. The "Alternatives Considered" section is honest about tradeoffs.
 
@@ -113,7 +113,7 @@ The isolation test at `tests/isolation/wasm-runtime-isolation.mjs` and idempoten
 
 The `initWasmTools` guard `if (!_wasmReady || !_wasm)` throws before attempting to import tools if runtime isn't ready. This is the correct order enforcement. Error message clearly names both the required call and the alternative.
 
-### `thoughts/plans/2026-03-23-wasm-runtime-tools-split.md`
+### `thoughts/archive/plans/2026-03-23-wasm-runtime-tools-split.md`
 
 19 items checked, 25 open. The split is approximately 43% complete on tracked tasks. The open items fall into three groups:
 
@@ -123,7 +123,7 @@ The `initWasmTools` guard `if (!_wasmReady || !_wasm)` throws before attempting 
 
 The plan is actionable. Each open item has enough context to be picked up without re-reading the ADR. The "Locked decisions" section (§11) is particularly valuable: it prevents future debate about packaging strategy and versioning by stating the decisions explicitly.
 
-### `thoughts/plans/2026-03-22-rust-wasm-engine-parity-plan.md`
+### `thoughts/archive/plans/2026-03-22-rust-wasm-engine-parity-plan.md`
 
 Progress is embedded in the `Status` section prose (phases 1-6 landed). The plan does not use checkbox-style tracking — progress is described in the header paragraph. This is less scannable than the split plan's checkbox approach, but the content is accurate and complete. The per-phase Python impact table is well-structured.
 
@@ -157,7 +157,7 @@ One observation: the Makefile `build-wasm` target previously ran `wasm-opt` inli
 **Approve.** The committed artifacts are clean and accurate. The uncommitted changes are a coherent, well-tested partial landing of the WASM split — ready to commit as-is. The two medium findings are documentation/tracking issues, not implementation problems. The root work (Rust crate split) is correctly deferred as future work and is explicitly tracked in the plan.
 
 **Next concrete steps after this group:**
-1. Commit the in-progress engine changes (`wasm-bridge.ts`, `init-formspec-engine.ts`, `index.ts`, `package.json`, `check-dep-fences.mjs`, `thoughts/plans/2026-03-23-wasm-runtime-tools-split.md`).
+1. Commit the in-progress engine changes (`wasm-bridge.ts`, `init-formspec-engine.ts`, `index.ts`, `package.json`, `check-dep-fences.mjs`, `thoughts/archive/plans/2026-03-23-wasm-runtime-tools-split.md`).
 2. Fix `scripts/find-large-code-files.sh` exclusion for `wasm-pkg-runtime/` and `wasm-pkg-tools/`.
 3. Add implementation status note to ADR 0050.
 4. Begin Rust crate/feature split (§3 of plan) — this is the blocking item for the ADR size acceptance criterion.
