@@ -2,7 +2,7 @@
 /** @filedesc Fails CI if repo cites legacy thoughts paths for files that only exist under thoughts/archive/. */
 
 import { execSync } from 'node:child_process';
-import { readdirSync, readFileSync, existsSync } from 'node:fs';
+import { readdirSync, readFileSync, existsSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -10,23 +10,48 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 const TEXT_EXT = /\.(md|mjs|cjs|js|ts|tsx|json|yaml|yml)$/i;
 
-/** @returns {string[]} legacy path strings like thoughts/adr/foo.md */
+/** Recursive file paths relative to absDir (POSIX-style segments). */
+function walkRelFiles(absDir, baseRel = '') {
+  const paths = [];
+  if (!existsSync(absDir)) return paths;
+  for (const name of readdirSync(absDir)) {
+    const full = join(absDir, name);
+    const rel = baseRel ? `${baseRel}/${name}` : name;
+    if (statSync(full).isDirectory()) {
+      paths.push(...walkRelFiles(full, rel));
+    } else {
+      paths.push(rel);
+    }
+  }
+  return paths;
+}
+
+/** @returns {string[]} legacy path strings for files that exist only under thoughts/archive/. */
 function legacyPathsFromArchive() {
-  const out = [];
-  const triples = [
+  const out = new Set();
+  const flatPairs = [
     ['thoughts/archive/adr', 'thoughts/adr'],
     ['thoughts/archive/plans', 'thoughts/plans'],
     ['thoughts/archive/specs', 'thoughts/specs'],
+    ['thoughts/archive/reviews', 'thoughts/reviews'],
   ];
-  for (const [archiveDir, legacyPrefix] of triples) {
+  for (const [archiveDir, legacyPrefix] of flatPairs) {
     const abs = join(root, archiveDir);
     if (!existsSync(abs)) continue;
     for (const name of readdirSync(abs)) {
       if (!name.endsWith('.md')) continue;
-      out.push(`${legacyPrefix}/${name}`);
+      const legacy = `${legacyPrefix}/${name}`;
+      if (existsSync(join(root, legacy))) continue;
+      out.add(legacy);
     }
   }
-  return out;
+  const studioAbs = join(root, 'thoughts/archive/studio');
+  for (const rel of walkRelFiles(studioAbs)) {
+    const legacy = `thoughts/studio/${rel}`;
+    if (existsSync(join(root, legacy))) continue;
+    out.add(legacy);
+  }
+  return [...out];
 }
 
 function trackedFiles() {
@@ -67,4 +92,4 @@ if (errors > 0) {
   process.exit(1);
 }
 
-console.log(`check-thoughts-relocated-paths: OK (${forbidden.length} archived markdown paths guarded)`);
+console.log(`check-thoughts-relocated-paths: OK (${forbidden.length} archived paths guarded)`);
