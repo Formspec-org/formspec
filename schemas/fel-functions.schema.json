@@ -59,7 +59,7 @@
         },
         "category": {
           "type": "string",
-          "enum": ["aggregate", "string", "numeric", "date", "logical", "type", "money", "mip", "repeat"],
+          "enum": ["aggregate", "string", "numeric", "date", "logical", "type", "money", "mip", "repeat", "locale"],
           "description": "Functional category for grouping and documentation."
         },
         "parameters": {
@@ -158,6 +158,98 @@
       "examples": [
         { "expression": "countWhere($items[*].amount, $ > 100)", "result": 2 },
         { "expression": "countWhere($scores[*], $ >= 60)", "result": 4 }
+      ]
+    },
+    {
+      "name": "sumWhere",
+      "category": "aggregate",
+      "parameters": [
+        { "name": "values", "type": "array", "description": "Array of numbers (or elements from which numeric matches are taken)." },
+        { "name": "predicate", "type": "boolean", "description": "FEL expression evaluated per element with '$' rebound to the current element." }
+      ],
+      "returns": "number",
+      "description": "Sums numeric array elements for which the predicate evaluates to true. The predicate is NOT pre-evaluated — it is evaluated once per element.",
+      "nullHandling": "Null array returns null. Non-numeric matches are skipped. No numeric matches returns 0.",
+      "shortCircuit": true,
+      "examples": [
+        { "expression": "sumWhere([1, 2, 3, 4], $ > 2)", "result": 7 }
+      ]
+    },
+    {
+      "name": "avgWhere",
+      "category": "aggregate",
+      "parameters": [
+        { "name": "values", "type": "array", "description": "Array of numbers." },
+        { "name": "predicate", "type": "boolean", "description": "FEL expression evaluated per element with '$' rebound to the current element." }
+      ],
+      "returns": "number",
+      "description": "Arithmetic mean of numeric elements for which the predicate is true. Returns null when no elements match.",
+      "nullHandling": "Null array returns null. No matches returns null.",
+      "shortCircuit": true,
+      "examples": [
+        { "expression": "avgWhere([40, 50, 60], $ >= 50)", "result": 55 }
+      ]
+    },
+    {
+      "name": "minWhere",
+      "category": "aggregate",
+      "parameters": [
+        { "name": "values", "type": "array", "description": "Array of comparable values." },
+        { "name": "predicate", "type": "boolean", "description": "FEL expression evaluated per element with '$' rebound to the current element." }
+      ],
+      "returns": "any",
+      "description": "Smallest element among those satisfying the predicate. Also applies to dates and strings.",
+      "nullHandling": "Null array returns null. No matches returns null.",
+      "shortCircuit": true,
+      "examples": [
+        { "expression": "minWhere([3, 1, 4], $ > 0)", "result": 1 }
+      ]
+    },
+    {
+      "name": "maxWhere",
+      "category": "aggregate",
+      "parameters": [
+        { "name": "values", "type": "array", "description": "Array of comparable values." },
+        { "name": "predicate", "type": "boolean", "description": "FEL expression evaluated per element with '$' rebound to the current element." }
+      ],
+      "returns": "any",
+      "description": "Largest element among those satisfying the predicate. Also applies to dates and strings.",
+      "nullHandling": "Null array returns null. No matches returns null.",
+      "shortCircuit": true,
+      "examples": [
+        { "expression": "maxWhere([3, 1, 4], $ < 4)", "result": 3 }
+      ]
+    },
+    {
+      "name": "every",
+      "category": "aggregate",
+      "parameters": [
+        { "name": "values", "type": "array", "description": "Array to test." },
+        { "name": "predicate", "type": "boolean", "description": "FEL expression evaluated per element with '$' rebound to the current element." }
+      ],
+      "returns": "boolean",
+      "description": "True if the array is empty or the predicate is true for every element. The predicate is NOT pre-evaluated — it is evaluated once per element.",
+      "nullHandling": "Null array returns null. Null predicate result is not true (element fails every, does not satisfy some).",
+      "shortCircuit": true,
+      "examples": [
+        { "expression": "every([1, 2, 3], $ > 0)", "result": true },
+        { "expression": "every([], $ > 0)", "result": true }
+      ]
+    },
+    {
+      "name": "some",
+      "category": "aggregate",
+      "parameters": [
+        { "name": "values", "type": "array", "description": "Array to test." },
+        { "name": "predicate", "type": "boolean", "description": "FEL expression evaluated per element with '$' rebound to the current element." }
+      ],
+      "returns": "boolean",
+      "description": "True if at least one element satisfies the predicate. The predicate is NOT pre-evaluated — it is evaluated once per element.",
+      "nullHandling": "Null array returns null. Null predicate result counts as false.",
+      "shortCircuit": true,
+      "examples": [
+        { "expression": "some([0, 2, 4], $ > 3)", "result": true },
+        { "expression": "some([], $ > 0)", "result": false }
       ]
     },
     {
@@ -591,16 +683,30 @@
       "name": "timeDiff",
       "category": "date",
       "parameters": [
-        { "name": "time1", "type": "time", "description": "First time string (HH:MM:SS)." },
-        { "name": "time2", "type": "time", "description": "Second time string (HH:MM:SS)." },
-        { "name": "unit", "type": "string", "description": "Unit of measurement.", "required": false, "enum": ["seconds", "minutes", "hours"] }
+        { "name": "laterTime", "type": "time", "description": "Later ISO 8601 time string (HH:MM:SS)." },
+        { "name": "earlierTime", "type": "time", "description": "Earlier ISO 8601 time string (HH:MM:SS)." }
       ],
       "returns": "number",
-      "description": "Returns the absolute difference between two time values in the specified unit (default: seconds). Always non-negative.",
-      "nullHandling": "Null times produce error.",
+      "returnDescription": "Signed difference in whole seconds: laterTime minus earlierTime (positive when the first argument is later in the day).",
+      "description": "Difference in seconds between two time-of-day strings. Distinct from duration(), which parses an ISO 8601 duration and returns milliseconds.",
+      "nullHandling": "Invalid time strings produce a diagnostic and null.",
       "examples": [
-        { "expression": "timeDiff('14:30:00', '09:00:00', 'hours')", "result": 5 },
-        { "expression": "timeDiff('14:30:00', '14:00:00', 'minutes')", "result": 30 }
+        { "expression": "timeDiff('14:30:00', '13:00:00')", "result": 5400 },
+        { "expression": "timeDiff('13:00:00', '14:30:00')", "result": -5400 }
+      ]
+    },
+    {
+      "name": "duration",
+      "category": "date",
+      "parameters": [
+        { "name": "isoDuration", "type": "string", "description": "ISO 8601 duration (PnYnMnDTnHnMnS subset), optional leading minus." }
+      ],
+      "returns": "number",
+      "description": "Parses a duration string and returns its length in milliseconds. Years/months in the date part use fixed 365-day years and 30-day months (not calendar arithmetic). Distinct from timeDiff, which compares two clock times in seconds.",
+      "nullHandling": "Null argument returns null. Invalid strings produce an error diagnostic and null.",
+      "examples": [
+        { "expression": "duration('PT1H')", "result": 3600000 },
+        { "expression": "duration('P1D')", "result": 86400000 }
       ]
     },
     {
@@ -881,6 +987,63 @@
       "nullHandling": "Null elements skipped. Empty array returns null.",
       "examples": [
         { "expression": "moneySum($lineItems[*].cost)", "result": {"amount": 1500, "currency": "USD"} }
+      ]
+    },
+    {
+      "name": "moneySumWhere",
+      "category": "money",
+      "parameters": [
+        { "name": "values", "type": "array", "description": "Array of money objects." },
+        { "name": "predicate", "type": "boolean", "description": "FEL expression evaluated per element with '$' rebound to the current money value." }
+      ],
+      "returns": "money",
+      "description": "Sums money array elements for which the predicate evaluates to true. Matched elements MUST share the same currency. The predicate is NOT pre-evaluated — it is evaluated once per element.",
+      "nullHandling": "Null array returns null. No matches returns null.",
+      "shortCircuit": true,
+      "examples": [
+        { "expression": "moneySumWhere([money(100,'USD'), money(200,'USD')], moneyAmount($) > 50)", "result": {"amount": 300, "currency": "USD"} }
+      ]
+    },
+    {
+      "name": "locale",
+      "category": "locale",
+      "parameters": [],
+      "returns": "string",
+      "description": "Returns the active BCP 47 locale tag from the evaluation context.",
+      "deterministic": false,
+      "nullHandling": "When the host has not set a locale, returns null.",
+      "examples": [
+        { "expression": "locale()", "result": "en-US" }
+      ]
+    },
+    {
+      "name": "runtimeMeta",
+      "category": "locale",
+      "parameters": [
+        { "name": "key", "type": "string", "description": "Key in the host-provided runtime metadata bag." }
+      ],
+      "returns": "any",
+      "description": "Reads a value from runtime metadata supplied by the host.",
+      "deterministic": false,
+      "nullHandling": "Missing key returns null.",
+      "examples": [
+        { "expression": "runtimeMeta('tenantId')", "result": "acme-42" }
+      ]
+    },
+    {
+      "name": "pluralCategory",
+      "category": "locale",
+      "parameters": [
+        { "name": "count", "type": "number", "description": "Numeric count for plural rule selection." },
+        { "name": "localeTag", "type": "string", "description": "Optional BCP 47 tag; defaults to locale().", "required": false }
+      ],
+      "returns": "string",
+      "description": "Returns the CLDR cardinal plural category (zero, one, two, few, many, other) for the count and locale.",
+      "deterministic": true,
+      "nullHandling": "Null count returns null.",
+      "examples": [
+        { "expression": "pluralCategory(1)", "result": "one" },
+        { "expression": "pluralCategory(2, 'en')", "result": "other" }
       ]
     },
     {

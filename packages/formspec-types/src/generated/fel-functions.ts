@@ -47,7 +47,7 @@ export interface FunctionEntry {
   /**
    * Functional category for grouping and documentation.
    */
-  category: 'aggregate' | 'string' | 'numeric' | 'date' | 'logical' | 'type' | 'money' | 'mip' | 'repeat';
+  category: 'aggregate' | 'string' | 'numeric' | 'date' | 'logical' | 'type' | 'money' | 'mip' | 'repeat' | 'locale';
   /**
    * Ordered parameter list. Variadic parameters must be last.
    */
