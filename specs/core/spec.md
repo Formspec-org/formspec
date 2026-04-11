@@ -1228,9 +1228,13 @@ Aggregate functions operate on arrays and reduce them to a single value.
 | `avgWhere` | `avgWhere(array<number>, boolean) → number` | `number` | Arithmetic mean of numeric elements whose predicate evaluates to `true`. Returns `null` when no elements match. |
 | `minWhere` | `minWhere(array<any>, boolean) → any` | `any` | Smallest element whose predicate evaluates to `true`. Returns `null` when no elements match. Also works on `array<date>` and `array<string>`. |
 | `maxWhere` | `maxWhere(array<any>, boolean) → any` | `any` | Largest element whose predicate evaluates to `true`. Returns `null` when no elements match. Also works on `array<date>` and `array<string>`. |
+| `every` | `every(array, boolean) → boolean` | `boolean` | `true` when the array is empty or the predicate evaluates to `true` for every element. Within the predicate, `$` refers to the current element (same rebinding rules as `countWhere`). A null array argument yields `null`. |
+| `some` | `some(array, boolean) → boolean` | `boolean` | `true` when at least one element satisfies the predicate. `some([], …)` is `false`. Within the predicate, `$` refers to the current element. A null array argument yields `null`. |
 | `avg` | `avg(array<number>) → number` | `number` | Arithmetic mean of non-null elements. `avg([])` MUST signal an error (division by zero). |
 | `min` | `min(array<number>) → number` | `number` | Smallest non-null element. `min([])` returns `null`. Also works on `array<date>` and `array<string>`. |
 | `max` | `max(array<number>) → number` | `number` | Largest non-null element. `max([])` returns `null`. Also works on `array<date>` and `array<string>`. |
+
+For `countWhere`, `sumWhere`, `avgWhere`, `minWhere`, `maxWhere`, `every`, and `some`, the second argument is a **predicate expression** evaluated once per array element. It MUST be FEL expression syntax — not a string literal that embeds FEL source, and not an opaque host-defined mini-language. Within the predicate, `$` is rebound to the **current element**, which may be any value type (scalar, object, array, date, money, etc.). When the element is an **object**, dotted postfix after `$` (e.g. `$.amount`, `$.lineTotal`) resolves named properties on that object using the same postfix access rules as elsewhere in FEL (§3.6). For example, `every($lineItems[*], $.quantity > 0)` is valid when each projected element is an object with a `quantity` field.
 
 > **Example.** Compute a line-item total:
 >
@@ -1280,6 +1284,7 @@ Aggregate functions operate on arrays and reduce them to a single value.
 | `seconds` | `seconds(string) → integer` | `time` | Extract the seconds component (0–59) from an ISO 8601 time string. E.g., `seconds('14:30:00')` → `0`. |
 | `time` | `time(integer, integer, integer) → string` | `time` | Construct an ISO 8601 time string from hours, minutes, seconds. E.g., `time(14, 30, 0)` → `'14:30:00'`. Hours MUST be 0–23, minutes and seconds 0–59. |
 | `timeDiff` | `timeDiff(string, string) → integer` | `time` | Difference in seconds between two ISO 8601 time strings. `timeDiff('14:30:00', '13:00:00')` → `5400`. Result MAY be negative. |
+| `duration` | `duration(string) → number` | `number` | Parses an ISO 8601 **duration** string in the `PnYnMnDTnHnMnS` form (optional leading `-` for negative durations). Returns the length in **milliseconds**. In the date component, `Y` is treated as 365 days and `M` as 30 days (fixed lengths, not calendar-month arithmetic). This is distinct from `timeDiff`, which compares two **time-of-day** strings and returns **seconds**. Invalid or unsupported duration strings MUST produce an evaluation diagnostic and yield `null`. |
 | `year` | `year(date) → number` | `number` | The four-digit year component. |
 | `month` | `month(date) → number` | `number` | The month component (1–12). |
 | `day` | `day(date) → number` | `number` | The day-of-month component (1–31). |

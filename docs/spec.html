@@ -2400,6 +2400,25 @@ Returns <code>null</code> when no elements match. Also works on
 <code>array&lt;string&gt;</code>.</td>
 </tr>
 <tr>
+<td><code>every</code></td>
+<td><code>every(array, boolean) → boolean</code></td>
+<td><code>boolean</code></td>
+<td><code>true</code> when the array is empty or the predicate evaluates
+to <code>true</code> for every element. Within the predicate,
+<code>$</code> refers to the current element (same rebinding rules as
+<code>countWhere</code>). A null array argument yields
+<code>null</code>.</td>
+</tr>
+<tr>
+<td><code>some</code></td>
+<td><code>some(array, boolean) → boolean</code></td>
+<td><code>boolean</code></td>
+<td><code>true</code> when at least one element satisfies the predicate.
+<code>some([], …)</code> is <code>false</code>. Within the predicate,
+<code>$</code> refers to the current element. A null array argument
+yields <code>null</code>.</td>
+</tr>
+<tr>
 <td><code>avg</code></td>
 <td><code>avg(array&lt;number&gt;) → number</code></td>
 <td><code>number</code></td>
@@ -2424,6 +2443,20 @@ signal an error (division by zero).</td>
 </tr>
 </tbody>
 </table>
+<p>For <code>countWhere</code>, <code>sumWhere</code>,
+<code>avgWhere</code>, <code>minWhere</code>, <code>maxWhere</code>,
+<code>every</code>, and <code>some</code>, the second argument is a
+<strong>predicate expression</strong> evaluated once per array element.
+It MUST be FEL expression syntax — not a string literal that embeds FEL
+source, and not an opaque host-defined mini-language. Within the
+predicate, <code>$</code> is rebound to the <strong>current
+element</strong>, which may be any value type (scalar, object, array,
+date, money, etc.). When the element is an <strong>object</strong>,
+dotted postfix after <code>$</code> (e.g. <code>$.amount</code>,
+<code>$.lineTotal</code>) resolves named properties on that object using
+the same postfix access rules as elsewhere in FEL (§3.6). For example,
+<code>every($lineItems[*], $.quantity &gt; 0)</code> is valid when each
+projected element is an object with a <code>quantity</code> field.</p>
 <blockquote>
 <p><strong>Example.</strong> Compute a line-item total:</p>
 <pre><code>sum($lineItems[*].quantity * $lineItems[*].unitPrice)</code></pre>
@@ -2646,6 +2679,20 @@ be 0–23, minutes and seconds 0–59.</td>
 <td>Difference in seconds between two ISO 8601 time strings.
 <code>timeDiff('14:30:00', '13:00:00')</code> → <code>5400</code>.
 Result MAY be negative.</td>
+</tr>
+<tr>
+<td><code>duration</code></td>
+<td><code>duration(string) → number</code></td>
+<td><code>number</code></td>
+<td>Parses an ISO 8601 <strong>duration</strong> string in the
+<code>PnYnMnDTnHnMnS</code> form (optional leading <code>-</code> for
+negative durations). Returns the length in
+<strong>milliseconds</strong>. In the date component, <code>Y</code> is
+treated as 365 days and <code>M</code> as 30 days (fixed lengths, not
+calendar-month arithmetic). This is distinct from <code>timeDiff</code>,
+which compares two <strong>time-of-day</strong> strings and returns
+<strong>seconds</strong>. Invalid or unsupported duration strings MUST
+produce an evaluation diagnostic and yield <code>null</code>.</td>
 </tr>
 <tr>
 <td><code>year</code></td>
