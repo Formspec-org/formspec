@@ -20,10 +20,8 @@ Sources: editor/layout split review, chaos-test phase 1 findings + phase 4 follo
 - **File**: `packages/formspec-core/src/raw-project.ts:350-373`
 - **Action**: Monitor. Resolution path documented: add dirty flag. Not yet implemented.
 
-### 21. ~32 `as any` casts in `project.ts` (worsened)
-- **Source**: editor/layout split review
-- **File**: `packages/formspec-studio-core/src/project.ts`
-- **Action**: Track. Resolve as `IProjectCore` interface is refined. Count grew from ~25 to 32.
+### ~~21. `as any` casts in `project.ts`~~ — resolved
+- All 33 casts eliminated. `CommandResult` typed with `nodeRef`/`nodeNotFound`, `Diagnostic` with `line`/`column`, `CompNode` structured type replaces `Record<string, unknown>`.
 
 ### LayoutContainer dual-droppable
 - **Source**: layout DnD review (2026-04-07)
