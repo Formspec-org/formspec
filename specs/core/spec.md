@@ -493,19 +493,21 @@ A Response references exactly one Definition by the tuple
 Response whose `definitionVersion` does not match any known Definition at the
 given `definitionUrl`.
 
-> **Example.** A completed Response:
+> **Example.** A completed Response (this object includes every required
+> top-level property in `schemas/response.schema.json` and omits optional
+> fields such as `id` and `validationResults` for brevity):
 >
 > ```json
 > {
+>   "$formspecResponse": "1.0",
 >   "definitionUrl": "https://example.org/forms/intake",
 >   "definitionVersion": "2.1.0",
 >   "status": "completed",
->   "authored": "2025-07-10T14:30:00Z",
->   "author": { "id": "user-42", "name": "Dr. Grace Hopper" },
 >   "data": {
 >     "firstName": "Ada",
 >     "lastName": "Lovelace"
->   }
+>   },
+>   "authored": "2025-07-10T14:30:00Z"
 > }
 > ```
 
