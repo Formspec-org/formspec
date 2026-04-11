@@ -25,6 +25,7 @@
  */
 import type { CommandHandler } from '../types.js';
 import { normalizeIndexedPath } from '@formspec-org/engine/fel-runtime';
+import { reconcileComponentTree } from '../tree-reconciler.js';
 import { type TreeNode, ensureTree } from './tree-utils.js';
 
 /** Auto-incrementing counter for generating unique node IDs within a session. */
@@ -89,6 +90,20 @@ function findNode(
 }
 
 export const componentTreeHandlers: Record<string, CommandHandler> = {
+
+  /**
+   * Rebuild bound/display nodes from the current definition while preserving
+   * layout wrappers (Page, Card, etc.). Used when a node was removed from the
+   * tree but the definition item still exists — e.g. Layout "Remove from Tree"
+   * followed by placing the item on a page again.
+   */
+  'component.reconcileFromDefinition': (state) => {
+    state.component.tree = reconcileComponentTree(
+      state.definition,
+      state.component.tree,
+    ) as any;
+    return { rebuildComponentTree: false };
+  },
 
   'component.addNode': (state, payload) => {
     const p = payload as {

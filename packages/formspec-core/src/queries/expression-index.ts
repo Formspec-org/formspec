@@ -88,6 +88,8 @@ export function parseFEL(state: ProjectState, expression: string, context?: FELP
     severity: 'error',
     code: 'FEL_PARSE_ERROR',
     message: addFELHint(expression, error.message),
+    ...(error.line !== undefined ? { line: error.line } : {}),
+    ...(error.column !== undefined ? { column: error.column } : {}),
   }));
 
   const semanticErrors: Diagnostic[] = [];

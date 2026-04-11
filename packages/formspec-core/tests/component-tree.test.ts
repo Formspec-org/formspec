@@ -1,6 +1,36 @@
 import { describe, it, expect } from 'vitest';
 import { createRawProject } from '../src/index.js';
 
+function treeHasBind(node: unknown, bind: string): boolean {
+  const n = node as { bind?: string; children?: unknown[] } | null | undefined;
+  if (!n) return false;
+  if (n.bind === bind) return true;
+  for (const c of n.children ?? []) {
+    if (treeHasBind(c, bind)) return true;
+  }
+  return false;
+}
+
+describe('component.reconcileFromDefinition', () => {
+  it('recreates a bound field node removed by deleteNode', () => {
+    const project = createRawProject();
+    project.dispatch({
+      type: 'definition.addItem',
+      payload: { type: 'field', key: 'name', label: 'Name' },
+    });
+    expect(treeHasBind(project.component.tree, 'name')).toBe(true);
+
+    project.dispatch({
+      type: 'component.deleteNode',
+      payload: { node: { bind: 'name' } },
+    });
+    expect(treeHasBind(project.component.tree, 'name')).toBe(false);
+
+    project.dispatch({ type: 'component.reconcileFromDefinition', payload: {} });
+    expect(treeHasBind(project.component.tree, 'name')).toBe(true);
+  });
+});
+
 describe('component.addNode', () => {
   it('adds a node to the root', () => {
     const project = createRawProject();

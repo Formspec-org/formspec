@@ -222,6 +222,10 @@ export interface CommandResult {
   insertedPath?: string;
   /** Canonical path after a move or rename operation. */
   newPath?: string;
+  /** Reference to a created/wrapped component node, returned by component tree handlers. */
+  nodeRef?: { bind?: string; nodeId?: string };
+  /** True when the target component node was not found (non-throwing). */
+  nodeNotFound?: boolean;
   /** Extra handler-specific return data. */
   [key: string]: unknown;
 }
@@ -599,6 +603,10 @@ export interface Diagnostic {
   code: string;
   /** Human-readable description of the issue. */
   message: string;
+  /** 1-based line number within the expression, when available (FEL parse errors). */
+  line?: number;
+  /** 1-based column number within the expression, when available (FEL parse errors). */
+  column?: number;
 }
 
 // ── Diagnostics types ───────────────────────────────────────────────
