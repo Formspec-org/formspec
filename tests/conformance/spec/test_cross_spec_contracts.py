@@ -1124,6 +1124,17 @@ class TestFelSpecContracts:
         extra = registry - spec_funcs
         assert not extra, f'Registry has functions not in spec: {extra}'
 
+    def test_fel_functions_schema_names_are_builtin(self):
+        """Every entry in fel-functions.schema.json is implemented (Rust catalog / BUILTIN_NAMES)."""
+        from formspec.fel import BUILTIN_NAMES
+
+        fel_fn = _load("fel-functions.schema.json")
+        names = {entry["name"] for entry in fel_fn["functions"]}
+        missing = names - set(BUILTIN_NAMES)
+        assert not missing, (
+            f'fel-functions.schema.json lists functions not in BUILTIN_NAMES: {sorted(missing)}'
+        )
+
 
 # ===========================================================================
 # Structural Schema Assertions — Bucket 1 schema changes

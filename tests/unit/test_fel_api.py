@@ -78,6 +78,11 @@ class TestDependencies:
         deps = extract_dependencies("$ > 0")
         assert deps.has_self_ref
 
+    def test_sum_where_predicate_bare_dollar_not_self_ref(self):
+        deps = extract_dependencies("sumWhere($items, $ > 0)")
+        assert "items" in deps.fields
+        assert not deps.has_self_ref
+
     def test_let_binding_excluded(self):
         deps = extract_dependencies("let x = $a in x + $b")
         assert deps.fields == {"a", "b"}
@@ -95,6 +100,19 @@ class TestRuntimeContract:
     def test_builtin_names_exposed(self):
         assert "sum" in BUILTIN_NAMES
         assert "instance" in BUILTIN_NAMES
+        assert {
+            "every",
+            "some",
+            "duration",
+            "sumWhere",
+            "avgWhere",
+            "minWhere",
+            "maxWhere",
+            "moneySumWhere",
+            "locale",
+            "runtimeMeta",
+            "pluralCategory",
+        } <= BUILTIN_NAMES
 
     def test_reserved_words_exposed(self):
         assert {"true", "false", "null", "let"} <= RESERVED_WORDS

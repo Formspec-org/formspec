@@ -64,6 +64,54 @@ class TestAggregates:
         assert is_null(val('max([])'))
 
 
+class TestArrayPredicates:
+    """countWhere / every / some — §3.5.1 element rebinding (same as fel-core)."""
+
+    def test_countWhere_basic(self):
+        assert pv('countWhere([1, 2, 3, 4, 5], $ > 3)') == Decimal('2')
+
+    def test_every_basic(self):
+        assert pv('every([1, 2, 3], $ > 0)') is True
+        assert pv('every([1, 0, 3], $ > 0)') is False
+
+    def test_every_empty_is_true(self):
+        assert pv('every([], $ > 0)') is True
+
+    def test_some_basic(self):
+        assert pv('some([0, 2, 0], $ > 1)') is True
+        assert pv('some([0, 1], $ > 5)') is False
+
+    def test_some_empty_is_false(self):
+        assert pv('some([], $ > 0)') is False
+
+    def test_duration_milliseconds(self):
+        assert pv("duration('PT1H')") == Decimal('3600000')
+        assert pv("duration('P1D')") == Decimal('86400000')
+        assert pv("duration('PT0.5S')") == Decimal('500')
+        assert pv("duration('-PT1M')") == Decimal('-60000')
+
+    def test_duration_out_of_range_diagnostic(self):
+        r = evaluate("duration('P106751991167301D')")
+        assert is_null(r.value)
+        assert any(
+            d.message == 'duration: duration exceeds representable range (milliseconds)'
+            for d in r.diagnostics
+        )
+
+    def test_duration_invalid_string_diagnostic(self):
+        r = evaluate("duration('P')")
+        assert is_null(r.value)
+        assert any(
+            d.message == 'duration: invalid ISO 8601 duration string' for d in r.diagnostics
+        )
+
+    def test_predicate_object_elements_use_dollar_field(self):
+        """§3.5.1 — rebound $ may be an object; $.prop uses postfix on the element."""
+        assert pv("every([{amount: 1}, {amount: 2}], $.amount > 0)") is True
+        assert pv("some([{flag: false}, {flag: true}], $.flag)") is True
+        assert pv("countWhere([{n: 1}, {n: 5}], $.n > 2)") == Decimal("1")
+
+
 class TestStringFunctions:
     def test_length(self):
         assert pv("length('hello')") == Decimal('5')
@@ -170,6 +218,9 @@ class TestDateFunctions:
 
     def test_timeDiff(self):
         assert pv("timeDiff('14:30:00', '13:00:00')") == Decimal('5400')
+
+    def test_timeDiff_may_be_negative(self):
+        assert pv("timeDiff('13:00:00', '14:30:00')") == Decimal('-5400')
 
 
 class TestLogicalFunctions:

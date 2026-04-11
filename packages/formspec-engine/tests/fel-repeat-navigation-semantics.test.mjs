@@ -112,3 +112,30 @@ test('countWhere predicate rebinds bare $ instead of leaking current repeat row'
   const engine = makeRepeatEngine();
   assert.equal(engine.compileExpression('countWhere([10, 20, 30], $ > 15)', 'rows[0].amount')(), 2);
 });
+
+test('every / some rebind bare $ like countWhere inside repeat context', () => {
+  const engine = makeRepeatEngine();
+  assert.equal(engine.compileExpression('every([10, 20, 30], $ > 5)', 'rows[0].amount')(), true);
+  assert.equal(engine.compileExpression('every([10, 20, 3], $ > 5)', 'rows[0].amount')(), false);
+  assert.equal(engine.compileExpression('some([1, 2, 3], $ > 2)', 'rows[0].amount')(), true);
+  assert.equal(engine.compileExpression('some([1, 2, 3], $ > 10)', 'rows[0].amount')(), false);
+});
+
+test('duration() parses ISO 8601 duration to milliseconds via WASM', () => {
+  const engine = makeRepeatEngine();
+  assert.equal(engine.compileExpression("duration('PT1H')", 'rows[0].amount')(), 3600000);
+  assert.equal(engine.compileExpression("duration('PT0.5S')", 'rows[0].amount')(), 500);
+  assert.equal(engine.compileExpression("duration('-PT1M')", 'rows[0].amount')(), -60000);
+});
+
+test('quantifier predicates support $.field when elements are objects (§3.5.1)', () => {
+  const engine = makeRepeatEngine();
+  assert.equal(
+    engine.compileExpression('every([{amount: 10}, {amount: 20}], $.amount > 5)', 'rows[0].amount')(),
+    true,
+  );
+  assert.equal(
+    engine.compileExpression('countWhere([{v: 1}, {v: 9}], $.v > 5)', 'rows[0].amount')(),
+    1,
+  );
+});
