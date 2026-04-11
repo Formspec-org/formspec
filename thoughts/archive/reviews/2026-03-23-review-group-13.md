@@ -127,7 +127,7 @@ The plan is actionable. Each open item has enough context to be picked up withou
 
 Progress is embedded in the `Status` section prose (phases 1-6 landed). The plan does not use checkbox-style tracking — progress is described in the header paragraph. This is less scannable than the split plan's checkbox approach, but the content is accurate and complete. The per-phase Python impact table is well-structured.
 
-### `thoughts/reviews/2026-03-23-presentation-tier-architecture-audit.md`
+### `thoughts/archive/reviews/2026-03-23-presentation-tier-architecture-audit.md`
 
 501 lines. Well-structured red/green team analysis. The "bottom line" section immediately states the thesis: three valid product jobs, invalid current contracts. The three authoring modes (definition-only, definition+theme, definition+component) are the right frame for evaluating the presentation tier. The main debt vectors (duplicated concepts, vocabulary drift, hybrid fallback model, weak selectors, wrong-direction coupling) are diagnosed at the right layer.
 
@@ -136,6 +136,7 @@ This document is diagnostic and correct but does not generate any immediate acti
 ### `filemap.json` (commit 5c0d4b4)
 
 Spot-checked five engine entries:
+
 - `packages/formspec-engine/src/wasm-bridge.ts` → "WASM bridge — lazy initialization and typed wrappers for all Rust WASM exports." Matches `@filedesc`.
 - `packages/formspec-engine/src/init-formspec-engine.ts` → "Public `initFormspecEngine` / `isFormspecEngineInitialized` — wraps wasm-bridge load for apps." Matches `@filedesc`.
 - `packages/formspec-engine/src/index.ts` → "Public API barrel for the Formspec engine package (WASM-backed evaluation)." Matches `@filedesc`.
@@ -157,6 +158,7 @@ One observation: the Makefile `build-wasm` target previously ran `wasm-opt` inli
 **Approve.** The committed artifacts are clean and accurate. The uncommitted changes are a coherent, well-tested partial landing of the WASM split — ready to commit as-is. The two medium findings are documentation/tracking issues, not implementation problems. The root work (Rust crate split) is correctly deferred as future work and is explicitly tracked in the plan.
 
 **Next concrete steps after this group:**
+
 1. Commit the in-progress engine changes (`wasm-bridge.ts`, `init-formspec-engine.ts`, `index.ts`, `package.json`, `check-dep-fences.mjs`, `thoughts/archive/plans/2026-03-23-wasm-runtime-tools-split.md`).
 2. Fix `scripts/find-large-code-files.sh` exclusion for `wasm-pkg-runtime/` and `wasm-pkg-tools/`.
 3. Add implementation status note to ADR 0050.

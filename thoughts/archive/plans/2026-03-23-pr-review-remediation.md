@@ -8,7 +8,7 @@
 
 **Tech Stack:** Rust (formspec-core, fel-core, formspec-py), TypeScript (formspec-engine, formspec-core tests), Playwright (E2E tests), CSS/Tailwind (formspec-adapters), Markdown (specs)
 
-**Source:** `thoughts/reviews/2026-03-23-validated-findings.md`
+**Source:** `thoughts/archive/reviews/2026-03-23-validated-findings.md`
 
 ---
 
@@ -17,6 +17,7 @@
 The version comparison in `apply_migrations_to_response_data` uses string ordering. `"9.0.0" > "10.0.0"` lexicographically, so migrations run in wrong order once any form hits version 10+.
 
 **Files:**
+
 - Modify: `crates/formspec-core/src/response_migration.rs:106-126`
 - Test: `crates/formspec-core/src/response_migration.rs` (inline `mod tests`)
 
@@ -136,6 +137,7 @@ ordering and filtering."
 Export tests use `not.toBeEmpty()` on deterministic mapping output. The original server-response tests verified the full ValidationReport schema shape; current tests only check existence.
 
 **Files:**
+
 - Modify: `tests/component/tools-dashboard/export.spec.ts`
 - Reference: `schemas/validationReport.schema.json` (for expected shape)
 
@@ -213,6 +215,7 @@ XML: verify XML declaration present."
 27 hardcoded color tokens across 8 widget files bypass the `--formspec-tw-*` CSS variable system, defeating themability. Also folds in L8 (dead `applyErrorStyling` parameter logic).
 
 **Files:**
+
 - Modify: `packages/formspec-adapters/src/tailwind/slider.ts`
 - Modify: `packages/formspec-adapters/src/tailwind/rating.ts`
 - Modify: `packages/formspec-adapters/src/tailwind/money-input.ts`
@@ -266,6 +269,7 @@ For each of the 8 widget files, replace raw Tailwind color tokens with CSS varia
 | `bg-teal-900/40`, `ring-teal-500/20`, `focus:ring-teal-500/15` | `bg-[var(--formspec-tw-accent)]/40` or CSS variable with opacity |
 
 For Wizard/Tabs MutationObserver callbacks that set `style.backgroundColor` directly, use:
+
 ```typescript
 el.style.backgroundColor = 'var(--formspec-tw-accent)';
 ```
@@ -339,6 +343,7 @@ radio-group use the shared function instead of inline duplicate."
 A single stale region key across ANY page drops ALL pages. Should filter per-page instead.
 
 **Files:**
+
 - Modify: `packages/formspec-core/src/handlers/project.ts:41-57`
 - Test: `packages/formspec-core/tests/project-commands.test.ts`
 
@@ -462,6 +467,7 @@ pages with stale region keys are removed; valid pages survive."
 `execute()` uses `COERCE_FAILURE` for both "WASM not loaded" and "execution error". Callers can't distinguish them.
 
 **Files:**
+
 - Modify: `packages/formspec-engine/src/mapping/RuntimeMappingEngine.ts:131-143`
 
 - [ ] **Step 1: Fix the error code**
@@ -507,6 +513,7 @@ can distinguish initialization failures from execution errors."
 The TS test helper `hasCurrentEvaluateDefSignature` doesn't check for the `context` parameter, so pre-parity binaries pass the guard and auto-rebuild doesn't trigger.
 
 **Files:**
+
 - Modify: `packages/formspec-core/tests/python.ts:32`
 
 - [ ] **Step 1: Add the check**
@@ -545,6 +552,7 @@ evaluate_def signature, triggering auto-rebuild for pre-parity binaries."
 `fastapi` and `httpx` in test extras have zero consumers.
 
 **Files:**
+
 - Modify: `pyproject.toml:13-14`
 
 - [ ] **Step 1: Remove the two lines**
@@ -585,6 +593,7 @@ a planned API test suite that hasn't been written."
 Multiple `[RFC ...]` references have no link definitions: `[RFC 4180]` (3 refs), `[RFC 8174]` (1 ref), `[RFC 8259]` (4 refs), `[RFC 6901]` (1 ref), `[RFC 3986]` (1 ref).
 
 **Files:**
+
 - Modify: `specs/mapping/mapping-spec.md:47`
 
 - [ ] **Step 1: Add link definitions**
@@ -625,6 +634,7 @@ referenced in body text but had no link definitions."
 Five static regex patterns compiled on every function call. ~1,250 compilations per evaluation cycle for a 50-field form.
 
 **Files:**
+
 - Modify: `crates/fel-core/src/prepare_host.rs:42,50,57,93,109`
 
 - [ ] **Step 1: Add LazyLock statics at module level**
@@ -685,6 +695,7 @@ std::sync::LazyLock (stable in Rust 2024 edition) for one-time init."
 The PostfixAccess let-bound fix is structurally correct but only tested at one level of depth.
 
 **Files:**
+
 - Modify: `crates/fel-core/tests/evaluator_tests.rs:239`
 
 - [ ] **Step 1: Add multi-level test**
@@ -721,6 +732,7 @@ property access (x.a.b, x.a.b.c), not just the one-level case."
 `formspec-py/src/document.rs` uses `types::EvalContext` instead of the crate-root re-export.
 
 **Files:**
+
 - Modify: `crates/formspec-py/src/document.rs:14-18`
 
 - [ ] **Step 1: Fix the import**
@@ -768,6 +780,7 @@ Decouples from formspec-eval's internal module layout."
 The `new Date().toISOString()` makes generated API.md files non-idempotent, blocking any future staleness gate.
 
 **Files:**
+
 - Modify: `scripts/bundle-rustdoc-md.mjs:70-74`
 
 - [ ] **Step 1: Remove the timestamp**
@@ -794,10 +807,12 @@ const pieces = [
 - [ ] **Step 2: Regenerate to verify idempotence**
 
 Run twice and diff:
+
 ```bash
 npm run docs:fel-core && cp crates/fel-core/docs/rustdoc-md/API.md /tmp/api1.md
 npm run docs:fel-core && diff /tmp/api1.md crates/fel-core/docs/rustdoc-md/API.md
 ```
+
 Expected: No diff (idempotent)
 
 - [ ] **Step 3: Commit**

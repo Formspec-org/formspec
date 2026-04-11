@@ -136,4 +136,4 @@ Given the project's "prefer starting over to refactoring" philosophy:
 **Created**: March 23, 2026  
 **Related**: ADR 0046, ADR 0049, `specs/theme/theme-spec.llm.md`
 
-This document can be committed as `thoughts/reviews/2026-03-23-tailwind-adapter-review.md`.
+This document lives at `thoughts/archive/reviews/2026-03-23-tailwind-adapter-review.md`.

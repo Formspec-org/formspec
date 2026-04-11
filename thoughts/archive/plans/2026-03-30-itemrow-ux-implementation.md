@@ -1,7 +1,7 @@
 # ItemRow UX Implementation Plan
 
 **Date:** 2026-03-30
-**Basis:** `thoughts/studio/2026-03-30-itemrow-non-technical-ux.md`, `thoughts/studio/mock-itemrow-ux.html`
+**Basis:** `thoughts/archive/studio/2026-03-30-itemrow-non-technical-ux.md`, `thoughts/archive/studio/mock-itemrow-ux.html`
 **Branch:** `feat/itemrow-ux-overhaul`
 
 ---
@@ -32,6 +32,7 @@ Update the label and pill infrastructure that everything else depends on.
 | `packages/formspec-studio/src/workspaces/editor/item-row-shared.tsx` | Update `summaryInputLabel` to use task-oriented labels: `'Inline calculate'`→`'Inline formula'`, `'Inline relevant'`→`'Inline visibility condition'`, `'Inline required'`→`'Inline mandatory rule'`, `'Inline readonly'`→`'Inline locked rule'`, `'Inline constraint'`→`'Inline validation rule'`. |
 
 **Tests (red first):**
+
 - `editor-tree-helpers.test.ts`: assert new pill text values and `specTerm` fields
 - Existing Playwright tests that assert pill text (grep for `req`, `rel`, `ƒx` in e2e tests) — update selectors
 
@@ -64,6 +65,7 @@ Build the accordion container that the lower panel will use.
 | `packages/formspec-studio/tests/components/ui/accordion-section.test.tsx` | **New file.** Renders open/closed, fires onToggle, aria-expanded reflects state, badge renders, color bar renders. |
 
 **Design tokens (from mock):**
+
 - Visibility: `border-l-logic` (purple)
 - Validation: `border-l-accent` (blue)
 - Value: `border-l-green`
@@ -110,17 +112,20 @@ The big change: replace three implementation zones with four-category accordion.
 | `packages/formspec-studio/src/workspaces/editor/ItemRowLowerPanel.tsx` | **Major rewrite.** Replace `editingFieldConfig`/`editingBehavior`/`editingOptions`/`editingDisplayContent` zone flags with a single `openSection: 'visibility' | 'validation' | 'value' | 'format' | null` state. Render: (1) `buildAdvisories` callouts above accordion, (2) four `AccordionSection` instances. Section contents: |
 
 **Visibility section:**
+
 - `relevant` BindCard (if present)
 - "Add visibility condition" button (if no relevant bind)
 - For relevant BindCard: advanced disclosure with `nonRelevantBehavior`, `excludedValue`, `disabledDisplay`
 
 **Validation section:**
+
 - `required` BindCard (if present)
 - `constraint` BindCard with `constraintMessage` (if present)
 - "Add validation rule" button
 - For constraint BindCard: advanced disclosure with `nonRelevantBehavior`, `excludedValue`
 
 **Value section:**
+
 - `calculate` BindCard (if present)
 - `initialValue` BindCard (if present)
 - `PrePopulateCard` (if present)
@@ -129,15 +134,18 @@ The big change: replace three implementation zones with four-category accordion.
 - When empty: three-option decision tree entry point (Type a starting value / Copy from a data source / Compute with a formula)
 
 **Data format section:**
+
 - Currency, precision, prefix, suffix fields
 - Orphan field-detail editor pattern (reused from current implementation)
 - Only auto-expand for money/decimal fields where these properties are relevant
 
 **Options (choice fields):**
+
 - Rendered as a fifth section when `isChoiceField` is true: "Options — What can the user choose?"
 - Reuses existing options editing UI
 
 **Display items:**
+
 - Only Visibility section rendered. Other sections hidden entirely — not collapsed, not disabled, just absent. No "Data format" or "Value" sections for headings/dividers.
 
 | File | Change |
@@ -149,12 +157,14 @@ The big change: replace three implementation zones with four-category accordion.
 **Prop changes on ItemRowLowerPanel:**
 
 Remove:
+
 - `editingFieldConfig`, `editingBehavior`, `editingOptions`, `editingDisplayContent`
 - `orphanUiLabel`, `orphanFieldDetailLabel` (absorbed into Data format section)
 - `fieldDetailLaunchers` (absorbed into per-section "Add" buttons)
 - `visibleMissingActions` (replaced by per-section empty states)
 
 Add:
+
 - `openSection: string | null`
 - `onSectionChange: (section: string | null) => void`
 - `isDisplayItem: boolean` (to control which sections render)
@@ -181,7 +191,7 @@ Wire up FEL expression errors from the engine to the BindCard UI.
 
 | File | Change |
 |------|--------|
-| `packages/formspec-studio-core/src/editor-tree-helpers.ts` | Add `buildExpressionDiagnostics(binds, definitionKeys): Record<string, ExpressionError | null>` function. For each bind expression, check for undefined references against `definitionKeys`. Return `{ message, suggestions }` for each broken expression. |
+| `packages/formspec-studio-core/src/editor-tree-helpers.ts` | Add `buildExpressionDiagnostics(binds, definitionKeys): Record<string, ExpressionError | null>` function. For each bind expression, check for undefined references against `definitionKeys`. Return`{ message, suggestions }` for each broken expression. |
 | `packages/formspec-studio-core/tests/editor-tree-helpers.test.ts` | Tests: valid expression → null, undefined reference → error with suggestions (fuzzy match on definitionKeys), syntax error → error with position. |
 | `packages/formspec-studio/src/workspaces/editor/ItemRowLowerPanel.tsx` | Pass `error` prop to BindCard when diagnostics exist for that bind type. |
 | `packages/formspec-studio/src/workspaces/editor/ItemRow.tsx` | Call `buildExpressionDiagnostics` and pass results down. |
