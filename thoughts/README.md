@@ -4,6 +4,11 @@ All internal planning, research, decisions, and reviews live here. `docs/` is fo
 
 **Reorganized:** 2026-03-16 (from scattered `docs/plans/`, `docs/superpowers/`, `thoughts/adr/` flat dump)
 
+### Verification
+
+- After adding or moving markdown under `thoughts/`, run **`npm run docs:filemap`** so `filemap.json` stays accurate.
+- **`npm run docs:check`** (repo CI gate) includes **`scripts/check-thoughts-relocated-paths.mjs`**, which fails if tracked sources still cite paths that now live only under **`thoughts/archive/`** (see [`archive/README.md`](archive/README.md)).
+
 ---
 
 ## Directory Structure
@@ -50,7 +55,7 @@ Next available number: **0061**
 | 0030 | [schema-parity-phase2](adr/0030-schema-parity-phase2-new-artifacts.md) | Proposed | New artifacts + mapping depth |
 | 0031 | [schema-parity-phase3](adr/0031-schema-parity-phase3-new-subsystems.md) | Proposed | Screener, registry, scoped vars |
 | 0035 | [test-suite-reorg](adr/0035-test-suite-reorganization-and-unification.md) | Accepted | Unify test suites |
-| 0036 | [extract-studio-core](adr/0036-extract-formspec-studio-core-package.md) | Proposed | Extract `formspec-studio-core` |
+| 0036 | [extract-studio-core](adr/0036-extract-formspec-studio-core-package.md) | Proposed | Package exists; reconcile ADR status when convenient |
 | 0037 | [move-python-to-packages](adr/0037-move-python-into-packages-formspec-core.md) | Accepted | Move `src/formspec/` → packages |
 | 0039 | [seamless-page-management](adr/0039-seamless-page-management.md) | Proposed | Studio sole document author |
 | 0040 | [mcp-tool-consolidation](adr/0040-mcp-tool-consolidation.md) | Proposed | MCP conversational workflow |
@@ -58,11 +63,31 @@ Next available number: **0061**
 | 0042 | [launch-blog-posts](adr/0042-launch-blog-posts.md) | Proposed | Content for launch |
 | 0043 | [archive-form-builder](adr/0043-archive-form-builder.md) | Approved | Remove form-builder |
 | 0044 | [inspector-ux-redesign](adr/0044-inspector-ux-redesign.md) | Implemented | Zero-jargon progressive disclosure |
+| 0045 | [rust-shared-kernel-hybrid](adr/0045-rust-shared-kernel-hybrid.md) | Implemented | Rust/WASM kernel + TS orchestration |
+| 0046 | [headless-component-adapters](adr/0046-headless-component-adapters.md) | Accepted | Render adapters + headless behaviors |
+| 0047 | [css-architecture-split](adr/0047-css-architecture-split.md) | Accepted | Layout vs default vs adapter CSS |
+| 0047 | [form-references](adr/0047-form-references.md) | Accepted | **Duplicate ADR id** — distinct topic from CSS split |
+| 0048 | [uswds-trimmed-sass-build](adr/0048-uswds-trimmed-sass-build.md) | Accepted | Trimmed USWDS Sass for adapter |
+| 0048 | [i18n-as-locale-artifact](adr/0048-i18n-as-locale-artifact.md) | Proposed | **Duplicate ADR id** — locale sidecar model |
+| 0049 | [tailwind-css-adapter](adr/0049-tailwind-css-adapter.md) | Accepted | Tailwind reference adapter |
+| 0050 | [wasm-runtime-tools-split](adr/0050-wasm-runtime-tools-split.md) | Accepted | `wasm-pkg-runtime` vs tools split |
+| 0051 | [pdf-acroform-generation](adr/0051-pdf-acroform-generation.md) | Proposed | PDF via layout seam |
+| 0052 | [remove-theme-page-layout](adr/0052-remove-theme-page-layout.md) | Proposed | Deprecate theme `pages` layout |
+| 0053 | [formspec-kotlin](adr/0053-formspec-kotlin.md) | Accepted | **Duplicate ADR id** — Android/Compose renderer |
+| 0053 | [webmcp-native-assist-protocol](adr/0053-webmcp-native-assist-protocol.md) | Proposed | Assist + WebMCP |
+| 0054 | [privacy-preserving-ledger-chain](adr/0054-privacy-preserving-client-server-ledger-chain.md) | Proposed | Client/server ledger + crypto |
+| 0055 | [studio-semantic-workspace-consolidation](adr/0055-studio-semantic-workspace-consolidation.md) | Proposed | Editor-centric semantic authoring |
+| 0056 | [click-to-sign-attestation](adr/0056-click-to-sign-attestation-component.md) | Proposed | Click-to-sign vs drawn signature |
+| 0057 | [wos-core-implementation-boundary](adr/0057-wos-core-implementation-boundary.md) | Accepted | WOS core vs embedder seam |
+| 0058 | [wos-core-gap-analysis](adr/0058-wos-core-gap-analysis.md) | Accepted (with modifications) | Gov workflow capability gaps |
+| 0059 | [unified-ledger-canonical-event-store](adr/0059-unified-ledger-as-canonical-event-store.md) | Proposed | Ledger across WOS + Formspec |
 | 0060 | [fel-constraint-self-dollar-nesting](adr/0060-fel-constraint-self-dollar-nesting.md) | Accepted | Constraint `$` vs quantifier predicate `$` scoping |
 
 ### Gaps in numbering
 
 Numbers 0024, 0026, 0027, 0028, 0032, 0034, 0038 were execution plans, not decisions — moved to `plans/`.
+
+**Duplicate ADR filenames:** `0047`, `0048`, and `0053` each appear twice (different decisions). Prefer disambiguating by slug when linking; renumbering is a separate editorial pass.
 
 ### Archived ADRs
 
