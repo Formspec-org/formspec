@@ -124,7 +124,7 @@ export function FELReferencePopup({ label = 'FEL Reference' }: FELReferencePopup
     : catalog;
 
   return (
-    <div ref={containerRef} className="relative inline-flex">
+    <div ref={containerRef} className={`relative inline-flex ${open ? 'z-[600]' : ''}`}>
       <button
         type="button"
         title={label}
@@ -142,7 +142,8 @@ export function FELReferencePopup({ label = 'FEL Reference' }: FELReferencePopup
 
       {open && (
         <div
-          className="absolute bottom-full right-0 mb-2 z-50 w-72 rounded-[6px] border border-border bg-surface shadow-lg overflow-hidden flex flex-col"
+          data-testid="fel-reference-popup"
+          className="absolute bottom-full right-0 mb-2 z-[200] w-72 rounded-[6px] border border-border bg-surface shadow-lg overflow-hidden flex flex-col"
           style={{ maxHeight: '380px' }}
         >
           {/* Header */}
@@ -184,6 +185,7 @@ export function FELReferencePopup({ label = 'FEL Reference' }: FELReferencePopup
                     {/* Category header */}
                     <button
                       type="button"
+                      data-fel-category={cat.name}
                       className="w-full flex items-center justify-between px-3 py-1.5 text-left hover:bg-subtle/50 transition-colors cursor-pointer"
                       onClick={() => setExpandedCat(isExpanded && !query ? null : cat.name)}
                     >
@@ -204,6 +206,7 @@ export function FELReferencePopup({ label = 'FEL Reference' }: FELReferencePopup
                           <button
                             key={fn.name}
                             type="button"
+                            data-fel-fn={fn.name}
                             aria-selected={activeFunction === fn.name}
                             data-active={activeFunction === fn.name ? 'true' : 'false'}
                             className={`w-full px-3 py-1 text-left hover:bg-subtle/30 transition-colors ${activeFunction === fn.name ? 'fel-fn-active bg-subtle/40' : ''}`}

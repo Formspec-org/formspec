@@ -124,7 +124,7 @@ function InsertSlot({ nodeId, index, collisionPriority }: { nodeId: string; inde
       data-testid={`insert-slot-${nodeId}-${index}`}
       data-insert-index={String(index)}
       data-container-id={nodeId}
-      className={`min-h-[12px] shrink-0 rounded transition-colors ${
+      className={`min-h-[20px] shrink-0 rounded transition-colors ${
         isDropTarget ? 'bg-accent/55 ring-2 ring-accent/80 ring-inset' : 'bg-accent/25 hover:bg-accent/35'
       }`}
     />

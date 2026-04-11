@@ -48,7 +48,7 @@ export function StatusBar() {
           <span className="text-[11px] uppercase tracking-[0.22em] text-muted">FORMSPEC {formspecVersion}</span>
         </div>
 
-        <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${statusTone}`}>
+        <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${statusTone}`}>
           {status}
         </span>
 
@@ -97,7 +97,7 @@ export function StatusBar() {
           <button
             onClick={() => handleCopyUrl(definition.url)}
             title="Copy URL"
-            className="rounded-full border border-border/70 px-2 py-1 text-[10px] text-muted hover:bg-surface hover:text-ink transition-colors"
+            className="rounded-full border border-border/70 px-2 py-1 text-[11px] text-muted hover:bg-surface hover:text-ink transition-colors"
           >
             {copied ? 'Copied' : 'Copy'}
           </button>
