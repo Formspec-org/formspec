@@ -146,10 +146,10 @@ wos-spec/
     advanced/verification-report.md          # L3 sidecar
     profiles/                                # Parallel seams
   schemas/
-    wos-kernel.schema.json
-    wos-workflow-governance.schema.json
-    wos-ai-integration.schema.json
-    wos-*.schema.json                        # One schema per document type
+    kernel/wos-kernel.schema.json
+    governance/wos-workflow-governance.schema.json
+    ai/wos-ai-integration.schema.json
+    */wos-*.schema.json                      # One schema per document type; dirs mirror specs/
   DRAFTS/                                    # 13 prior drafts — source material for recovery
 ```
 

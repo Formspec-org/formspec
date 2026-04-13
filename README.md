@@ -169,6 +169,7 @@ Neither runtime imports or wraps the other. They deploy and test independently, 
 [`conformance-suite`](schemas/conformance-suite.schema.json)
 
 `specs/` — Normative specifications organized by tier
+`wos-spec/` — [Workflow Orchestration Standard](wos-spec/README.md): governed workflow, runtime, provenance, AI-oversight specs, and the Rust conformance/runtime-core work that composes with Formspec contracts
 `registries/` — Extension registries (common: email, phone, currency, SSN, etc.)
 
 ### TypeScript Packages

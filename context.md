@@ -229,6 +229,21 @@ Formspec separates concerns into independent, composable sidecar documents — f
 
 ---
 
+## WOS Relationship
+
+Formspec now has a sibling specification in this repository: **WOS (Workflow Orchestration Standard)**, under [`wos-spec/`](wos-spec/README.md). WOS governs what happens after data collection in rights-impacting and audit-heavy workflows: lifecycle state, actor authority, due process, structured review, AI constraints, provenance, and runtime conformance.
+
+The relationship is deliberate:
+
+- **Formspec** defines contracts for collecting, validating, explaining, and transforming structured data.
+- **WOS** defines how governed workflows use that data over time, including case state, decisions, review protocols, agent controls, and durable provenance.
+
+They compose cleanly. WOS uses Formspec where it needs contract validation and human-task response structure, rather than inventing a second form or validation language. That makes Formspec more than a form definition standard: it becomes the intake and interaction layer for governed workflow systems in benefits, eligibility, compliance, investigations, and other high-stakes domains.
+
+This matters for project positioning. Formspec remains focused on portable, spec-defined data collection and validation. WOS extends the broader architecture into workflow and decision governance without collapsing the two concerns into one document model.
+
+---
+
 ## Design Philosophy
 
 ### Spec-first methodology
