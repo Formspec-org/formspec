@@ -1,15 +1,7 @@
 # Studio TODO
 
-## bindKeyMap collision risk with duplicate item keys
+## bindKeyMap collision (resolved)
 
-**Priority**: Medium
-**Area**: `src/lib/tree-helpers.ts`, `src/workspaces/editor/EditorCanvas.tsx`
+**Status:** Fixed in-repo (2026-04-14). `reconcileComponentTree` (`@formspec-org/core`) stamps each item with **`definitionItemPath`** (absolute definition dotted path). Layout code in `@formspec-org/studio-core` / studio prefers that field when resolving paths; `buildBindKeyMap` remains a fallback for external trees that never ran reconciliation.
 
-When a field is moved (via `component.moveNode`) into a layout container at a different tree level, the renderer falls back to `bindKeyMap` — a secondary index from item key to definition path — to resolve the field's actual definition path.
-
-This map is keyed by leaf key (e.g., `name`), so if two groups have items with the same key (e.g., `page1.name` and `page2.name`), the first one wins. This works today because paged mode only shows one page at a time, but it will break if:
-
-- Multiple pages are rendered simultaneously (e.g., a "show all pages" view)
-- Non-paged definitions have duplicate keys across groups
-
-**Fix**: Store the actual definition path on each component tree node during `_rebuildComponentTree`. The rebuild already knows both the definition structure and tree structure, so it can annotate each bound node with its full defPath. This eliminates the need for the fallback map entirely.
+**Areas touched:** `packages/formspec-core/src/tree-reconciler.ts`, `packages/formspec-studio-core/src/authoring-helpers.ts`, `packages/formspec-studio/src/workspaces/layout/render-tree.tsx`, `CompNode` in `layout-helpers.ts`.

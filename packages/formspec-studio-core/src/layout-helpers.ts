@@ -26,6 +26,13 @@ export interface CompNode {
   component: string;
   bind?: string;
   nodeId?: string;
+  /**
+   * Absolute definition item path (e.g. `pageA.contact.email`) set when the tree is
+   * reconciled from the definition. Studio-only — not part of the shipped component
+   * schema. Lets layout tooling resolve the correct item when duplicate leaf keys
+   * exist across pages or groups without relying solely on `bindKeyMap`.
+   */
+  definitionItemPath?: string;
   title?: string;
   description?: string;
   syntheticPage?: boolean;

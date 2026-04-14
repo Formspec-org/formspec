@@ -87,6 +87,35 @@ describe('reconcileComponentTree', () => {
     expect(tree.children[0].component).toBe('TextInput');
     expect(tree.children[1].bind).toBe('age');
     expect(tree.children[1].component).toBe('NumberInput');
+    expect(tree.children[0].definitionItemPath).toBe('name');
+    expect(tree.children[1].definitionItemPath).toBe('age');
+  });
+
+  it('stamps definitionItemPath on nested items so duplicate leaf keys stay distinct', () => {
+    const definition = {
+      items: [
+        {
+          key: 'g1',
+          type: 'group',
+          children: [{ key: 'title', type: 'field', dataType: 'string' }],
+        },
+        {
+          key: 'g2',
+          type: 'group',
+          children: [{ key: 'title', type: 'field', dataType: 'string' }],
+        },
+      ],
+    } as any;
+
+    const tree = reconcileComponentTree(definition, undefined);
+    const g1 = tree.children!.find((c: any) => c.bind === 'g1');
+    const g2 = tree.children!.find((c: any) => c.bind === 'g2');
+    expect(g1?.definitionItemPath).toBe('g1');
+    expect(g2?.definitionItemPath).toBe('g2');
+    const t1 = g1?.children?.find((c: any) => c.bind === 'title');
+    const t2 = g2?.children?.find((c: any) => c.bind === 'title');
+    expect(t1?.definitionItemPath).toBe('g1.title');
+    expect(t2?.definitionItemPath).toBe('g2.title');
   });
 
   it('reuses existing bound node properties', () => {

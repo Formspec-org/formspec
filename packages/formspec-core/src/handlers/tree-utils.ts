@@ -22,6 +22,9 @@ import {
  *   the absolute path by prepending the group prefix accumulated from ancestor nodes
  *   (e.g. `"contact.email"`). Code that reads `bind` from an in-memory `TreeNode`
  *   must not assume it is a rooted path.
+ * - `definitionItemPath` -- optional absolute definition path for this node (set by
+ *   `reconcileComponentTree`). Studio-only; stripped on export. Disambiguates
+ *   duplicate leaf keys across pages and layout wrappers.
  * - `nodeId` -- present on unbound nodes (layout, container).
  * - `children` -- child nodes; only meaningful for Layout and Container types.
  * - `style`, `accessibility`, `responsive` -- typed sub-objects for property handlers.
@@ -31,6 +34,8 @@ export type TreeNode = {
   component: string;
   bind?: string;
   nodeId?: string;
+  /** Absolute definition path; set by reconcile; stripped on export. */
+  definitionItemPath?: string;
   children?: TreeNode[];
   style?: Record<string, unknown>;
   accessibility?: Record<string, unknown>;

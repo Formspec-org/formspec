@@ -449,8 +449,14 @@ export function flattenComponentTree(
         });
         walk(children, depth + 1, defPathPrefix);
       } else if (node.bind) {
-        let defPath = defPathPrefix ? `${defPathPrefix}.${node.bind}` : node.bind;
-        let defEntry = defLookup.get(defPath);
+        const candidate = defPathPrefix ? `${defPathPrefix}.${node.bind}` : node.bind;
+        let defPath = candidate;
+        let defEntry = defLookup.get(candidate);
+        const annotated = node.definitionItemPath;
+        if (!defEntry && annotated && defLookup.has(annotated)) {
+          defPath = annotated;
+          defEntry = defLookup.get(annotated);
+        }
         if (!defEntry && bindKeyMap) {
           const altPath = bindKeyMap.get(node.bind);
           if (altPath) {
@@ -475,8 +481,15 @@ export function flattenComponentTree(
           walk(children, depth + 1, defPath);
         }
       } else if (node.nodeId) {
-        let defPath = defPathPrefix ? `${defPathPrefix}.${node.nodeId}` : node.nodeId;
-        if (!defLookup.get(defPath) && bindKeyMap) {
+        const candidate = defPathPrefix ? `${defPathPrefix}.${node.nodeId}` : node.nodeId;
+        let defPath = candidate;
+        let defEntry = defLookup.get(candidate);
+        const annotated = node.definitionItemPath;
+        if (!defEntry && annotated && defLookup.has(annotated)) {
+          defPath = annotated;
+          defEntry = defLookup.get(annotated);
+        }
+        if (!defEntry && bindKeyMap) {
           const altPath = bindKeyMap.get(node.nodeId);
           if (altPath) defPath = altPath;
         }

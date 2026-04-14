@@ -8,6 +8,12 @@ type TreeNode = {
   bind?: string;
   nodeId?: string;
   children?: TreeNode[];
+  /**
+   * Absolute definition path for this item (e.g. `page1.contact.email`). Studio-only
+   * authoring metadata — stripped on component export. Disambiguates duplicate leaf
+   * `bind` / display `nodeId` values across pages and layout wrappers.
+   */
+  definitionItemPath?: string;
   [k: string]: unknown;
 };
 
@@ -183,6 +189,8 @@ export function reconcileComponentTree(
       }
     }
 
+    node.definitionItemPath = itemPath;
+
     if (item.children && item.children.length > 0) {
       const childNodes = item.children.flatMap(child => buildNodes(child, itemPath));
       if (CONTAINER_COMPONENTS.has(node.component)) {
@@ -208,16 +216,37 @@ export function reconcileComponentTree(
   let newRoot: TreeNode = { component: 'Stack', nodeId: 'root', children: builtNodes };
 
   // ── Phase 3: Re-insert layout wrappers ──
-  const findInTree = (root: TreeNode, ref: { bind?: string; nodeId?: string }): { parent: TreeNode; index: number; node: TreeNode } | undefined => {
-    if (ref.nodeId && root.nodeId === ref.nodeId) return { parent: root, index: -1, node: root };
-    if (ref.bind && root.bind === ref.bind) return { parent: root, index: -1, node: root };
+  const matchesRef = (n: TreeNode, ref: { bind?: string; nodeId?: string; definitionItemPath?: string }): boolean => {
+    if (ref.nodeId && n.nodeId === ref.nodeId) {
+      if (!ref.definitionItemPath || n.definitionItemPath === ref.definitionItemPath) return true;
+      return false;
+    }
+    if (ref.bind && n.bind === ref.bind) {
+      if (!ref.definitionItemPath || n.definitionItemPath === ref.definitionItemPath) return true;
+    }
+    return false;
+  };
+
+  const findInTree = (
+    root: TreeNode,
+    ref: { bind?: string; nodeId?: string; definitionItemPath?: string },
+  ): { parent: TreeNode; index: number; node: TreeNode } | undefined => {
+    if (ref.nodeId && root.nodeId === ref.nodeId) {
+      if (matchesRef(root, ref)) return { parent: root, index: -1, node: root };
+    }
+    if (ref.bind && root.bind === ref.bind) {
+      if (matchesRef(root, ref)) return { parent: root, index: -1, node: root };
+    }
     const stack: TreeNode[] = [root];
     while (stack.length) {
       const p = stack.pop()!;
       for (let i = 0; i < (p.children?.length ?? 0); i++) {
         const c = p.children![i];
-        if (ref.nodeId && c.nodeId === ref.nodeId) return { parent: p, index: i, node: c };
-        if (ref.bind && c.bind === ref.bind) return { parent: p, index: i, node: c };
+        if (ref.nodeId && c.nodeId === ref.nodeId) {
+          if (matchesRef(c, ref)) return { parent: p, index: i, node: c };
+        } else if (ref.bind && c.bind === ref.bind) {
+          if (matchesRef(c, ref)) return { parent: p, index: i, node: c };
+        }
         stack.push(c);
       }
     }
@@ -232,13 +261,21 @@ export function reconcileComponentTree(
         updateWrapperChildren(child);
         updatedChildren.push(child);
       } else if (child.bind) {
-        const found = findInTree(newRoot, { bind: child.bind });
+        const found = findInTree(newRoot, {
+          bind: child.bind,
+          definitionItemPath:
+            typeof child.definitionItemPath === 'string' ? child.definitionItemPath : undefined,
+        });
         if (found && found.index !== -1) {
           const [extracted] = found.parent.children!.splice(found.index, 1);
           updatedChildren.push(extracted);
         }
       } else if (child.nodeId) {
-        const found = findInTree(newRoot, { nodeId: child.nodeId });
+        const found = findInTree(newRoot, {
+          nodeId: child.nodeId,
+          definitionItemPath:
+            typeof child.definitionItemPath === 'string' ? child.definitionItemPath : undefined,
+        });
         if (found && found.index !== -1) {
           const [extracted] = found.parent.children!.splice(found.index, 1);
           updatedChildren.push(extracted);

@@ -78,9 +78,11 @@ function resolveDefPathMaps(
   defPathPrefix: string,
   defLookup: Map<string, DefLookupEntry>,
   bindKeyMap: Map<string, string>,
+  definitionItemPath?: string,
 ): string | null {
   const candidate = defPathPrefix ? `${defPathPrefix}.${key}` : key;
   if (defLookup.has(candidate)) return candidate;
+  if (definitionItemPath && defLookup.has(definitionItemPath)) return definitionItemPath;
   return bindKeyMap.get(key) ?? candidate;
 }
 
@@ -88,8 +90,9 @@ function resolveDefPath(
   key: string,
   defPathPrefix: string,
   ctx: LayoutRenderContext,
+  definitionItemPath?: string,
 ): string | null {
-  return resolveDefPathMaps(key, defPathPrefix, ctx.defLookup, ctx.bindKeyMap);
+  return resolveDefPathMaps(key, defPathPrefix, ctx.defLookup, ctx.bindKeyMap, definitionItemPath);
 }
 
 /** Depth-first list of layout row selection keys (same order as `renderLayoutTree`). Used for Shift+click range select. */
@@ -147,7 +150,13 @@ export function collectLayoutFlatSelectionKeys(
     }
 
     if (node.bind) {
-      const defPath = resolveDefPathMaps(node.bind, defPathPrefix, defLookup, bindKeyMap);
+      const defPath = resolveDefPathMaps(
+        node.bind,
+        defPathPrefix,
+        defLookup,
+        bindKeyMap,
+        node.definitionItemPath,
+      );
       const defEntry = defPath ? defLookup.get(defPath) : null;
       if (!defPath || !defEntry) continue;
       const item = defEntry.item as Item;
@@ -172,7 +181,13 @@ export function collectLayoutFlatSelectionKeys(
     }
 
     if (node.nodeId) {
-      const defPath = resolveDefPathMaps(node.nodeId, defPathPrefix, defLookup, bindKeyMap);
+      const defPath = resolveDefPathMaps(
+        node.nodeId,
+        defPathPrefix,
+        defLookup,
+        bindKeyMap,
+        node.definitionItemPath,
+      );
       const displaySelKey = defPath || node.nodeId;
       keys.push(displaySelKey);
     }
@@ -406,7 +421,7 @@ export function renderLayoutTree(
 
     // Bound node — field or group
     if (node.bind) {
-      const defPath = resolveDefPath(node.bind, defPathPrefix, ctx);
+      const defPath = resolveDefPath(node.bind, defPathPrefix, ctx, node.definitionItemPath);
       const defEntry = defPath ? ctx.defLookup.get(defPath) : null;
       if (!defPath || !defEntry) continue;
 
@@ -509,7 +524,7 @@ export function renderLayoutTree(
 
     // Display node (nodeId, no _layout, no bind)
     if (node.nodeId) {
-      const defPath = resolveDefPath(node.nodeId, defPathPrefix, ctx);
+      const defPath = resolveDefPath(node.nodeId, defPathPrefix, ctx, node.definitionItemPath);
       const defEntry = defPath ? ctx.defLookup.get(defPath) : null;
       const displayNode = node as DisplayNode;
       const label = (defEntry?.item as Item | undefined)?.label

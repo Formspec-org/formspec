@@ -134,6 +134,37 @@ describe('authoring-helpers', () => {
     ]);
   });
 
+  it('prefers definitionItemPath over bindKeyMap when duplicate leaf keys collide', () => {
+    const tree = {
+      component: 'Stack',
+      nodeId: 'root',
+      children: [
+        layoutNode('c1', 'Card', [{ component: 'TextInput', bind: 'title', definitionItemPath: 'g1.title' }]),
+        layoutNode('c2', 'Card', [{ component: 'TextInput', bind: 'title', definitionItemPath: 'g2.title' }]),
+      ],
+    };
+
+    const lookup = buildDefLookup([
+      {
+        key: 'g1',
+        type: 'group',
+        children: [{ key: 'title', type: 'field', dataType: 'string' }],
+      },
+      {
+        key: 'g2',
+        type: 'group',
+        children: [{ key: 'title', type: 'field', dataType: 'string' }],
+      },
+    ] as any);
+    const bindKeyMap = buildBindKeyMap(lookup);
+    expect(bindKeyMap.get('title')).toBe('g1.title');
+
+    const entries = flattenComponentTree(tree as any, lookup, bindKeyMap);
+    const titleEntries = entries.filter((e) => e.bind === 'title');
+    expect(titleEntries).toHaveLength(2);
+    expect(titleEntries.map((e) => e.defPath)).toEqual(['g1.title', 'g2.title']);
+  });
+
   it('handles layout node helpers and batch move planning', () => {
     expect(isLayoutId('__node:card_1')).toBe(true);
     expect(nodeIdFromLayoutId('__node:card_1')).toBe('card_1');
