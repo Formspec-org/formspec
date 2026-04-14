@@ -1,29 +1,16 @@
 /** @filedesc Integrated studio chat panel — shares the studio Project, routes AI through MCP, shows changeset review. */
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo, useSyncExternalStore } from 'react';
 import { ChatSession, GeminiAdapter, type ChatMessage, type ToolContext } from '@formspec-org/chat';
 import { type Project, type Changeset, type MergeResult, type ProposalManager } from '@formspec-org/studio-core';
 import { ProjectRegistry } from '@formspec-org/mcp/registry';
 import { createToolDispatch } from '@formspec-org/mcp/dispatch';
 import { ChangesetReview, type ChangesetReviewData } from './ChangesetReview.js';
 import { getSavedProviderConfig } from './AppSettingsDialog.js';
+import { IconSparkle, IconArrowUp } from './icons/index.js';
 
 // ── Icons ──────────────────────────────────────────────────────────
-
-function IconSparkle() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path d="M8 1l1.5 4.5L14 7l-4.5 1.5L8 13l-1.5-4.5L2 7l4.5-1.5L8 1z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" fill="currentColor" fillOpacity="0.15" />
-    </svg>
-  );
-}
-
-function IconArrowUp() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M9 14V4M5 8l4-4 4 4" />
-    </svg>
-  );
-}
+// IconClose and IconWarning are ChatPanel-only — kept local. Shared icons
+// (IconSparkle, IconArrowUp) live in ./icons.
 
 function IconClose() {
   return (
@@ -87,7 +74,6 @@ export function ChatPanel({ project, onClose, initialPrompt }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [sending, setSending] = useState(false);
-  const [changeset, setChangeset] = useState<Readonly<Changeset> | null>(null);
   const [diagnostics, setDiagnostics] = useState<DiagnosticEntry[]>([]);
   const [mergeMessage, setMergeMessage] = useState<string | null>(null);
   const [hasApiKey, setHasApiKey] = useState(() => !!getSavedProviderConfig()?.apiKey);
@@ -136,14 +122,16 @@ export function ChatPanel({ project, onClose, initialPrompt }: ChatPanelProps) {
     sessionRef.current = session;
   }, [toolContext, hasApiKey]);
 
-  // Sync changeset state from ProposalManager
-  useEffect(() => {
-    if (!proposalManager) return;
-    const interval = setInterval(() => {
-      setChangeset(proposalManager.changeset);
-    }, 500);
-    return () => clearInterval(interval);
-  }, [proposalManager]);
+  // Subscribe to changeset transitions — no polling.
+  // useSyncExternalStore re-renders only when ProposalManager notifies.
+  const changeset = useSyncExternalStore(
+    useCallback(
+      (onStoreChange) => proposalManager?.subscribe(onStoreChange) ?? (() => {}),
+      [proposalManager],
+    ),
+    useCallback(() => proposalManager?.getChangeset() ?? null, [proposalManager]),
+    useCallback(() => proposalManager?.getChangeset() ?? null, [proposalManager]),
+  );
 
   // Apply initialPrompt when it changes
   useEffect(() => {
@@ -267,8 +255,6 @@ export function ChatPanel({ project, onClose, initialPrompt }: ChatPanelProps) {
         const label = `Initial scaffold: ${itemCount} field(s)`;
         proposalManager.endEntry(label);
         proposalManager.closeChangeset(label);
-
-        setChangeset(proposalManager.changeset);
       } else {
         // No changeset support — load directly
         project.loadBundle({ definition });
@@ -302,7 +288,7 @@ export function ChatPanel({ project, onClose, initialPrompt }: ChatPanelProps) {
       setMergeMessage('Merge blocked — structural validation errors found.');
       setDiagnostics(extractDiagnostics(result.diagnostics));
     }
-    if (proposalManager) setChangeset(proposalManager.changeset);
+    // Changeset state updates flow through useSyncExternalStore subscription.
   }
 
   function extractDiagnostics(diagnostics: unknown): DiagnosticEntry[] {

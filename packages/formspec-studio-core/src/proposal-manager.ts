@@ -102,9 +102,41 @@ export class ProposalManager {
   private _pendingAiEntry: ChangeEntry | null = null;
   /** Per-instance changeset id counter — must not be shared across managers. */
   private _nextChangesetSequence = 1;
+  /** Subscribers notified on every changeset state transition. */
+  private readonly _listeners = new Set<() => void>();
+  /** Stable snapshot ref for useSyncExternalStore — replaced only when state changes. */
+  private _snapshot: Readonly<Changeset> | null = null;
 
   private generateChangesetId(): string {
     return `cs-${this._nextChangesetSequence++}-${Math.random().toString(36).slice(2, 8)}`;
+  }
+
+  /**
+   * Replace the cached snapshot and notify subscribers.
+   * Called on every state transition (open/record/close/accept/reject/discard).
+   */
+  private _notify(): void {
+    this._snapshot = this._changeset;
+    for (const listener of this._listeners) listener();
+  }
+
+  // ── Subscribe API ────────────────────────────────────────────
+  // Consumers (React via useSyncExternalStore, plain listeners) subscribe here
+  // rather than polling `.changeset`. getChangeset() returns a stable reference
+  // between mutations so React can diff reliably.
+
+  /**
+   * Subscribe to changeset state changes.
+   * @returns An unsubscribe function.
+   */
+  subscribe(listener: () => void): () => void {
+    this._listeners.add(listener);
+    return () => { this._listeners.delete(listener); };
+  }
+
+  /** Stable snapshot of the current changeset — same reference until state changes. */
+  getChangeset(): Readonly<Changeset> | null {
+    return this._snapshot;
   }
 
   /**
@@ -163,6 +195,7 @@ export class ProposalManager {
     this.setRecording(true);
     this.setActor('user'); // default actor is user
 
+    this._notify();
     return id;
   }
 
@@ -205,6 +238,7 @@ export class ProposalManager {
     this._pendingEntryToolName = null;
     this._pendingEntryWarnings = [];
     this.setActor('user');
+    this._notify();
   }
 
   /**
@@ -239,6 +273,7 @@ export class ProposalManager {
       };
       this._changeset.userOverlay.push(entry);
     }
+    this._notify();
   }
 
   /**
@@ -256,6 +291,7 @@ export class ProposalManager {
     this._changeset.dependencyGroups = this._computeDependencyGroups();
     this._changeset.status = 'pending';
     // Keep recording for user overlay during review
+    this._notify();
   }
 
   /**
@@ -271,15 +307,18 @@ export class ProposalManager {
 
     this.setRecording(false);
 
+    let result: MergeResult;
     if (!groupIndices) {
       // Merge all — state is already correct, just discard snapshot
       const diagnostics = this.core.diagnose();
       this._changeset.status = 'merged';
-      return { ok: true, diagnostics };
+      result = { ok: true, diagnostics };
+    } else {
+      // Partial merge — snapshot-and-replay
+      result = this._partialMerge(groupIndices);
     }
-
-    // Partial merge — snapshot-and-replay
-    return this._partialMerge(groupIndices);
+    this._notify();
+    return result;
   }
 
   /**
@@ -293,6 +332,7 @@ export class ProposalManager {
       throw new Error('Cannot reject: no pending changeset');
     }
 
+    let result: MergeResult;
     // Partial rejection = accept the complement
     if (groupIndices && groupIndices.length > 0) {
       const allIndices = this._changeset.dependencyGroups.map((_, i) => i);
@@ -300,13 +340,16 @@ export class ProposalManager {
       const complementIndices = allIndices.filter(i => !rejectSet.has(i));
       if (complementIndices.length === 0) {
         // Rejecting all groups — fall through to full reject
-        return this._fullReject();
+        result = this._fullReject();
+      } else {
+        this.setRecording(false);
+        result = this._partialMerge(complementIndices);
       }
-      this.setRecording(false);
-      return this._partialMerge(complementIndices);
+    } else {
+      result = this._fullReject();
     }
-
-    return this._fullReject();
+    this._notify();
+    return result;
   }
 
   /** Full rejection — restore to snapshot, replay user overlay only. */
@@ -359,6 +402,7 @@ export class ProposalManager {
     }
 
     this._changeset = null;
+    this._notify();
   }
 
   // ── Undo/redo gate ─────────────────────────────────────────────

@@ -993,4 +993,69 @@ describe('ProposalManager', () => {
       expect(notesGroup!.entries).toEqual([2]);
     });
   });
+
+  describe('subscribe', () => {
+    // The ProposalManager replaces a 500ms polling loop in ChatPanel — subscribers
+    // must be notified at every changeset state transition so React can render
+    // on change instead of on a timer.
+    it('notifies subscribers when a changeset opens, records entries, and closes', () => {
+      const listener = vi.fn();
+      const unsubscribe = pm.subscribe(listener);
+
+      pm.openChangeset();
+      const callsAfterOpen = listener.mock.calls.length;
+      expect(callsAfterOpen).toBeGreaterThanOrEqual(1);
+
+      pm.beginEntry('formspec_field');
+      project.addField('email', 'Email', 'text');
+      pm.endEntry('Added email');
+      expect(listener.mock.calls.length).toBeGreaterThan(callsAfterOpen);
+
+      const callsBeforeClose = listener.mock.calls.length;
+      pm.closeChangeset('Added email');
+      expect(listener.mock.calls.length).toBeGreaterThan(callsBeforeClose);
+
+      unsubscribe();
+    });
+
+    it('notifies on accept and reject transitions', () => {
+      pm.openChangeset();
+      pm.beginEntry('formspec_field');
+      project.addField('a', 'A', 'text');
+      pm.endEntry('Added a');
+      pm.closeChangeset('Added a');
+
+      const listener = vi.fn();
+      const unsubscribe = pm.subscribe(listener);
+
+      pm.acceptChangeset();
+      expect(listener).toHaveBeenCalled();
+
+      unsubscribe();
+    });
+
+    it('stops notifying after unsubscribe', () => {
+      const listener = vi.fn();
+      const unsubscribe = pm.subscribe(listener);
+      unsubscribe();
+
+      pm.openChangeset();
+      pm.closeChangeset('x');
+
+      expect(listener).not.toHaveBeenCalled();
+    });
+
+    it('returns a snapshot via getChangeset() that is stable between notifications', () => {
+      // useSyncExternalStore requires a stable snapshot reference between
+      // mutations to avoid infinite re-renders.
+      const first = pm.getChangeset();
+      const second = pm.getChangeset();
+      expect(first).toBe(second);
+
+      pm.openChangeset();
+      const third = pm.getChangeset();
+      expect(third).not.toBe(first);
+      expect(pm.getChangeset()).toBe(third);
+    });
+  });
 });

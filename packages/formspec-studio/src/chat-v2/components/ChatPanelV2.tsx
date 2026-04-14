@@ -1,16 +1,12 @@
 /** @filedesc Modern chat message thread with rich input bar, animations, and inline actions — v2. */
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useChatSession, useChatState } from '../state/ChatContext.js';
+import { IconArrowUp } from '../../components/icons/index.js';
 
 // ── Icons ────────────────────────────────────────────────────────────
-
-function IconArrowUp() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M9 14V4M5 8l4-4 4 4" />
-    </svg>
-  );
-}
+// IconSparkle here has a richer two-path design for chat-v2 surfaces — it is
+// intentionally distinct from the shared icon in ../../components/icons and
+// stays local. IconArrowUp is shared.
 
 function IconPaperclip() {
   return (

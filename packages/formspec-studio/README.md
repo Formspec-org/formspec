@@ -105,6 +105,20 @@ Nine sections with entity count badges:
 
 The chat shell is exported from `formspec-chat` and consumed by the studio as a workspace mode.
 
+### Two chat surfaces
+
+The studio currently ships two distinct chat entry points. They serve different
+flows and share no runtime state.
+
+| Surface | Entry | Analytics label | Role |
+|---------|-------|-----------------|------|
+| Integrated sidebar | `src/components/ChatPanel.tsx` | `integrated-studio-ai` | Assistant bound to the live `Project`, routed through MCP tools, producing reviewable changesets inside the editor. |
+| Standalone MPA | `src/chat-v2/` + `main-chat.tsx` at `/studio/chat.html` | `standalone-conversational-entry` | Conversational intake built on `ChatSession`. Hands off to the editor via the `?h=` query parameter. |
+
+The integrated panel mutates the open project directly; the standalone page is
+a separate entry that scaffolds a definition and hands it to the editor. Both
+use `@formspec-org/chat` but compose it differently.
+
 ---
 
 ## Design tokens
