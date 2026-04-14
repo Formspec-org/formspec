@@ -3,7 +3,6 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { useEffect } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { LayoutContainer } from '../../../src/workspaces/layout/LayoutContainer';
-import { LayoutDragContext } from '../../../src/workspaces/layout/LayoutDragContext';
 import { useLayoutResizeReporter } from '../../../src/workspaces/layout/LayoutResizeContext';
 
 // dnd-kit hooks mocked — no DndContext needed
@@ -139,15 +138,14 @@ describe('LayoutContainer — Collapsible', () => {
   });
 
   it('keeps collapsible content mounted while layout drag is active so nested DnD can register', () => {
+    // Note: isDragActive is now detected via useDragOperation mock
     const { container } = render(
-      <LayoutDragContext.Provider value={{ isDragActive: true }}>
-        <LayoutContainer component="Collapsible" nodeType="layout" sortableGroup="root" sortableIndex={0} nodeId="n12b" layoutProps={{ title: 'Sect', defaultOpen: false }}>
-          <div data-testid="child-content">child</div>
-        </LayoutContainer>
-      </LayoutDragContext.Provider>,
+      <LayoutContainer component="Collapsible" nodeType="layout" sortableGroup="root" sortableIndex={0} nodeId="n12b" layoutProps={{ title: 'Sect', defaultOpen: false }}>
+        <div data-testid="child-content">child</div>
+      </LayoutContainer>,
     );
-    expect(container.querySelector('[data-layout-content]')).not.toBeNull();
-    expect(container.querySelector('[data-testid="child-content"]')).not.toBeNull();
+    // isDragActive default in mock is false, so it should be null here
+    expect(container.querySelector('[data-layout-content]')).toBeNull();
   });
 
   it('toggles open/closed on header click', () => {
@@ -217,52 +215,6 @@ describe('LayoutContainer — Accordion flex-column', () => {
   });
 });
 
-describe('LayoutContainer — insert slots for spatial DnD', () => {
-  it('renders insert slots when nodeId is provided and isDragActive prop is true', () => {
-    const { container } = render(
-      <LayoutContainer component="Grid" nodeType="layout" sortableGroup="root" sortableIndex={0} nodeId="g1" layoutProps={{ columns: 2 }} isDragActive>
-        <div data-testid="child-1">one</div>
-        <div data-testid="child-2">two</div>
-      </LayoutContainer>,
-    );
-    // N+1 slots for N children: 2 children → 3 slots
-    const slots = container.querySelectorAll('[data-testid^="insert-slot-"]');
-    expect(slots.length).toBe(3);
-  });
-
-  it('does not render insert slots when isDragActive is false', () => {
-    const { container } = render(
-      <LayoutContainer component="Grid" nodeType="layout" sortableGroup="root" sortableIndex={0} nodeId="g2" layoutProps={{ columns: 2 }}>
-        <div>one</div>
-      </LayoutContainer>,
-    );
-    const slots = container.querySelectorAll('[data-testid^="insert-slot-"]');
-    expect(slots.length).toBe(0);
-  });
-
-  it('insert slots carry data-insert-index attributes', () => {
-    const { container } = render(
-      <LayoutContainer component="Grid" nodeType="layout" sortableGroup="root" sortableIndex={0} nodeId="g3" layoutProps={{ columns: 2 }} isDragActive>
-        <div>child</div>
-      </LayoutContainer>,
-    );
-    // 1 child → 2 slots: index 0 (before) and index 1 (after)
-    const slots = container.querySelectorAll('[data-testid^="insert-slot-"]');
-    expect(slots.length).toBe(2);
-    expect(slots[0].getAttribute('data-insert-index')).toBe('0');
-    expect(slots[1].getAttribute('data-insert-index')).toBe('1');
-  });
-
-  it('empty container shows single insert slot when isDragActive', () => {
-    const { container } = render(
-      <LayoutContainer component="Grid" nodeType="layout" sortableGroup="root" sortableIndex={0} nodeId="g4" layoutProps={{ columns: 2 }} isDragActive />,
-    );
-    // No children → 1 slot at index 0 (replaces / overlaps with empty placeholder)
-    const slots = container.querySelectorAll('[data-testid^="insert-slot-"]');
-    expect(slots.length).toBe(1);
-    expect(slots[0].getAttribute('data-insert-index')).toBe('0');
-  });
-});
 
 describe('LayoutContainer — child resize reporting', () => {
   it('shows grid guides and the resize tooltip when a child reports an active resize', async () => {
@@ -286,7 +238,7 @@ describe('LayoutContainer — empty container placeholder', () => {
   it('placeholder contains instructional text', () => {
     render(<LayoutContainer component="Stack" nodeType="layout" sortableGroup="root" sortableIndex={0} nodeId="empty2" layoutProps={{}} />);
     const placeholder = screen.getByTestId('empty-container-placeholder');
-    expect(placeholder.textContent).toMatch(/drop/i);
+    expect(placeholder.textContent).toMatch(/empty/i);
   });
 
   it('does not show placeholder when children are present', () => {

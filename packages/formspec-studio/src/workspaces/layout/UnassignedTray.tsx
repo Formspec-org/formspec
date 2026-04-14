@@ -1,7 +1,8 @@
 /** @filedesc Tray showing definition items not bound in the component tree. */
 import { useMemo } from 'react';
 import { useDraggable } from '@dnd-kit/react';
-import { LAYOUT_DND_FEEDBACK_NONE } from './layout-dnd-sortable-config';
+import { STUDIO_DND_FEEDBACK } from '../shared/dnd-config';
+import { LAYOUT_DRAG_SOURCE_STYLE } from '../layout/layout-node-styles';
 import type { FormItem } from '@formspec-org/types';
 import {
   computeUnassignedItems,
@@ -27,7 +28,7 @@ function UnassignedTrayItem({
 }) {
   const { ref: dragRef, isDragging } = useDraggable({
     id: `unassigned:${item.key}`,
-    feedback: LAYOUT_DND_FEEDBACK_NONE,
+    feedback: STUDIO_DND_FEEDBACK,
     data: {
       type: 'unassigned-item',
       key: item.key,
@@ -42,8 +43,8 @@ function UnassignedTrayItem({
       tabIndex={0}
       data-testid={`unassigned-${item.key}`}
       aria-label={`${item.label} — drag to canvas or focus and press Space to pick up, arrow keys to move, Space to drop`}
-      className={`flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1.5 text-[12px] text-muted outline-none transition-[opacity,box-shadow] focus-visible:ring-2 focus-visible:ring-accent/55 ${
-        isDragging ? 'cursor-grabbing opacity-50 ring-2 ring-accent/45 ring-offset-2 ring-offset-background' : 'cursor-grab'
+      className={`flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1.5 text-[12px] text-muted outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-accent/55 ${
+        isDragging ? `cursor-grabbing ${LAYOUT_DRAG_SOURCE_STYLE}` : 'cursor-grab'
       }`}
     >
       <span className="truncate">{item.label}</span>

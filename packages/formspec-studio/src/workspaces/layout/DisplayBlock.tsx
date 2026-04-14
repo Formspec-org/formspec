@@ -10,8 +10,8 @@ import { InlineToolbar } from './InlineToolbar';
 import { PropertyPopover } from './PropertyPopover';
 import { DefinitionCopyReadonlyPanel } from './DefinitionCopyReadonlyPanel';
 import { useLayoutResizeReporter } from './LayoutResizeContext';
-import { LAYOUT_LEAF_SELECTED, LAYOUT_LEAF_UNSELECTED } from './layout-node-styles';
-import { LAYOUT_DND_FEEDBACK_NONE, LAYOUT_SORTABLE_TRANSITION } from './layout-dnd-sortable-config';
+import { LAYOUT_LEAF_SELECTED, LAYOUT_LEAF_UNSELECTED, LAYOUT_DRAG_SOURCE_STYLE } from './layout-node-styles';
+import { STUDIO_DND_FEEDBACK, STUDIO_SORTABLE_TRANSITION } from '../shared/dnd-config';
 
 const STOP_SELECT = 'data-layout-stop-select';
 
@@ -134,8 +134,8 @@ export function DisplayBlock({
     data: layoutSortable ? { nodeRef: treeDragNodeRef!, type: 'tree-node' } : {},
     handle: dragHandleRef,
     disabled: !layoutSortable,
-    feedback: LAYOUT_DND_FEEDBACK_NONE,
-    transition: LAYOUT_SORTABLE_TRANSITION,
+    feedback: STUDIO_DND_FEEDBACK,
+    transition: STUDIO_SORTABLE_TRANSITION,
   });
 
   const isInGrid = layoutContext?.parentContainerType === 'grid';
@@ -263,9 +263,9 @@ export function DisplayBlock({
   };
 
   const shellClasses = [
-    'group relative flex w-full min-w-0 flex-col rounded-[18px] px-3 py-3 text-left transition-[border-color,background-color,opacity,box-shadow] md:px-4 md:py-3.5',
+    'group relative flex w-full min-w-0 flex-col rounded-[18px] px-3 py-3 text-left transition-all duration-200 md:px-4 md:py-3.5',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35',
-    isDragSource ? 'opacity-50 ring-2 ring-accent/45 ring-offset-2 ring-offset-background' : '',
+    isDragSource ? LAYOUT_DRAG_SOURCE_STYLE : '',
     selected ? LAYOUT_LEAF_SELECTED : LAYOUT_LEAF_UNSELECTED,
   ].join(' ');
 

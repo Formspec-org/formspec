@@ -13,10 +13,10 @@ export function LayoutPageSection({ title, pageId, active = false, onSelect, chi
   return (
     <div
       data-testid={`layout-page-${pageId}`}
-      className={`rounded-lg border bg-surface ${
+      className={`rounded-[10px] border bg-surface transition-all ${
         active
-          ? 'border-border border-s-[3px] border-s-accent/80 shadow-sm'
-          : 'border-border'
+          ? 'border-border/80 border-s-[4px] border-s-accent/80 shadow-[0_2px_8px_rgba(0,0,0,0.04)] ring-1 ring-accent/10'
+          : 'border-border/60 opacity-80 hover:opacity-100 hover:border-border/80'
       }`}
     >
       <button

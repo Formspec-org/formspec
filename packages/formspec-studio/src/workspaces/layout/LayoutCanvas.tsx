@@ -51,6 +51,8 @@ function useLayoutCanvasContextMenu(
   selectLayoutNode: (key: string, type: 'field' | 'group' | 'display' | 'layout') => void,
   layoutSelectedKeys: Set<string>,
   layoutFlatOrder: string[],
+  isMultiPage: boolean,
+  pageNavItems: Array<{ id: string; title: string; groupPath?: string; pageId?: string }>,
 ) {
   const [contextMenu, setContextMenu] = useState<LayoutContextMenuState | null>(null);
 
@@ -100,6 +102,11 @@ function useLayoutCanvasContextMenu(
       nodeRef,
       layoutTargetKeys: targetKeysForMenu,
       selectionCount: targetKeysForMenu.length,
+      availablePages: isMultiPage ? pageNavItems.map(p => ({
+        id: p.id,
+        title: p.title,
+        isActive: p.id === activePageId || p.pageId === activePageId
+      })) : undefined,
     });
   };
 
@@ -113,6 +120,35 @@ function useLayoutCanvasContextMenu(
         setActivePageId(resolvedActivePageId);
       }
     }
+
+    if (action.startsWith('moveToPage:')) {
+      const targetNavId = action.split(':')[1];
+      const targetPageId = pageIdMap.get(targetNavId) ?? targetNavId;
+      const keys =
+        contextMenu?.layoutTargetKeys && contextMenu.layoutTargetKeys.length > 0
+          ? contextMenu.layoutTargetKeys
+          : contextMenu?.nodeRef
+            ? [contextMenu.nodeRef.bind ?? `__node:${contextMenu.nodeRef.nodeId}`].filter((k) => k !== '')
+            : [];
+      
+      for (const key of keys) {
+        if (!key.startsWith('__node:')) {
+           project.placeOnPage(key, targetPageId);
+        } else {
+           // move layout node to page
+           const nodeId = key.split(':')[1];
+           if (nodeId) {
+             project.moveComponentNodeToContainer(
+               { nodeId },
+               { nodeId: targetPageId },
+             );
+           }
+        }
+      }
+      closeMenu();
+      return;
+    }
+
     const tree = project.component.tree as CompNode | undefined;
     executeLayoutAction({
       action,
@@ -592,6 +628,8 @@ export function LayoutCanvas() {
     selectLayoutNode,
     layoutSelectedKeys,
     layoutFlatOrder,
+    isMultiPage,
+    pageNavItems,
   );
 
   return (
@@ -721,16 +759,26 @@ export function LayoutCanvas() {
       />
 
       {contextMenu && menuItems.length > 0 && (
-        <div
-          className="fixed z-50"
-          style={{ left: contextMenu.x, top: contextMenu.y }}
-        >
-          <LayoutContextMenu
-            items={menuItems}
-            onAction={handleAction}
-            onClose={closeMenu}
+        <>
+          <div
+            className="fixed inset-0 z-50"
+            onClick={closeMenu}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              closeMenu();
+            }}
           />
-        </div>
+          <div
+            className="fixed z-[51]"
+            style={{ left: contextMenu.x, top: contextMenu.y }}
+          >
+            <LayoutContextMenu
+              items={menuItems}
+              onAction={handleAction}
+              onClose={closeMenu}
+            />
+          </div>
+        </>
       )}
 
       <AddItemPalette

@@ -1,6 +1,7 @@
 /** @filedesc Wrapper that makes a canvas item sortable via dnd-kit, fading the source during drag. */
 import { cloneElement, isValidElement, type ReactElement } from 'react';
 import { useSortable } from '@dnd-kit/react/sortable';
+import { STUDIO_DND_FEEDBACK, STUDIO_SORTABLE_TRANSITION } from '../../shared/dnd-config';
 
 interface SortableItemWrapperProps {
   id: string;
@@ -14,6 +15,8 @@ export function SortableItemWrapper({ id, index, group, children }: SortableItem
     id,
     index,
     group,
+    feedback: STUDIO_DND_FEEDBACK,
+    transition: STUDIO_SORTABLE_TRANSITION,
   });
 
   const child = isValidElement(children)

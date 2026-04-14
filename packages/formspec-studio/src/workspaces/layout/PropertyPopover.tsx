@@ -60,7 +60,7 @@ function PopoverInput({
           onCommit(e.currentTarget.value.trim());
         }}
         onKeyDown={(e) => { if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur(); }}
-        className="flex-1 h-6 rounded border border-border bg-surface px-2 text-[12px] font-mono text-ink outline-none placeholder:text-muted/40 focus:border-accent transition-colors"
+        className="flex-1 h-7 rounded-[6px] border border-border/80 bg-surface px-2 text-[12px] font-mono text-ink outline-none placeholder:text-muted/40 transition-all focus:border-accent focus:ring-2 focus:ring-accent/30"
       />
     </div>
   );
@@ -255,9 +255,9 @@ export function PropertyPopover({
         visibility: position != null ? 'visible' : 'hidden',
         zIndex: 50,
       }}
-      className="flex w-72 max-h-[min(32rem,calc(100dvh-1rem))] flex-col overflow-hidden rounded border border-border bg-surface shadow-lg"
+      className="flex w-[320px] max-h-[min(32rem,calc(100dvh-1rem))] flex-col overflow-hidden rounded-[8px] border border-border/70 bg-surface/95 backdrop-blur-[2px] shadow-[0_4px_16px_rgba(0,0,0,0.06)]"
     >
-      <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-surface shrink-0">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-border/60 bg-surface/80 shrink-0">
         <span className="text-[13px] font-semibold text-ink font-ui">Properties</span>
         <button
           type="button"
@@ -321,7 +321,7 @@ export function PropertyPopover({
                   value={newStyleKey}
                   placeholder="key"
                   onChange={(e) => setNewStyleKey(e.currentTarget.value)}
-                  className="w-20 h-6 rounded border border-border bg-surface px-1.5 text-[11px] font-mono outline-none focus:border-accent"
+                  className="w-20 h-7 rounded-[6px] border border-border/80 bg-surface px-1.5 text-[11px] font-mono outline-none transition-shadow focus:border-accent focus:ring-2 focus:ring-accent/30"
                 />
                 <input
                   type="text"
@@ -330,7 +330,7 @@ export function PropertyPopover({
                   value={newStyleValue}
                   placeholder="value"
                   onChange={(e) => setNewStyleValue(e.currentTarget.value)}
-                  className="flex-1 h-6 rounded border border-border bg-surface px-1.5 text-[11px] font-mono outline-none focus:border-accent"
+                  className="flex-1 h-7 rounded-[6px] border border-border/80 bg-surface px-1.5 text-[11px] font-mono outline-none transition-shadow focus:border-accent focus:ring-2 focus:ring-accent/30"
                 />
                 <button
                   type="button"

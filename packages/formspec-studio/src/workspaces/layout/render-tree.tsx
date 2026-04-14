@@ -290,7 +290,6 @@ export function renderLayoutTree(
   pageSectionActive = false,
   /**
    * @dnd-kit sortable group id for direct children (`root`, a parent `nodeId`, or `bind:` + definition key).
-   * Must stay consistent with `layoutSortGroupToTargetParent` in `LayoutDndProvider.tsx`.
    */
   sortableGroupId = 'root',
 ): ReactNode[] {

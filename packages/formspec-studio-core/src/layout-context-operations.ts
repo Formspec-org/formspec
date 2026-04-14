@@ -16,6 +16,7 @@ export interface LayoutContextMenuState {
   layoutTargetKeys?: string[];
   /** Mirrors `layoutTargetKeys.length` for menu chrome (e.g. hide move when multi-select). */
   selectionCount?: number;
+  availablePages?: { id: string; title: string; isActive: boolean }[];
 }
 
 export interface LayoutContextMenuItem {
@@ -73,6 +74,18 @@ export function buildLayoutContextMenuItems(
     { label: 'Move Down', action: 'moveDown' },
     { label: 'Remove from Tree', action: 'removeFromTree', separator: true },
   );
+
+  if (menu.availablePages && menu.availablePages.length > 1) {
+    const pageItems = menu.availablePages
+      .filter((p) => !p.isActive)
+      .map((p) => ({
+        label: `Move to ${p.title}`,
+        action: `moveToPage:${p.id}`,
+      }));
+    if (pageItems.length > 0) {
+      items.push({ separator: true, label: '', action: 'sep-pages-before' }, ...pageItems);
+    }
+  }
 
   const multi = (menu.selectionCount ?? menu.layoutTargetKeys?.length ?? 1) > 1;
   if (multi) {

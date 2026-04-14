@@ -1,19 +1,18 @@
 /** @filedesc Layout canvas wrapper for layout nodes — applies real CSS layout per container type (Grid, Stack, Card, Panel, Collapsible, Accordion). */
 import React, { useState, useRef, useCallback, type ReactNode } from 'react';
 import { DragHandle } from '../../components/ui/DragHandle';
-import { useDroppable } from '@dnd-kit/react';
+import { useDroppable, useDragOperation } from '@dnd-kit/react';
 import { useSortable } from '@dnd-kit/react/sortable';
 import { hasTier3Content, type ContainerLayoutProps } from '@formspec-org/studio-core';
 import { InlineToolbar } from './InlineToolbar';
 import { PropertyPopover } from './PropertyPopover';
-import { useLayoutDragActive } from './LayoutDragContext';
 import { LayoutResizeProvider, type LayoutResizeState } from './LayoutResizeContext';
 import {
   LAYOUT_CONTAINER_SELECTED,
   LAYOUT_CONTAINER_UNSELECTED,
   LAYOUT_CONTAINER_UNSELECTED_ON_ACTIVE_PAGE,
 } from './layout-node-styles';
-import { LAYOUT_DND_FEEDBACK_NONE, LAYOUT_SORTABLE_TRANSITION } from './layout-dnd-sortable-config';
+import { STUDIO_DND_FEEDBACK, STUDIO_SORTABLE_TRANSITION } from '../shared/dnd-config';
 
 export interface LayoutContainerProps {
   component: string;
@@ -49,8 +48,6 @@ export interface LayoutContainerProps {
   onRemove?: () => void;
   /** Called when style is removed from the PropertyPopover. */
   onStyleRemove?: (styleKey: string) => void;
-  /** When true, renders N+1 insert slots between/around children for spatial DnD. */
-  isDragActive?: boolean;
   /** Collision priority for nested drop targets (higher wins). */
   collisionPriority?: number;
   /**
@@ -111,40 +108,28 @@ function buildContentStyle(component: string, layoutProps: ContentStyleProps = {
   }
 }
 
-/** A single droppable insert slot registered with dnd-kit. */
-function InsertSlot({ nodeId, index, collisionPriority }: { nodeId: string; index: number; collisionPriority: number }) {
+/** Subtle drop target rendered only when a container is empty. */
+function EmptyContainerPlaceholder({ containerRef, collisionPriority }: { containerRef: {bind?: string, nodeId?: string}; collisionPriority: number }) {
+  const containerIdText = containerRef.nodeId ?? `bind:${containerRef.bind}`;
   const { ref, isDropTarget } = useDroppable({
-    id: `slot-${nodeId}-${index}`,
-    data: { type: 'insert-slot', containerId: nodeId, insertIndex: index },
+    id: `empty-${containerIdText}`,
+    data: { type: 'container-drop', nodeRef: containerRef },
     collisionPriority,
   });
+  
   return (
-    <div
+    <div 
       ref={ref}
-      data-testid={`insert-slot-${nodeId}-${index}`}
-      data-insert-index={String(index)}
-      data-container-id={nodeId}
-      className={`min-h-[20px] shrink-0 rounded transition-colors ${
-        isDropTarget ? 'bg-accent/55 ring-2 ring-accent/80 ring-inset' : 'bg-accent/25 hover:bg-accent/35'
+      data-testid="empty-container-placeholder"
+      className={`py-8 border-2 border-dashed rounded-[16px] flex flex-col items-center justify-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all duration-200 ${
+        isDropTarget 
+          ? 'bg-accent/15 border-accent text-accent shadow-sm scale-[0.99]' 
+          : 'bg-bg-default/30 border-accent/10 text-accent/20'
       }`}
-    />
-  );
-}
-
-/** Renders N+1 droppable insert slots interleaved with N children. */
-function InsertSlotChildren({ nodeId, children, collisionPriority }: { nodeId: string; children?: ReactNode; collisionPriority: number }) {
-  const childArray = children ? (Array.isArray(children) ? children : [children]) : [];
-  const slotCount = childArray.length + 1;
-
-  return (
-      <>
-      {Array.from({ length: slotCount }, (_, i) => (
-        <React.Fragment key={`slot-group-${i}`}>
-          <InsertSlot nodeId={nodeId} index={i} collisionPriority={collisionPriority} />
-          {i < childArray.length && childArray[i]}
-        </React.Fragment>
-      ))}
-    </>
+    >
+      <div className={`w-1.5 h-1.5 rounded-full ${isDropTarget ? 'bg-accent' : 'bg-accent/20'}`} />
+      Empty Container
+    </div>
   );
 }
 
@@ -169,14 +154,13 @@ export function LayoutContainer(props: LayoutContainerProps) {
     onUnwrap,
     onRemove,
     onStyleRemove,
-    isDragActive: isDragActiveProp = false,
     collisionPriority = 0,
     pageSectionActive = false,
   } = props;
 
-  // OBJ-4-02: read from DnD context so containers know drag is active without prop threading
-  const isDragActiveCtx = useLayoutDragActive();
-  const isDragActive = isDragActiveProp || isDragActiveCtx;
+  // Track active drag state for UI feedback.
+  const dragOperation = useDragOperation();
+  const isDragActive = !!dragOperation.source;
 
   const resolvedLayoutProps = layoutProps ?? {};
   const [open, setOpen] = useState(resolvedLayoutProps.defaultOpen ?? true);
@@ -198,15 +182,10 @@ export function LayoutContainer(props: LayoutContainerProps) {
     data: { nodeRef, type: 'tree-node' },
     handle: dragHandleRef,
     collisionPriority,
-    feedback: LAYOUT_DND_FEEDBACK_NONE,
-    transition: LAYOUT_SORTABLE_TRANSITION,
+    feedback: STUDIO_DND_FEEDBACK,
+    transition: STUDIO_SORTABLE_TRANSITION,
   });
 
-  const { ref: dropRef } = useDroppable({
-    id: `drop:${dragId}`,
-    data: { nodeRef, index: sortableIndex, type: 'container-drop', component },
-    collisionPriority,
-  });
 
   const isCollapsible = component === 'Collapsible' || component === 'Accordion';
   /** Keep body mounted during canvas drag so nested sortables / insert slots stay registered (avoids dnd-kit crashes). */
@@ -241,10 +220,7 @@ export function LayoutContainer(props: LayoutContainerProps) {
 
   return (
     <div
-      ref={(el) => {
-        dropRef(el);
-        sortableRef(el);
-      }}
+      ref={sortableRef}
       data-testid={`layout-container-${nodeId ?? bind ?? component}`}
       data-layout-node
       data-layout-node-type={nodeType}
@@ -254,7 +230,9 @@ export function LayoutContainer(props: LayoutContainerProps) {
       {...(nodeId ? { 'data-layout-node-id': nodeId } : {})}
       {...(selectionKey ? { 'data-layout-select-key': selectionKey } : {})}
       style={containerStyle}
-      className={`transition-[colors,opacity,box-shadow] ${isDragSource ? 'opacity-50 ring-2 ring-accent/45 ring-offset-2 ring-offset-background' : ''} ${shellClasses}`}
+      className={`transition-all duration-200 ${
+        isDragSource ? LAYOUT_DRAG_SOURCE_STYLE : ''
+      } ${shellClasses}`}
     >
       {/* Header: drag grip (dnd activator) + clickable row (selection + toolbar). */}
       <div className="flex w-full items-center gap-1 rounded px-2 py-1.5 md:px-2 md:py-2">
@@ -381,20 +359,13 @@ export function LayoutContainer(props: LayoutContainerProps) {
               </div>
             )}
 
-            {isDragActive && nodeId ? (
-              <InsertSlotChildren nodeId={nodeId} collisionPriority={collisionPriority + 1}>
-                {children}
-              </InsertSlotChildren>
-            ) : (
-              children ?? (
-                <div
-                  data-testid="empty-container-placeholder"
-                  className="flex items-center justify-center rounded border border-dashed border-muted/50 py-4 text-[11px] text-muted"
-                >
-                  Drop items here
-                </div>
-              )
-            )}
+            <div style={contentStyle} className="relative min-h-[1.5rem] w-full">
+              {React.Children.count(children) > 0 ? (
+                children
+              ) : (
+                <EmptyContainerPlaceholder key="empty-placeholder" containerRef={nodeRef!} collisionPriority={collisionPriority + 1} />
+              )}
+            </div>
           </div>
         </LayoutResizeProvider>
       )}

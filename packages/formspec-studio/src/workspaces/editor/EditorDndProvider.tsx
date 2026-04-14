@@ -1,7 +1,8 @@
 /** @filedesc DnD wrapper for the DefinitionTreeEditor — reorders definition.items, not component tree. */
 import { useState, useCallback, type ReactNode } from 'react';
 import { DragDropProvider } from '@dnd-kit/react';
-import { PointerSensor, PointerActivationConstraints } from '@dnd-kit/dom';
+import { PointerSensor } from '@dnd-kit/dom';
+import { STUDIO_POINTER_ACTIVATION } from '../shared/dnd-config';
 import { useProject } from '../../state/useProject';
 import { useSelection } from '../../state/useSelection';
 
@@ -96,9 +97,7 @@ export function EditorDndProvider({ items, children }: EditorDndProviderProps) {
       onDragEnd={onDragEnd}
       sensors={() => [
         PointerSensor.configure({
-          activationConstraints: [
-            new PointerActivationConstraints.Distance({ value: 5 }),
-          ],
+          activationConstraints: STUDIO_POINTER_ACTIVATION,
         }),
       ]}
     >

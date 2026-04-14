@@ -13,7 +13,7 @@ export function LayoutContextMenu({ items, onAction, onClose }: LayoutContextMen
   return (
     <div
       data-testid="layout-context-menu"
-      className="bg-surface border border-border rounded shadow-lg py-1 min-w-[160px]"
+      className="bg-surface/95 backdrop-blur-[2px] border border-border/70 rounded-[8px] shadow-[0_4px_16px_rgba(0,0,0,0.08)] py-1.5 min-w-[180px] z-50 flex flex-col"
       role="menu"
     >
       {items.map(({ label, action, separator }) => (
@@ -24,7 +24,7 @@ export function LayoutContextMenu({ items, onAction, onClose }: LayoutContextMen
           <button
             role="menuitem"
             data-testid={`layout-ctx-${action}`}
-            className="w-full text-left px-3 py-1.5 text-sm hover:bg-surface-hover transition-colors"
+            className="w-full text-left px-3.5 py-1.5 text-[13px] font-medium text-ink hover:bg-accent/10 hover:text-accent focus:bg-accent/10 focus:text-accent transition-colors focus-visible:outline-none"
             onClick={() => {
               onAction(action);
               onClose();
