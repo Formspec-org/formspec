@@ -500,4 +500,38 @@ describe('reconcileComponentTree', () => {
     expect(tree.children[0].component).toBe('Heading');
     expect(tree.children[0].bind).toBe('total_heading');
   });
+
+  it('maps duplicate leaf binds into sibling layout wrappers when clones lack definitionItemPath', () => {
+    const definition = {
+      items: [
+        { key: 'g1', type: 'group', children: [{ key: 'title', type: 'field', dataType: 'string' }] },
+        { key: 'g2', type: 'group', children: [{ key: 'title', type: 'field', dataType: 'string' }] },
+      ],
+    } as any;
+    const existing = {
+      component: 'Stack',
+      nodeId: 'root',
+      children: [
+        {
+          component: 'Card',
+          _layout: true,
+          nodeId: 'cardA',
+          children: [{ component: 'TextInput', bind: 'title' }],
+        },
+        {
+          component: 'Card',
+          _layout: true,
+          nodeId: 'cardB',
+          children: [{ component: 'TextInput', bind: 'title' }],
+        },
+      ],
+    };
+
+    const tree = reconcileComponentTree(definition, existing);
+    const cards = tree.children.filter((c: any) => c._layout && c.component === 'Card');
+    expect(cards).toHaveLength(2);
+    const byCardId = (id: string) => cards.find((c: any) => c.nodeId === id);
+    expect(byCardId('cardA')?.children?.[0]?.definitionItemPath).toBe('g1.title');
+    expect(byCardId('cardB')?.children?.[0]?.definitionItemPath).toBe('g2.title');
+  });
 });

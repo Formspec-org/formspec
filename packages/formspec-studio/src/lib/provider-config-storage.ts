@@ -41,6 +41,12 @@ export function clearProviderConfig(storage?: StorageBackend): void {
  * or schema-invalid legacy values are dropped rather than poisoning the canonical
  * key. Always clears every legacy key afterward so they stop drifting.
  *
+ * **Canonical slot already occupied:** promotion runs only when the canonical key
+ * is absent (`getItem === null`). If the key exists but holds unreadable or
+ * schema-invalid JSON, a valid legacy value is NOT promoted — clear the canonical
+ * entry manually (or fix JSON) if you need to recover from legacy. Legacy keys are
+ * still removed each run so drift stops.
+ *
  * Safe to call on every app boot — idempotent and cheap.
  */
 // Why: migrating from split keys added before 2026-04-14

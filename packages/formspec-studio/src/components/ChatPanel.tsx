@@ -124,6 +124,8 @@ export function ChatPanel({ project, onClose, initialPrompt }: ChatPanelProps) {
 
   // Subscribe to changeset transitions — no polling.
   // useSyncExternalStore re-renders only when ProposalManager notifies.
+  // Client-only bundle: getServerSnapshot matches getSnapshot. If ChatPanel is ever
+  // rendered under SSR, supply a real server snapshot (or gate this path) per React 18.
   const changeset = useSyncExternalStore(
     useCallback(
       (onStoreChange) => proposalManager?.subscribe(onStoreChange) ?? (() => {}),

@@ -216,6 +216,54 @@ export function reconcileComponentTree(
   let newRoot: TreeNode = { component: 'Stack', nodeId: 'root', children: builtNodes };
 
   // ── Phase 3: Re-insert layout wrappers ──
+  /**
+   * DFS queues of definition-bound nodes on `newRoot`, in visit order. Used when a
+   * layout-wrapper clone still has leaf `bind` / `nodeId` but no `definitionItemPath`
+   * (e.g. first reconcile after import): consume the next queue entry so duplicate
+   * keys map to the same order as the rebuilt flat tree.
+   */
+  function buildExtractionQueues(root: TreeNode): {
+    byBind: Map<string, TreeNode[]>;
+    byNodeId: Map<string, TreeNode[]>;
+  } {
+    const byBind = new Map<string, TreeNode[]>();
+    const byNodeId = new Map<string, TreeNode[]>();
+    const push = (map: Map<string, TreeNode[]>, key: string, node: TreeNode) => {
+      const arr = map.get(key) ?? [];
+      arr.push(node);
+      map.set(key, arr);
+    };
+    /** Do not queue nodes already sitting under a layout wrapper (they were extracted). */
+    const walk = (n: TreeNode, underLayoutWrapper: boolean) => {
+      for (const c of n.children ?? []) {
+        const nextUnderLayout = underLayoutWrapper || isLayoutWrapper(c);
+        if (!nextUnderLayout) {
+          // Skip schema containers (groups, etc.): only leaf-like bound nodes participate
+          // in duplicate-bind disambiguation for wrapper extraction.
+          if (
+            c.bind &&
+            !isLayoutWrapper(c) &&
+            typeof c.definitionItemPath === 'string' &&
+            !CONTAINER_COMPONENTS.has(c.component)
+          ) {
+            push(byBind, c.bind, c);
+          } else if (
+            c.nodeId &&
+            !c._layout &&
+            !c.bind &&
+            typeof c.definitionItemPath === 'string' &&
+            !CONTAINER_COMPONENTS.has(c.component)
+          ) {
+            push(byNodeId, c.nodeId, c);
+          }
+        }
+        if (c.children) walk(c, nextUnderLayout);
+      }
+    };
+    walk(root, false);
+    return { byBind, byNodeId };
+  }
+
   const matchesRef = (n: TreeNode, ref: { bind?: string; nodeId?: string; definitionItemPath?: string }): boolean => {
     if (ref.nodeId && n.nodeId === ref.nodeId) {
       if (!ref.definitionItemPath || n.definitionItemPath === ref.definitionItemPath) return true;
@@ -253,29 +301,40 @@ export function reconcileComponentTree(
     return undefined;
   };
 
-  const updateWrapperChildren = (wrapperNode: TreeNode): void => {
+  const updateWrapperChildren = (
+    wrapperNode: TreeNode,
+    queues: ReturnType<typeof buildExtractionQueues>,
+  ): void => {
     if (!wrapperNode.children) return;
     const updatedChildren: TreeNode[] = [];
     for (const child of wrapperNode.children) {
       if (isLayoutWrapper(child)) {
-        updateWrapperChildren(child);
+        updateWrapperChildren(child, queues);
         updatedChildren.push(child);
       } else if (child.bind) {
-        const found = findInTree(newRoot, {
-          bind: child.bind,
-          definitionItemPath:
-            typeof child.definitionItemPath === 'string' ? child.definitionItemPath : undefined,
-        });
+        let itemPath: string | undefined =
+          typeof child.definitionItemPath === 'string' ? child.definitionItemPath : undefined;
+        if (!itemPath) {
+          const next = queues.byBind.get(child.bind)?.shift();
+          itemPath = typeof next?.definitionItemPath === 'string' ? next.definitionItemPath : undefined;
+        }
+        const found = itemPath
+          ? findInTree(newRoot, { bind: child.bind, definitionItemPath: itemPath })
+          : findInTree(newRoot, { bind: child.bind });
         if (found && found.index !== -1) {
           const [extracted] = found.parent.children!.splice(found.index, 1);
           updatedChildren.push(extracted);
         }
       } else if (child.nodeId) {
-        const found = findInTree(newRoot, {
-          nodeId: child.nodeId,
-          definitionItemPath:
-            typeof child.definitionItemPath === 'string' ? child.definitionItemPath : undefined,
-        });
+        let itemPath: string | undefined =
+          typeof child.definitionItemPath === 'string' ? child.definitionItemPath : undefined;
+        if (!itemPath) {
+          const next = queues.byNodeId.get(child.nodeId)?.shift();
+          itemPath = typeof next?.definitionItemPath === 'string' ? next.definitionItemPath : undefined;
+        }
+        const found = itemPath
+          ? findInTree(newRoot, { nodeId: child.nodeId, definitionItemPath: itemPath })
+          : findInTree(newRoot, { nodeId: child.nodeId });
         if (found && found.index !== -1) {
           const [extracted] = found.parent.children!.splice(found.index, 1);
           updatedChildren.push(extracted);
@@ -287,7 +346,8 @@ export function reconcileComponentTree(
 
   for (const snap of wrapperSnapshots) {
     const wrapperNode = snap.wrapper;
-    updateWrapperChildren(wrapperNode);
+    const queues = buildExtractionQueues(newRoot);
+    updateWrapperChildren(wrapperNode, queues);
 
     const parentResult = findInTree(newRoot, snap.parentRef);
     const parentNode = parentResult ? parentResult.node : newRoot;

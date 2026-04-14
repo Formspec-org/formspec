@@ -112,6 +112,16 @@ describe('migrateLegacyProviderConfigKeys', () => {
     expect(localStorage.getItem(STUDIO_LEGACY)).toBeNull();
   });
 
+  it('does not promote legacy when canonical key exists even if value is malformed JSON', () => {
+    localStorage.setItem(CANONICAL_PROVIDER_CONFIG_KEY, '{not valid json');
+    localStorage.setItem(STUDIO_LEGACY, JSON.stringify({ provider: 'google', apiKey: 'from-legacy' }));
+
+    migrateLegacyProviderConfigKeys();
+
+    expect(localStorage.getItem(CANONICAL_PROVIDER_CONFIG_KEY)).toBe('{not valid json');
+    expect(localStorage.getItem(STUDIO_LEGACY)).toBeNull();
+  });
+
   it('does NOT promote a schema-invalid legacy value to the canonical key', () => {
     localStorage.setItem(STUDIO_LEGACY, JSON.stringify({ provider: 'google' }));
 
