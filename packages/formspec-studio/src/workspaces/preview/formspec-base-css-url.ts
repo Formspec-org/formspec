@@ -7,6 +7,3 @@ import defaultUrl from '@formspec-org/webcomponent/formspec-default.css?url';
 
 export const formspecLayoutCssHref: string = layoutUrl ?? '';
 export const formspecDefaultCssHref: string = defaultUrl ?? '';
-
-/** @deprecated Use formspecLayoutCssHref and formspecDefaultCssHref instead. */
-export const formspecBaseCssHref: string = formspecLayoutCssHref;

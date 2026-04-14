@@ -7,7 +7,6 @@ import { afterEach, vi } from 'vitest';
 vi.mock('../src/workspaces/preview/formspec-base-css-url', () => ({
   formspecLayoutCssHref: '',
   formspecDefaultCssHref: '',
-  formspecBaseCssHref: '',
 }));
 
 await initFormspecEngine();

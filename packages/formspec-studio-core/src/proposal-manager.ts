@@ -82,11 +82,6 @@ export type MergeResult =
 
 // ── ProposalManager ─────────────────────────────────────────────────
 
-let nextId = 1;
-function generateChangesetId(): string {
-  return `cs-${nextId++}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
 /**
  * Manages changeset lifecycle, actor-tagged recording, and snapshot-and-replay.
  *
@@ -105,6 +100,12 @@ export class ProposalManager {
   private _pendingEntryWarnings: string[] = [];
   /** Accumulates commands within a single beginEntry/endEntry bracket. */
   private _pendingAiEntry: ChangeEntry | null = null;
+  /** Per-instance changeset id counter — must not be shared across managers. */
+  private _nextChangesetSequence = 1;
+
+  private generateChangesetId(): string {
+    return `cs-${this._nextChangesetSequence++}-${Math.random().toString(36).slice(2, 8)}`;
+  }
 
   /**
    * @param core - The IProjectCore instance to manage.
@@ -148,7 +149,7 @@ export class ProposalManager {
       throw new Error(`Cannot open changeset on ${status} definition (VP-02: active/retired definitions are immutable)`);
     }
 
-    const id = generateChangesetId();
+    const id = this.generateChangesetId();
     this._changeset = {
       id,
       label: '',

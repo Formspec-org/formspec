@@ -23,6 +23,61 @@ describe('ProposalManager', () => {
     expect(pm).not.toBeNull();
   });
 
+  describe('instance isolation', () => {
+    // Guards against regressing to a module-scoped `nextId` counter.
+    // Each ProposalManager must own its own id sequence so tests and multi-project
+    // hosts don't leak counter state between instances.
+    it('two managers in the same process have independent id sequences', () => {
+      const firstProject = createProject({
+        seed: {
+          definition: {
+            $formspec: '1.0',
+            url: 'urn:test:iso-a',
+            version: '0.1.0',
+            title: 'A',
+            items: [],
+          } as any,
+        },
+      });
+      const secondProject = createProject({
+        seed: {
+          definition: {
+            $formspec: '1.0',
+            url: 'urn:test:iso-b',
+            version: '0.1.0',
+            title: 'B',
+            items: [],
+          } as any,
+        },
+      });
+
+      const firstId = firstProject.proposals!.openChangeset();
+      const secondId = secondProject.proposals!.openChangeset();
+
+      const counterFor = (id: string) => id.match(/^cs-(\d+)-/)?.[1];
+      expect(counterFor(firstId)).toBe('1');
+      expect(counterFor(secondId)).toBe('1');
+    });
+
+    // Guards against accidental removal of structuredClone in openChangeset /
+    // onCommandsRecorded — a caller's snapshot object must never be mutated
+    // by subsequent recording.
+    it('does not mutate caller-visible snapshot objects when recording mutations', () => {
+      const id = pm.openChangeset();
+      expect(id).toBeTruthy();
+
+      const snapshotRef = pm.changeset!.snapshotBefore;
+      const snapshotCopy = structuredClone(snapshotRef);
+
+      pm.beginEntry('formspec_field');
+      project.addField('email', 'Email', 'text');
+      pm.endEntry('Added email');
+      project.addField('userField', 'User', 'text');
+
+      expect(snapshotRef).toEqual(snapshotCopy);
+    });
+  });
+
   describe('openChangeset', () => {
     it('opens a changeset and returns an ID', () => {
       const id = pm.openChangeset();
