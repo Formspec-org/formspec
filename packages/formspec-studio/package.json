@@ -36,6 +36,7 @@
     "@formspec-org/layout": "*",
     "@formspec-org/mcp": "*",
     "@formspec-org/studio-core": "*",
+    "@formspec-org/types": "*",
     "@formspec-org/webcomponent": "*",
     "jszip": "^3.10.1",
     "react": "^19.0.0",
