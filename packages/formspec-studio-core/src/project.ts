@@ -4085,7 +4085,14 @@ export class Project {
     };
   }
 
-  /** Rename a variable — Future Work, handler not implemented. */
+  /**
+   * Rename a definition variable and rewrite FEL references — **not implemented**.
+   *
+   * Blocked on a `definition.renameVariable` (or equivalent) command in
+   * `@formspec-org/core`; until that exists this helper always throws
+   * {@link HelperError} with code `NOT_IMPLEMENTED`. See the studio README
+   * “Known limitations” section for the product-facing note.
+   */
   renameVariable(name: string, newName: string): HelperResult {
     throw new HelperError(
       'NOT_IMPLEMENTED',

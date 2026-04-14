@@ -203,6 +203,12 @@ tests/
 
 ---
 
+## Known limitations
+
+- **`Project.renameVariable()`** — Throws `HelperError` with code `NOT_IMPLEMENTED`. There is no `definition.renameVariable` command in the core handler catalog yet, so the studio cannot safely rewrite variable names across binds and FEL. Use manual edits until a core migration path exists.
+
+---
+
 ## Key design decisions
 
 **All mutations are commands.** Every user action dispatches a typed command (`definition.addItem`, `theme.setToken`, `component.addNode`, etc.). This gives undo/redo and audit logging without extra infrastructure.

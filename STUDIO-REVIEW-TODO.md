@@ -30,9 +30,9 @@ Use this file as a **backlog**: each `- [ ]` is one shippable task unless noted 
 ### Component tree helpers
 
 - [x] Introduce shared **`tree-utils.ts`** and consolidate **`findComponentNodeById`** (merged with prior `findNodeById` usage; see `packages/formspec-studio-core/src/tree-utils.ts`).
-- [ ] Replace **`componentTreeHasBind`** with **`componentSubtreeContainsRef`** using `{ bind }` only if behavior is identical for all callers; otherwise document why both stay.
-- [ ] Factor shared **parent walk** logic between `findParentOfNodeRef` (`layout-dnd-utils.ts` ~9–29) and `_findComponentParentRef` (`project.ts` ~2928–2944) if return-type differences allow a shared core.
-- [ ] Remove test-local **`findNodeById` / `findNodeByBind`** in `packages/formspec-studio-core/tests/project-methods.test.ts` (~3690–3709); import the production helper instead of a third DFS copy.
+- [x] **`componentTreeHasBind` / `componentSubtreeContainsRef`:** No `componentTreeHasBind` symbol remains in the repo; subtree membership is **`treeContainsRef`** in `packages/formspec-studio-core/src/tree-utils.ts` (re-exported from `index.ts`).
+- [x] **Parent walk:** **`findParentOfNodeRef`** / **`findParentRefOfNodeRef`** live in `tree-utils.ts`; `Project.applyLayout` and layout DnD import them — no separate `_findComponentParentRef` duplicate.
+- [x] **Test-local tree DFS copies:** The old `findNodeById` / `findNodeByBind` block in `project-methods.test.ts` is gone; helpers live in `tree-utils.ts`.
 
 ### Chat (dual product — keep both)
 
@@ -80,8 +80,8 @@ Use this file as a **backlog**: each `- [ ]` is one shippable task unless noted 
 
 ### Explicit gaps (document, do not “fix” without product)
 
-- [ ] Document **`Project.renameVariable()`** as `NOT_IMPLEMENTED`: add issue link in a code comment and a “Known limitations” bullet in the studio README.
-- [ ] **Triage `packages/formspec-studio-core/tests/repro.test.ts`:** convert to a named regression test with a single assertion path, or delete.
+- [x] Document **`Project.renameVariable()`** as `NOT_IMPLEMENTED` — JSDoc on `project.ts` + “Known limitations” in `packages/formspec-studio/README.md`.
+- [x] **Triage `repro.test.ts`:** removed scratch file (only `console.log` / no assertions); use `analyzeFEL` tests in `packages/formspec-engine` or add a focused studio-core test if a regression is needed.
 
 ### Optional performance (large forms / MCP-heavy use)
 

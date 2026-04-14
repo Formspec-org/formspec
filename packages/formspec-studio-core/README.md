@@ -133,7 +133,7 @@ All helpers return `HelperResult`. Helpers throw `HelperError` on pre-validation
 - `addVariable(name, expression, scope?)`
 - `updateVariable(name, expression)`
 - `removeVariable(name)` — warns on dangling references
-- `renameVariable(name, newName)`
+- `renameVariable(name, newName)` — **not implemented** (throws `HelperError` `NOT_IMPLEMENTED` until core adds a rename command)
 - `addInstance(name, props)`
 - `updateInstance(name, changes)`
 - `renameInstance(name, newName)`
