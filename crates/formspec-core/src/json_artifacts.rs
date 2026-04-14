@@ -3,11 +3,9 @@
 //! Private `*_str` helpers stringify changelog enums; `change_to_object` builds each change row.
 #![allow(clippy::missing_docs_in_private_items)]
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
-use crate::changelog::{
-    Change, ChangeImpact, ChangeTarget, ChangeType, Changelog, SemverImpact,
-};
+use crate::changelog::{Change, ChangeImpact, ChangeTarget, ChangeType, Changelog, SemverImpact};
 use crate::extension_analysis::ExtensionUsageIssue;
 use crate::wire_keys::{changelog_change_keys, changelog_root_keys};
 
@@ -53,10 +51,7 @@ fn change_impact_str(i: ChangeImpact) -> &'static str {
 fn change_to_object(c: &Change, style: JsonWireStyle) -> Value {
     let (type_key, migration_key) = changelog_change_keys(style);
     let mut m = serde_json::Map::new();
-    m.insert(
-        type_key.to_string(),
-        json!(change_type_str(&c.change_type)),
-    );
+    m.insert(type_key.to_string(), json!(change_type_str(&c.change_type)));
     m.insert("target".to_string(), json!(change_target_str(&c.target)));
     m.insert("path".to_string(), json!(c.path));
     m.insert("impact".to_string(), json!(change_impact_str(c.impact)));
@@ -64,10 +59,7 @@ fn change_to_object(c: &Change, style: JsonWireStyle) -> Value {
     m.insert("description".to_string(), json!(c.description));
     m.insert("before".to_string(), json!(c.before));
     m.insert("after".to_string(), json!(c.after));
-    m.insert(
-        migration_key.to_string(),
-        json!(c.migration_hint),
-    );
+    m.insert(migration_key.to_string(), json!(c.migration_hint));
     Value::Object(m)
 }
 

@@ -3,7 +3,8 @@
 
 use fel_core::error::{Diagnostic, Severity};
 use fel_core::{
-    EvalResult, FelValue, FormspecEnvironment, evaluate, expr_is_interpolation_static_literal, parse,
+    EvalResult, FelValue, FormspecEnvironment, evaluate, expr_is_interpolation_static_literal,
+    parse,
 };
 
 /// Check whether a constraint evaluation result means "passes."
@@ -83,11 +84,7 @@ pub(super) fn interpolate_message(template: &str, env: &FormspecEnvironment) -> 
                         let er = evaluate(&parsed, env);
                         let trim = expr.trim();
                         let has_binding_sigil = trim.contains('$') || trim.contains('@');
-                        if er
-                            .diagnostics
-                            .iter()
-                            .any(|d| d.severity == Severity::Error)
-                        {
+                        if er.diagnostics.iter().any(|d| d.severity == Severity::Error) {
                             format!("{{{{{expr}}}}}")
                         } else if er.value.is_null()
                             && !has_binding_sigil
@@ -140,7 +137,11 @@ fn fel_value_to_display(value: &FelValue) -> String {
         FelValue::Number(n) => fel_core::types::format_number(*n),
         FelValue::String(s) => s.clone(),
         FelValue::Date(d) => d.format_iso(),
-        FelValue::Money(m) => format!("{} {}", fel_core::types::format_number(m.amount), m.currency),
+        FelValue::Money(m) => format!(
+            "{} {}",
+            fel_core::types::format_number(m.amount),
+            m.currency
+        ),
         FelValue::Array(_) | FelValue::Object(_) => String::new(),
     }
 }
@@ -148,8 +149,8 @@ fn fel_value_to_display(value: &FelValue) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fel_core::error::Diagnostic;
     use fel_core::EvalResult;
+    use fel_core::error::Diagnostic;
     use rust_decimal::Decimal;
 
     #[test]
@@ -304,8 +305,7 @@ mod tests {
     #[test]
     fn mixed_text_and_expressions() {
         let env = make_env();
-        let result =
-            interpolate_message("{{$name}} spent {{$budget}} of {{$limit}} allowed", &env);
+        let result = interpolate_message("{{$name}} spent {{$budget}} of {{$limit}} allowed", &env);
         assert_eq!(result, "Alice spent 1000 of 500 allowed");
     }
 

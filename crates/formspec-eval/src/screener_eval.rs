@@ -80,7 +80,11 @@ pub fn evaluate_screener_document(
     for phase in &evaluation {
         if let Some(routes) = phase.get("routes").and_then(Value::as_array) {
             for route in routes {
-                if route.get("override").and_then(Value::as_bool).unwrap_or(false) {
+                if route
+                    .get("override")
+                    .and_then(Value::as_bool)
+                    .unwrap_or(false)
+                {
                     override_routes.push(route);
                 }
             }
@@ -92,7 +96,10 @@ pub fn evaluate_screener_document(
     let mut has_terminal = false;
 
     for route in &override_routes {
-        let condition = route.get("condition").and_then(Value::as_str).unwrap_or("false");
+        let condition = route
+            .get("condition")
+            .and_then(Value::as_str)
+            .unwrap_or("false");
         let is_truthy = eval_condition(condition, &env);
         if is_truthy {
             let mut result = route_to_result(route);
@@ -339,10 +346,7 @@ fn eval_score_threshold(
     let mut scored: Vec<ScoredRoute> = routes
         .iter()
         .map(|route| {
-            let score_expr = route
-                .get("score")
-                .and_then(Value::as_str)
-                .unwrap_or("0");
+            let score_expr = route.get("score").and_then(Value::as_str).unwrap_or("0");
             let threshold = route
                 .get("threshold")
                 .and_then(Value::as_f64)
@@ -469,10 +473,7 @@ fn route_to_result(route: &Value) -> RouteResult {
             .and_then(Value::as_str)
             .unwrap_or("")
             .to_string(),
-        label: route
-            .get("label")
-            .and_then(Value::as_str)
-            .map(String::from),
+        label: route.get("label").and_then(Value::as_str).map(String::from),
         message: route
             .get("message")
             .and_then(Value::as_str)
@@ -780,7 +781,11 @@ mod tests {
         let det = evaluate_screener_document(&screener, &answers, Some("2026-04-01T10:00:00Z"));
 
         assert_eq!(det.phases[0].matched.len(), 1);
-        assert!(det.phases[0].warnings.contains(&"below-minimum".to_string()));
+        assert!(
+            det.phases[0]
+                .warnings
+                .contains(&"below-minimum".to_string())
+        );
     }
 
     // ── Score-threshold tests ──────────────────────────────────────

@@ -58,15 +58,16 @@ pub(super) fn validate_items(
 
         // Type mismatch check — covers all 13 spec dataTypes.
         // Skip for null AND empty values (same gate as constraint checks per §3.8.1).
-        if !val.is_null() && !value_skips_optional_bind_checks(&val) && let Some(ref dt) = item.data_type {
+        if !val.is_null()
+            && !value_skips_optional_bind_checks(&val)
+            && let Some(ref dt) = item.data_type
+        {
             let mismatch = match dt.as_str() {
                 // String-family: must be a JSON string
                 "string" | "text" => !val.is_string(),
-                "choice" => {
-                    !val.as_str().map_or(false, |s| {
-                        item.option_values.is_empty() || item.option_values.iter().any(|o| o == s)
-                    })
-                }
+                "choice" => !val.as_str().map_or(false, |s| {
+                    item.option_values.is_empty() || item.option_values.iter().any(|o| o == s)
+                }),
 
                 // Numeric: integer must be whole, decimal any number
                 "integer" => {
@@ -94,16 +95,14 @@ pub(super) fn validate_items(
                 "uri" => !val.as_str().map_or(false, is_valid_uri),
 
                 // multiChoice: array where every element is a string (and in options if defined)
-                "multiChoice" => {
-                    !val.as_array().map_or(false, |arr| {
-                        arr.iter().all(|v| {
-                            v.as_str().map_or(false, |s| {
-                                item.option_values.is_empty()
-                                    || item.option_values.iter().any(|o| o == s)
-                            })
+                "multiChoice" => !val.as_array().map_or(false, |arr| {
+                    arr.iter().all(|v| {
+                        v.as_str().map_or(false, |s| {
+                            item.option_values.is_empty()
+                                || item.option_values.iter().any(|o| o == s)
                         })
                     })
-                }
+                }),
 
                 // money: object with amount (string or number) + currency (string, 3 uppercase letters)
                 // Spec requires string amounts in responses, but we accept numeric for Postel's Law.

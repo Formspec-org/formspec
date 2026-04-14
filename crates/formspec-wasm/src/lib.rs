@@ -16,9 +16,9 @@
 //! - `fel` — core eval + analysis + path utils always; `fel-authoring`: tokenize/parse/print/rewrites/catalog
 //! - `wasm_tests` — native `cargo test` coverage (`#[cfg(test)]` only)
 
-mod changeset;
 #[cfg(feature = "changelog-api")]
 mod changelog;
+mod changeset;
 mod definition;
 #[cfg(feature = "document-api")]
 mod document;

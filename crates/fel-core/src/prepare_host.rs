@@ -98,11 +98,15 @@ fn get_repeat_ancestors(path: &str, repeats: &HashMap<String, u32>) -> Vec<Repea
 
 /// FEL uses 1-based repeat indices in paths; flat data uses 0-based.
 fn to_fel_indexed_path(path: &str) -> String {
-    RE_INDEX_BRACKET.replace_all(path, |caps: &regex::Captures| {
-        let n: i64 = caps.get(1).and_then(|m| m.as_str().parse().ok()).unwrap_or(0);
-        format!("[{}]", n + 1)
-    })
-    .to_string()
+    RE_INDEX_BRACKET
+        .replace_all(path, |caps: &regex::Captures| {
+            let n: i64 = caps
+                .get(1)
+                .and_then(|m| m.as_str().parse().ok())
+                .unwrap_or(0);
+            format!("[{}]", n + 1)
+        })
+        .to_string()
 }
 
 fn to_repeat_wildcard_path(alias: &str) -> String {
@@ -197,11 +201,8 @@ fn resolve_qualified_group_refs(expression: &str, repeat_ancestors: &[RepeatAnce
     let mut result = expression.to_string();
     for (group_name, concrete_prefix, is_innermost) in replacements {
         let escaped = regex::escape(&group_name);
-        let pattern = Regex::new(&format!(
-            r"\${}\.([A-Za-z_][A-Za-z0-9_]*)",
-            escaped
-        ))
-        .expect("valid group pattern");
+        let pattern = Regex::new(&format!(r"\${}\.([A-Za-z_][A-Za-z0-9_]*)", escaped))
+            .expect("valid group pattern");
         result = pattern
             .replace_all(&result, |caps: &regex::Captures| {
                 let field = caps.get(1).expect("field").as_str();
@@ -404,10 +405,7 @@ mod tests {
         repeats: &[(&str, u32)],
         paths: &[&str],
     ) -> String {
-        let rc: HashMap<String, u32> = repeats
-            .iter()
-            .map(|(k, v)| (k.to_string(), *v))
-            .collect();
+        let rc: HashMap<String, u32> = repeats.iter().map(|(k, v)| (k.to_string(), *v)).collect();
         let fp: Vec<String> = paths.iter().map(|s| (*s).to_string()).collect();
         prepare_fel_expression_for_host(PrepareFelHostInput {
             expression: expr,
@@ -456,9 +454,6 @@ mod tests {
             &[],
             &["rows[0].score", "rows[1].score"],
         );
-        assert_eq!(
-            out,
-            "$rows[*].score + $rows[*].score + x.rows.score"
-        );
+        assert_eq!(out, "$rows[*].score + $rows[*].score + x.rows.score");
     }
 }

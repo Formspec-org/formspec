@@ -882,7 +882,11 @@ mod tests {
 
         assert!(result.diagnostics.is_empty());
         assert_eq!(result.compiled.len(), 2);
-        let paths: Vec<&str> = result.compiled.iter().map(|e| e.expression_path.as_str()).collect();
+        let paths: Vec<&str> = result
+            .compiled
+            .iter()
+            .map(|e| e.expression_path.as_str())
+            .collect();
         assert!(paths.contains(&"$.evaluation[0].routes[0].condition"));
         assert!(paths.contains(&"$.evaluation[0].routes[1].condition"));
     }
@@ -904,7 +908,11 @@ mod tests {
 
         assert!(result.diagnostics.is_empty());
         assert_eq!(result.compiled.len(), 2);
-        let paths: Vec<&str> = result.compiled.iter().map(|e| e.expression_path.as_str()).collect();
+        let paths: Vec<&str> = result
+            .compiled
+            .iter()
+            .map(|e| e.expression_path.as_str())
+            .collect();
         assert!(paths.contains(&"$.evaluation[0].routes[0].score"));
         assert!(paths.contains(&"$.evaluation[0].routes[1].score"));
     }
@@ -924,7 +932,10 @@ mod tests {
 
         assert!(result.diagnostics.is_empty());
         assert_eq!(result.compiled.len(), 1);
-        assert_eq!(result.compiled[0].expression_path, "$.evaluation[0].activeWhen");
+        assert_eq!(
+            result.compiled[0].expression_path,
+            "$.evaluation[0].activeWhen"
+        );
     }
 
     #[test]
@@ -939,7 +950,11 @@ mod tests {
         let result = compile_screener_expressions(&doc);
 
         assert!(result.diagnostics.is_empty());
-        let paths: Vec<&str> = result.compiled.iter().map(|e| e.expression_path.as_str()).collect();
+        let paths: Vec<&str> = result
+            .compiled
+            .iter()
+            .map(|e| e.expression_path.as_str())
+            .collect();
         assert!(paths.contains(&"$.binds[0].required"));
         assert!(paths.contains(&"$.binds[0].constraint"));
     }
@@ -961,7 +976,10 @@ mod tests {
         assert_eq!(result.compiled.len(), 0);
         assert_eq!(result.diagnostics.len(), 1);
         assert_eq!(result.diagnostics[0].code, "E400");
-        assert_eq!(result.diagnostics[0].path, "$.evaluation[0].routes[0].condition");
+        assert_eq!(
+            result.diagnostics[0].path,
+            "$.evaluation[0].routes[0].condition"
+        );
     }
 
     #[test]

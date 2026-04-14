@@ -1,9 +1,9 @@
 //! `serde_json::Value` projection for lint results (WASM / Python FFI).
 
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 
-use formspec_core::wire_keys::lint_document_type_key;
 use formspec_core::JsonWireStyle;
+use formspec_core::wire_keys::lint_document_type_key;
 
 use crate::LintResult;
 

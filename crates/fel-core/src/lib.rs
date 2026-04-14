@@ -18,8 +18,8 @@ pub mod environment;
 pub mod error;
 pub mod evaluator;
 pub mod extensions;
-pub mod iso_duration;
 pub mod interpolation;
+pub mod iso_duration;
 pub mod lexer;
 pub mod parser;
 pub mod prepare_host;
@@ -30,11 +30,10 @@ pub mod wire_style;
 // Re-export key types
 pub use ast::Expr;
 pub use context_json::formspec_environment_from_json_map;
-pub use convert::{
-    fel_to_json, field_map_from_json_str, json_object_to_field_map, json_to_fel,
-};
+pub use convert::{fel_to_json, field_map_from_json_str, json_object_to_field_map, json_to_fel};
 pub use dependencies::{
-    Dependencies, dependencies_to_json_value, dependencies_to_json_value_styled, extract_dependencies,
+    Dependencies, dependencies_to_json_value, dependencies_to_json_value_styled,
+    extract_dependencies,
 };
 pub use environment::{FormspecEnvironment, MipState, RepeatContext};
 pub use error::{
@@ -42,21 +41,21 @@ pub use error::{
     undefined_function_names_from_diagnostics,
 };
 pub use evaluator::{Environment, EvalResult, Evaluator, MapEnvironment, evaluate};
-pub use interpolation::expr_is_interpolation_static_literal;
 pub use extensions::{
     BuiltinFunctionCatalogEntry, ExtensionError, ExtensionRegistry, builtin_function_catalog,
     builtin_function_catalog_json_value,
 };
-pub use iso_duration::{parse_iso8601_duration, parse_iso8601_duration_ms, IsoDurationParse};
+pub use interpolation::expr_is_interpolation_static_literal;
+pub use iso_duration::{IsoDurationParse, parse_iso8601_duration, parse_iso8601_duration_ms};
+pub use lexer::{is_valid_fel_identifier, sanitize_fel_identifier};
 pub use parser::parse;
 pub use prepare_host::{
-    prepare_fel_expression_for_host, prepare_fel_expression_owned,
-    prepare_fel_host_options_from_json_map, PrepareFelHostInput, PrepareFelHostOptionsOwned,
+    PrepareFelHostInput, PrepareFelHostOptionsOwned, prepare_fel_expression_for_host,
+    prepare_fel_expression_owned, prepare_fel_host_options_from_json_map,
 };
 pub use printer::print_expr;
 pub use rust_decimal::Decimal;
 pub use types::{FelDate, FelMoney, FelValue, parse_date_literal, parse_datetime_literal};
-pub use lexer::{is_valid_fel_identifier, sanitize_fel_identifier};
 pub use wire_style::JsonWireStyle;
 
 /// One lexeme from [`tokenize`] for host bindings and tooling (stable type names + source span).

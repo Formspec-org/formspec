@@ -7,14 +7,15 @@ use pyo3::types::PyDict;
 
 use fel_core::{
     JsonWireStyle, MapEnvironment, builtin_function_catalog_json_value,
-    dependencies_to_json_value_styled, evaluate, extract_dependencies, fel_diagnostics_to_json_value,
-    parse, prepare_fel_expression_owned, prepare_fel_host_options_from_json_map,
+    dependencies_to_json_value_styled, evaluate, extract_dependencies,
+    fel_diagnostics_to_json_value, parse, prepare_fel_expression_owned,
+    prepare_fel_host_options_from_json_map,
 };
-use serde_json::Value;
 use formspec_core::{
     analyze_fel, assembly_fel_rewrite_map_from_value, fel_analysis_to_json_value,
     get_fel_dependencies, rewrite_fel_for_assembly as rewrite_fel_for_assembly_core,
 };
+use serde_json::Value;
 
 use crate::PyObject;
 use crate::convert::{
@@ -149,10 +150,7 @@ pub fn prepare_fel_expression(options: &Bound<'_, PyAny>) -> PyResult<String> {
 /// Rewrite FEL using definition-assembly RewriteMap (fragment + host keys, same as TS `rewriteFEL`).
 #[pyfunction]
 #[pyo3(name = "rewrite_fel_for_assembly")]
-pub fn rewrite_fel_for_assembly_py(
-    expression: &str,
-    map: &Bound<'_, PyAny>,
-) -> PyResult<String> {
+pub fn rewrite_fel_for_assembly_py(expression: &str, map: &Bound<'_, PyAny>) -> PyResult<String> {
     let v: Value = depythonize_json(map)?;
     let m = assembly_fel_rewrite_map_from_value(&v)
         .map_err(|e| pyo3::exceptions::PyValueError::new_err(e))?;

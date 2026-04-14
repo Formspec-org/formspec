@@ -138,10 +138,7 @@ mod tests {
         });
         let obj = ctx.as_object().unwrap();
         let env = formspec_environment_from_json_map(obj);
-        assert_eq!(
-            env.data.get("n"),
-            Some(&FelValue::Number(Decimal::from(3)))
-        );
+        assert_eq!(env.data.get("n"), Some(&FelValue::Number(Decimal::from(3))));
         assert!(env.current_datetime.is_some());
     }
 }

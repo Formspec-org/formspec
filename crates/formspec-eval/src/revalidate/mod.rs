@@ -10,7 +10,9 @@ use std::collections::HashMap;
 
 use serde_json::Value;
 
-use crate::types::{EvalTrigger, ExtensionConstraint, ItemInfo, ValidationResult, collect_data_types};
+use crate::types::{
+    EvalTrigger, ExtensionConstraint, ItemInfo, ValidationResult, collect_data_types,
+};
 
 use env::{apply_excluded_values_to_env, build_validation_env_typed};
 use items::validate_items;
@@ -104,8 +106,8 @@ pub fn revalidate(
 #[cfg(test)]
 mod tests {
     #![allow(clippy::missing_docs_in_private_items)]
-    use super::*;
     use super::env::build_validation_env;
+    use super::*;
     use serde_json::json;
 
     #[test]

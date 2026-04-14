@@ -4,11 +4,11 @@ mod tests {
     use formspec_core::changelog::{
         Change, ChangeImpact, ChangeTarget, ChangeType, Changelog, SemverImpact,
     };
-    use formspec_core::{JsonWireStyle, changelog_to_json_value};
     use formspec_core::extension_analysis::RegistryEntryStatus;
     use formspec_core::registry_client;
-    use formspec_core::runtime_mapping;
     use formspec_core::registry_client::registry_entry_count_from_raw;
+    use formspec_core::runtime_mapping;
+    use formspec_core::{JsonWireStyle, changelog_to_json_value};
     use formspec_core::{
         MappingDirection, parse_coerce_type, parse_mapping_direction_wire,
         parse_mapping_document_from_value as parse_mapping_document_inner,

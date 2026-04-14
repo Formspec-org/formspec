@@ -12,7 +12,7 @@ use std::collections::{HashMap, HashSet};
 use fel_core::ast::{BinaryOp, Expr, PathSegment, UnaryOp};
 use fel_core::extensions::builtin_function_catalog;
 use fel_core::{FelError, parse};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 /// Callback that rewrites a single string reference, returning `None` to keep the original.
 type RewriteFn = Box<dyn Fn(&str) -> Option<String>>;
@@ -168,16 +168,12 @@ fn check_function_arity(calls: &[(String, usize)]) -> Vec<FelAnalysisWarning> {
         };
         if *arg_count < min {
             warnings.push(FelAnalysisWarning {
-                message: format!(
-                    "{name}() requires at least {min} arg(s), got {arg_count}"
-                ),
+                message: format!("{name}() requires at least {min} arg(s), got {arg_count}"),
             });
         } else if let Some(mx) = max {
             if *arg_count > mx {
                 warnings.push(FelAnalysisWarning {
-                    message: format!(
-                        "{name}() accepts at most {mx} arg(s), got {arg_count}"
-                    ),
+                    message: format!("{name}() accepts at most {mx} arg(s), got {arg_count}"),
                 });
             }
         }
@@ -235,21 +231,24 @@ fn infer_coarse_type(expr: &Expr, field_types: &HashMap<String, String>) -> Coar
 
         Expr::FunctionCall { name, .. } => match name.as_str() {
             "today" | "now" | "date" | "dateAdd" => CoarseType::Date,
-            "moneyAmount" | "number" | "sum" | "count" | "avg" | "min" | "max"
-            | "length" | "round" | "floor" | "ceil" | "abs" | "power"
-            | "year" | "month" | "day" | "hours" | "minutes" | "seconds"
-            | "dateDiff" | "timeDiff" => CoarseType::Number,
+            "moneyAmount" | "number" | "sum" | "count" | "avg" | "min" | "max" | "length"
+            | "round" | "floor" | "ceil" | "abs" | "power" | "year" | "month" | "day" | "hours"
+            | "minutes" | "seconds" | "dateDiff" | "timeDiff" => CoarseType::Number,
             "money" | "moneyAdd" | "moneySum" => CoarseType::Money,
             "contains" | "startsWith" | "endsWith" | "matches" | "empty" | "present"
-            | "isNumber" | "isString" | "isDate" | "isNull" | "selected"
-            | "valid" | "relevant" | "readonly" | "required" => CoarseType::Boolean,
-            "string" | "upper" | "lower" | "trim" | "substring" | "replace"
-            | "format" | "moneyCurrency" | "typeOf" | "locale" | "time" => CoarseType::String,
+            | "isNumber" | "isString" | "isDate" | "isNull" | "selected" | "valid" | "relevant"
+            | "readonly" | "required" => CoarseType::Boolean,
+            "string" | "upper" | "lower" | "trim" | "substring" | "replace" | "format"
+            | "moneyCurrency" | "typeOf" | "locale" | "time" => CoarseType::String,
             _ => CoarseType::Unknown,
         },
 
-        Expr::UnaryOp { op: UnaryOp::Neg, .. } => CoarseType::Number,
-        Expr::UnaryOp { op: UnaryOp::Not, .. } => CoarseType::Boolean,
+        Expr::UnaryOp {
+            op: UnaryOp::Neg, ..
+        } => CoarseType::Number,
+        Expr::UnaryOp {
+            op: UnaryOp::Not, ..
+        } => CoarseType::Boolean,
 
         _ => CoarseType::Unknown,
     }
@@ -282,7 +281,8 @@ fn check_comparison_types(
                 let left_type = infer_coarse_type(left, field_types);
                 let right_type = infer_coarse_type(right, field_types);
 
-                if left_type != CoarseType::Unknown && right_type != CoarseType::Unknown
+                if left_type != CoarseType::Unknown
+                    && right_type != CoarseType::Unknown
                     && left_type != right_type
                 {
                     match (left_type, right_type) {
@@ -318,8 +318,16 @@ fn check_comparison_types(
         Expr::UnaryOp { operand, .. } => {
             check_comparison_types(operand, field_types, warnings);
         }
-        Expr::Ternary { condition, then_branch, else_branch }
-        | Expr::IfThenElse { condition, then_branch, else_branch } => {
+        Expr::Ternary {
+            condition,
+            then_branch,
+            else_branch,
+        }
+        | Expr::IfThenElse {
+            condition,
+            then_branch,
+            else_branch,
+        } => {
             check_comparison_types(condition, field_types, warnings);
             check_comparison_types(then_branch, field_types, warnings);
             check_comparison_types(else_branch, field_types, warnings);
@@ -329,7 +337,9 @@ fn check_comparison_types(
                 check_comparison_types(arg, field_types, warnings);
             }
         }
-        Expr::Membership { value, container, .. } => {
+        Expr::Membership {
+            value, container, ..
+        } => {
             check_comparison_types(value, field_types, warnings);
             check_comparison_types(container, field_types, warnings);
         }
@@ -468,8 +478,20 @@ fn collect_info(
             else_branch,
         } => {
             collect_info(condition, references, variables, functions, function_calls);
-            collect_info(then_branch, references, variables, functions, function_calls);
-            collect_info(else_branch, references, variables, functions, function_calls);
+            collect_info(
+                then_branch,
+                references,
+                variables,
+                functions,
+                function_calls,
+            );
+            collect_info(
+                else_branch,
+                references,
+                variables,
+                functions,
+                function_calls,
+            );
         }
         Expr::Membership {
             value, container, ..
@@ -1400,18 +1422,12 @@ mod tests {
         // round(number, number?) — both 1 and 2 args should be fine
         let result1 = analyze_fel("round(1)");
         assert!(
-            !result1
-                .warnings
-                .iter()
-                .any(|w| w.message.contains("round")),
+            !result1.warnings.iter().any(|w| w.message.contains("round")),
             "round with 1 arg should not warn"
         );
         let result2 = analyze_fel("round(1, 2)");
         assert!(
-            !result2
-                .warnings
-                .iter()
-                .any(|w| w.message.contains("round")),
+            !result2.warnings.iter().any(|w| w.message.contains("round")),
             "round with 2 args should not warn"
         );
     }
@@ -1449,10 +1465,7 @@ mod tests {
         // Unknown functions can't have arity checked — only report "unknown function"
         let result = analyze_fel("myCustomFunc(1, 2)");
         assert!(
-            !result
-                .warnings
-                .iter()
-                .any(|w| w.message.contains("arg")),
+            !result.warnings.iter().any(|w| w.message.contains("arg")),
             "unknown function should not get arity warnings"
         );
     }
@@ -1467,7 +1480,10 @@ mod tests {
         let result = analyze_fel_with_field_types("$revenue > 0", &field_types);
         assert!(result.valid);
         assert!(
-            result.warnings.iter().any(|w| w.message.contains("moneyAmount")),
+            result
+                .warnings
+                .iter()
+                .any(|w| w.message.contains("moneyAmount")),
             "should warn about money vs number comparison, got: {:?}",
             result.warnings
         );
@@ -1480,7 +1496,9 @@ mod tests {
 
         let result = analyze_fel_with_field_types("moneyAmount($revenue) > 0", &field_types);
         assert!(result.valid);
-        let type_warnings: Vec<_> = result.warnings.iter()
+        let type_warnings: Vec<_> = result
+            .warnings
+            .iter()
             .filter(|w| w.message.contains("money") || w.message.contains("Money"))
             .collect();
         assert!(
@@ -1513,9 +1531,15 @@ mod tests {
 
         let result = analyze_fel_with_field_types("$deadline >= today()", &field_types);
         assert!(result.valid);
-        let type_warnings: Vec<_> = result.warnings.iter()
-            .filter(|w| w.message.contains("date") || w.message.contains("Date")
-                    || w.message.contains("string") || w.message.contains("String"))
+        let type_warnings: Vec<_> = result
+            .warnings
+            .iter()
+            .filter(|w| {
+                w.message.contains("date")
+                    || w.message.contains("Date")
+                    || w.message.contains("string")
+                    || w.message.contains("String")
+            })
             .collect();
         assert!(
             type_warnings.is_empty(),
@@ -1529,7 +1553,9 @@ mod tests {
         // Without field type context, no type warnings
         let result = analyze_fel_with_field_types("$revenue > 0", &HashMap::new());
         assert!(result.valid);
-        let type_warnings: Vec<_> = result.warnings.iter()
+        let type_warnings: Vec<_> = result
+            .warnings
+            .iter()
             .filter(|w| w.message.contains("money") || w.message.contains("date"))
             .collect();
         assert!(
@@ -1545,9 +1571,14 @@ mod tests {
 
         let result = analyze_fel_with_field_types("$age >= 18", &field_types);
         assert!(result.valid);
-        let type_warnings: Vec<_> = result.warnings.iter()
-            .filter(|w| w.message.contains("mismatch") || w.message.contains("money")
-                    || w.message.contains("date"))
+        let type_warnings: Vec<_> = result
+            .warnings
+            .iter()
+            .filter(|w| {
+                w.message.contains("mismatch")
+                    || w.message.contains("money")
+                    || w.message.contains("date")
+            })
             .collect();
         assert!(type_warnings.is_empty(), "number vs number should not warn");
     }
@@ -1563,7 +1594,10 @@ mod tests {
         );
         assert!(result.valid);
         assert!(
-            result.warnings.iter().any(|w| w.message.contains("moneyAmount")),
+            result
+                .warnings
+                .iter()
+                .any(|w| w.message.contains("moneyAmount")),
             "should detect money vs number in nested if() comparison, got: {:?}",
             result.warnings
         );

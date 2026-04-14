@@ -48,15 +48,16 @@ pub fn assembly_fel_rewrite_map_from_value(v: &Value) -> Result<AssemblyFelRewri
         .unwrap_or("")
         .to_string();
 
-    let imported_keys: HashSet<String> = match obj.get("importedKeys").or_else(|| obj.get("imported_keys")) {
-        Some(Value::Array(arr)) => arr
-            .iter()
-            .filter_map(|x| x.as_str().map(String::from))
-            .collect(),
-        _ => {
-            return Err("importedKeys must be a JSON array of strings".to_string());
-        }
-    };
+    let imported_keys: HashSet<String> =
+        match obj.get("importedKeys").or_else(|| obj.get("imported_keys")) {
+            Some(Value::Array(arr)) => arr
+                .iter()
+                .filter_map(|x| x.as_str().map(String::from))
+                .collect(),
+            _ => {
+                return Err("importedKeys must be a JSON array of strings".to_string());
+            }
+        };
 
     Ok(AssemblyFelRewriteMap {
         fragment_root_key,
@@ -79,7 +80,11 @@ pub fn rewrite_message_template_for_assembly(message: &str, map: &AssemblyFelRew
 }
 
 /// Prefix dotted path segments whose base key is in `imported_keys` (bind / shape paths).
-pub(crate) fn assembly_prefix_path(path: &str, prefix: &str, imported_keys: &HashSet<String>) -> String {
+pub(crate) fn assembly_prefix_path(
+    path: &str,
+    prefix: &str,
+    imported_keys: &HashSet<String>,
+) -> String {
     let segments = split_path_segments(path);
     let rewritten: Vec<String> = segments
         .into_iter()
@@ -262,10 +267,7 @@ mod tests {
     fn matches_ts_1_7_current_path() {
         let m = common_map();
         assert_eq!(
-            rewrite_fel_for_assembly(
-                "@index > 0 and @count < 10 and @current.amount > 0",
-                &m,
-            ),
+            rewrite_fel_for_assembly("@index > 0 and @count < 10 and @current.amount > 0", &m,),
             "@index > 0 and @count < 10 and @current.proj_amount > 0"
         );
     }
@@ -275,7 +277,10 @@ mod tests {
         let m = AssemblyFelRewriteMap {
             fragment_root_key: "budget".into(),
             host_group_key: "projectBudget".into(),
-            imported_keys: ["budget", "runningTotal"].into_iter().map(String::from).collect(),
+            imported_keys: ["budget", "runningTotal"]
+                .into_iter()
+                .map(String::from)
+                .collect(),
             key_prefix: "proj_".into(),
         };
         assert_eq!(

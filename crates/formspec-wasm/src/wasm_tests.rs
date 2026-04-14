@@ -16,11 +16,11 @@ mod tests {
     use crate::fel::{eval_fel_inner, prepare_fel_expression_inner};
     #[cfg(feature = "fel-authoring")]
     use crate::fel::{rewrite_fel_for_assembly_inner, tokenize_fel_inner};
-    use crate::value_coerce::coerce_field_value_inner;
     #[cfg(feature = "mapping-api")]
     use crate::mapping::execute_mapping_inner;
     #[cfg(feature = "registry-api")]
     use crate::registry::find_registry_entry_inner;
+    use crate::value_coerce::coerce_field_value_inner;
     use formspec_core::{
         parse_coerce_type, parse_mapping_document_from_value as parse_mapping_document_inner,
         parse_mapping_rules_from_value as parse_mapping_rules_inner,
@@ -283,13 +283,9 @@ mod tests {
     #[test]
     fn coerce_field_value_inner_decimal_precision_round_trip() {
         let item = json!({ "dataType": "decimal" });
-        let out = coerce_field_value_inner(
-            &item.to_string(),
-            r#"{"precision":1}"#,
-            "{}",
-            "\"42.26\"",
-        )
-        .unwrap();
+        let out =
+            coerce_field_value_inner(&item.to_string(), r#"{"precision":1}"#, "{}", "\"42.26\"")
+                .unwrap();
         let v: Value = serde_json::from_str(&out).unwrap();
         assert_eq!(v, json!(42.3));
     }
@@ -298,13 +294,8 @@ mod tests {
     fn coerce_field_value_inner_money_number_wraps_default_currency() {
         let item = json!({ "dataType": "money" });
         let def = json!({ "formPresentation": { "defaultCurrency": "USD" } });
-        let out = coerce_field_value_inner(
-            &item.to_string(),
-            "",
-            &def.to_string(),
-            "42.26",
-        )
-        .unwrap();
+        let out =
+            coerce_field_value_inner(&item.to_string(), "", &def.to_string(), "42.26").unwrap();
         let v: Value = serde_json::from_str(&out).unwrap();
         assert_eq!(v["amount"], json!(42.26));
         assert_eq!(v["currency"], json!("USD"));

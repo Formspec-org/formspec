@@ -121,8 +121,11 @@ fn extract_command_keys(cmd: &RecordedCommand, keys: &mut EntryKeys) {
             }
         }
 
-        "definition.addBind" | "definition.addShape" | "definition.setBind"
-        | "definition.setItemProperty" | "definition.setFieldOptions"
+        "definition.addBind"
+        | "definition.addShape"
+        | "definition.setBind"
+        | "definition.setItemProperty"
+        | "definition.setFieldOptions"
         | "definition.setFieldDataType" => {
             if let Some(path) = payload.get("path").and_then(Value::as_str) {
                 let leaf = path_leaf(path).to_string();
@@ -176,8 +179,11 @@ fn extract_command_keys(cmd: &RecordedCommand, keys: &mut EntryKeys) {
             }
         }
 
-        "theme.setItemOverride" | "theme.deleteItemOverride" | "theme.setItemWidgetConfig"
-        | "theme.setItemAccessibility" | "theme.setItemStyle" => {
+        "theme.setItemOverride"
+        | "theme.deleteItemOverride"
+        | "theme.setItemWidgetConfig"
+        | "theme.setItemAccessibility"
+        | "theme.setItemStyle" => {
             if let Some(ik) = payload.get("itemKey").and_then(Value::as_str) {
                 keys.references.push(ik.to_string());
             }
@@ -195,134 +201,238 @@ mod tests {
     use serde_json::json;
 
     fn entry(commands: Vec<Vec<RecordedCommand>>) -> RecordedEntry {
-        RecordedEntry { commands, tool_name: None }
+        RecordedEntry {
+            commands,
+            tool_name: None,
+        }
     }
 
     fn cmd(cmd_type: &str, payload: Value) -> RecordedCommand {
-        RecordedCommand { cmd_type: cmd_type.to_string(), payload }
+        RecordedCommand {
+            cmd_type: cmd_type.to_string(),
+            payload,
+        }
     }
 
-    #[test] fn add_item_creates_key() {
-        let e = entry(vec![vec![cmd("definition.addItem", json!({"key": "email", "type": "text"}))]]);
+    #[test]
+    fn add_item_creates_key() {
+        let e = entry(vec![vec![cmd(
+            "definition.addItem",
+            json!({"key": "email", "type": "text"}),
+        )]]);
         let k = extract_keys(&e);
         assert_eq!(k.creates, vec!["email"]);
         assert!(k.references.is_empty());
     }
 
-    #[test] fn add_item_with_parent_path() {
-        let e = entry(vec![vec![cmd("definition.addItem", json!({"key": "street", "parentPath": "address", "type": "text"}))]]);
+    #[test]
+    fn add_item_with_parent_path() {
+        let e = entry(vec![vec![cmd(
+            "definition.addItem",
+            json!({"key": "street", "parentPath": "address", "type": "text"}),
+        )]]);
         assert_eq!(extract_keys(&e).creates, vec!["address.street"]);
     }
 
-    #[test] fn add_bind_references_path() {
-        let e = entry(vec![vec![cmd("definition.addBind", json!({"path": "email", "properties": {"required": true}}))]]);
+    #[test]
+    fn add_bind_references_path() {
+        let e = entry(vec![vec![cmd(
+            "definition.addBind",
+            json!({"path": "email", "properties": {"required": true}}),
+        )]]);
         let k = extract_keys(&e);
         assert!(k.creates.is_empty());
         assert!(k.references.contains(&"email".to_string()));
     }
 
-    #[test] fn set_bind_with_fel_refs() {
-        let e = entry(vec![vec![cmd("definition.setBind", json!({"path": "total", "properties": {"calculate": "$price * $quantity"}}))]]);
+    #[test]
+    fn set_bind_with_fel_refs() {
+        let e = entry(vec![vec![cmd(
+            "definition.setBind",
+            json!({"path": "total", "properties": {"calculate": "$price * $quantity"}}),
+        )]]);
         let k = extract_keys(&e);
         assert!(k.references.contains(&"total".to_string()));
         assert!(k.references.contains(&"price".to_string()));
         assert!(k.references.contains(&"quantity".to_string()));
     }
 
-    #[test] fn component_set_field_widget_references_key() {
-        let e = entry(vec![vec![cmd("component.setFieldWidget", json!({"fieldKey": "email", "widget": "email-input"}))]]);
+    #[test]
+    fn component_set_field_widget_references_key() {
+        let e = entry(vec![vec![cmd(
+            "component.setFieldWidget",
+            json!({"fieldKey": "email", "widget": "email-input"}),
+        )]]);
         assert!(extract_keys(&e).references.contains(&"email".to_string()));
     }
 
-    #[test] fn component_add_node_with_bind() {
-        let e = entry(vec![vec![cmd("component.addNode", json!({"pageIndex": 0, "node": {"bind": "email", "type": "input"}}))]]);
+    #[test]
+    fn component_add_node_with_bind() {
+        let e = entry(vec![vec![cmd(
+            "component.addNode",
+            json!({"pageIndex": 0, "node": {"bind": "email", "type": "input"}}),
+        )]]);
         assert!(extract_keys(&e).references.contains(&"email".to_string()));
     }
 
-    #[test] fn deduplicates_references() {
-        let e = entry(vec![vec![cmd("definition.setBind", json!({"path": "total", "properties": {"calculate": "$price + $price"}}))]]);
-        assert_eq!(extract_keys(&e).references.iter().filter(|r| r.as_str() == "price").count(), 1);
+    #[test]
+    fn deduplicates_references() {
+        let e = entry(vec![vec![cmd(
+            "definition.setBind",
+            json!({"path": "total", "properties": {"calculate": "$price + $price"}}),
+        )]]);
+        assert_eq!(
+            extract_keys(&e)
+                .references
+                .iter()
+                .filter(|r| r.as_str() == "price")
+                .count(),
+            1
+        );
     }
 
-    #[test] fn multiple_phases() {
+    #[test]
+    fn multiple_phases() {
         let e = entry(vec![
-            vec![cmd("definition.addItem", json!({"key": "name", "type": "text"}))],
-            vec![cmd("definition.addBind", json!({"path": "name", "properties": {"required": true}}))],
+            vec![cmd(
+                "definition.addItem",
+                json!({"key": "name", "type": "text"}),
+            )],
+            vec![cmd(
+                "definition.addBind",
+                json!({"path": "name", "properties": {"required": true}}),
+            )],
         ]);
         let k = extract_keys(&e);
         assert_eq!(k.creates, vec!["name"]);
         assert!(k.references.contains(&"name".to_string()));
     }
 
-    #[test] fn add_shape_references_path() {
-        let e = entry(vec![vec![cmd("definition.addShape", json!({"path": "items[*].price", "rule": {"min": 0}}))]]);
+    #[test]
+    fn add_shape_references_path() {
+        let e = entry(vec![vec![cmd(
+            "definition.addShape",
+            json!({"path": "items[*].price", "rule": {"min": 0}}),
+        )]]);
         assert!(extract_keys(&e).references.contains(&"price".to_string()));
     }
 
-    #[test] fn set_item_property_references_path() {
-        let e = entry(vec![vec![cmd("definition.setItemProperty", json!({"path": "email", "property": "label", "value": "Email Address"}))]]);
+    #[test]
+    fn set_item_property_references_path() {
+        let e = entry(vec![vec![cmd(
+            "definition.setItemProperty",
+            json!({"path": "email", "property": "label", "value": "Email Address"}),
+        )]]);
         assert!(extract_keys(&e).references.contains(&"email".to_string()));
     }
 
-    #[test] fn unknown_command_scans_for_fel_refs() {
-        let e = entry(vec![vec![cmd("definition.setRouteProperty", json!({"index": 0, "property": "condition", "value": "$age >= 18"}))]]);
+    #[test]
+    fn unknown_command_scans_for_fel_refs() {
+        let e = entry(vec![vec![cmd(
+            "definition.setRouteProperty",
+            json!({"index": 0, "property": "condition", "value": "$age >= 18"}),
+        )]]);
         assert!(extract_keys(&e).references.contains(&"age".to_string()));
     }
 
     // Edge #1: Variable scope
-    #[test] fn add_variable_with_scope_references_key() {
-        let e = entry(vec![vec![cmd("definition.addVariable", json!({"name": "s", "expression": "42", "scope": "address"}))]]);
+    #[test]
+    fn add_variable_with_scope_references_key() {
+        let e = entry(vec![vec![cmd(
+            "definition.addVariable",
+            json!({"name": "s", "expression": "42", "scope": "address"}),
+        )]]);
         assert!(extract_keys(&e).references.contains(&"address".to_string()));
     }
 
-    #[test] fn add_variable_with_fel_expression() {
-        let e = entry(vec![vec![cmd("definition.addVariable", json!({"name": "t", "expression": "$price * $qty"}))]]);
+    #[test]
+    fn add_variable_with_fel_expression() {
+        let e = entry(vec![vec![cmd(
+            "definition.addVariable",
+            json!({"name": "t", "expression": "$price * $qty"}),
+        )]]);
         let k = extract_keys(&e);
         assert!(k.references.contains(&"price".to_string()));
         assert!(k.references.contains(&"qty".to_string()));
     }
 
-    #[test] fn set_variable_scope_references_key() {
-        let e = entry(vec![vec![cmd("definition.setVariable", json!({"name": "v1", "property": "scope", "value": "demographics"}))]]);
-        assert!(extract_keys(&e).references.contains(&"demographics".to_string()));
+    #[test]
+    fn set_variable_scope_references_key() {
+        let e = entry(vec![vec![cmd(
+            "definition.setVariable",
+            json!({"name": "v1", "property": "scope", "value": "demographics"}),
+        )]]);
+        assert!(
+            extract_keys(&e)
+                .references
+                .contains(&"demographics".to_string())
+        );
     }
 
-    #[test] fn set_variable_expression_references_fel() {
-        let e = entry(vec![vec![cmd("definition.setVariable", json!({"name": "v1", "property": "expression", "value": "$a + $b"}))]]);
+    #[test]
+    fn set_variable_expression_references_fel() {
+        let e = entry(vec![vec![cmd(
+            "definition.setVariable",
+            json!({"name": "v1", "property": "expression", "value": "$a + $b"}),
+        )]]);
         let k = extract_keys(&e);
         assert!(k.references.contains(&"a".to_string()));
         assert!(k.references.contains(&"b".to_string()));
     }
 
     // Edges #2/#3/#4: Same-target
-    #[test] fn set_item_property_records_target() {
-        let e = entry(vec![vec![cmd("definition.setItemProperty", json!({"path": "color", "property": "optionSet", "value": "colors"}))]]);
+    #[test]
+    fn set_item_property_records_target() {
+        let e = entry(vec![vec![cmd(
+            "definition.setItemProperty",
+            json!({"path": "color", "property": "optionSet", "value": "colors"}),
+        )]]);
         assert!(extract_keys(&e).targets.contains(&"color".to_string()));
     }
 
-    #[test] fn set_field_options_records_target() {
-        let e = entry(vec![vec![cmd("definition.setFieldOptions", json!({"path": "color", "options": [{"value": "red", "label": "Red"}]}))]]);
+    #[test]
+    fn set_field_options_records_target() {
+        let e = entry(vec![vec![cmd(
+            "definition.setFieldOptions",
+            json!({"path": "color", "options": [{"value": "red", "label": "Red"}]}),
+        )]]);
         assert!(extract_keys(&e).targets.contains(&"color".to_string()));
     }
 
-    #[test] fn set_bind_records_target() {
-        let e = entry(vec![vec![cmd("definition.setBind", json!({"path": "total", "properties": {"calculate": "$a + $b"}}))]]);
+    #[test]
+    fn set_bind_records_target() {
+        let e = entry(vec![vec![cmd(
+            "definition.setBind",
+            json!({"path": "total", "properties": {"calculate": "$a + $b"}}),
+        )]]);
         assert!(extract_keys(&e).targets.contains(&"total".to_string()));
     }
 
-    #[test] fn add_bind_records_target() {
-        let e = entry(vec![vec![cmd("definition.addBind", json!({"path": "age", "properties": {"relevant": "$show_age"}}))]]);
+    #[test]
+    fn add_bind_records_target() {
+        let e = entry(vec![vec![cmd(
+            "definition.addBind",
+            json!({"path": "age", "properties": {"relevant": "$show_age"}}),
+        )]]);
         assert!(extract_keys(&e).targets.contains(&"age".to_string()));
     }
 
     // Edge #6: Theme item overrides
-    #[test] fn theme_set_item_override_references_key() {
-        let e = entry(vec![vec![cmd("theme.setItemOverride", json!({"itemKey": "email", "property": "widget", "value": "email-input"}))]]);
+    #[test]
+    fn theme_set_item_override_references_key() {
+        let e = entry(vec![vec![cmd(
+            "theme.setItemOverride",
+            json!({"itemKey": "email", "property": "widget", "value": "email-input"}),
+        )]]);
         assert!(extract_keys(&e).references.contains(&"email".to_string()));
     }
 
-    #[test] fn theme_delete_item_override_references_key() {
-        let e = entry(vec![vec![cmd("theme.deleteItemOverride", json!({"itemKey": "phone"}))]]);
+    #[test]
+    fn theme_delete_item_override_references_key() {
+        let e = entry(vec![vec![cmd(
+            "theme.deleteItemOverride",
+            json!({"itemKey": "phone"}),
+        )]]);
         assert!(extract_keys(&e).references.contains(&"phone".to_string()));
     }
 }

@@ -16,7 +16,12 @@ pub fn parse_registry(py: Python, registry: &Bound<'_, PyAny>) -> PyResult<PyObj
     let reg = Registry::from_json(&val)
         .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
     let issues = reg.validate();
-    let json = registry_parse_summary_to_json_value(&reg, &val, &issues, formspec_core::JsonWireStyle::PythonSnake);
+    let json = registry_parse_summary_to_json_value(
+        &reg,
+        &val,
+        &issues,
+        formspec_core::JsonWireStyle::PythonSnake,
+    );
     json_to_python(py, &json)
 }
 

@@ -5,8 +5,8 @@ use std::collections::HashMap;
 use formspec_core::json_object_to_string_map;
 use formspec_eval::{
     AnswerInput, AnswerState, EvalContext, EvalTrigger, eval_host_context_from_json_map,
-    evaluate_definition_full_with_instances_and_context,
-    evaluate_screener_document, evaluation_result_to_json_value,
+    evaluate_definition_full_with_instances_and_context, evaluate_screener_document,
+    evaluation_result_to_json_value,
 };
 use serde_json::Value;
 use wasm_bindgen::prelude::*;
@@ -104,10 +104,7 @@ fn evaluate_screener_document_inner(
         Some(ctx_str) => {
             let ctx: Value = parse_value_str(ctx_str, "context JSON")?;
             let states = ctx.get("answerStates").and_then(Value::as_object).cloned();
-            let now = ctx
-                .get("nowIso")
-                .and_then(Value::as_str)
-                .map(String::from);
+            let now = ctx.get("nowIso").and_then(Value::as_str).map(String::from);
             (states, now)
         }
         None => (None, None),
@@ -131,17 +128,22 @@ fn evaluate_screener_document_inner(
     if let Some(ref states) = answer_states {
         for (key, state_val) in states {
             if !answers.contains_key(key) {
-                let state = state_val.as_str().map(parse_answer_state).unwrap_or(AnswerState::Answered);
-                answers.insert(key.clone(), AnswerInput { value: Value::Null, state });
+                let state = state_val
+                    .as_str()
+                    .map(parse_answer_state)
+                    .unwrap_or(AnswerState::Answered);
+                answers.insert(
+                    key.clone(),
+                    AnswerInput {
+                        value: Value::Null,
+                        state,
+                    },
+                );
             }
         }
     }
 
-    let record = evaluate_screener_document(
-        &screener,
-        &answers,
-        now_iso.as_deref(),
-    );
+    let record = evaluate_screener_document(&screener, &answers, now_iso.as_deref());
 
     serde_json::to_string(&record).map_err(|e| format!("serialization error: {e}"))
 }

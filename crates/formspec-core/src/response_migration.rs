@@ -117,7 +117,8 @@ pub fn apply_migrations_to_response_data(
             let Some(obj) = m.as_object() else {
                 return false;
             };
-            migration_from_version(obj).is_some_and(|v| parse_semver_tuple(v) >= parse_semver_tuple(from_version))
+            migration_from_version(obj)
+                .is_some_and(|v| parse_semver_tuple(v) >= parse_semver_tuple(from_version))
         })
         .collect();
 
@@ -275,7 +276,8 @@ mod tests {
     fn no_migrations_returns_clone_of_object() {
         let def = json!({ "items": [] });
         let data = json!({ "x": 1 });
-        let out = apply_migrations_to_response_data(&def, data.clone(), "1.0.0", "2020-01-01T00:00:00Z");
+        let out =
+            apply_migrations_to_response_data(&def, data.clone(), "1.0.0", "2020-01-01T00:00:00Z");
         assert_eq!(out, data);
     }
 
@@ -306,7 +308,11 @@ mod tests {
         });
         let data2 = json!({ "a": "low", "b": "high" });
         let out = apply_migrations_to_response_data(&def, data2, "10.0.0", "2020-01-01T00:00:00Z");
-        assert_eq!(out["a"], json!("low"), "2.0.0 migration should NOT have run");
+        assert_eq!(
+            out["a"],
+            json!("low"),
+            "2.0.0 migration should NOT have run"
+        );
         assert_eq!(out["c"], json!("high"));
         assert_eq!(out.get("b"), None);
     }

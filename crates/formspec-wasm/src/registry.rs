@@ -20,7 +20,8 @@ pub fn parse_registry(registry_json: &str) -> Result<String, JsError> {
     let val: Value = parse_value_str(registry_json, "JSON").map_err(|e| JsError::new(&e))?;
     let registry = Registry::from_json(&val).map_err(|e| JsError::new(&e.to_string()))?;
     let issues = registry.validate();
-    let json = registry_parse_summary_to_json_value(&registry, &val, &issues, JsonWireStyle::JsCamel);
+    let json =
+        registry_parse_summary_to_json_value(&registry, &val, &issues, JsonWireStyle::JsCamel);
     to_json_string(&json).map_err(|e| JsError::new(&e))
 }
 
@@ -75,8 +76,8 @@ pub fn validate_extension_usage_wasm(
 ) -> Result<String, JsError> {
     let item_values: Value =
         parse_value_str(items_json, "items JSON").map_err(|e| JsError::new(&e))?;
-    let items = json_definition_items_tree_from_value(&item_values)
-        .map_err(|e| JsError::new(&e))?;
+    let items =
+        json_definition_items_tree_from_value(&item_values).map_err(|e| JsError::new(&e))?;
     let registry_entries: HashMap<String, Value> =
         parse_json_as(registry_entries_json, "registry entries JSON")
             .map_err(|e| JsError::new(&e))?;

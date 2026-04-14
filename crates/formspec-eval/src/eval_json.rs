@@ -7,12 +7,14 @@ use std::collections::HashMap;
 
 use serde_json::{Map, Value, json};
 
+use formspec_core::JsonWireStyle;
 use formspec_core::json_object_to_string_map;
 use formspec_core::wire_keys::evaluation_batch_keys;
-use formspec_core::JsonWireStyle;
 
-use crate::types::{EvalContext, EvalTrigger, EvaluationResult, ExtensionConstraint, ValidationResult};
 use crate::extension_constraints_from_registry_documents;
+use crate::types::{
+    EvalContext, EvalTrigger, EvaluationResult, ExtensionConstraint, ValidationResult,
+};
 
 /// Full batch evaluation output as JSON (matches `evaluateDefinition` WASM shape, camelCase).
 pub fn evaluation_result_to_json_value(result: &EvaluationResult) -> Value {
@@ -122,9 +124,7 @@ fn parse_eval_context(ctx_obj: &Map<String, Value>) -> Result<EvalContext, Strin
 /// Parses [`EvalContext`] fields from a host JSON object (clock, prior validations, `repeatCounts`, …).
 ///
 /// Trigger, `instances`, and registry documents are not read; use [`eval_host_context_from_json_map`] for the full bundle.
-pub fn eval_context_from_json_object(
-    ctx_obj: &Map<String, Value>,
-) -> Result<EvalContext, String> {
+pub fn eval_context_from_json_object(ctx_obj: &Map<String, Value>) -> Result<EvalContext, String> {
     parse_eval_context(ctx_obj)
 }
 

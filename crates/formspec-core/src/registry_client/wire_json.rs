@@ -5,15 +5,11 @@ use serde_json::{Map, Value, json};
 use crate::JsonWireStyle;
 use crate::wire_keys::{registry_entry_keys, registry_parse_summary_keys};
 
-use super::{extension_category_to_wire, registry_entry_status_to_wire, Registry, RegistryEntry};
+use super::{Registry, RegistryEntry, extension_category_to_wire, registry_entry_status_to_wire};
 
 /// Empty string means “no constraint” for `find_one` host inputs.
 pub fn version_constraint_option(s: &str) -> Option<&str> {
-    if s.is_empty() {
-        None
-    } else {
-        Some(s)
-    }
+    if s.is_empty() { None } else { Some(s) }
 }
 
 /// Entry count from raw registry JSON (`entries` array length).
@@ -65,10 +61,7 @@ pub fn registry_entry_to_json_value(entry: &RegistryEntry, style: JsonWireStyle)
         json!(registry_entry_status_to_wire(entry.status)),
     );
     m.insert("description".into(), json!(entry.description));
-    m.insert(
-        deprecation_k.into(),
-        json!(entry.deprecation_notice),
-    );
+    m.insert(deprecation_k.into(), json!(entry.deprecation_notice));
     m.insert(base_type_k.into(), json!(entry.base_type));
     m.insert("returns".into(), json!(entry.returns));
 

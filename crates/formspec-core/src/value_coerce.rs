@@ -16,7 +16,10 @@ fn default_currency(definition: &Value) -> Option<&str> {
     definition
         .get("formPresentation")
         .or_else(|| definition.get("form_presentation"))
-        .and_then(|fp| fp.get("defaultCurrency").or_else(|| fp.get("default_currency")))
+        .and_then(|fp| {
+            fp.get("defaultCurrency")
+                .or_else(|| fp.get("default_currency"))
+        })
         .and_then(|v| v.as_str())
 }
 
@@ -68,7 +71,9 @@ fn bind_whitespace(bind: Option<&Value>) -> Option<&str> {
 
 fn bind_precision(bind: Option<&Value>) -> Option<u32> {
     let p = bind?.get("precision")?;
-    let n = p.as_u64().or_else(|| p.as_i64().filter(|&i| i >= 0).map(|i| i as u64))?;
+    let n = p
+        .as_u64()
+        .or_else(|| p.as_i64().filter(|&i| i >= 0).map(|i| i as u64))?;
     u32::try_from(n).ok()
 }
 

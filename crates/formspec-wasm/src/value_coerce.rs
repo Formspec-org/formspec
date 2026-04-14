@@ -35,11 +35,7 @@ pub(crate) fn coerce_field_value_inner(
             None
         } else {
             let b: Value = parse_value_str(bind_json, "bind JSON")?;
-            if b.is_null() {
-                None
-            } else {
-                Some(b)
-            }
+            if b.is_null() { None } else { Some(b) }
         }
     };
     let out = coerce_field_value(&item, bind_owned.as_ref(), &definition, value);

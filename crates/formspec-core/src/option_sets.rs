@@ -42,7 +42,8 @@ pub fn resolve_option_sets_on_definition(definition: &mut Value) {
         let Some(obj) = definition.as_object() else {
             return;
         };
-        let Some(Value::Object(m)) = obj.get("optionSets").or_else(|| obj.get("option_sets")) else {
+        let Some(Value::Object(m)) = obj.get("optionSets").or_else(|| obj.get("option_sets"))
+        else {
             return;
         };
         m.clone()
@@ -116,7 +117,10 @@ mod tests {
             "optionSets": { "a": [{ "value": "v", "label": "L" }] }
         });
         resolve_option_sets_on_definition(&mut def);
-        assert_eq!(def["items"][0]["children"][0]["options"][0]["value"], json!("v"));
+        assert_eq!(
+            def["items"][0]["children"][0]["options"][0]["value"],
+            json!("v")
+        );
     }
 
     #[test]

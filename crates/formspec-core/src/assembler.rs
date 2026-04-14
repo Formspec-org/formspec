@@ -9,12 +9,12 @@ use std::collections::{HashMap, HashSet};
 
 use serde_json::{Map, Value, json};
 
+use crate::JsonWireStyle;
 use crate::assembly_fel_rewrite::{
     AssemblyFelRewriteMap as FelRewriteMap, assembly_prefix_path, rewrite_fel_for_assembly,
     rewrite_message_template_for_assembly,
 };
 use crate::wire_keys::assembly_provenance_keys;
-use crate::JsonWireStyle;
 
 /// Failure while resolving `$ref` or merging assembled fragments.
 #[derive(Debug, Clone)]
@@ -179,11 +179,13 @@ pub fn assembly_result_to_json_value(result: &AssemblyResult, style: JsonWireSty
     root.insert("warnings".into(), json!(result.warnings));
     root.insert(
         "errors".into(),
-        json!(result
-            .errors
-            .iter()
-            .map(|e| e.to_string())
-            .collect::<Vec<_>>()),
+        json!(
+            result
+                .errors
+                .iter()
+                .map(|e| e.to_string())
+                .collect::<Vec<_>>()
+        ),
     );
     root.insert(assembled_k.into(), Value::Array(assembled));
     Value::Object(root)

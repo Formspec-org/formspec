@@ -87,14 +87,11 @@ pub fn build_item_index(document: &Value) -> ItemTreeIndex {
                 &ctx.json_path,
                 format!(
                     "Duplicate item key '{}' (first seen at {})",
-                    ctx.key,
-                    index.by_key[ctx.key].json_path
+                    ctx.key, index.by_key[ctx.key].json_path
                 ),
             ));
         } else {
-            index
-                .by_key
-                .insert(ctx.key.to_string(), item_ref.clone());
+            index.by_key.insert(ctx.key.to_string(), item_ref.clone());
         }
 
         // E201: duplicate full path
@@ -106,9 +103,7 @@ pub fn build_item_index(document: &Value) -> ItemTreeIndex {
                 format!("Duplicate item path '{}'", ctx.dotted_path),
             ));
         } else {
-            index
-                .by_full_path
-                .insert(ctx.dotted_path.clone(), item_ref);
+            index.by_full_path.insert(ctx.dotted_path.clone(), item_ref);
         }
 
         if is_repeatable {

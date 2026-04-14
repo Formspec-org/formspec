@@ -2,26 +2,26 @@
 
 use std::cell::Cell;
 
+#[cfg(feature = "fel-authoring")]
+use fel_core::{
+    builtin_function_catalog_json_value, dependencies_to_json_value, extract_dependencies,
+    print_expr, tokenize_to_json_value,
+};
 use fel_core::{
     evaluate, expr_is_interpolation_static_literal, fel_to_json, field_map_from_json_str,
     formspec_environment_from_json_map, has_error_diagnostics, parse, prepare_fel_expression_owned,
     prepare_fel_host_options_from_json_map, reject_undefined_functions,
 };
-#[cfg(feature = "fel-authoring")]
-use fel_core::{
-    builtin_function_catalog_json_value, dependencies_to_json_value, extract_dependencies, print_expr,
-    tokenize_to_json_value,
-};
 use formspec_core::{
-    analyze_fel, analyze_fel_with_field_types, definition_item_location_to_json_value,
-    fel_analysis_to_json_value, get_fel_dependencies, json_definition_item_at_path,
-    normalize_indexed_path, JsonWireStyle,
+    JsonWireStyle, analyze_fel, analyze_fel_with_field_types,
+    definition_item_location_to_json_value, fel_analysis_to_json_value, get_fel_dependencies,
+    json_definition_item_at_path, normalize_indexed_path,
 };
 #[cfg(feature = "fel-authoring")]
 use formspec_core::{
-    assembly_fel_rewrite_map_from_value, collect_fel_rewrite_targets, fel_rewrite_targets_to_json_value,
-    rewrite_fel_for_assembly, rewrite_fel_source_references, rewrite_message_template,
-    rewrite_options_from_camel_case_json,
+    assembly_fel_rewrite_map_from_value, collect_fel_rewrite_targets,
+    fel_rewrite_targets_to_json_value, rewrite_fel_for_assembly, rewrite_fel_source_references,
+    rewrite_message_template, rewrite_options_from_camel_case_json,
 };
 use serde_json::Value;
 use wasm_bindgen::prelude::*;
@@ -221,7 +221,10 @@ pub fn rewrite_message_template_wasm(
 }
 
 #[cfg(feature = "fel-authoring")]
-pub(crate) fn rewrite_fel_for_assembly_inner(expression: &str, map_json: &str) -> Result<String, String> {
+pub(crate) fn rewrite_fel_for_assembly_inner(
+    expression: &str,
+    map_json: &str,
+) -> Result<String, String> {
     let map_value: Value = parse_value_str(map_json, "assembly rewrite map JSON")?;
     let map = assembly_fel_rewrite_map_from_value(&map_value)?;
     Ok(rewrite_fel_for_assembly(expression, &map))
@@ -266,7 +269,8 @@ pub fn normalize_path(path: &str) -> String {
 
 #[wasm_bindgen(js_name = "itemAtPath")]
 pub fn item_at_path_wasm(items_json: &str, path: &str) -> Result<String, JsError> {
-    let items: Vec<Value> = parse_json_as(items_json, "items JSON").map_err(|e| JsError::new(&e))?;
+    let items: Vec<Value> =
+        parse_json_as(items_json, "items JSON").map_err(|e| JsError::new(&e))?;
     let json = json_definition_item_at_path(&items, path)
         .cloned()
         .unwrap_or(Value::Null);
@@ -275,7 +279,8 @@ pub fn item_at_path_wasm(items_json: &str, path: &str) -> Result<String, JsError
 
 #[wasm_bindgen(js_name = "itemLocationAtPath")]
 pub fn item_location_at_path_wasm(items_json: &str, path: &str) -> Result<String, JsError> {
-    let items: Vec<Value> = parse_json_as(items_json, "items JSON").map_err(|e| JsError::new(&e))?;
+    let items: Vec<Value> =
+        parse_json_as(items_json, "items JSON").map_err(|e| JsError::new(&e))?;
     let json = definition_item_location_to_json_value(&items, path, JsonWireStyle::JsCamel);
     to_json_string(&json).map_err(|e| JsError::new(&e))
 }

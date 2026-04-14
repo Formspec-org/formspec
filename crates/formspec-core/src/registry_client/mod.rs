@@ -13,8 +13,8 @@ mod tests;
 pub use types::{ExtensionCategory, Parameter, Publisher, Registry, RegistryEntry, RegistryError};
 pub use version::version_satisfies;
 pub use wire_json::{
-    registry_entry_count_from_raw, registry_entry_to_json_value, registry_parse_summary_to_json_value,
-    version_constraint_option,
+    registry_entry_count_from_raw, registry_entry_to_json_value,
+    registry_parse_summary_to_json_value, version_constraint_option,
 };
 
 use crate::extension_analysis::RegistryEntryStatus;

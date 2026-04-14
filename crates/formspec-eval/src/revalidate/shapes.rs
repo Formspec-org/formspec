@@ -165,9 +165,10 @@ fn validate_wildcard_shape(
         // Build a row-scoped environment: instantiate [*] references in the constraint
         let prev_dollar = env.data.remove("");
         if let Some(val) = values.get(concrete_path.as_str()) {
-            let data_type =
-                find_item_by_path(items, concrete_path.as_str()).and_then(|i| i.data_type.as_deref());
-            env.data.insert(String::new(), json_to_runtime_fel_typed(val, data_type));
+            let data_type = find_item_by_path(items, concrete_path.as_str())
+                .and_then(|i| i.data_type.as_deref());
+            env.data
+                .insert(String::new(), json_to_runtime_fel_typed(val, data_type));
         }
 
         let active = shape

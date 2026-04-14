@@ -263,7 +263,9 @@ impl JsonDefinitionItem {
 }
 
 /// Parse a JSON value as a root `items` array for extension validation.
-pub fn json_definition_items_tree_from_value(val: &Value) -> Result<Vec<JsonDefinitionItem>, String> {
+pub fn json_definition_items_tree_from_value(
+    val: &Value,
+) -> Result<Vec<JsonDefinitionItem>, String> {
     let arr = val
         .as_array()
         .ok_or_else(|| "items JSON must be an array".to_string())?;

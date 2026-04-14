@@ -14,7 +14,7 @@ use unic_langid::LanguageIdentifier;
 
 use crate::ast::*;
 use crate::error::Diagnostic;
-use crate::iso_duration::{parse_iso8601_duration, IsoDurationParse};
+use crate::iso_duration::{IsoDurationParse, parse_iso8601_duration};
 use crate::types::*;
 
 // ── Evaluation context ──────────────────────────────────────────
@@ -292,10 +292,8 @@ impl<'a> Evaluator<'a> {
                         // Let-bound identifiers resolve in `eval_field_ref` before the environment.
                         // Skipping `eval(expr)` would merge path segments and call `resolve_field`
                         // only, so e.g. `let x = {a: 1} in x.a` would wrongly yield null.
-                        let bound_in_let = self
-                            .let_scopes
-                            .iter()
-                            .any(|scope| scope.contains_key(name));
+                        let bound_in_let =
+                            self.let_scopes.iter().any(|scope| scope.contains_key(name));
                         if !bound_in_let {
                             for segment in &combined {
                                 if let PathSegment::Dot(part) = segment {
@@ -1593,10 +1591,7 @@ impl<'a> Evaluator<'a> {
             },
             FelValue::Null => FelValue::Null,
             _ => {
-                self.diag(format!(
-                    "duration: expected string, got {}",
-                    v.type_name()
-                ));
+                self.diag(format!("duration: expected string, got {}", v.type_name()));
                 FelValue::Null
             }
         }

@@ -8,8 +8,10 @@
 //! - Invalid values that MUST produce TYPE_MISMATCH
 //! - Edge cases at type boundaries
 
-use formspec_eval::{evaluate_definition, evaluate_definition_full, EvalTrigger, ExtensionConstraint};
-use serde_json::{json, Value};
+use formspec_eval::{
+    EvalTrigger, ExtensionConstraint, evaluate_definition, evaluate_definition_full,
+};
+use serde_json::{Value, json};
 use std::collections::HashMap;
 
 /// Helper: build a minimal definition with one field of the given dataType.
@@ -89,7 +91,10 @@ fn text_accepts_any_string() {
     assert_valid("text", json!("short"));
     assert_valid("text", json!("multi\nline\ntext"));
     assert_valid("text", json!(""));
-    assert_valid("text", json!("A very long paragraph that spans multiple sentences. It has depth and nuance."));
+    assert_valid(
+        "text",
+        json!("A very long paragraph that spans multiple sentences. It has depth and nuance."),
+    );
 }
 
 #[test]
@@ -320,14 +325,28 @@ fn choice_validates_against_options_list() {
     let mut data = HashMap::new();
     data.insert("color".to_string(), json!("red"));
     let result = evaluate_definition(&def, &data);
-    let mismatches: Vec<_> = result.validations.iter().filter(|r| r.code == "TYPE_MISMATCH").collect();
-    assert!(mismatches.is_empty(), "valid option 'red' should not produce TYPE_MISMATCH");
+    let mismatches: Vec<_> = result
+        .validations
+        .iter()
+        .filter(|r| r.code == "TYPE_MISMATCH")
+        .collect();
+    assert!(
+        mismatches.is_empty(),
+        "valid option 'red' should not produce TYPE_MISMATCH"
+    );
 
     // Invalid option
     data.insert("color".to_string(), json!("purple"));
     let result = evaluate_definition(&def, &data);
-    let mismatches: Vec<_> = result.validations.iter().filter(|r| r.code == "TYPE_MISMATCH").collect();
-    assert!(!mismatches.is_empty(), "invalid option 'purple' should produce TYPE_MISMATCH");
+    let mismatches: Vec<_> = result
+        .validations
+        .iter()
+        .filter(|r| r.code == "TYPE_MISMATCH")
+        .collect();
+    assert!(
+        !mismatches.is_empty(),
+        "invalid option 'purple' should produce TYPE_MISMATCH"
+    );
 }
 
 #[test]
@@ -353,14 +372,28 @@ fn multichoice_validates_against_options_list() {
     let mut data = HashMap::new();
     data.insert("colors".to_string(), json!(["red", "blue"]));
     let result = evaluate_definition(&def, &data);
-    let mismatches: Vec<_> = result.validations.iter().filter(|r| r.code == "TYPE_MISMATCH").collect();
-    assert!(mismatches.is_empty(), "valid options should not produce TYPE_MISMATCH");
+    let mismatches: Vec<_> = result
+        .validations
+        .iter()
+        .filter(|r| r.code == "TYPE_MISMATCH")
+        .collect();
+    assert!(
+        mismatches.is_empty(),
+        "valid options should not produce TYPE_MISMATCH"
+    );
 
     // One invalid option
     data.insert("colors".to_string(), json!(["red", "purple"]));
     let result = evaluate_definition(&def, &data);
-    let mismatches: Vec<_> = result.validations.iter().filter(|r| r.code == "TYPE_MISMATCH").collect();
-    assert!(!mismatches.is_empty(), "invalid option 'purple' in array should produce TYPE_MISMATCH");
+    let mismatches: Vec<_> = result
+        .validations
+        .iter()
+        .filter(|r| r.code == "TYPE_MISMATCH")
+        .collect();
+    assert!(
+        !mismatches.is_empty(),
+        "invalid option 'purple' in array should produce TYPE_MISMATCH"
+    );
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -444,9 +477,18 @@ fn money_rejects_invalid_currency_format() {
 
 #[test]
 fn attachment_accepts_valid_attachments() {
-    assert_valid("attachment", json!({"contentType": "application/pdf", "url": "https://example.com/doc.pdf"}));
-    assert_valid("attachment", json!({"contentType": "image/png", "data": "iVBORw0KGgo="}));
-    assert_valid("attachment", json!({"contentType": "text/plain", "url": "https://example.com/file.txt", "size": 1024}));
+    assert_valid(
+        "attachment",
+        json!({"contentType": "application/pdf", "url": "https://example.com/doc.pdf"}),
+    );
+    assert_valid(
+        "attachment",
+        json!({"contentType": "image/png", "data": "iVBORw0KGgo="}),
+    );
+    assert_valid(
+        "attachment",
+        json!({"contentType": "text/plain", "url": "https://example.com/file.txt", "size": 1024}),
+    );
 }
 
 #[test]
@@ -485,16 +527,33 @@ fn attachment_validates_accept_mime_types() {
 
     // Accepted type
     let mut data = HashMap::new();
-    data.insert("photo".to_string(), json!({"contentType": "image/png", "url": "https://example.com/photo.png"}));
+    data.insert(
+        "photo".to_string(),
+        json!({"contentType": "image/png", "url": "https://example.com/photo.png"}),
+    );
     let result = evaluate_definition(&def, &data);
-    let mismatches: Vec<_> = result.validations.iter().filter(|r| r.code == "TYPE_MISMATCH").collect();
+    let mismatches: Vec<_> = result
+        .validations
+        .iter()
+        .filter(|r| r.code == "TYPE_MISMATCH")
+        .collect();
     assert!(mismatches.is_empty(), "image/png should be accepted");
 
     // Rejected type
-    data.insert("photo".to_string(), json!({"contentType": "application/pdf", "url": "https://example.com/doc.pdf"}));
+    data.insert(
+        "photo".to_string(),
+        json!({"contentType": "application/pdf", "url": "https://example.com/doc.pdf"}),
+    );
     let result = evaluate_definition(&def, &data);
-    let mismatches: Vec<_> = result.validations.iter().filter(|r| r.code == "TYPE_MISMATCH").collect();
-    assert!(!mismatches.is_empty(), "application/pdf should be rejected when only image types accepted");
+    let mismatches: Vec<_> = result
+        .validations
+        .iter()
+        .filter(|r| r.code == "TYPE_MISMATCH")
+        .collect();
+    assert!(
+        !mismatches.is_empty(),
+        "application/pdf should be rejected when only image types accepted"
+    );
 }
 
 #[test]
@@ -516,22 +575,49 @@ fn attachment_accept_wildcard() {
     let mut data = HashMap::new();
 
     // Wildcard match
-    data.insert("file".to_string(), json!({"contentType": "image/webp", "url": "https://example.com/photo.webp"}));
+    data.insert(
+        "file".to_string(),
+        json!({"contentType": "image/webp", "url": "https://example.com/photo.webp"}),
+    );
     let result = evaluate_definition(&def, &data);
-    let mismatches: Vec<_> = result.validations.iter().filter(|r| r.code == "TYPE_MISMATCH").collect();
+    let mismatches: Vec<_> = result
+        .validations
+        .iter()
+        .filter(|r| r.code == "TYPE_MISMATCH")
+        .collect();
     assert!(mismatches.is_empty(), "image/webp should match image/*");
 
     // Exact match
-    data.insert("file".to_string(), json!({"contentType": "application/pdf", "url": "https://example.com/doc.pdf"}));
+    data.insert(
+        "file".to_string(),
+        json!({"contentType": "application/pdf", "url": "https://example.com/doc.pdf"}),
+    );
     let result = evaluate_definition(&def, &data);
-    let mismatches: Vec<_> = result.validations.iter().filter(|r| r.code == "TYPE_MISMATCH").collect();
-    assert!(mismatches.is_empty(), "application/pdf should match exactly");
+    let mismatches: Vec<_> = result
+        .validations
+        .iter()
+        .filter(|r| r.code == "TYPE_MISMATCH")
+        .collect();
+    assert!(
+        mismatches.is_empty(),
+        "application/pdf should match exactly"
+    );
 
     // No match
-    data.insert("file".to_string(), json!({"contentType": "text/plain", "url": "https://example.com/file.txt"}));
+    data.insert(
+        "file".to_string(),
+        json!({"contentType": "text/plain", "url": "https://example.com/file.txt"}),
+    );
     let result = evaluate_definition(&def, &data);
-    let mismatches: Vec<_> = result.validations.iter().filter(|r| r.code == "TYPE_MISMATCH").collect();
-    assert!(!mismatches.is_empty(), "text/plain should not match image/* or application/pdf");
+    let mismatches: Vec<_> = result
+        .validations
+        .iter()
+        .filter(|r| r.code == "TYPE_MISMATCH")
+        .collect();
+    assert!(
+        !mismatches.is_empty(),
+        "text/plain should not match image/* or application/pdf"
+    );
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -541,8 +627,19 @@ fn attachment_accept_wildcard() {
 #[test]
 fn null_never_type_mismatches() {
     for dt in &[
-        "string", "text", "integer", "decimal", "boolean", "date", "dateTime",
-        "time", "uri", "choice", "multiChoice", "money", "attachment",
+        "string",
+        "text",
+        "integer",
+        "decimal",
+        "boolean",
+        "date",
+        "dateTime",
+        "time",
+        "uri",
+        "choice",
+        "multiChoice",
+        "money",
+        "attachment",
     ] {
         assert_valid(dt, json!(null));
     }
@@ -558,7 +655,9 @@ fn null_never_type_mismatches() {
 #[test]
 fn cross_type_wrong_family_detection() {
     // Number given to string-family types
-    for dt in &["string", "text", "choice", "date", "dateTime", "time", "uri"] {
+    for dt in &[
+        "string", "text", "choice", "date", "dateTime", "time", "uri",
+    ] {
         assert_invalid(dt, json!(42));
     }
     // String given to number-family types
@@ -567,8 +666,7 @@ fn cross_type_wrong_family_detection() {
     }
     // Boolean given to everything except boolean
     for dt in &[
-        "string", "text", "integer", "decimal", "date", "dateTime",
-        "time", "uri", "choice",
+        "string", "text", "integer", "decimal", "date", "dateTime", "time", "uri", "choice",
     ] {
         assert_invalid(dt, json!(true));
     }
@@ -608,14 +706,28 @@ fn choice_with_option_set_validates_against_resolved_options() {
     let mut data = HashMap::new();
     data.insert("country".to_string(), json!("us"));
     let result = evaluate_definition(&def, &data);
-    let mismatches: Vec<_> = result.validations.iter().filter(|r| r.code == "TYPE_MISMATCH").collect();
-    assert!(mismatches.is_empty(), "valid option 'us' should not produce TYPE_MISMATCH");
+    let mismatches: Vec<_> = result
+        .validations
+        .iter()
+        .filter(|r| r.code == "TYPE_MISMATCH")
+        .collect();
+    assert!(
+        mismatches.is_empty(),
+        "valid option 'us' should not produce TYPE_MISMATCH"
+    );
 
     // Invalid: value not in options
     data.insert("country".to_string(), json!("de"));
     let result = evaluate_definition(&def, &data);
-    let mismatches: Vec<_> = result.validations.iter().filter(|r| r.code == "TYPE_MISMATCH").collect();
-    assert!(!mismatches.is_empty(), "invalid option 'de' should produce TYPE_MISMATCH");
+    let mismatches: Vec<_> = result
+        .validations
+        .iter()
+        .filter(|r| r.code == "TYPE_MISMATCH")
+        .collect();
+    assert!(
+        !mismatches.is_empty(),
+        "invalid option 'de' should produce TYPE_MISMATCH"
+    );
 }
 
 #[test]
@@ -625,7 +737,11 @@ fn choice_without_options_accepts_any_string() {
     let mut data = HashMap::new();
     data.insert("country".to_string(), json!("anything_goes"));
     let result = evaluate_definition(&def, &data);
-    let mismatches: Vec<_> = result.validations.iter().filter(|r| r.code == "TYPE_MISMATCH").collect();
+    let mismatches: Vec<_> = result
+        .validations
+        .iter()
+        .filter(|r| r.code == "TYPE_MISMATCH")
+        .collect();
     assert!(mismatches.is_empty(), "no options = accept any string");
 }
 
@@ -652,14 +768,28 @@ fn multichoice_with_options_validates_array_elements() {
     let mut data = HashMap::new();
     data.insert("countries".to_string(), json!(["us", "gb"]));
     let result = evaluate_definition(&def, &data);
-    let mismatches: Vec<_> = result.validations.iter().filter(|r| r.code == "TYPE_MISMATCH").collect();
-    assert!(mismatches.is_empty(), "valid multiChoice should not produce TYPE_MISMATCH");
+    let mismatches: Vec<_> = result
+        .validations
+        .iter()
+        .filter(|r| r.code == "TYPE_MISMATCH")
+        .collect();
+    assert!(
+        mismatches.is_empty(),
+        "valid multiChoice should not produce TYPE_MISMATCH"
+    );
 
     // Invalid: one value not in options
     data.insert("countries".to_string(), json!(["us", "de"]));
     let result = evaluate_definition(&def, &data);
-    let mismatches: Vec<_> = result.validations.iter().filter(|r| r.code == "TYPE_MISMATCH").collect();
-    assert!(!mismatches.is_empty(), "multiChoice with invalid option 'de' should produce TYPE_MISMATCH");
+    let mismatches: Vec<_> = result
+        .validations
+        .iter()
+        .filter(|r| r.code == "TYPE_MISMATCH")
+        .collect();
+    assert!(
+        !mismatches.is_empty(),
+        "multiChoice with invalid option 'de' should produce TYPE_MISMATCH"
+    );
 }
 
 #[test]
@@ -680,8 +810,15 @@ fn choice_null_value_skips_validation() {
 
     let data = HashMap::new(); // no value = null
     let result = evaluate_definition(&def, &data);
-    let mismatches: Vec<_> = result.validations.iter().filter(|r| r.code == "TYPE_MISMATCH").collect();
-    assert!(mismatches.is_empty(), "null should never produce TYPE_MISMATCH");
+    let mismatches: Vec<_> = result
+        .validations
+        .iter()
+        .filter(|r| r.code == "TYPE_MISMATCH")
+        .collect();
+    assert!(
+        mismatches.is_empty(),
+        "null should never produce TYPE_MISMATCH"
+    );
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -720,8 +857,15 @@ fn choice_empty_string_skips_type_validation() {
     let mut data = HashMap::new();
     data.insert("status".to_string(), json!(""));
     let result = evaluate_definition(&def, &data);
-    let mismatches: Vec<_> = result.validations.iter().filter(|r| r.code == "TYPE_MISMATCH").collect();
-    assert!(mismatches.is_empty(), "empty string on optional choice should not produce TYPE_MISMATCH");
+    let mismatches: Vec<_> = result
+        .validations
+        .iter()
+        .filter(|r| r.code == "TYPE_MISMATCH")
+        .collect();
+    assert!(
+        mismatches.is_empty(),
+        "empty string on optional choice should not produce TYPE_MISMATCH"
+    );
 }
 
 #[test]
@@ -747,8 +891,15 @@ fn multichoice_empty_array_skips_type_validation() {
     let mut data = HashMap::new();
     data.insert("tags".to_string(), json!([]));
     let result = evaluate_definition(&def, &data);
-    let mismatches: Vec<_> = result.validations.iter().filter(|r| r.code == "TYPE_MISMATCH").collect();
-    assert!(mismatches.is_empty(), "empty array on multiChoice should not produce TYPE_MISMATCH");
+    let mismatches: Vec<_> = result
+        .validations
+        .iter()
+        .filter(|r| r.code == "TYPE_MISMATCH")
+        .collect();
+    assert!(
+        mismatches.is_empty(),
+        "empty array on multiChoice should not produce TYPE_MISMATCH"
+    );
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -789,7 +940,9 @@ fn extension_max_length_counts_characters_not_bytes() {
     let mut data = HashMap::new();
     data.insert("name".to_string(), json!("你好世界")); // 4 chars, 12 bytes
     let result = evaluate_definition_full(&def, &data, EvalTrigger::Continuous, &ext);
-    let max_len_errors: Vec<_> = result.validations.iter()
+    let max_len_errors: Vec<_> = result
+        .validations
+        .iter()
         .filter(|r| r.code == "MAX_LENGTH_EXCEEDED")
         .collect();
     assert!(
@@ -837,7 +990,9 @@ fn extension_results_use_spec_valid_constraint_kind_and_source() {
     let mut data = HashMap::new();
     data.insert("email".to_string(), json!("not-an-email"));
     let result = evaluate_definition_full(&def, &data, EvalTrigger::Continuous, &ext);
-    let ext_results: Vec<_> = result.validations.iter()
+    let ext_results: Vec<_> = result
+        .validations
+        .iter()
         .filter(|r| r.code == "PATTERN_MISMATCH")
         .collect();
     assert!(!ext_results.is_empty(), "should produce PATTERN_MISMATCH");
@@ -851,7 +1006,13 @@ fn extension_results_use_spec_valid_constraint_kind_and_source() {
             r.source, "extension",
             "source must NOT be 'extension' — use a spec-valid enum value"
         );
-        assert_eq!(r.constraint_kind, "constraint", "extension field constraints should use constraintKind 'constraint'");
-        assert_eq!(r.source, "external", "extension constraints should use source 'external'");
+        assert_eq!(
+            r.constraint_kind, "constraint",
+            "extension field constraints should use constraintKind 'constraint'"
+        );
+        assert_eq!(
+            r.source, "external",
+            "extension constraints should use source 'external'"
+        );
     }
 }

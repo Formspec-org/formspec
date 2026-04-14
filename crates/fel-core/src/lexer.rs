@@ -609,7 +609,10 @@ mod tests {
     #[test]
     fn test_keywords_are_not_valid_identifiers() {
         for kw in FEL_KEYWORDS {
-            assert!(!is_valid_fel_identifier(kw), "keyword '{kw}' should be invalid");
+            assert!(
+                !is_valid_fel_identifier(kw),
+                "keyword '{kw}' should be invalid"
+            );
         }
     }
 

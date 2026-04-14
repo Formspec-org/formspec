@@ -124,14 +124,8 @@ fn walk(expr: &Expr, deps: &mut Dependencies, let_vars: &mut Vec<String>) {
                         walk(arg, deps, let_vars);
                     }
                 }
-                "countWhere"
-                | "every"
-                | "some"
-                | "sumWhere"
-                | "avgWhere"
-                | "minWhere"
-                | "maxWhere"
-                | "moneySumWhere" => {
+                "countWhere" | "every" | "some" | "sumWhere" | "avgWhere" | "minWhere"
+                | "maxWhere" | "moneySumWhere" => {
                     // First arg: normal walk
                     if let Some(first) = args.first() {
                         walk(first, deps, let_vars);

@@ -1,8 +1,10 @@
 //! Definition helpers for `wasm_bindgen` — option sets + migrations always; `$ref` assembly behind `definition-assembly`.
 
-use formspec_core::{apply_migrations_to_response_data, resolve_option_sets_on_definition};
 #[cfg(feature = "definition-assembly")]
-use formspec_core::{JsonWireStyle, MapResolver, assemble_definition, assembly_result_to_json_value};
+use formspec_core::{
+    JsonWireStyle, MapResolver, assemble_definition, assembly_result_to_json_value,
+};
+use formspec_core::{apply_migrations_to_response_data, resolve_option_sets_on_definition};
 use serde_json::Value;
 use wasm_bindgen::prelude::*;
 
@@ -46,8 +48,8 @@ pub fn apply_migrations_to_response_data_wasm(
 ) -> Result<String, JsError> {
     let definition: Value =
         parse_value_str(definition_json, "definition JSON").map_err(|e| JsError::new(&e))?;
-    let response_data: Value = parse_value_str(response_data_json, "response data JSON")
-        .map_err(|e| JsError::new(&e))?;
+    let response_data: Value =
+        parse_value_str(response_data_json, "response data JSON").map_err(|e| JsError::new(&e))?;
     let out = apply_migrations_to_response_data(&definition, response_data, from_version, now_iso);
     to_json_string(&out).map_err(|e| JsError::new(&e))
 }

@@ -19,8 +19,8 @@ pub mod json_artifacts;
 pub mod json_util;
 pub mod option_sets;
 pub mod path_utils;
-pub mod response_migration;
 pub mod registry_client;
+pub mod response_migration;
 pub mod runtime_mapping;
 pub mod schema_validator;
 pub mod value_coerce;
@@ -34,6 +34,14 @@ pub use assembler::{
 pub use assembly_fel_rewrite::{
     AssemblyFelRewriteMap, assembly_fel_rewrite_map_from_value, rewrite_fel_for_assembly,
 };
+pub use component_tree::visit_component_subtree;
+pub use definition_items::{
+    DefinitionItemKeyPolicy, DefinitionItemVisitCtx, coerce_definition_item_key_segment,
+    definition_item_dotted_path, definition_item_key_segment,
+    extension_item_diagnostic_path_from_dotted, visit_definition_items_from_document,
+    visit_definition_items_json, visit_definition_items_json_shallow,
+    visit_definition_items_json_with_policy,
+};
 pub use extension_analysis::{
     ExtensionErrorCode, ExtensionItem, ExtensionSeverity, ExtensionUsageIssue, JsonDefinitionItem,
     MapRegistry, RegistryEntryInfo, RegistryEntryStatus, RegistryLookup,
@@ -46,18 +54,18 @@ pub use fel_analysis::{
     fel_rewrite_targets_to_json_value, get_fel_dependencies, rewrite_fel_references,
     rewrite_options_from_camel_case_json,
 };
+pub use fel_rewrite_exact::{rewrite_fel_source_references, rewrite_message_template};
 pub use json_artifacts::{
     JsonWireStyle, changelog_to_json_value, extension_usage_issues_to_json_value,
 };
-pub use fel_rewrite_exact::{rewrite_fel_source_references, rewrite_message_template};
 pub use json_util::json_object_to_string_map;
 pub use option_sets::resolve_option_sets_on_definition;
-pub use response_migration::apply_migrations_to_response_data;
 pub use path_utils::{
     ItemLocation, TreeItem, definition_item_location_to_json_value, item_at_path,
     item_location_at_path, json_definition_item_at_path, json_definition_item_location_at_path,
     leaf_key, normalize_indexed_path, normalize_path_segment, parent_path, split_normalized_path,
 };
+pub use response_migration::apply_migrations_to_response_data;
 pub use runtime_mapping::{
     ArrayDescriptor, ArrayMode, CoerceType, MappingDiagnostic, MappingDirection, MappingDocument,
     MappingErrorCode, MappingResult, MappingRule, ReverseOverride, TransformType, UnmappedStrategy,
@@ -71,10 +79,3 @@ pub use schema_validator::{
     schema_validation_plan, validate_document,
 };
 pub use value_coerce::coerce_field_value;
-pub use component_tree::visit_component_subtree;
-pub use definition_items::{
-    coerce_definition_item_key_segment, definition_item_dotted_path, definition_item_key_segment,
-    extension_item_diagnostic_path_from_dotted, visit_definition_items_from_document,
-    visit_definition_items_json, visit_definition_items_json_shallow,
-    visit_definition_items_json_with_policy, DefinitionItemKeyPolicy, DefinitionItemVisitCtx,
-};

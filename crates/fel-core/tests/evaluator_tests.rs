@@ -608,7 +608,10 @@ fn test_duration_invalid_vs_out_of_range_diagnostics() {
     let r_inv = evaluate(&expr_invalid, &env);
     assert!(r_inv.value.is_null());
     assert!(
-        r_inv.diagnostics.iter().any(|d| d.message == "duration: invalid ISO 8601 duration string"),
+        r_inv
+            .diagnostics
+            .iter()
+            .any(|d| d.message == "duration: invalid ISO 8601 duration string"),
         "invalid shape should use invalid-string diagnostic, got {:?}",
         r_inv.diagnostics
     );
@@ -904,9 +907,7 @@ fn test_money_number_comparison_returns_null_with_diagnostic() {
         result.diagnostics[0].message
     );
     assert!(
-        result.diagnostics[0]
-            .message
-            .contains("moneyAmount("),
+        result.diagnostics[0].message.contains("moneyAmount("),
         "diagnostic should suggest moneyAmount(), got: {}",
         result.diagnostics[0].message
     );
@@ -921,9 +922,7 @@ fn test_number_money_comparison_returns_null_with_diagnostic() {
     assert_eq!(result.value, FelValue::Null);
     assert!(!result.diagnostics.is_empty());
     assert!(
-        result.diagnostics[0]
-            .message
-            .contains("moneyAmount("),
+        result.diagnostics[0].message.contains("moneyAmount("),
         "diagnostic should suggest moneyAmount(), got: {}",
         result.diagnostics[0].message
     );
@@ -936,11 +935,12 @@ fn test_money_money_ordering_returns_null_with_diagnostic() {
     let env = MapEnvironment::new();
     let result = evaluate(&expr, &env);
     assert_eq!(result.value, FelValue::Null);
-    assert!(!result.diagnostics.is_empty(), "should have diagnostic for money ordering");
     assert!(
-        result.diagnostics[0]
-            .message
-            .contains("moneyAmount("),
+        !result.diagnostics.is_empty(),
+        "should have diagnostic for money ordering"
+    );
+    assert!(
+        result.diagnostics[0].message.contains("moneyAmount("),
         "diagnostic should suggest moneyAmount() for money ordering, got: {}",
         result.diagnostics[0].message
     );
@@ -993,8 +993,13 @@ fn test_max_where_no_match() {
 #[test]
 fn test_money_sum_where() {
     assert_eq!(
-        eval("moneySumWhere([money(100, 'USD'), money(200, 'USD'), money(300, 'USD')], moneyAmount($) > 150)"),
-        FelValue::Money(FelMoney { amount: Decimal::from(500), currency: "USD".to_string() })
+        eval(
+            "moneySumWhere([money(100, 'USD'), money(200, 'USD'), money(300, 'USD')], moneyAmount($) > 150)"
+        ),
+        FelValue::Money(FelMoney {
+            amount: Decimal::from(500),
+            currency: "USD".to_string()
+        })
     ); // 200 + 300
 }
 
@@ -1008,7 +1013,13 @@ fn test_money_sum_where_no_match() {
 
 #[test]
 fn test_where_functions_require_two_args() {
-    for func in &["sumWhere", "avgWhere", "minWhere", "maxWhere", "moneySumWhere"] {
+    for func in &[
+        "sumWhere",
+        "avgWhere",
+        "minWhere",
+        "maxWhere",
+        "moneySumWhere",
+    ] {
         let expr = parse(&format!("{func}([1, 2, 3])")).unwrap();
         let env = MapEnvironment::new();
         let result = evaluate(&expr, &env);

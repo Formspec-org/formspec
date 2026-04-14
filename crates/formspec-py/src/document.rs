@@ -13,9 +13,8 @@ use formspec_core::{
 };
 use formspec_eval::{
     AnswerInput, AnswerState, EvalContext, eval_context_from_json_object,
-    evaluate_definition_full_with_instances_and_context,
-    evaluate_screener_document, evaluation_result_to_json_value_styled,
-    extension_constraints_from_registry_documents,
+    evaluate_definition_full_with_instances_and_context, evaluate_screener_document,
+    evaluation_result_to_json_value_styled, extension_constraints_from_registry_documents,
 };
 use formspec_lint::{LintMode, LintOptions, lint_result_to_json_value, lint_with_options};
 
@@ -119,8 +118,7 @@ pub fn evaluate_def(
 
     let data = json_object_to_string_map(&data_val);
 
-    let eval_trigger =
-        formspec_eval::EvalTrigger::from_python_eval_def_option(trigger);
+    let eval_trigger = formspec_eval::EvalTrigger::from_python_eval_def_option(trigger);
 
     let constraints = match registry_documents {
         Some(docs) => {
@@ -142,12 +140,11 @@ pub fn evaluate_def(
         None => EvalContext::default(),
         Some(ctx_any) => {
             let ctx_val: Value = depythonize_json(ctx_any)?;
-            let map = ctx_val.as_object().ok_or_else(|| {
-                pyo3::exceptions::PyTypeError::new_err("context must be a dict")
-            })?;
-            eval_context_from_json_object(map).map_err(|e| {
-                pyo3::exceptions::PyValueError::new_err(e)
-            })?
+            let map = ctx_val
+                .as_object()
+                .ok_or_else(|| pyo3::exceptions::PyTypeError::new_err("context must be a dict"))?;
+            eval_context_from_json_object(map)
+                .map_err(|e| pyo3::exceptions::PyValueError::new_err(e))?
         }
     };
 
@@ -189,11 +186,7 @@ pub fn coerce_field_value(
         None => None,
         Some(b) => {
             let v: Value = depythonize_json(b)?;
-            if v.is_null() {
-                None
-            } else {
-                Some(v)
-            }
+            if v.is_null() { None } else { Some(v) }
         }
     };
     let out = coerce_field_value_core(&item_v, bind_v.as_ref(), &def_v, val_v);
@@ -286,12 +279,21 @@ pub fn evaluate_screener_document_py(
     if let Some(ref states) = answer_states {
         for (key, state_val) in states {
             if !answer_inputs.contains_key(key) {
-                let state = state_val.as_str().map(|s| match s {
-                    "declined" => AnswerState::Declined,
-                    "not-presented" => AnswerState::NotPresented,
-                    _ => AnswerState::Answered,
-                }).unwrap_or(AnswerState::Answered);
-                answer_inputs.insert(key.clone(), AnswerInput { value: Value::Null, state });
+                let state = state_val
+                    .as_str()
+                    .map(|s| match s {
+                        "declined" => AnswerState::Declined,
+                        "not-presented" => AnswerState::NotPresented,
+                        _ => AnswerState::Answered,
+                    })
+                    .unwrap_or(AnswerState::Answered);
+                answer_inputs.insert(
+                    key.clone(),
+                    AnswerInput {
+                        value: Value::Null,
+                        state,
+                    },
+                );
             }
         }
     }

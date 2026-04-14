@@ -286,7 +286,10 @@ mod tests {
             extension_item_diagnostic_path_from_dotted("group.child"),
             "$.items[key=group].child"
         );
-        assert_eq!(extension_item_diagnostic_path_from_dotted(""), "$.items[key=]");
+        assert_eq!(
+            extension_item_diagnostic_path_from_dotted(""),
+            "$.items[key=]"
+        );
     }
 
     #[test]

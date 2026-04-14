@@ -2,7 +2,8 @@
 
 use formspec_core::{
     JsonWireStyle, execute_mapping, execute_mapping_doc, mapping_result_to_json_value,
-    parse_mapping_document_from_value, parse_mapping_direction_wire, parse_mapping_rules_from_value,
+    parse_mapping_direction_wire, parse_mapping_document_from_value,
+    parse_mapping_rules_from_value,
 };
 use serde_json::Value;
 use wasm_bindgen::prelude::*;

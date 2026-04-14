@@ -1202,7 +1202,9 @@ fn required_with_empty_object_passes() {
     data.insert("meta".to_string(), json!({}));
 
     let result = evaluate_definition(&def, &data);
-    let required_errors: Vec<_> = result.validations.iter()
+    let required_errors: Vec<_> = result
+        .validations
+        .iter()
         .filter(|r| r.code == "REQUIRED")
         .collect();
     assert!(
@@ -1223,7 +1225,9 @@ fn required_with_non_empty_array_passes() {
     data.insert("tags".to_string(), json!(["a"]));
 
     let result = evaluate_definition(&def, &data);
-    let required_errors: Vec<_> = result.validations.iter()
+    let required_errors: Vec<_> = result
+        .validations
+        .iter()
         .filter(|r| r.code == "REQUIRED")
         .collect();
     assert!(
@@ -3617,8 +3621,7 @@ fn shape_message_interpolates_expressions() {
     let result = evaluate_definition(&def, &data);
     assert_eq!(result.validations.len(), 1);
     assert_eq!(
-        result.validations[0].message,
-        "Budget 1000 exceeds limit 500",
+        result.validations[0].message, "Budget 1000 exceeds limit 500",
         "shape message must resolve {{expr}} interpolation"
     );
 }

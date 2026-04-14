@@ -169,10 +169,7 @@ fn collect_all_enabled_extensions(document: &Value) -> Vec<(String, String)> {
         if let Some(extensions) = ctx.item.get("extensions").and_then(|v| v.as_object()) {
             for (ext_name, ext_value) in extensions {
                 if is_extension_enabled(ext_value) {
-                    result.push((
-                        format!("{path}.extensions.{ext_name}"),
-                        ext_name.clone(),
-                    ));
+                    result.push((format!("{path}.extensions.{ext_name}"), ext_name.clone()));
                 }
             }
         }

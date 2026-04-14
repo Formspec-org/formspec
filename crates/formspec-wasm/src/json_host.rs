@@ -1,7 +1,7 @@
 //! Shared JSON parse/stringify helpers for wasm_bindgen surfaces.
 
-use serde::de::DeserializeOwned;
 use serde::Serialize;
+use serde::de::DeserializeOwned;
 use serde_json::Value;
 
 /// Parse JSON text into a [`Value`]. `label` is the phrase after `invalid ` in error messages.

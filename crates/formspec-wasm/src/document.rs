@@ -1,12 +1,12 @@
 //! Document type detection, schema validation planning, and linting.
 
-use formspec_core::{
-    detect_document_type, json_pointer_to_jsonpath, schema_validation_plan, DocumentType,
-};
 #[cfg(feature = "lint")]
 use formspec_core::JsonWireStyle;
+use formspec_core::{
+    DocumentType, detect_document_type, json_pointer_to_jsonpath, schema_validation_plan,
+};
 #[cfg(feature = "lint")]
-use formspec_lint::{lint, lint_result_to_json_value, lint_with_options, LintOptions};
+use formspec_lint::{LintOptions, lint, lint_result_to_json_value, lint_with_options};
 use serde_json::Value;
 use wasm_bindgen::prelude::*;
 
