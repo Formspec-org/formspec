@@ -103,6 +103,35 @@ describe('migrateLegacyProviderConfigKeys', () => {
     expect(localStorage.getItem(CANONICAL_PROVIDER_CONFIG_KEY)).toBeNull();
   });
 
+  it('does NOT promote a corrupt-JSON legacy value to the canonical key', () => {
+    localStorage.setItem(STUDIO_LEGACY, '{not valid json');
+
+    migrateLegacyProviderConfigKeys();
+
+    expect(localStorage.getItem(CANONICAL_PROVIDER_CONFIG_KEY)).toBeNull();
+    expect(localStorage.getItem(STUDIO_LEGACY)).toBeNull();
+  });
+
+  it('does NOT promote a schema-invalid legacy value to the canonical key', () => {
+    localStorage.setItem(STUDIO_LEGACY, JSON.stringify({ provider: 'google' }));
+
+    migrateLegacyProviderConfigKeys();
+
+    expect(localStorage.getItem(CANONICAL_PROVIDER_CONFIG_KEY)).toBeNull();
+    expect(localStorage.getItem(STUDIO_LEGACY)).toBeNull();
+  });
+
+  it('falls through to the next legacy key when the first one is corrupt', () => {
+    localStorage.setItem(STUDIO_LEGACY, '{corrupt');
+    localStorage.setItem(CHAT_LEGACY, JSON.stringify({ provider: 'anthropic', apiKey: 'chat-k' }));
+
+    migrateLegacyProviderConfigKeys();
+
+    expect(loadProviderConfig()).toEqual({ provider: 'anthropic', apiKey: 'chat-k' });
+    expect(localStorage.getItem(STUDIO_LEGACY)).toBeNull();
+    expect(localStorage.getItem(CHAT_LEGACY)).toBeNull();
+  });
+
   it('is idempotent — running twice has the same effect as once', () => {
     localStorage.setItem(STUDIO_LEGACY, JSON.stringify({ provider: 'google', apiKey: 'k' }));
 

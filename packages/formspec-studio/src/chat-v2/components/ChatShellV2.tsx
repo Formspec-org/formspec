@@ -16,7 +16,6 @@ import {
   migrateLegacyProviderConfigKeys,
 } from '../../lib/provider-config-storage.js';
 
-const PROVIDER_STORAGE_KEY = CANONICAL_PROVIDER_CONFIG_KEY;
 const UPLOAD_ACCEPT = '.pdf,.png,.jpg,.jpeg,.csv,.tsv,.xlsx,.json';
 
 function attachmentTypeFromFilename(name: string): Attachment['type'] {
@@ -54,7 +53,7 @@ export function ChatShellV2({ store, storage }: ChatShellProps = {}) {
   const [providerConfig, setProviderConfig] = useState<ProviderConfig | null>(() => {
     if (!storage) return null;
     migrateLegacyProviderConfigKeys(storage);
-    const raw = storage.getItem(PROVIDER_STORAGE_KEY);
+    const raw = storage.getItem(CANONICAL_PROVIDER_CONFIG_KEY);
     if (!raw) return null;
     try {
       const parsed = JSON.parse(raw);
@@ -83,13 +82,13 @@ export function ChatShellV2({ store, storage }: ChatShellProps = {}) {
 
   const handleSaveProvider = useCallback((config: ProviderConfig) => {
     setProviderConfig(config);
-    storage?.setItem(PROVIDER_STORAGE_KEY, JSON.stringify(config));
+    storage?.setItem(CANONICAL_PROVIDER_CONFIG_KEY, JSON.stringify(config));
     setShowProviderSetup(false);
   }, [storage]);
 
   const handleClearProvider = useCallback(() => {
     setProviderConfig(null);
-    storage?.removeItem(PROVIDER_STORAGE_KEY);
+    storage?.removeItem(CANONICAL_PROVIDER_CONFIG_KEY);
     setShowProviderSetup(false);
   }, [storage]);
 

@@ -1,4 +1,5 @@
 /** @filedesc Unified localStorage access for the AI provider config shared by studio and chat-v2. */
+import { validateProviderConfig } from '@formspec-org/chat';
 import type { ProviderConfig, StorageBackend } from '@formspec-org/chat';
 
 /** Canonical localStorage key — not tied to either surface. */
@@ -36,8 +37,9 @@ export function clearProviderConfig(storage?: StorageBackend): void {
 
 /**
  * One-time migration: if any legacy key exists and the canonical key is empty,
- * copy the first legacy value found into the canonical slot. Always clears
- * every legacy key afterward so they stop drifting.
+ * promote the first VALID legacy value found into the canonical slot. Corrupt
+ * or schema-invalid legacy values are dropped rather than poisoning the canonical
+ * key. Always clears every legacy key afterward so they stop drifting.
  *
  * Safe to call on every app boot — idempotent and cheap.
  */
@@ -49,7 +51,7 @@ export function migrateLegacyProviderConfigKeys(storage?: StorageBackend): void 
   if (!hasCanonical) {
     for (const legacyKey of LEGACY_PROVIDER_CONFIG_KEYS) {
       const value = target.getItem(legacyKey);
-      if (value !== null) {
+      if (value !== null && isValidSerializedProviderConfig(value)) {
         target.setItem(CANONICAL_PROVIDER_CONFIG_KEY, value);
         break;
       }
@@ -58,5 +60,14 @@ export function migrateLegacyProviderConfigKeys(storage?: StorageBackend): void 
 
   for (const legacyKey of LEGACY_PROVIDER_CONFIG_KEYS) {
     target.removeItem(legacyKey);
+  }
+}
+
+function isValidSerializedProviderConfig(raw: string): boolean {
+  try {
+    const parsed = JSON.parse(raw) as ProviderConfig;
+    return validateProviderConfig(parsed).length === 0;
+  } catch {
+    return false;
   }
 }
