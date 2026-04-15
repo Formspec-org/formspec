@@ -1,8 +1,9 @@
 /** @filedesc Live form preview panel that runs the FormEngine with scenario data and renders at a given viewport. */
 import { useMemo, useState } from 'react';
-import { createFormEngine, type FormspecItem } from '@formspec-org/engine';
-import type { IFormEngine } from '@formspec-org/engine';
+import { createFormEngine } from '@formspec-org/engine';
+import type { IFormEngine } from '@formspec-org/engine/render';
 import type { FormDefinition } from '@formspec-org/types';
+import { applyResponseDataToEngine } from '@formspec-org/webcomponent';
 import { useProjectState } from '../../state/useProjectState';
 import { normalizeDefinitionDoc } from '@formspec-org/studio-core';
 import type { ResolvedTheme } from '../../hooks/useColorScheme';
@@ -15,52 +16,39 @@ const viewportWidths: Record<Viewport, string> = {
   mobile: '375px',
 };
 
-function seedInitialValues(engine: IFormEngine, items: FormspecItem[], prefix = ''): void {
-  for (const item of items) {
-    const path = prefix ? `${prefix}.${item.key}` : item.key;
-    if (item.type === 'field' && item.initialValue !== undefined && !(typeof item.initialValue === 'string' && item.initialValue.startsWith('='))) {
-      engine.setValue(path, item.initialValue);
-    }
-    if (item.children?.length) {
-      seedInitialValues(engine, item.children, path);
-    }
-  }
-}
-
-function flattenScenario(value: unknown, prefix = ''): Array<{ path: string; value: unknown }> {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    return prefix ? [{ path: prefix, value }] : [];
-  }
-
-  const entries: Array<{ path: string; value: unknown }> = [];
-  for (const [key, entryValue] of Object.entries(value)) {
-    const path = prefix ? `${prefix}.${key}` : key;
-    if (entryValue && typeof entryValue === 'object' && !Array.isArray(entryValue)) {
-      entries.push(...flattenScenario(entryValue, path));
-    } else {
-      entries.push({ path, value: entryValue });
-    }
-  }
-  return entries;
-}
-
 interface SimulationResult {
   parseError?: string;
   snapshot?: ReturnType<IFormEngine['getDiagnosticsSnapshot']>;
   response?: unknown;
 }
 
-function buildSimulation(definition: unknown, scenarioText: string): SimulationResult {
+type ParsedScenario =
+  | { ok: true; data: Record<string, unknown> }
+  | { ok: false; error: string };
+
+function parseScenarioText(text: string): ParsedScenario {
+  const trimmed = text.trim();
+  if (!trimmed) return { ok: true, data: {} };
+  try {
+    const parsed: unknown = JSON.parse(trimmed);
+    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return { ok: false, error: 'Scenario must be a JSON object' };
+    }
+    return { ok: true, data: parsed as Record<string, unknown> };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'Invalid JSON',
+    };
+  }
+}
+
+/** Headless engine run using the same hydration path as `<formspec-render>` + {@link applyResponseDataToEngine}. */
+function buildSimulation(definition: unknown, scenarioData: Record<string, unknown>): SimulationResult {
   try {
     const normalizedDefinition = normalizeDefinitionDoc(definition) as FormDefinition;
     const engine = createFormEngine(normalizedDefinition);
-    seedInitialValues(engine, (normalizedDefinition?.items ?? []) as FormspecItem[]);
-
-    const parsedScenario = scenarioText.trim() ? JSON.parse(scenarioText) : {};
-    for (const entry of flattenScenario(parsedScenario)) {
-      engine.setValue(entry.path, entry.value);
-    }
-
+    applyResponseDataToEngine(engine, scenarioData as Record<string, any>);
     return {
       snapshot: engine.getDiagnosticsSnapshot({ mode: 'continuous' }),
       response: engine.getResponse({ mode: 'continuous' }),
@@ -80,11 +68,18 @@ interface BehaviorPreviewProps {
 export function BehaviorPreview({ viewport = 'desktop', appearance }: BehaviorPreviewProps = {}) {
   const state = useProjectState();
   const [scenarioText, setScenarioText] = useState<string>('{}');
-  const simulation = useMemo(
-    () => buildSimulation(state.definition, scenarioText),
-    [scenarioText, state.definition],
-  );
+  const parsedScenario = useMemo(() => parseScenarioText(scenarioText), [scenarioText]);
+
+  const simulation = useMemo(() => {
+    if (!parsedScenario.ok) {
+      return { parseError: parsedScenario.error };
+    }
+    return buildSimulation(state.definition, parsedScenario.data);
+  }, [parsedScenario, state.definition]);
+
   const fields = Object.entries(simulation.snapshot?.mips ?? {});
+
+  const scenarioForHost: Record<string, unknown> | null = parsedScenario.ok ? parsedScenario.data : null;
 
   return (
     <div className="grid h-full min-h-0 gap-3 p-2 lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
@@ -97,7 +92,11 @@ export function BehaviorPreview({ viewport = 'desktop', appearance }: BehaviorPr
             minWidth: viewport === 'desktop' ? '800px' : undefined,
           }}
         >
-          <FormspecPreviewHost width={viewportWidths[viewport]} appearance={appearance} />
+          <FormspecPreviewHost
+            width={viewportWidths[viewport]}
+            appearance={appearance}
+            scenarioData={scenarioForHost}
+          />
         </div>
       </div>
 
@@ -109,9 +108,11 @@ export function BehaviorPreview({ viewport = 'desktop', appearance }: BehaviorPr
             className="min-h-[140px] w-full rounded border border-border bg-bg-default p-2 font-mono text-xs outline-none focus:border-accent"
             value={scenarioText}
             onChange={(event) => setScenarioText(event.target.value)}
+            aria-label="Scenario JSON"
           />
           <p className="mt-2 text-xs text-muted">
-            Enter a JSON object with field paths or nested values to simulate respondent answers.
+            Same nested shape as response <code className="text-[11px]">data</code> — applied to the live preview and
+            the behavior snapshot.
           </p>
         </section>
 

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { FormspecRender } from '@formspec-org/webcomponent';
 import { createProject } from '@formspec-org/studio-core';
@@ -39,8 +39,21 @@ describe('BehaviorPreview', () => {
       </ProjectProvider>,
     );
 
+    const host = screen.getByTestId('formspec-preview-host');
+    await waitFor(() => {
+      const field = host.querySelector('.formspec-field[data-name="income.monthlyIncome"]');
+      expect(field).toBeTruthy();
+      expect(field).toHaveClass('formspec-hidden');
+    });
+
     const scenarioInput = screen.getByTestId('behavior-scenario-input');
     fireEvent.change(scenarioInput, { target: { value: '{"income":{"hasIncome":true}}' } });
+
+    await waitFor(() => {
+      const field = host.querySelector('.formspec-field[data-name="income.monthlyIncome"]');
+      expect(field).toBeTruthy();
+      expect(field).not.toHaveClass('formspec-hidden');
+    });
 
     const row = screen.getByText('income.monthlyIncome').closest('div');
     expect(row).toBeTruthy();

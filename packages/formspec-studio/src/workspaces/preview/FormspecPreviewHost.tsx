@@ -1,5 +1,7 @@
 /** @filedesc Hosts the <formspec-render> web component and syncs project documents to it via props. */
 import { useRef, useEffect } from 'react';
+import type { IFormEngine } from '@formspec-org/engine/render';
+import { applyResponseDataToEngine } from '@formspec-org/webcomponent';
 import type { ResolvedTheme } from '../../hooks/useColorScheme';
 import { useProjectState } from '../../state/useProjectState';
 import { useProject } from '../../state/useProject';
@@ -65,6 +67,12 @@ interface FormspecPreviewHostProps {
    * When set (Layout live preview), outlines the matching field in the preview (definition path / `data-name`).
    */
   layoutHighlightFieldPath?: string | null;
+  /**
+   * When set (Behavior lab), hydrates the live engine with the same nested object shape as
+   * response `data`. `null` skips re-apply (e.g. invalid JSON) so the last good state remains.
+   * Omit on Form / JSON preview.
+   */
+  scenarioData?: Record<string, unknown> | null;
 }
 
 type FormspecRenderElement = HTMLElement & {
@@ -73,7 +81,29 @@ type FormspecRenderElement = HTMLElement & {
   componentDocument: unknown;
   themeDocument: unknown;
   goToWizardStep?: (index: number) => boolean;
+  getEngine?: () => IFormEngine | null;
 };
+
+/**
+ * Apply scenario / saved-response-shaped data to the live preview engine (same path as
+ * `<formspec-render>.initialData`). `undefined` disables hydration (Form / Layout preview).
+ */
+function applyScenarioToLiveElement(
+  el: FormspecRenderElement | null,
+  scenario: Record<string, unknown> | null | undefined,
+): void {
+  if (!el) return;
+  if (scenario === undefined) return;
+  if (scenario === null) return;
+  // Call as a method so `this` stays bound to the custom element.
+  const engine = typeof el.getEngine === 'function' ? el.getEngine() : null;
+  if (!engine) return;
+  try {
+    applyResponseDataToEngine(engine, scenario as Record<string, any>);
+  } catch (err) {
+    console.error('[FormspecPreviewHost] applyResponseDataToEngine failed', err);
+  }
+}
 
 const PREVIEW_NAV_MAX_FRAMES = 48;
 
@@ -127,13 +157,16 @@ export function FormspecPreviewHost({
   appearance,
   layoutPreviewPageIndex,
   layoutHighlightFieldPath,
+  scenarioData,
 }: FormspecPreviewHostProps) {
   const state = useProjectState();
   const project = useProject();
   const stateRef = useRef(state);
   const projectRef = useRef(project);
+  const scenarioDataRef = useRef(scenarioData);
   stateRef.current = state;
   projectRef.current = project;
+  scenarioDataRef.current = scenarioData;
 
   const hostRef = useRef<HTMLDivElement>(null);
   const renderRef = useRef<FormspecRenderElement | null>(null);
@@ -240,6 +273,7 @@ export function FormspecPreviewHost({
     // Sync after the element is connected so it's ready to render.
     const rafId = requestAnimationFrame(() => {
       syncToElement(el);
+      applyScenarioToLiveElement(el, scenarioDataRef.current);
     });
 
     return () => {
@@ -265,6 +299,7 @@ export function FormspecPreviewHost({
     const el = renderRef.current;
     const timer = setTimeout(() => {
       syncToElement(el);
+      applyScenarioToLiveElement(el, scenarioDataRef.current);
       const navIdx = layoutPreviewPageRef.current;
       if (navIdx !== undefined && navIdx !== null && navIdx >= 0) {
         scheduleNavigatePreviewPage(el, navIdx);
@@ -272,6 +307,22 @@ export function FormspecPreviewHost({
     }, DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [state.definition, state.component, state.theme]);
+
+  // Re-apply scenario whenever it changes without waiting for the document debounce.
+  useEffect(() => {
+    if (scenarioData === undefined) return;
+    let cancelled = false;
+    const id0 = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (cancelled) return;
+        applyScenarioToLiveElement(renderRef.current, scenarioDataRef.current);
+      });
+    });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(id0);
+    };
+  }, [scenarioData]);
 
   // Immediate wizard/tab sync when the Layout canvas active page changes.
   useEffect(() => {
