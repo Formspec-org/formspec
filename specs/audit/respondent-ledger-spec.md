@@ -1,7 +1,7 @@
 ---
 title: Respondent Ledger Add-On Specification
-version: 0.1.0-draft
-date: 2026-04-09
+version: 0.2.0-draft
+date: 2026-04-15
 status: draft
 ---
 
@@ -77,6 +77,10 @@ Recommended extension pointer shape:
   }
 }
 ```
+
+### 2.4 Legal sufficiency
+
+Ledger integrity, event chaining, and checkpoint anchoring contribute to evidentiary quality but do not, by themselves, guarantee legal admissibility in any particular jurisdiction. Implementations **MUST NOT** imply that ledger integrity alone is sufficient for legal admissibility. Implementations **MAY** make stronger evidentiary claims only to the extent supported by declared process, authored signature semantics, records-management practice, and applicable law — and **MUST** disclose which of those conditions they rely on when making such claims.
 
 ---
 
@@ -308,10 +312,25 @@ Recommended identity attestation fields:
 - `credentialRef` — reference to the protected credential or token envelope, not the raw secret itself.
 - `personhoodCheck` — whether proof-of-personhood or liveness/uniqueness checks passed, failed, or were not performed.
 - `subjectBinding` — whether the attestation is about the respondent, subject, delegate, or another party.
-- `assuranceLevel` — assurance tier or policy profile satisfied by the attestation.
+- `assuranceLevel` — ordered assurance tier per §6.6.1.
 - `privacyTier` — disclosure tier such as `anonymous`, `pseudonymous`, `identified`, or `public`.
 - `selectiveDisclosureProfile` — named policy profile controlling what parts of the attestation may be revealed in support, review, export, or dispute contexts.
 - `evidenceRef` — pointer to encrypted reveal material, redacted export evidence, or provider response evidence.
+
+### 6.6.1 Assurance levels
+
+Implementations using `assuranceLevel` **MUST** support at minimum the following ordered four-level taxonomy:
+
+| Level | Label | Meaning |
+|---|---|---|
+| `L1` | Self-asserted | Subject or actor asserted the identity binding; no external corroboration. |
+| `L2` | Corroborated | Binding corroborated by at least one external source (e.g., emailed magic link, phone verification). |
+| `L3` | Verified | Binding verified against an authoritative source (e.g., government ID match, credential issuer). |
+| `L4` | In-person or equivalent | Binding verified under conditions equivalent to in-person government-issued identity check. |
+
+Implementations **MAY** define additional levels; additional levels **MUST** be declared in reference to the base four.
+
+Assurance levels are declared per attestation; they are not properties of the subject. An assurance level **MAY** be upgraded by a later `attestation.captured` event referencing the same `subjectRef`, but **MUST NOT** be silently downgraded. Upgrades apply forward only; prior events **MUST NOT** be rewritten.
 
 If a processor integrates with a third-party identity provider such as **ID.me**, it **SHOULD** do so through an adapter boundary that emits this canonical object rather than writing provider-native fields directly into the ledger event shape.
 
@@ -327,19 +346,29 @@ The first concern may be stored off-chain, on-chain, or in hybrid storage. The s
 
 This means a conforming implementation can keep the form response and respondent ledger anonymous or pseudonymous by default — including when writing hashes, checkpoints, or commitments to a chain — while still using the same framework to attach higher-assurance identity proofs later.
 
-### 6.7 Tiered privacy inspiration
+### 6.7 Disclosure tier and assurance are independent
 
-Implementations **SHOULD** treat identity assurance and identity disclosure as related but distinct concerns.
+Implementations **MUST NOT** conflate disclosure tier (`privacyTier`) and assurance level (`assuranceLevel`). The two are independent properties of an attestation. Implementations **MUST NOT** derive one from the other, and **MUST NOT** couple their transitions.
 
-A respondent may prove personhood or eligibility while remaining:
+A respondent **MAY** be highly assured and pseudonymously disclosed (a verified L3 attestation disclosed under a pseudonym). A respondent **MAY** be weakly assured and fully identified (a self-asserted L1 attestation tied to a legal name). All four combinations of privacy tier and assurance level are valid. Implementations that force these to co-vary violate this requirement.
 
-- effectively anonymous to the relying workflow,
-- pseudonymous but continuity-preserving across a case,
-- identified to the service operator but not broadly disclosed in exports,
-- or fully attributable where law or policy requires it.
+Consequences:
 
-Accordingly, processors **SHOULD** model privacy as a tier attached to identity attestations and export/review policy, rather than as a separate ledger format. This preserves one portable event model while allowing selective disclosure packages, DID presentations, and provider adapters such as **ID.me** to map into different assurance and reveal profiles.
+- Profiles and export policies **MAY** constrain disclosure tier or assurance level independently. A profile constraining both **MUST** constrain them as independent predicates, not a joint predicate.
+- `attestation.captured` events that upgrade assurance **MUST NOT** implicitly change the disclosure tier on the same `subjectRef`.
+- Disclosure re-scoping (e.g., a pseudonymous record being later identified) **MUST NOT** imply an assurance upgrade.
+- Reviewers and verifiers **MUST** be able to check assurance claims independently of disclosure claims.
 
+### 6.8 Authored signatures vs. recorded attestations
+
+A Response **MAY** carry an authored signature — a cryptographic binding by the respondent (or delegate) to the submitted Response payload at authoring time. Authored signatures are a property of the Response data contract; their shape and verification are defined where the Response itself is specified, not in this add-on.
+
+This add-on records the fact that a signature, credential, or delegation was bound into audit history via `attestation.captured` events and `identityAttestation` objects. The two concerns are distinct and **MUST** remain distinguishable:
+
+- An **authored signature** is evidence produced by the respondent at authoring time, binding the respondent to the Response content.
+- A **recorded attestation** is an audit-history entry describing that signature (or another credential) as it was observed, validated, or admitted into workflow.
+
+An implementation **MUST NOT** treat a recorded `attestation.captured` event as a substitute for the authored signature itself. Verifiers evaluating authenticity of Response content **MUST** verify the authored signature; the ledger event is corroborating audit context, not the signature.
 
 ---
 
@@ -974,3 +1003,8 @@ This draft intentionally leaves several adjacent deliverables for subsequent wor
 - and concrete disclosure-profile registries for export and review workflows.
 
 Companion JSON Schemas for the top-level ledger document and standalone event object are now provided at `schemas/respondent-ledger.schema.json` and `schemas/respondent-ledger-event.schema.json`. Those schemas are intended to encode the canonical wire shape defined here; they do not narrow the broader normative model beyond the constraints stated in this document.
+
+### 17.1 Changelog
+
+- **0.2.0-draft (2026-04-15)** — Added normative L1–L4 assurance taxonomy (§6.6.1); promoted §6.7 to a normative independence invariant between disclosure tier and assurance level; added §6.8 distinguishing authored signatures from recorded attestations; added §2.4 legal-sufficiency disclosure. The wire-format literal `$formspecRespondentLedger` is unchanged at `"0.1"`; a wire-format version bump is a separate compatibility decision.
+- **0.1.0-draft (2026-03-22)** — Initial draft.

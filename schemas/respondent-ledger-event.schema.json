@@ -146,7 +146,8 @@
         },
         "assuranceLevel": {
           "type": "string",
-          "description": "Authentication or identity assurance tier associated with the actor for this event."
+          "description": "Ordered assurance level per spec §6.6.1. Implementations MAY define additional levels; the base four are enumerated here.",
+          "examples": ["L1", "L2", "L3", "L4"]
         },
         "privacyTier": {
           "$ref": "#/$defs/PrivacyTier"
@@ -300,7 +301,8 @@
         },
         "assuranceLevel": {
           "type": "string",
-          "description": "Assurance tier or policy profile satisfied by the attestation."
+          "description": "Ordered assurance level per spec §6.6.1. Implementations MAY define additional levels; the base four are enumerated here.",
+          "examples": ["L1", "L2", "L3", "L4"]
         },
         "privacyTier": {
           "$ref": "#/$defs/PrivacyTier"
