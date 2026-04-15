@@ -5,6 +5,7 @@ import type { IFormEngine } from '@formspec-org/engine';
 import type { FormDefinition } from '@formspec-org/types';
 import { useProjectState } from '../../state/useProjectState';
 import { normalizeDefinitionDoc } from '@formspec-org/studio-core';
+import type { ResolvedTheme } from '../../hooks/useColorScheme';
 import { FormspecPreviewHost } from '../../workspaces/preview/FormspecPreviewHost';
 import type { Viewport } from '../../workspaces/preview/ViewportSwitcher';
 
@@ -73,9 +74,10 @@ function buildSimulation(definition: unknown, scenarioText: string): SimulationR
 
 interface BehaviorPreviewProps {
   viewport?: Viewport;
+  appearance?: ResolvedTheme;
 }
 
-export function BehaviorPreview({ viewport = 'desktop' }: BehaviorPreviewProps = {}) {
+export function BehaviorPreview({ viewport = 'desktop', appearance }: BehaviorPreviewProps = {}) {
   const state = useProjectState();
   const [scenarioText, setScenarioText] = useState<string>('{}');
   const simulation = useMemo(
@@ -95,7 +97,7 @@ export function BehaviorPreview({ viewport = 'desktop' }: BehaviorPreviewProps =
             minWidth: viewport === 'desktop' ? '800px' : undefined,
           }}
         >
-          <FormspecPreviewHost width={viewportWidths[viewport]} />
+          <FormspecPreviewHost width={viewportWidths[viewport]} appearance={appearance} />
         </div>
       </div>
 

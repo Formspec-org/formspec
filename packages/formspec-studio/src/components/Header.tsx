@@ -8,7 +8,7 @@ const TABS: { name: string; help: string }[] = [
   { name: 'Editor', help: 'Build your form structure and manage shared resources' },
   { name: 'Layout', help: 'Visual form builder — pages, layout containers, widget selection, and theme overrides' },
   { name: 'Mapping', help: 'Bidirectional data transforms for import/export formats' },
-  { name: 'Preview', help: 'Live form preview and JSON document view' },
+  { name: 'Preview', help: 'Live form preview, behavior lab, and JSON document view' },
 ];
 
 interface HeaderProps {

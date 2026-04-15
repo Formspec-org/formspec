@@ -50,6 +50,14 @@ describe('PreviewTab', () => {
     expect(screen.getByText(/mobile/i)).toBeInTheDocument();
   });
 
+  it('shows behavior lab when Behavior mode is selected', () => {
+    renderPreview();
+    fireEvent.click(screen.getByTestId('preview-mode-behavior'));
+    expect(screen.getByTestId('behavior-scenario-input')).toBeInTheDocument();
+    expect(screen.getByText('Scenario JSON')).toBeInTheDocument();
+    expect(screen.getByText('Behavior Snapshot')).toBeInTheDocument();
+  });
+
   it('renders FormspecPreviewHost with formspec-render when definition has items', () => {
     renderPreview();
     const host = screen.getByTestId('formspec-preview-host');

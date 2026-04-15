@@ -21,7 +21,7 @@ Use this file as a **backlog**: each `- [ ]` is one shippable task unless noted 
 
 ## P1 — Owner decision (one outcome per task)
 
-- [ ] **Behavior preview:** Either wire `features/behavior-preview/` (e.g. mount `BehaviorPreview` in a real route/workspace) **or** delete the feature folder and its tests. Today nothing outside tests imports it — orphan code.
+- [x] **Behavior preview:** `BehaviorPreview` is mounted from **Preview** workspace as the **Behavior** mode (alongside Form / JSON); `PreviewMode` includes `'behavior'`.
 
 ---
 

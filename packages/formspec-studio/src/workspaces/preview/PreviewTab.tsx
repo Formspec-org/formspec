@@ -1,10 +1,11 @@
-/** @filedesc Preview workspace tab toggling between live form render and JSON documents view. */
+/** @filedesc Preview workspace tab toggling live form render, behavior lab, and JSON documents view. */
 import { useState } from 'react';
 import type { ResolvedTheme } from '../../hooks/useColorScheme';
 import { useDefinition } from '../../state/useDefinition';
 import { ViewportSwitcher, type Viewport } from './ViewportSwitcher';
 import { JsonDocumentsView } from './JsonDocumentsView';
 import { FormspecPreviewHost } from './FormspecPreviewHost';
+import { BehaviorPreview } from '../../features/behavior-preview/BehaviorPreview';
 
 const viewportWidths: Record<Viewport, string> = {
   desktop: '100%',
@@ -12,7 +13,15 @@ const viewportWidths: Record<Viewport, string> = {
   mobile: '375px',
 };
 
-export type PreviewMode = 'form' | 'json';
+export type PreviewMode = 'form' | 'behavior' | 'json';
+
+const PREVIEW_MODES: PreviewMode[] = ['form', 'behavior', 'json'];
+
+const MODE_LABEL: Record<PreviewMode, string> = {
+  form: 'Form',
+  behavior: 'Behavior',
+  json: 'JSON',
+};
 
 interface PreviewTabProps {
   viewport?: Viewport;
@@ -44,11 +53,11 @@ export function PreviewTab({
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between gap-2 p-2 border-b border-border">
         <div className="flex gap-1">
-          {(['form', 'json'] as const).map((m) => (
+          {PREVIEW_MODES.map((m) => (
             <button
               key={m}
               type="button"
-              className={`px-3 py-1 text-sm rounded capitalize ${
+              className={`px-3 py-1 text-sm rounded ${
                 activeMode === m
                   ? 'bg-accent text-white'
                   : 'text-muted hover:text-ink hover:bg-subtle'
@@ -56,11 +65,11 @@ export function PreviewTab({
               onClick={() => setMode(m)}
               data-testid={`preview-mode-${m}`}
             >
-              {m}
+              {MODE_LABEL[m]}
             </button>
           ))}
         </div>
-        {activeMode === 'form' && (
+        {(activeMode === 'form' || activeMode === 'behavior') && (
           <ViewportSwitcher active={activeViewport} onChange={setViewport} />
         )}
       </div>
@@ -79,6 +88,16 @@ export function PreviewTab({
                 <FormspecPreviewHost width={viewportWidths[activeViewport]} appearance={appearance} />
               </div>
             </div>
+          </div>
+        ) : (
+          <div className="flex flex-1 items-center justify-center text-center text-muted text-sm py-8">
+            No items to preview
+          </div>
+        )
+      ) : activeMode === 'behavior' ? (
+        items.length > 0 ? (
+          <div className="flex-1 min-h-0 overflow-hidden bg-subtle/50">
+            <BehaviorPreview viewport={activeViewport} appearance={appearance} />
           </div>
         ) : (
           <div className="flex flex-1 items-center justify-center text-center text-muted text-sm py-8">

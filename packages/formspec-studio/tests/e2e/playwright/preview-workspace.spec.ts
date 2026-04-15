@@ -55,6 +55,13 @@ test.describe('Preview Workspace', () => {
     await switchTab(page, 'Preview');
   });
 
+  test('behavior mode shows scenario JSON editor and live preview host', async ({ page }) => {
+    const workspace = page.locator('[data-testid="workspace-Preview"]');
+    await workspace.getByTestId('preview-mode-behavior').click();
+    await expect(workspace.getByTestId('behavior-scenario-input')).toBeVisible();
+    await expect(workspace.getByTestId('formspec-preview-host')).toBeVisible();
+  });
+
   test('renders form inputs for fields, group fieldset, and display text', async ({ page }) => {
     const workspace = page.locator('[data-testid="workspace-Preview"]');
 
