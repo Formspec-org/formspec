@@ -1,8 +1,13 @@
 /** @filedesc Main studio shell; composes the header, blueprint sidebar, workspace tabs, and status bar. */
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useEffect, useMemo, useCallback } from 'react';
 import { type ColorScheme } from '../hooks/useColorScheme';
+import { useWorkspaceRouter } from '../hooks/useWorkspaceRouter';
+import { useEditorState } from '../hooks/useEditorState';
+import { useShellLayout } from '../hooks/useShellLayout';
+import { useShellPanels } from '../hooks/useShellPanels';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import JSZip from 'jszip';
-import { createProject, handleKeyboardShortcut, buildDefLookup, isLayoutId, nodeIdFromLayoutId, type Project } from '@formspec-org/studio-core';
+import { createProject, buildDefLookup, type Project } from '@formspec-org/studio-core';
 import { Header } from './Header';
 import { StatusBar } from './StatusBar';
 import { Blueprint } from './Blueprint';
@@ -46,9 +51,6 @@ import { DefaultFieldStyle } from '../workspaces/theme/DefaultFieldStyle';
 import { FieldTypeRules } from '../workspaces/theme/FieldTypeRules';
 import { ScreenSizes } from '../workspaces/theme/ScreenSizes';
 import { AllTokens } from '../workspaces/theme/AllTokens';
-import { type MappingTabId } from '../workspaces/mapping/MappingTab';
-import { type Viewport } from '../workspaces/preview/ViewportSwitcher';
-import { type PreviewMode } from '../workspaces/preview/PreviewTab';
 
 const WORKSPACES: Record<string, React.FC> = {
   Layout: LayoutWorkspace,
@@ -87,10 +89,6 @@ interface ShellProps {
   colorScheme?: ColorScheme;
 }
 
-/**
- * Blueprint sidebar inner — Layout tab always uses theme authoring sections (Colors, Typography, …).
- * Must render inside <LayoutModeProvider>.
- */
 function BlueprintSidebarInner({
   activeTab,
   activeSection,
@@ -108,7 +106,6 @@ function BlueprintSidebarInner({
 }) {
   const layoutModeCtx = useOptionalLayoutMode();
 
-  // Coerce invalid sections (e.g. Structure after switching from Editor), then mirror to context.
   useEffect(() => {
     if (activeTab !== 'Layout' || !layoutModeCtx) return;
     const first = THEME_MODE_BLUEPRINT_SECTIONS[0] ?? 'Colors';
@@ -146,36 +143,86 @@ function BlueprintSidebarInner({
 }
 
 export function Shell({ colorScheme }: ShellProps = {}) {
-  const [activeTab, setActiveTab] = useState<string>('Editor');
-  const [activeSection, setActiveSection] = useState<string>('Structure');
-  const [showPalette, setShowPalette] = useState(false);
-  const [showImport, setShowImport] = useState(false);
-  const [activeEditorView, setActiveEditorView] = useState<EditorView>('build');
-  const [activeMappingTab, setActiveMappingTab] = useState<MappingTabId>('all');
-  const [mappingConfigOpen, setMappingConfigOpen] = useState(true);
-  const [previewViewport, setPreviewViewport] = useState<Viewport>('desktop');
-  const [previewMode, setPreviewMode] = useState<PreviewMode>('form');
-  const [showSettings, setShowSettings] = useState(false);
-  const [showAppSettings, setShowAppSettings] = useState(false);
-  const [showBlueprintDrawer, setShowBlueprintDrawer] = useState(false);
-  const [showChatPanel, setShowChatPanel] = useState(false);
-  const [showHealthSheet, setShowHealthSheet] = useState(false);
-  const [showRightPanel, setShowRightPanel] = useState(true);
-  const [showLayoutPreviewPanel, setShowLayoutPreviewPanel] = useState(true);
-  const [chatPrompt, setChatPrompt] = useState<string | null>(null);
-  const [isTabletLayout, setIsTabletLayout] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 1024);
-  const [leftWidth, setLeftWidth] = useState(214);
-  const [rightWidth, setRightWidth] = useState(320);
-  const onResizeLeft = useCallback((delta: number) => {
-    setLeftWidth((w) => Math.min(Math.max(w + delta, 160), 400));
-  }, []);
-  const onResizeRight = useCallback((delta: number) => {
-    setRightWidth((w) => Math.min(Math.max(w + delta, 220), 500));
-  }, []);
-  const blueprintCloseRef = useRef<HTMLButtonElement | null>(null);
-  const lastFocusRef = useRef<HTMLElement | null>(null);
   const project = useProject();
   const { selectedKey, selectedKeyForTab, deselect, select } = useSelection();
+
+  const router = useWorkspaceRouter();
+  const {
+    activeTab,
+    setActiveTab,
+    activeSection,
+    setActiveSection,
+    activeEditorView,
+    setActiveEditorView,
+    activeMappingTab,
+    setActiveMappingTab,
+    mappingConfigOpen,
+    setMappingConfigOpen,
+    previewViewport,
+    setPreviewViewport,
+    previewMode,
+    setPreviewMode,
+  } = router;
+
+  const layout = useShellLayout();
+  const {
+    compactLayout,
+    leftWidth,
+    rightWidth,
+    showBlueprintDrawer,
+    setShowBlueprintDrawer,
+    showLayoutPreviewPanel,
+    setShowLayoutPreviewPanel,
+    onResizeLeft,
+    onResizeRight,
+    blueprintCloseRef,
+    overlayOpen,
+  } = layout;
+
+  const editor = useEditorState(activeTab, compactLayout);
+  const {
+    manageCount,
+    showRightPanel,
+    setShowRightPanel,
+    showHealthSheet,
+    setShowHealthSheet,
+  } = editor;
+
+  const panels = useShellPanels();
+  const {
+    showPalette,
+    setShowPalette,
+    showImport,
+    setShowImport,
+    showSettings,
+    setShowSettings,
+    showAppSettings,
+    setShowAppSettings,
+    showChatPanel,
+    setShowChatPanel,
+    chatPrompt,
+    setChatPrompt,
+  } = panels;
+
+  const activeTabScope = activeTab.toLowerCase();
+  const scopedSelectedKey = selectedKeyForTab(activeTabScope);
+
+  useKeyboardShortcuts(activeTab, project, scopedSelectedKey, setShowPalette);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const handleNewForm = useCallback(() => {
+    project.loadBundle(createProject().export());
+    setActiveTab('Editor');
+    setActiveSection('Structure');
+    setActiveEditorView('build');
+    setActiveMappingTab('config');
+    setMappingConfigOpen(true);
+    setPreviewViewport('desktop');
+    setPreviewMode('form');
+    setShowPalette(false);
+    setShowImport(false);
+    deselect();
+  }, [project]);
 
   const openDefinitionInEditor = useCallback(
     (defPath: string, kind: DefinitionEditorItemKind) => {
@@ -184,24 +231,11 @@ export function Shell({ colorScheme }: ShellProps = {}) {
       select(defPath, kind, { tab: 'editor', focusInspector: true });
       setShowRightPanel(true);
     },
-    [select],
+    [select, setActiveTab, setActiveEditorView, setShowRightPanel],
   );
-  const activeTabScope = activeTab.toLowerCase();
-  const scopedSelectedKey = selectedKeyForTab(activeTabScope);
+
   const definitionLookup = useMemo(() => buildDefLookup(project.definition.items ?? []), [project.definition.items]);
-  const manageCount = useMemo(() => {
-    const def = project.definition;
-    return (def.binds?.length ?? 0) +
-      (Array.isArray(def.shapes) ? def.shapes.length : 0) +
-      (def.variables?.length ?? 0) +
-      Object.keys(def.optionSets ?? {}).length +
-      Object.keys(def.instances ?? {}).length;
-  }, [project.definition]);
-  const viewportWidth = typeof window !== 'undefined'
-    ? Math.min(window.innerWidth, document.documentElement?.clientWidth || window.innerWidth)
-    : Infinity;
-  const compactLayout = isTabletLayout || viewportWidth <= 1024;
-  const overlayOpen = compactLayout && showBlueprintDrawer;
+
   const activePanelId = `studio-panel-${activeTab.toLowerCase()}`;
   const activeTabId = `studio-tab-${activeTab.toLowerCase()}`;
   const visibleBlueprintSections =
@@ -219,7 +253,23 @@ export function Shell({ colorScheme }: ShellProps = {}) {
   useEffect(() => {
     if (resolvedActiveSection === activeSection) return;
     setActiveSection(resolvedActiveSection);
-  }, [activeSection, resolvedActiveSection]);
+  }, [activeSection, resolvedActiveSection, setActiveSection]);
+
+  useEffect(() => {
+    if (!compactLayout || activeTab !== 'Editor') return;
+    setShowBlueprintDrawer(false);
+    setShowHealthSheet(false);
+  }, [compactLayout, activeTab, setShowBlueprintDrawer, setShowHealthSheet]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('e2e') !== '1') return;
+    (window as unknown as { __FORMSPEC_TEST_EXPORT?: () => ReturnType<Project['export']> }).__FORMSPEC_TEST_EXPORT = () => project.export();
+    return () => {
+      delete (window as unknown as { __FORMSPEC_TEST_EXPORT?: unknown }).__FORMSPEC_TEST_EXPORT;
+    };
+  }, [project]);
 
   const hasScreener = project.state.screener !== null;
   const shellBackgroundImage = colorScheme?.resolvedTheme === 'dark'
@@ -278,148 +328,6 @@ export function Shell({ colorScheme }: ShellProps = {}) {
     }
   })();
 
-  useEffect(() => {
-    if (!compactLayout || activeTab !== 'Editor') return;
-    setShowBlueprintDrawer(false);
-    setShowHealthSheet(false);
-  }, [compactLayout, activeTab]);
-
-  // E2E: expose project.export() when ?e2e=1 so tests can validate exported bundle
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('e2e') !== '1') return;
-    (window as unknown as { __FORMSPEC_TEST_EXPORT?: () => ReturnType<Project['export']> }).__FORMSPEC_TEST_EXPORT = () => project.export();
-    return () => {
-      delete (window as unknown as { __FORMSPEC_TEST_EXPORT?: unknown }).__FORMSPEC_TEST_EXPORT;
-    };
-  }, [project]);
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      handleKeyboardShortcut(event, {
-        undo: () => project.undo(),
-        redo: () => project.redo(),
-        delete: () => {
-          if (scopedSelectedKey) {
-            if (activeTab === 'Layout') {
-              if (isLayoutId(scopedSelectedKey)) {
-                project.deleteLayoutNode(nodeIdFromLayoutId(scopedSelectedKey));
-              } else {
-                project.deleteComponentNode({ bind: scopedSelectedKey });
-              }
-            } else {
-              project.removeItem(scopedSelectedKey);
-            }
-            deselect();
-          }
-        },
-        escape: () => { setShowPalette(false); deselect(); },
-        search: () => setShowPalette(true),
-      }, {
-        activeWorkspace: activeTab,
-      });
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [activeTab, project, scopedSelectedKey, deselect]);
-
-  useEffect(() => {
-    const updateViewport = () => {
-      setIsTabletLayout(window.innerWidth <= 1024);
-    };
-
-    updateViewport();
-    window.addEventListener('resize', updateViewport);
-    return () => window.removeEventListener('resize', updateViewport);
-  }, []);
-
-  useEffect(() => {
-    const onNavigateWorkspace = (event: Event) => {
-      const detail = (event as CustomEvent<{ tab?: string; subTab?: string; view?: EditorView; section?: string }>).detail ?? {};
-      let { tab, subTab, view, section } = detail;
-      // Theme workspace was merged into Layout (theme authoring in the blueprint sidebar).
-      if (tab === 'Theme') {
-        tab = 'Layout';
-      }
-      if (tab && (tab === 'Editor' || WORKSPACES[tab])) {
-        setActiveTab(tab);
-        if (tab === 'Editor' && view) {
-          setActiveEditorView(view);
-        }
-        if (subTab) {
-          if (tab === 'Mapping') setActiveMappingTab(subTab as MappingTabId);
-        }
-        if (section) {
-          setActiveSection(section);
-          window.dispatchEvent(new CustomEvent('formspec:scroll-to-section', {
-            detail: { section },
-          }));
-        }
-      }
-    };
-    window.addEventListener('formspec:navigate-workspace', onNavigateWorkspace);
-    return () => window.removeEventListener('formspec:navigate-workspace', onNavigateWorkspace);
-  }, []);
-
-  useEffect(() => {
-    const onOpenSettings = () => setShowSettings(true);
-    const onOpenAppSettings = () => setShowAppSettings(true);
-    window.addEventListener('formspec:open-settings', onOpenSettings);
-    window.addEventListener('formspec:open-app-settings', onOpenAppSettings);
-    return () => {
-      window.removeEventListener('formspec:open-settings', onOpenSettings);
-      window.removeEventListener('formspec:open-app-settings', onOpenAppSettings);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!compactLayout || !showBlueprintDrawer) return;
-    lastFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    blueprintCloseRef.current?.focus();
-    return () => {
-      lastFocusRef.current?.focus();
-    };
-  }, [compactLayout, showBlueprintDrawer]);
-
-  useEffect(() => {
-    if (!overlayOpen) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
-      if (showBlueprintDrawer) {
-        setShowBlueprintDrawer(false);
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [overlayOpen, showBlueprintDrawer]);
-
-  useEffect(() => {
-    const onAIAction = (event: Event) => {
-      const { prompt } = (event as CustomEvent<{ prompt: string }>).detail ?? {};
-      if (prompt) {
-        setChatPrompt(prompt);
-        setShowChatPanel(true);
-      }
-    };
-    window.addEventListener('formspec:ai-action', onAIAction);
-    return () => window.removeEventListener('formspec:ai-action', onAIAction);
-  }, []);
-
-  const handleNewForm = () => {
-    project.loadBundle(createProject().export());
-    setActiveTab('Editor');
-    setActiveSection('Structure');
-    setActiveEditorView('build');
-    setActiveMappingTab('config');
-    setMappingConfigOpen(true);
-    setPreviewViewport('desktop');
-    setPreviewMode('form');
-    setShowPalette(false);
-    setShowImport(false);
-    deselect();
-  };
-
   const handleExport = async () => {
     const bundle = project.export();
     const { definition } = bundle;
@@ -469,7 +377,7 @@ export function Shell({ colorScheme }: ShellProps = {}) {
         onOpenMetadata={() => setShowSettings(true)}
         onToggleAccountMenu={() => setShowAppSettings(true)}
         onToggleMenu={compactLayout ? () => setShowBlueprintDrawer(true) : undefined}
-        onToggleChat={() => setShowChatPanel((p) => !p)}
+        onToggleChat={() => setShowChatPanel(!showChatPanel)}
         isCompact={compactLayout}
         colorScheme={colorScheme}
       />
@@ -519,7 +427,7 @@ export function Shell({ colorScheme }: ShellProps = {}) {
                       className="ml-2 shrink-0 rounded-full border border-border/60 bg-bg-default/75 p-2.5 text-muted hover:text-ink hover:bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
                       onClick={() => setShowHealthSheet(true)}
                     >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
                       </svg>
                     </button>
@@ -572,7 +480,7 @@ export function Shell({ colorScheme }: ShellProps = {}) {
                       className="rounded p-1 text-muted hover:text-ink hover:bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
                       onClick={() => setShowRightPanel(false)}
                     >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
                     </button>
                   </div>
                   <div className="flex-1 min-h-0">
@@ -587,7 +495,7 @@ export function Shell({ colorScheme }: ShellProps = {}) {
                 className="shrink-0 border-l border-border/70 bg-[linear-gradient(180deg,rgba(255,252,247,0.95),rgba(246,238,227,0.9))] dark:bg-[linear-gradient(180deg,rgba(26,35,47,0.94),rgba(32,44,59,0.92))] px-1.5 py-3 text-muted hover:text-ink hover:bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
                 onClick={() => setShowRightPanel(true)}
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
               </button>
             )
           )}
@@ -608,7 +516,7 @@ export function Shell({ colorScheme }: ShellProps = {}) {
                       className="rounded p-1 text-muted hover:text-ink hover:bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
                       onClick={() => setShowLayoutPreviewPanel(false)}
                     >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
                     </button>
                   </div>
                   <div className="flex-1 min-h-0 px-3 pb-3">
@@ -629,12 +537,12 @@ export function Shell({ colorScheme }: ShellProps = {}) {
                 className="shrink-0 border-l border-border/70 bg-[linear-gradient(180deg,rgba(255,252,247,0.95),rgba(246,238,227,0.9))] dark:bg-[linear-gradient(180deg,rgba(26,35,47,0.94),rgba(32,44,59,0.92))] px-1.5 py-3 text-muted hover:text-ink hover:bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
                 onClick={() => setShowLayoutPreviewPanel(true)}
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
               </button>
             )
           )}
           {showChatPanel && !compactLayout && (
-            <aside className="w-[360px] shrink-0" data-testid="chat-panel-container">
+            <aside className="w-[360px] shrink-0" data-testid="chat-panel-container" aria-label="AI chat panel">
               <ChatPanel
                 project={project}
                 onClose={() => { setShowChatPanel(false); setChatPrompt(null); }}
