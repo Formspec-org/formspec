@@ -60,7 +60,7 @@ Formspec inverts the usual dependency between frontend and backend. Neither impl
                       MCP   Chat   CLI tool  Studio  LLM
 ```
 
-The specification — 19 JSON Schemas, normative prose, and FEL grammar — is the stable abstraction that all implementations conform to. A Rust shared kernel (7 crates, ~47,000 lines, 1,462 tests) owns all spec business logic: FEL evaluation, assembly, linting, mapping, registry, changelog, and definition evaluation. The TypeScript engine keeps Preact Signals for reactive UI state and calls Rust via WASM. Python calls Rust via PyO3. One implementation, every platform.
+The specification — 20 JSON Schemas, normative prose, and FEL grammar — is the stable abstraction that all implementations conform to. A Rust shared kernel (7 crates, ~47,000 lines, 1,533 tests) owns all spec business logic: FEL evaluation, assembly, linting, mapping, registry, changelog, and definition evaluation. The TypeScript engine keeps Preact Signals for reactive UI state and calls Rust via WASM. Python calls Rust via PyO3. One implementation, every platform.
 
 This inversion runs deeper than just client/server. The TypeScript side itself has two dependency boundaries below the engine:
 
@@ -134,7 +134,7 @@ Neither runtime imports or wraps the other. They deploy and test independently, 
 | Tier | Spec | Schema |
 |------|------|--------|
 | Core | [Core Spec](specs/core/spec.md) · [FEL Grammar](specs/fel/fel-grammar.md) | [`definition`](schemas/definition.schema.json) · [`response`](schemas/response.schema.json) · [`validationReport`](schemas/validation-report.schema.json) |
-| Theme | [Theme Spec](specs/theme/theme-spec.md) | [`theme`](schemas/theme.schema.json) |
+| Theme | [Theme Spec](specs/theme/theme-spec.md) · [Token Registry](specs/theme/token-registry-spec.md) | [`theme`](schemas/theme.schema.json) · [`token-registry`](schemas/token-registry.schema.json) |
 | Components | [Component Spec](specs/component/component-spec.md) | [`component`](schemas/component.schema.json) |
 | Mapping | [Mapping DSL](specs/mapping/mapping-spec.md) | [`mapping`](schemas/mapping.schema.json) |
 | Extensions | [Extension Registry](specs/registry/extension-registry.md) · [Changelog](specs/registry/changelog-spec.md) | [`registry`](schemas/registry.schema.json) · [`changelog`](schemas/changelog.schema.json) |
@@ -147,7 +147,7 @@ Neither runtime imports or wraps the other. They deploy and test independently, 
 
 ## Repository Structure
 
-`schemas/` — 19 JSON Schema files (the structural source of truth):
+`schemas/` — 20 JSON Schema files (the structural source of truth):
 [`definition`](schemas/definition.schema.json) ·
 [`response`](schemas/response.schema.json) ·
 [`validationReport`](schemas/validation-report.schema.json) ·
@@ -166,10 +166,15 @@ Neither runtime imports or wraps the other. They deploy and test independently, 
 [`respondent-ledger-event`](schemas/respondent-ledger-event.schema.json) ·
 [`fel-functions`](schemas/fel-functions.schema.json) ·
 [`core-commands`](schemas/core-commands.schema.json) ·
-[`conformance-suite`](schemas/conformance-suite.schema.json)
+[`conformance-suite`](schemas/conformance-suite.schema.json) ·
+[`token-registry`](schemas/token-registry.schema.json)
 
-`specs/` — Normative specifications organized by tier
-`wos-spec/` — [Workflow Orchestration Standard](wos-spec/README.md): governed workflow, runtime, provenance, AI-oversight specs, and the Rust conformance/runtime-core work that composes with Formspec contracts
+`specs/` — Normative Formspec specifications organized by tier
+
+[`wos-spec/`](wos-spec/README.md) — **WOS (Workflow Orchestration Standard):** JSON-native governance for rights-impacting workflows — deontic constraints on agents, structured human oversight, provenance tiers, and conformance-checked Rust runtime crates. Composes with Formspec artifacts; execution stays on engines like Camunda or Temporal while WOS defines the protections that bind transitions and AI behavior.
+
+[`trellis/`](trellis/README.md) — **Trellis:** cross-cutting design workspace for the **shared respondent ledger** and related case lifecycle, privacy, sync, and crypto semantics where Formspec and WOS evolve together. Drafts and matrices here inform normative changes in `specs/` and `wos-spec/`. Heading-level navigation: [REFERENCE.md](trellis/REFERENCE.md).
+
 `registries/` — Extension registries (common: email, phone, currency, SSN, etc.)
 
 ### TypeScript Packages
@@ -203,7 +208,7 @@ Neither runtime imports or wraps the other. They deploy and test independently, 
 | `formspec-wasm` | WASM bindings (wasm-bindgen) — exposes all capabilities to TypeScript |
 | `formspec-py` | PyO3 bindings — exposes all capabilities to Python |
 
-~47,000 lines of Rust. 1,462 tests.
+~47,000 lines of Rust. 1,533 tests.
 
 ### Python — [`src/formspec/`](src/formspec/README.md)
 
@@ -226,7 +231,7 @@ Most spec logic has migrated to Rust and is called via PyO3 (`formspec._native`)
 | [`grant-application`](examples/grant-application/README.md) | 6-page federal grant form — all tiers exercised, FastAPI backend, dev tools |
 | [`uswds-grant`](examples/uswds-grant/) | Community development grant rendered with the USWDS adapter |
 | [`react-demo`](examples/react-demo/) | React integration using `formspec-react` hooks |
-| `refrences` | Cross-reference dashboard — fields, binds, FEL, shapes |
+| [`refrences`](examples/refrences/) | Cross-reference dashboard — fields, binds, FEL, shapes (example directory name) |
 
 ### Other
 
@@ -234,6 +239,8 @@ Most spec logic has migrated to Rust and is called via PyO3 (`formspec._native`)
 site/                           Formspec.org (Astro 5.0, Tailwind CSS v4)
 docs/                           Generated HTML specs and API reference (Pandoc, pdoc, TypeDoc)
 thoughts/                       ADRs, research, and design artifacts
+wos-spec/                       WOS specs, schemas, Rust runtime & conformance (see wos-spec/README.md)
+trellis/                        Joint ledger & provenance drafts for Formspec + WOS (see trellis/README.md)
 
 tests/
   unit/                         Pure logic unit tests (Python)
@@ -332,7 +339,7 @@ npm run docs:check         # Enforce doc/schema freshness gates
 make api-docs              # Generate Python + TypeScript API reference
 make docs                  # Full doc build (specs + API + HTML)
 
-cargo test --workspace     # Rust test suite (1,462 tests)
+cargo test --workspace     # Rust test suite (1,533 tests)
 python3 -m pytest tests/   # Python conformance suite
 npm run test:unit          # TypeScript unit tests (all packages)
 npm test                   # Playwright E2E (auto-starts dev server)
@@ -341,7 +348,7 @@ npm run test:all           # Everything (unit + E2E + Studio E2E)
 
 ## Roadmap
 
-- [x] **Rust shared kernel** — FEL runtime, assembler, path utils, schema validator, definition evaluator, 8-pass linter, changeset analysis (7 crates, ~47,000 lines, 1,462 tests)
+- [x] **Rust shared kernel** — FEL runtime, assembler, path utils, schema validator, definition evaluator, 8-pass linter, changeset analysis (7 crates, ~47,000 lines, 1,533 tests)
 - [x] **WASM wired into TypeScript** — `formspec-wasm` connected to the TypeScript engine via `wasm-bridge-runtime`. FEL evaluation, dependency extraction, analysis, and assembly run through Rust/WASM.
 - [x] **PyO3 wired into Python** — `formspec-py` connected to the Python package. FEL, linting, evaluation, mapping, registry, and changelog all run through Rust. Format adapters stay Python.
 - [x] **Companion specs** — Locale, Ontology, References, Screener, Assist, and Respondent Ledger specifications drafted with corresponding JSON Schemas.
