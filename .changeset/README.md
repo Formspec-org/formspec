@@ -5,3 +5,9 @@ with multi-package repos, or single-package repos to help you version and publis
 find the full documentation for it [in the readme](https://github.com/changesets/changesets)
 
 You can find the pre-existing configuration for this project in [the config file](./config.json).
+
+## npm releases (maintainers)
+
+Pushes to `main` run [.github/workflows/publish.yml](../.github/workflows/publish.yml) (Changesets → `npm run release`). Publishing uses **npm Trusted Publishing** (OIDC from GitHub Actions), not a long-lived `NPM_TOKEN`.
+
+**Adding a new `@formspec-org/*` workspace package:** before the first successful publish, open that package on [npmjs.com](https://www.npmjs.com/), go to **Package settings → Trusted publishing**, and connect **GitHub Actions** with repository `Formspec-org/formspec` and workflow file **`publish.yml`** (name must match exactly). Without this, the registry may return a misleading `E404` on publish. The workflow installs **npm ≥ 11.5.1** because Trusted Publishing requires that CLI version.
