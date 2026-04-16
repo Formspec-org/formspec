@@ -540,13 +540,18 @@ export const definitionItemsHandlers: Record<string, CommandHandler> = {
     // Rewrite path references across all artifacts
     rewriteAllPathReferences(state, path, newPath);
 
-    // Rename-specific: rewrite component tree bind references (key-based, not path-based)
+    // Rename-specific: rewrite component tree bind + definitionItemPath (Studio metadata).
+    // Reconcile matches bound nodes by bind + definitionItemPath; updating bind alone leaves
+    // a stale path so wrapper restore cannot splice the node back from newRoot.
     const tree = getEditableComponentDocument(state).tree as any;
     if (tree) {
       const queue = [tree];
       while (queue.length > 0) {
         const node = queue.shift()!;
         if (node.bind === oldKey) node.bind = newKey;
+        if (typeof node.definitionItemPath === 'string') {
+          node.definitionItemPath = rewritePathPrefix(node.definitionItemPath, path, newPath);
+        }
         if (node.children) queue.push(...node.children);
       }
     }
@@ -558,8 +563,8 @@ export const definitionItemsHandlers: Record<string, CommandHandler> = {
       delete themeItems[oldKey];
     }
 
-    // Page child bind keys are updated by the component tree BFS walk above.
-    // The reconciler (rebuildComponentTree: true) preserves updated _layout nodes.
+    // Page children and other layout-preserved nodes are updated by the BFS above so
+    // reconcile can match and re-splice them onto newRoot.
 
     return { rebuildComponentTree: true, newPath };
   },
