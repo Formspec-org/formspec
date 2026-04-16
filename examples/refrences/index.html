@@ -23,36 +23,9 @@
       --radius:             4px;
     }
 
-    /* ── Base form elements ── */
-    input, textarea, select {
-      display: block;
-      width: 100%;
-      padding: 0.5rem 0.625rem;
-      border: 1px solid var(--color-neutral-200);
-      border-radius: var(--radius);
-      font-family: var(--font);
-      font-size: 1rem;
-      color: var(--color-text);
-      background: #fff;
-      line-height: 1.5;
-    }
-    input:focus, textarea:focus, select:focus {
-      outline: 2px solid var(--color-primary);
-      outline-offset: 0;
-      border-color: var(--color-primary);
-    }
-    input[type="radio"], input[type="checkbox"] {
-      display: inline-block;
-      width: auto;
-      padding: 0;
-      border: none;
-      accent-color: var(--color-primary);
-    }
-    button {
-      font-family: var(--font);
-      font-size: 1rem;
-      cursor: pointer;
-    }
+    /* No global input/textarea/select/button rules — they cascade into <formspec-render> and fight
+       the default skin + USWDS adapter (usa-input, usa-button, grid layout). Shell controls use
+       explicit classes (.fixture-select, .action-btn, .example-tab, …). */
 
     body {
       font-family: var(--font);
@@ -184,6 +157,12 @@
     }
     .form-container formspec-render { display: block; }
 
+    /* USWDS adapter SCSS caps .formspec-wizard-panel at 32rem; use full width inside this shell. */
+    .live-form-frame .formspec-wizard-panel {
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+
     /* ── Example info bar ── */
     .example-info {
       display: flex;
@@ -290,16 +269,24 @@
 	    .action-btn.secondary { color: var(--color-neutral-700); }
 
 	    .fixture-select {
+	      display: inline-block;
 	      width: auto;
 	      min-width: 160px;
 	      padding: 7px 10px;
 	      font-size: 13px;
 	      font-weight: 600;
+	      font-family: var(--font);
+	      line-height: 1.5;
 	      border: 1px solid var(--color-neutral-200);
 	      border-radius: var(--radius);
 	      color: var(--color-primary-dark);
 	      background: #fff;
 	      cursor: pointer;
+	    }
+	    .fixture-select:focus {
+	      outline: 2px solid var(--color-primary);
+	      outline-offset: 0;
+	      border-color: var(--color-primary);
 	    }
 	    .fixture-select:hover { border-color: var(--color-primary); }
 
