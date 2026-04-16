@@ -92,6 +92,7 @@ export function App() {
 
             <main id="main-content">
                 <FormspecForm
+                    className="formspec-appearance-light"
                     definition={definition}
                     themeDocument={theme}
                     registryEntries={registry.entries}

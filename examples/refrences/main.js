@@ -260,6 +260,8 @@ async function loadExample(ex, fixture = null) {
 
     const formEl = document.createElement('formspec-render');
     formEl.id = 'form';
+    // Shell is light; pin skin so prefers-color-scheme: dark does not use default dark tokens on #f9f9f9 / white panels.
+    formEl.setAttribute('data-formspec-appearance', 'light');
 
     // Tabs — two visual sections: interactive (form + submit) vs read-only source JSON
     const tabs = document.createElement('div');

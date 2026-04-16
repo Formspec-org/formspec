@@ -135,8 +135,10 @@
       white-space: pre;
     }
 
+    /* Readable line length on small screens; use more width on large viewports (52rem felt ~“half the screen”). */
     .form-container {
-      max-width: 52rem;
+      width: min(100% - 2rem, 72rem);
+      max-width: 72rem;
       margin: 24px auto;
       padding: 32px;
       background: #fff;
@@ -144,6 +146,12 @@
       border-radius: var(--formspec-border-radius, 0);
     }
     formspec-render { display: block; }
+
+    /* Adapter SCSS caps wizard step body at 32rem — stretch to this demo’s card so fields use full width. */
+    .form-container .formspec-wizard-panel {
+      max-width: 100%;
+      box-sizing: border-box;
+    }
 
     .demo-banner {
       display: flex;
@@ -215,7 +223,8 @@
 </div>
 
 <main class="form-container">
-  <formspec-render></formspec-render>
+  <!-- White panel: force light appearance — avoids default dark skin when OS is in dark mode. -->
+  <formspec-render data-formspec-appearance="light"></formspec-render>
 </main>
 
 <script type="module" src="./main.js"></script>

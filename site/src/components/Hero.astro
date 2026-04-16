@@ -116,7 +116,8 @@ import Newsletter from "./Newsletter.astro";
               <div class="preview-loading-spinner"></div>
               <span>Rendering...</span>
             </div>
-            <formspec-render id="hero-form"></formspec-render>
+            <!-- Light preview pane: force light skin — otherwise prefers-color-scheme: dark paints cream text on #f0f0ee. -->
+            <formspec-render id="hero-form" data-formspec-appearance="light"></formspec-render>
           </div>
         </div>
 
