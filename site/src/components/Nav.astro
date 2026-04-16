@@ -153,6 +153,10 @@ const links = [
     flex: 1;
   }
 
+  .nav-links > li {
+    flex-shrink: 0;
+  }
+
   .nav-link {
     font-size: 0.875rem;
     font-weight: 500;
@@ -161,6 +165,7 @@ const links = [
     padding: 0.375rem 0.625rem;
     border-radius: var(--radius-sm);
     transition: color 0.15s, background-color 0.15s;
+    white-space: nowrap;
   }
 
   .nav-link:hover,
@@ -257,7 +262,8 @@ const links = [
     font-weight: 600;
   }
 
-  @media (max-width: 768px) {
+  /* Match breakpoint to real width: logo + 7 links + GitHub CTA needs ~1000px+ */
+  @media (max-width: 1023px) {
     .nav-links,
     .nav-cta {
       display: none;
@@ -268,7 +274,7 @@ const links = [
     }
   }
 
-  @media (min-width: 769px) {
+  @media (min-width: 1024px) {
     .mobile-nav {
       display: none !important;
     }
