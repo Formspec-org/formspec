@@ -1,0 +1,143 @@
+{
+  "$formspecTheme": "1.0",
+  "version": "1.0.0",
+  "name": "grant-application-theme-pdf",
+  "title": "Grant Application Theme (PDF)",
+  "description": "Print-first static rendering theme for PDF generation.",
+  "platform": "pdf",
+  "targetDefinition": {
+    "url": "https://example.gov/forms/grant-application",
+    "compatibleVersions": ">=1.0.0 <2.0.0"
+  },
+  "tokens": {
+    "color.text": "#111111",
+    "color.muted": "#444444",
+    "color.rule": "#222222",
+    "space.xs": "2mm",
+    "space.sm": "3mm",
+    "space.md": "5mm",
+    "space.lg": "8mm",
+    "type.fontFamily": "Times New Roman, serif",
+    "type.baseSize": "11pt",
+    "type.lineHeight": "1.25",
+    "border.rule": "1px solid #222222",
+    "pdf.page.margin": "12mm",
+    "pdf.page.numberSize": "9pt"
+  },
+  "defaults": {
+    "widget": "paragraph",
+    "labelPosition": "top",
+    "style": {
+      "fontFamily": "$token.type.fontFamily",
+      "fontSize": "$token.type.baseSize",
+      "lineHeight": "$token.type.lineHeight",
+      "color": "$token.color.text",
+      "marginBottom": "$token.space.sm"
+    }
+  },
+  "selectors": [
+    {
+      "match": { "type": "group" },
+      "apply": {
+        "widget": "section",
+        "style": {
+          "borderBottom": "$token.border.rule",
+          "paddingBottom": "$token.space.sm",
+          "marginBottom": "$token.space.md"
+        }
+      }
+    },
+    {
+      "match": { "type": "field" },
+      "apply": {
+        "widget": "paragraph",
+        "style": {
+          "marginBottom": "$token.space.sm"
+        }
+      }
+    },
+    {
+      "match": { "dataType": "boolean" },
+      "apply": {
+        "widget": "paragraph",
+        "widgetConfig": {
+          "trueText": "Yes",
+          "falseText": "No"
+        }
+      }
+    },
+    {
+      "match": { "dataType": "money" },
+      "apply": {
+        "widget": "paragraph",
+        "style": {
+          "fontVariantNumeric": "tabular-nums"
+        }
+      }
+    },
+    {
+      "match": { "type": "display" },
+      "apply": {
+        "widget": "heading",
+        "style": {
+          "fontWeight": "700",
+          "marginBottom": "$token.space.xs"
+        }
+      }
+    }
+  ],
+  "items": {
+    "applicantInfo.ein": {
+      "style": {
+        "fontFamily": "Courier New, monospace",
+        "letterSpacing": "0.03em"
+      }
+    },
+    "projectNarrative.abstract": {
+      "style": {
+        "minHeight": "24mm",
+        "whiteSpace": "pre-wrap"
+      }
+    },
+    "budget.requestedAmount": {
+      "style": {
+        "fontWeight": "700"
+      }
+    }
+  },
+  "pages": [
+    {
+      "id": "applicant-info-pdf",
+      "title": "Applicant Information",
+      "description": "Applicant identity and contact profile for the grant record.",
+      "regions": [
+        { "key": "applicantInfo", "span": 12 }
+      ]
+    },
+    {
+      "id": "project-budget-pdf",
+      "title": "Project and Budget",
+      "description": "Narrative, dates, and requested funding details.",
+      "regions": [
+        { "key": "projectNarrative", "span": 12 },
+        { "key": "budget", "span": 12 }
+      ]
+    },
+    {
+      "id": "review-submit-pdf",
+      "title": "Review and Certification",
+      "description": "Remaining sections and supporting documents.",
+      "regions": [
+        { "key": "subcontractors", "span": 12 },
+        { "key": "attachments", "span": 12 }
+      ]
+    }
+  ],
+  "extensions": {
+    "x-pdf": {
+      "paperSize": "letter",
+      "orientation": "portrait",
+      "includePageNumbers": true
+    }
+  }
+}

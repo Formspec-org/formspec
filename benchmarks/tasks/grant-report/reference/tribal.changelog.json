@@ -1,0 +1,73 @@
+{
+    "$formspecChangelog": "1.0",
+    "definitionUrl": "https://acf.hhs.gov/formspec/csbg/tribal-long",
+    "fromVersion": "3.0.0",
+    "toVersion": "3.0.4",
+    "semverImpact": "patch",
+    "summary": "Long Form adds a Demographics section with population, sex breakdown, and employment status data. All changes are additive. Short Form responses can be migrated to Long Form with null demographics.",
+    "changes": [
+        {
+            "type": "added",
+            "target": "item",
+            "path": "items.demographics",
+            "impact": "compatible",
+            "description": "New top-level demographics group with totalServed, totalServedOver18, sexBreakdown, and employmentStatus sub-groups"
+        },
+        {
+            "type": "added",
+            "target": "item",
+            "path": "items.demographics.children.totalServed",
+            "impact": "compatible",
+            "description": "Total number of people served (integer, required)"
+        },
+        {
+            "type": "added",
+            "target": "item",
+            "path": "items.demographics.children.totalServedOver18",
+            "impact": "compatible",
+            "description": "Total number of people served over 18 (integer, required)"
+        },
+        {
+            "type": "added",
+            "target": "item",
+            "path": "items.demographics.children.sexBreakdown",
+            "impact": "compatible",
+            "description": "Group containing male, female, and auto-calculated sexTotal fields"
+        },
+        {
+            "type": "added",
+            "target": "item",
+            "path": "items.demographics.children.employmentStatus",
+            "impact": "compatible",
+            "description": "Group containing 8 employment status breakdowns and auto-calculated employmentTotal"
+        },
+        {
+            "type": "added",
+            "target": "bind",
+            "path": "binds.demographics.sexBreakdown.sexTotal.calculate",
+            "impact": "compatible",
+            "description": "Calculate bind: sum of male + female"
+        },
+        {
+            "type": "added",
+            "target": "bind",
+            "path": "binds.demographics.employmentStatus.employmentTotal.calculate",
+            "impact": "compatible",
+            "description": "Calculate bind: sum of all 8 employment status categories"
+        },
+        {
+            "type": "added",
+            "target": "shape",
+            "path": "shapes.sexBreakdownMatchesTotal",
+            "impact": "compatible",
+            "description": "Submit-timing shape: sex breakdown total must equal totalServedOver18"
+        },
+        {
+            "type": "added",
+            "target": "shape",
+            "path": "shapes.employmentMatchesTotal",
+            "impact": "compatible",
+            "description": "Submit-timing shape: employment status total must equal totalServedOver18"
+        }
+    ]
+}

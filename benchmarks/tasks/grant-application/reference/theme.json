@@ -1,0 +1,142 @@
+{
+  "$formspecTheme": "1.0",
+  "version": "1.0.0",
+  "name": "grant-application-theme",
+  "title": "Grant Application Theme",
+  "platform": "web",
+  "targetDefinition": {
+    "url": "https://example.gov/forms/grant-application",
+    "compatibleVersions": ">=1.0.0 <2.0.0"
+  },
+  "stylesheets": [
+    "/packages/formspec-webcomponent/examples/formspec-uswds-bridge.css",
+    "/examples/grant-application/grant-bridge.css"
+  ],
+  "tokens": {
+    "color.primary":       "#005ea2",
+    "color.primaryDark":   "#1a4480",
+    "color.primaryLight":  "#d9e8f6",
+    "color.success":       "#00a91c",
+    "color.warning":       "#ffbe2e",
+    "color.error":         "#e52207",
+    "color.neutral50":     "#f9f9f9",
+    "color.neutral100":    "#f0f0f0",
+    "color.neutral200":    "#dfe1e2",
+    "color.neutral400":    "#a9aeb1",
+    "color.neutral700":    "#565c65",
+    "color.text":          "#1b1b1b",
+    "color.textMuted":     "#71767a",
+    "space.xs":            "4px",
+    "space.sm":            "8px",
+    "space.md":            "16px",
+    "space.lg":            "24px",
+    "space.xl":            "40px",
+    "type.fontFamily":     "Source Sans Pro Web, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    "type.baseSize":       "16px",
+    "type.lineHeight":     "1.5",
+    "radius.sm":           "4px",
+    "radius.md":           "8px",
+    "elevation.sm":        "0 1px 3px rgba(0,0,0,0.12)",
+    "elevation.md":        "0 4px 6px rgba(0,0,0,0.15)",
+    "elevation.lg":        "0 10px 20px rgba(0,0,0,0.19)",
+    "focusRing":           "0 0 0 0.25rem #2491ff",
+    "grid.columns":        12,
+    "uswds.formGroup":     "usa-form-group",
+    "uswds.label":         "usa-label",
+    "uswds.input":         "usa-input",
+    "uswds.hint":          "usa-hint",
+    "uswds.error":         "usa-error-message"
+  },
+  "defaults": {
+    "labelPosition": "top",
+    "widgetConfig": {
+      "x-classes": {
+        "root":    "$token.uswds.formGroup",
+        "label":   "$token.uswds.label",
+        "control": "$token.uswds.input",
+        "hint":    "$token.uswds.hint",
+        "error":   "$token.uswds.error"
+      }
+    }
+  },
+  "selectors": [
+    {
+      "match": { "dataType": "money" },
+      "apply": { "widget": "MoneyInput" }
+    },
+    {
+      "match": { "dataType": "choice" },
+      "apply": {
+        "widget": "RadioGroup",
+        "widgetConfig": {
+          "x-classes": {
+            "control": null
+          }
+        }
+      }
+    },
+    {
+      "match": { "dataType": "boolean" },
+      "apply": {
+        "widget": "Toggle",
+        "labelPosition": "start",
+        "widgetConfig": {
+          "x-classes": {
+            "control": null,
+            "label":   null
+          }
+        }
+      }
+    },
+    {
+      "match": { "type": "group" },
+      "apply": {
+        "style": {
+          "marginBottom": "$token.space.lg",
+          "borderLeft": "3px solid $token.color.primary"
+        }
+      }
+    },
+    {
+      "match": { "type": "field", "dataType": "attachment" },
+      "apply": {
+        "widget": "FileUpload",
+        "labelPosition": "hidden",
+        "fallback": ["camera", "fileUpload"],
+        "cssClass": "attachment-field",
+        "accessibility": {
+          "liveRegion": "polite"
+        }
+      }
+    }
+  ],
+  "items": {
+    "applicantInfo.orgName": {
+      "style": {
+        "fontWeight": "bold",
+        "borderBottom": "2px solid $token.color.primary"
+      }
+    },
+    "applicantInfo.ein": {
+      "style": {
+        "fontFamily": "monospace"
+      },
+      "cssClass": "ein-field"
+    },
+    "projectNarrative.abstract": {
+      "style": {
+        "minHeight": "$token.space.xl"
+      },
+      "accessibility": {
+        "description": "Enter a detailed project abstract",
+        "liveRegion": "polite"
+      }
+    }
+  },
+  "breakpoints": {
+    "sm": 480,
+    "md": 768,
+    "lg": 1024,
+    "xl": 1280
+  }
+}

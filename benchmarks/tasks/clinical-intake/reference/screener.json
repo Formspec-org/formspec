@@ -1,0 +1,72 @@
+{
+  "$formspecScreener": "1.0",
+  "url": "https://example.org/forms/clinical-intake/screener",
+  "version": "1.0.0",
+  "title": "Clinical Intake Survey \u2014 Screener",
+  "items": [
+    {
+      "key": "sChiefComplaint",
+      "type": "field",
+      "dataType": "choice",
+      "label": "What is the primary reason for your visit?",
+      "options": [
+        {
+          "value": "acute",
+          "label": "Acute illness or injury"
+        },
+        {
+          "value": "chronic",
+          "label": "Chronic condition management"
+        },
+        {
+          "value": "preventive",
+          "label": "Preventive care / checkup"
+        },
+        {
+          "value": "emergency",
+          "label": "Emergency symptoms"
+        }
+      ]
+    },
+    {
+      "key": "sPainLevel",
+      "type": "field",
+      "dataType": "integer",
+      "label": "Current pain level (0-10)",
+      "hint": "0 = no pain, 10 = worst possible pain"
+    }
+  ],
+  "binds": [
+    {
+      "path": "sChiefComplaint",
+      "required": "true"
+    },
+    {
+      "path": "sPainLevel",
+      "constraint": "$ >= 0 and $ <= 10"
+    }
+  ],
+  "evaluation": [
+    {
+      "id": "routing",
+      "strategy": "first-match",
+      "routes": [
+        {
+          "condition": "$sChiefComplaint = 'emergency' or $sPainLevel >= 8",
+          "target": "https://formspec.org/examples/emergency-intake",
+          "label": "Route to Emergency Intake"
+        },
+        {
+          "condition": "$sChiefComplaint = 'acute' and $sPainLevel >= 5",
+          "target": "https://formspec.org/examples/urgent-intake",
+          "label": "Route to Urgent Care Intake"
+        },
+        {
+          "condition": "true",
+          "target": "https://formspec.org/examples/clinical-intake",
+          "label": "Continue to Standard Intake"
+        }
+      ]
+    }
+  ]
+}

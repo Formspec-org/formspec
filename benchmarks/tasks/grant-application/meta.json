@@ -1,0 +1,20 @@
+{
+  "id": "grant-application",
+  "difficulty": "expert",
+  "feature_tags": [
+    "wizard",
+    "screener",
+    "fragments",
+    "repeats",
+    "calculations",
+    "shapes",
+    "changelog",
+    "migrations",
+    "mapping-json",
+    "mapping-csv",
+    "mapping-xml",
+    "print-theme",
+    "registry"
+  ],
+  "tiers_covered": ["core", "fel", "theme", "component", "mapping", "registry"]
+}

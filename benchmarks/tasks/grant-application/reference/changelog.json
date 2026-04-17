@@ -1,0 +1,116 @@
+{
+  "$schema": "https://formspec.org/schemas/changelog/1.0",
+  "$formspecChangelog": "1.0",
+  "definitionUrl": "https://example.gov/forms/grant-application",
+  "fromVersion": "1.0.0",
+  "toVersion": "1.1.0",
+  "generatedAt": "2026-02-28T16:30:00Z",
+  "semverImpact": "minor",
+  "summary": "Adds collaboration planning, reorganizes option sets, updates external sources, and records migration guidance.",
+  "changes": [
+    {
+      "type": "added",
+      "target": "item",
+      "path": "items.projectNarrative.collaborationPlan",
+      "key": "collaborationPlan",
+      "impact": "compatible",
+      "description": "Added optional collaboration plan text field.",
+      "after": {
+        "key": "collaborationPlan",
+        "type": "field",
+        "dataType": "string",
+        "label": "Collaboration Plan"
+      },
+      "migrationHint": "preserve"
+    },
+    {
+      "type": "removed",
+      "target": "bind",
+      "path": "budget.legacyTotal",
+      "impact": "breaking",
+      "description": "Removed legacy total calculation bind.",
+      "before": {
+        "path": "budget.legacyTotal",
+        "calculate": "$lineItemsSubtotal + $legacyCarry"
+      },
+      "after": {
+        "note": "Bind removed in favor of computed requestedAmount"
+      },
+      "migrationHint": "drop"
+    },
+    {
+      "type": "modified",
+      "target": "shape",
+      "path": "shapes.einFormat",
+      "impact": "cosmetic",
+      "description": "Updated EIN validation message wording.",
+      "before": {
+        "message": "Enter EIN as 12-3456789"
+      },
+      "after": {
+        "message": "Use EIN format 12-3456789"
+      }
+    },
+    {
+      "type": "moved",
+      "target": "optionSet",
+      "path": "optionSets.programFocusAreas",
+      "impact": "compatible",
+      "description": "Moved focus area options under new programFocusAreas set.",
+      "before": {
+        "path": "optionSets.focusAreas"
+      },
+      "after": {
+        "path": "optionSets.programFocusAreas"
+      },
+      "migrationHint": "preserve"
+    },
+    {
+      "type": "renamed",
+      "target": "dataSource",
+      "path": "dataSources.organizationProfile",
+      "impact": "breaking",
+      "description": "Renamed agency source to organizationProfile.",
+      "before": {
+        "key": "agencyData"
+      },
+      "after": {
+        "key": "organizationProfile"
+      },
+      "migrationHint": "$old.agencyData"
+    },
+    {
+      "type": "modified",
+      "target": "screener",
+      "path": "screener.routes[0]",
+      "impact": "compatible",
+      "description": "Expanded screener route to include fiscal sponsor path.",
+      "before": {
+        "target": "budget"
+      },
+      "after": {
+        "target": "fiscalSponsor"
+      }
+    },
+    {
+      "type": "added",
+      "target": "migration",
+      "path": "migrations.from.1.0.0",
+      "impact": "compatible",
+      "description": "Added migration descriptor for 1.0.0 responses.",
+      "after": {
+        "description": "Carry forward unchanged values and map renamed external source"
+      },
+      "migrationHint": "preserve"
+    },
+    {
+      "type": "modified",
+      "target": "metadata",
+      "path": "title",
+      "impact": "cosmetic",
+      "description": "Clarified form title for applicants.",
+      "before": "Grant Application",
+      "after": "Grant Application (FY 2026)"
+    }
+  ]
+}

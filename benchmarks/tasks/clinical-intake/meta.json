@@ -1,0 +1,6 @@
+{
+  "id": "clinical-intake",
+  "difficulty": "intermediate",
+  "feature_tags": ["screener", "nested-repeats", "instances", "wizard", "conditional-relevance", "keep-on-hide"],
+  "tiers_covered": ["core", "fel", "theme", "component"]
+}

@@ -1,0 +1,6 @@
+{
+  "id": "invoice",
+  "difficulty": "novice",
+  "feature_tags": ["repeats", "calculations", "money", "shapes", "csv-export"],
+  "tiers_covered": ["core", "fel", "theme", "component"]
+}

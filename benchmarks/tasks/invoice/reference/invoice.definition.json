@@ -1,0 +1,274 @@
+{
+  "$formspec": "1.0",
+  "url": "https://formspec.org/examples/invoice",
+  "version": "1.0.0",
+  "status": "active",
+  "title": "Invoice",
+  "name": "invoice",
+  "description": "Line-item invoice with repeat groups and calculated totals (subtotal, tax, discount, grand total).",
+  "extensions": {
+    "x-formspec-common": {
+      "registryUrl": "https://formspec.org/registries/formspec-common.registry.json",
+      "version": "1.0.0"
+    }
+  },
+  "formPresentation": {
+    "pageMode": "single",
+    "labelPosition": "top",
+    "density": "comfortable",
+    "defaultCurrency": "USD"
+  },
+  "items": [
+    {
+      "key": "header",
+      "type": "group",
+      "label": "Invoice Details",
+      "children": [
+        {
+          "key": "invoiceNumber",
+          "type": "field",
+          "dataType": "string",
+          "label": "Invoice Number",
+          "hint": "Auto-generated if left blank"
+        },
+        {
+          "key": "invoiceDate",
+          "type": "field",
+          "dataType": "date",
+          "label": "Invoice Date",
+          "initialValue": "=today()"
+        },
+        {
+          "key": "dueDate",
+          "type": "field",
+          "dataType": "date",
+          "label": "Due Date",
+          "hint": "Payment due by this date"
+        },
+        {
+          "key": "customerName",
+          "type": "field",
+          "dataType": "string",
+          "label": "Customer Name"
+        },
+        {
+          "key": "customerEmail",
+          "type": "field",
+          "dataType": "string",
+          "label": "Customer Email",
+          "extensions": {
+            "x-formspec-email": true
+          }
+        }
+      ]
+    },
+    {
+      "key": "lineItems",
+      "type": "group",
+      "label": "Line Items",
+      "repeatable": true,
+      "minRepeat": 1,
+      "maxRepeat": 50,
+      "children": [
+        {
+          "key": "itemDescription",
+          "type": "field",
+          "dataType": "string",
+          "label": "Description"
+        },
+        {
+          "key": "quantity",
+          "type": "field",
+          "dataType": "integer",
+          "label": "Qty",
+          "initialValue": 1
+        },
+        {
+          "key": "unitPrice",
+          "type": "field",
+          "dataType": "money",
+          "label": "Unit Price",
+          "currency": "USD"
+        },
+        {
+          "key": "lineTotal",
+          "type": "field",
+          "dataType": "money",
+          "label": "Line Total",
+          "currency": "USD"
+        }
+      ]
+    },
+    {
+      "key": "totals",
+      "type": "group",
+      "label": "Totals",
+      "children": [
+        {
+          "key": "subtotal",
+          "type": "field",
+          "dataType": "money",
+          "label": "Subtotal",
+          "currency": "USD"
+        },
+        {
+          "key": "taxRate",
+          "type": "field",
+          "dataType": "decimal",
+          "label": "Tax Rate",
+          "suffix": "%",
+          "initialValue": 0,
+          "extensions": {
+            "x-formspec-percentage": true
+          }
+        },
+        {
+          "key": "taxAmount",
+          "type": "field",
+          "dataType": "money",
+          "label": "Tax Amount",
+          "currency": "USD"
+        },
+        {
+          "key": "discountPercent",
+          "type": "field",
+          "dataType": "decimal",
+          "label": "Discount",
+          "suffix": "%",
+          "initialValue": 0,
+          "extensions": {
+            "x-formspec-percentage": true
+          }
+        },
+        {
+          "key": "discountAmount",
+          "type": "field",
+          "dataType": "money",
+          "label": "Discount Amount",
+          "currency": "USD"
+        },
+        {
+          "key": "grandTotal",
+          "type": "field",
+          "dataType": "money",
+          "label": "Grand Total",
+          "currency": "USD"
+        }
+      ]
+    },
+    {
+      "key": "notes",
+      "type": "field",
+      "dataType": "text",
+      "label": "Notes",
+      "hint": "Optional memo for the customer"
+    }
+  ],
+  "binds": [
+    {
+      "path": "header.invoiceNumber",
+      "whitespace": "trim"
+    },
+    {
+      "path": "header.customerName",
+      "whitespace": "trim"
+    },
+    {
+      "path": "header.customerEmail",
+      "whitespace": "trim"
+    },
+    {
+      "path": "header.invoiceDate",
+      "required": "true"
+    },
+    {
+      "path": "header.customerName",
+      "required": "true"
+    },
+    {
+      "path": "lineItems[*].itemDescription",
+      "required": "true"
+    },
+    {
+      "path": "lineItems[*].quantity",
+      "constraint": "isNull($quantity) or $quantity >= 0",
+      "constraintMessage": "Quantity must not be negative."
+    },
+    {
+      "path": "lineItems[*].unitPrice",
+      "constraint": "isNull($unitPrice) or moneyAmount($unitPrice) >= 0",
+      "constraintMessage": "Unit price must not be negative."
+    },
+    {
+      "path": "lineItems[*].lineTotal",
+      "calculate": "if isNull($quantity) or isNull($unitPrice) then null else money(moneyAmount($unitPrice) * $quantity, moneyCurrency($unitPrice))",
+      "readonly": "true",
+      "disabledDisplay": "protected"
+    },
+    {
+      "path": "totals.subtotal",
+      "calculate": "coalesce(moneySum($lineItems[*].lineTotal), money(0, 'USD'))",
+      "readonly": "true",
+      "disabledDisplay": "protected"
+    },
+    {
+      "path": "totals.taxRate",
+      "constraint": "isNull($) or ($ >= 0 and $ <= 100)",
+      "constraintMessage": "Tax rate must be between 0 and 100."
+    },
+    {
+      "path": "totals.taxAmount",
+      "calculate": "money(moneyAmount($totals.subtotal) * ($totals.taxRate ?? 0) / 100, moneyCurrency($totals.subtotal))",
+      "readonly": "true",
+      "disabledDisplay": "protected"
+    },
+    {
+      "path": "totals.discountPercent",
+      "constraint": "isNull($) or ($ >= 0 and $ <= 100)",
+      "constraintMessage": "Discount must be between 0 and 100."
+    },
+    {
+      "path": "totals.discountAmount",
+      "calculate": "money(moneyAmount($totals.subtotal) * ($totals.discountPercent ?? 0) / 100, moneyCurrency($totals.subtotal))",
+      "readonly": "true",
+      "disabledDisplay": "protected"
+    },
+    {
+      "path": "totals.grandTotal",
+      "calculate": "money( moneyAmount($totals.subtotal) + moneyAmount($totals.taxAmount ?? money(0, moneyCurrency($totals.subtotal))) - moneyAmount($totals.discountAmount ?? money(0, moneyCurrency($totals.subtotal))), moneyCurrency($totals.subtotal) )",
+      "readonly": "true",
+      "disabledDisplay": "protected"
+    },
+    {
+      "path": "header.dueDate",
+      "constraint": "isNull($) or isNull($header.invoiceDate) or $ >= $header.invoiceDate",
+      "constraintMessage": "Due date must be on or after the invoice date."
+    }
+  ],
+  "shapes": [
+    {
+      "id": "discountNotAboveSubtotal",
+      "target": "totals.discountAmount",
+      "severity": "error",
+      "constraint": "moneyAmount($totals.discountAmount) <= moneyAmount($totals.subtotal)",
+      "message": "Discount amount cannot exceed subtotal.",
+      "code": "DISCOUNT_EXCEEDS_SUBTOTAL"
+    },
+    {
+      "id": "grandTotalNonNegative",
+      "target": "totals.grandTotal",
+      "severity": "warning",
+      "constraint": "moneyAmount($totals.grandTotal) >= 0",
+      "message": "Grand total is negative. Check discount and line items.",
+      "code": "NEGATIVE_GRAND_TOTAL"
+    },
+    {
+      "id": "dueDateWithinYear",
+      "target": "header.dueDate",
+      "severity": "warning",
+      "constraint": "isNull($header.dueDate) or isNull($header.invoiceDate) or dateDiff(date($header.dueDate), date($header.invoiceDate), 'days') <= 365",
+      "message": "Due date is more than a year after the invoice date.",
+      "code": "DUE_DATE_FAR"
+    }
+  ]
+}

@@ -1,0 +1,210 @@
+{
+  "$formspecComponent": "1.0",
+  "version": "1.0.0",
+  "name": "clinical-intake-component",
+  "title": "Clinical Intake Layout",
+  "targetDefinition": {
+    "url": "https://formspec.org/examples/clinical-intake",
+    "compatibleVersions": ">=1.0.0 <2.0.0"
+  },
+  "tree": {
+    "component": "Stack",
+    "children": [
+      {
+        "component": "Page",
+        "title": "Patient Information",
+        "children": [
+          {
+            "component": "Card",
+            "title": "Demographics",
+            "children": [
+              {
+                "component": "Alert",
+                "severity": "info",
+                "text": "Some fields are pre-populated from your medical record. Contact the front desk to make changes."
+              },
+              {
+                "component": "Grid",
+                "columns": 2,
+                "gap": "16px",
+                "children": [
+                  { "component": "TextInput", "bind": "patient.firstName" },
+                  { "component": "TextInput", "bind": "patient.lastName" },
+                  { "component": "DatePicker", "bind": "patient.dob" },
+                  { "component": "NumberInput", "bind": "patient.age", "step": 1, "min": 0, "max": 130 },
+                  { "component": "Select", "bind": "patient.sex" },
+                  { "component": "Spacer" }
+                ]
+              }
+            ]
+          },
+          {
+            "component": "Card",
+            "title": "Contact & Insurance",
+            "children": [
+              {
+                "component": "Grid",
+                "columns": 2,
+                "gap": "16px",
+                "children": [
+                  { "component": "TextInput", "bind": "patient.phone" },
+                  { "component": "TextInput", "bind": "patient.email" },
+                  { "component": "TextInput", "bind": "patient.insuranceMemberId" },
+                  { "component": "FileUpload", "bind": "patient.insuranceCard" }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "component": "Page",
+        "title": "Current Visit",
+        "children": [
+          { "component": "CheckboxGroup", "bind": "currentVisit.symptoms", "columns": 2 },
+          {
+            "component": "TextInput",
+            "bind": "currentVisit.otherSymptoms",
+            "maxLines": 3,
+            "when": "selected($currentVisit.symptoms, 'other')"
+          },
+          {
+            "component": "Grid",
+            "columns": 2,
+            "gap": "16px",
+            "children": [
+              { "component": "DatePicker", "bind": "currentVisit.onsetDate" },
+              { "component": "DatePicker", "bind": "currentVisit.onsetTime" }
+            ]
+          },
+          { "component": "DatePicker", "bind": "currentVisit.appointmentDateTime", "showTime": true },
+          { "component": "Select", "bind": "currentVisit.provider", "searchable": true, "placeholder": "Select a clinic type" }
+        ]
+      },
+      {
+        "component": "Page",
+        "title": "Medical History",
+        "children": [
+          {
+            "component": "Card",
+            "title": "Allergies",
+            "children": [
+              { "component": "Toggle", "bind": "medicalHistory.hasAllergies", "onLabel": "Yes", "offLabel": "No" },
+              {
+                "component": "TextInput",
+                "bind": "medicalHistory.allergies",
+                "maxLines": 3,
+                "when": "$medicalHistory.hasAllergies = true"
+              }
+            ]
+          },
+          {
+            "component": "Card",
+            "title": "Active Medical Conditions",
+            "children": [
+              {
+                "component": "Accordion",
+                "bind": "medicalHistory.conditions",
+                "allowMultiple": true,
+                "defaultOpen": 0,
+                "labels": ["Condition"],
+                "children": [
+                  {
+                    "component": "Card",
+                    "title": "Condition",
+                    "children": [
+                      {
+                        "component": "Grid",
+                        "columns": 2,
+                        "gap": "16px",
+                        "children": [
+                          { "component": "TextInput", "bind": "conditionName" },
+                          { "component": "DatePicker", "bind": "diagnosedDate" },
+                          { "component": "Select", "bind": "severity" },
+                          { "component": "NumberInput", "bind": "condMedCount", "step": 1, "min": 0 }
+                        ]
+                      },
+                      {
+                        "component": "Divider",
+                        "label": "Medications"
+                      },
+                      {
+                        "component": "DataTable",
+                        "bind": "medications",
+                        "allowAdd": true,
+                        "allowRemove": true,
+                        "showRowNumbers": true,
+                        "columns": [
+                          { "header": "Medication", "bind": "medDrugName" },
+                          { "header": "Dosage", "bind": "medDosage" },
+                          { "header": "Frequency", "bind": "medFrequency" },
+                          { "header": "Started", "bind": "medStartDate" }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "component": "Page",
+        "title": "Summary",
+        "children": [
+          {
+            "component": "Card",
+            "title": "Assessment",
+            "children": [
+              {
+                "component": "Grid",
+                "columns": 3,
+                "gap": "16px",
+                "children": [
+                  { "component": "NumberInput", "bind": "assessment.totalConditions" },
+                  { "component": "NumberInput", "bind": "assessment.severeConditionCount" },
+                  { "component": "NumberInput", "bind": "assessment.totalMedications" }
+                ]
+              },
+              {
+                "component": "Grid",
+                "columns": 2,
+                "gap": "16px",
+                "children": [
+                  { "component": "NumberInput", "bind": "assessment.symptomDuration" },
+                  { "component": "TextInput", "bind": "assessment.maskedInsuranceId" }
+                ]
+              },
+              {
+                "component": "Alert",
+                "severity": "info",
+                "text": "This summary is computed from your entries."
+              }
+            ]
+          },
+          {
+            "component": "Card",
+            "title": "Review & Submit",
+            "children": [
+              {
+                "component": "ValidationSummary",
+                "source": "live",
+                "mode": "submit",
+                "showFieldErrors": true,
+                "jumpLinks": true
+              },
+              {
+                "component": "SubmitButton",
+                "label": "Submit Intake",
+                "mode": "submit",
+                "emitEvent": true,
+                "pendingLabel": "Submitting..."
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
