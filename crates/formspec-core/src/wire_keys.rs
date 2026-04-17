@@ -70,9 +70,20 @@ pub fn evaluation_batch_keys(style: JsonWireStyle) -> (&'static str, &'static st
     }
 }
 
+/// Envelope marker field name for changelog documents.
+/// Identical across wire styles — JSON envelope markers (`$formspec*`) are
+/// never translated to snake_case, they're document-type discriminators
+/// defined by the schema.
+pub const CHANGELOG_MARKER_FIELD: &str = "$formspecChangelog";
+
+/// Value required by `changelog.schema.json` for the marker field (`const: "1.0"`).
+pub const CHANGELOG_MARKER_VERSION: &str = "1.0";
+
 /// Top-level changelog object keys for [`crate::json_artifacts::changelog_to_json_value`].
 #[allow(missing_docs)]
 pub struct ChangelogRootKeys {
+    pub marker: &'static str,
+    pub marker_version: &'static str,
     pub definition_url: &'static str,
     pub from_version: &'static str,
     pub to_version: &'static str,
@@ -83,12 +94,16 @@ pub struct ChangelogRootKeys {
 pub fn changelog_root_keys(style: JsonWireStyle) -> ChangelogRootKeys {
     match style {
         JsonWireStyle::JsCamel => ChangelogRootKeys {
+            marker: CHANGELOG_MARKER_FIELD,
+            marker_version: CHANGELOG_MARKER_VERSION,
             definition_url: "definitionUrl",
             from_version: "fromVersion",
             to_version: "toVersion",
             semver_impact: "semverImpact",
         },
         JsonWireStyle::PythonSnake => ChangelogRootKeys {
+            marker: CHANGELOG_MARKER_FIELD,
+            marker_version: CHANGELOG_MARKER_VERSION,
             definition_url: "definition_url",
             from_version: "from_version",
             to_version: "to_version",

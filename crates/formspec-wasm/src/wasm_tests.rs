@@ -22,7 +22,8 @@ mod tests {
     use crate::registry::find_registry_entry_inner;
     use crate::value_coerce::coerce_field_value_inner;
     use formspec_core::{
-        parse_coerce_type, parse_mapping_document_from_value as parse_mapping_document_inner,
+        DocumentType, detect_document_type, parse_coerce_type,
+        parse_mapping_document_from_value as parse_mapping_document_inner,
         parse_mapping_rules_from_value as parse_mapping_rules_inner,
     };
 
@@ -366,6 +367,12 @@ mod tests {
             generate_changelog_inner(&old_def, &new_def, "https://example.com/form").unwrap();
         let val: Value = serde_json::from_str(&result).unwrap();
 
+        // Envelope marker — required for document-type detection & schema validation.
+        assert_eq!(
+            val["$formspecChangelog"], "1.0",
+            "missing or wrong '$formspecChangelog' envelope marker"
+        );
+
         assert_eq!(val["definitionUrl"], "https://example.com/form");
         assert!(val.get("fromVersion").is_some(), "missing 'fromVersion'");
         assert!(val.get("toVersion").is_some(), "missing 'toVersion'");
@@ -379,6 +386,38 @@ mod tests {
 
         assert!(val.get("changes").is_some(), "missing 'changes'");
         assert!(val["changes"].is_array());
+    }
+
+    /// Regression: generated changelog must round-trip through
+    /// `detect_document_type` so the linter's pass-1 does not emit E100.
+    #[cfg(feature = "changelog-api")]
+    #[test]
+    fn generate_changelog_round_trips_document_type_detection() {
+        let old_def = json!({
+            "title": "Form v1",
+            "version": "1.0.0",
+            "items": [ { "key": "name", "label": "Name", "dataType": "string" } ]
+        })
+        .to_string();
+        let new_def = json!({
+            "title": "Form v2",
+            "version": "2.0.0",
+            "items": [
+                { "key": "name", "label": "Name", "dataType": "string" },
+                { "key": "email", "label": "Email", "dataType": "string" }
+            ]
+        })
+        .to_string();
+
+        let result =
+            generate_changelog_inner(&old_def, &new_def, "https://example.com/form").unwrap();
+        let val: Value = serde_json::from_str(&result).unwrap();
+
+        assert_eq!(
+            detect_document_type(&val),
+            Some(DocumentType::Changelog),
+            "generated changelog must be detectable as DocumentType::Changelog"
+        );
     }
 
     /// Spec: specs/registry/changelog-spec.md §2 — Each change has type, target, path, impact.

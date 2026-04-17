@@ -64,9 +64,16 @@ fn change_to_object(c: &Change, style: JsonWireStyle) -> Value {
 }
 
 /// Serialize a generated changelog for FFI consumers.
+///
+/// Emits `$formspecChangelog: "1.0"` as the first key so
+/// `detect_document_type` can classify the output and the linter can
+/// validate it against `changelog.schema.json` without tripping E100.
+/// The marker field name is identical across wire styles — JSON envelope
+/// markers are schema-level discriminators, not translated identifiers.
 pub fn changelog_to_json_value(result: &Changelog, style: JsonWireStyle) -> Value {
     let k = changelog_root_keys(style);
     let mut m = serde_json::Map::new();
+    m.insert(k.marker.to_string(), json!(k.marker_version));
     m.insert(k.definition_url.to_string(), json!(result.definition_url));
     m.insert(k.from_version.to_string(), json!(result.from_version));
     m.insert(k.to_version.to_string(), json!(result.to_version));

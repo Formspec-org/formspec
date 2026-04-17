@@ -8,7 +8,9 @@ mod tests {
     use formspec_core::registry_client;
     use formspec_core::registry_client::registry_entry_count_from_raw;
     use formspec_core::runtime_mapping;
-    use formspec_core::{JsonWireStyle, changelog_to_json_value};
+    use formspec_core::{
+        DocumentType, JsonWireStyle, changelog_to_json_value, detect_document_type,
+    };
     use formspec_core::{
         MappingDirection, parse_coerce_type, parse_mapping_direction_wire,
         parse_mapping_document_from_value as parse_mapping_document_inner,
@@ -167,6 +169,12 @@ mod tests {
     #[test]
     fn changelog_to_json_python_snake_shape() {
         let v = changelog_to_json_value(&sample_changelog(), JsonWireStyle::PythonSnake);
+        // Envelope marker — required by changelog.schema.json and document-type detection.
+        assert_eq!(
+            v["$formspecChangelog"],
+            json!("1.0"),
+            "missing envelope marker on Python-snake output"
+        );
         assert_eq!(v["definition_url"], json!("https://example.com/def"));
         assert_eq!(v["from_version"], json!("1.0.0"));
         assert_eq!(v["to_version"], json!("1.0.1"));
@@ -182,10 +190,30 @@ mod tests {
     #[test]
     fn changelog_to_json_js_camel_shape() {
         let v = changelog_to_json_value(&sample_changelog(), JsonWireStyle::JsCamel);
+        // Envelope marker — required by changelog.schema.json and document-type detection.
+        assert_eq!(
+            v["$formspecChangelog"],
+            json!("1.0"),
+            "missing envelope marker on JS-camel output"
+        );
         assert_eq!(v["definitionUrl"], json!("https://example.com/def"));
         assert_eq!(v["semverImpact"], json!("patch"));
         let changes = v["changes"].as_array().unwrap();
         assert_eq!(changes[0]["type"], json!("added"));
+    }
+
+    /// Regression: both wire styles must be classified by `detect_document_type`
+    /// so `lint(changelog)` does not emit E100 "Cannot determine document type".
+    #[test]
+    fn changelog_to_json_round_trips_document_type_detection() {
+        for style in [JsonWireStyle::PythonSnake, JsonWireStyle::JsCamel] {
+            let v = changelog_to_json_value(&sample_changelog(), style);
+            assert_eq!(
+                detect_document_type(&v),
+                Some(DocumentType::Changelog),
+                "changelog_to_json_value({style:?}) must be detectable as Changelog"
+            );
+        }
     }
 
     // ── parse_mapping_direction_wire ────────────────────────────
