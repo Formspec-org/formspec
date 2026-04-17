@@ -8,6 +8,8 @@ You can find the pre-existing configuration for this project in [the config file
 
 ## npm releases (maintainers)
 
-Pushes to `main` run [.github/workflows/publish.yml](../.github/workflows/publish.yml) (Changesets → `npm run release`). Publishing uses **npm Trusted Publishing** (OIDC from GitHub Actions), not a long-lived `NPM_TOKEN`.
+Pushes to `main` run [.github/workflows/publish.yml](../.github/workflows/publish.yml). The workflow runs **four per-tier jobs sequentially** (kernel → foundation → integration → ai) — each one filters `.changeset/*.md` by tier, opens a `changeset-release/<tier>` PR, and publishes under `--tag <tier>-latest`. Publishing uses **npm Trusted Publishing** (OIDC from GitHub Actions), not a long-lived `NPM_TOKEN`.
 
-**Adding a new `@formspec-org/*` workspace package:** before the first successful publish, open that package on [npmjs.com](https://www.npmjs.com/), go to **Package settings → Trusted publishing**, and connect **GitHub Actions** with repository `Formspec-org/formspec` and workflow file **`publish.yml`** (name must match exactly). Without this, the registry may return a misleading `E404` on publish. The workflow installs **npm ≥ 11.5.1** because Trusted Publishing requires that CLI version.
+**Every changeset must declare a tier.** Add `<!-- tier: kernel|foundation|integration|ai -->` to the body — see [COMPAT.md → Authoring a changeset](../COMPAT.md#authoring-a-changeset-tier-aware). `npm run check:changesets` enforces this locally; `docs:check` gates it in CI.
+
+**Adding a new `@formspec-org/*` workspace package:** before the first successful publish, open that package on [npmjs.com](https://www.npmjs.com/), go to **Package settings → Trusted publishing**, and connect **GitHub Actions** with repository `Formspec-org/formspec` and workflow file **`publish.yml`** (name must match exactly). Without this, the registry may return a misleading `E404` on publish. The workflow installs **npm ≥ 11.5.1** because Trusted Publishing requires that CLI version. Also add the package to `TIER_PACKAGES` in `scripts/changeset-tiers.mjs` so the filter and lint recognise it.

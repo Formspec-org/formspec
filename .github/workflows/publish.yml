@@ -4,17 +4,14 @@ on:
   push:
     branches: [main]
 
+# Top-level concurrency: never overlap two publish runs on main.
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
-  release:
+  build:
     if: github.repository == 'Formspec-org/formspec'
-    name: Release
+    name: Build
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-      id-token: write
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -22,7 +19,6 @@ jobs:
           node-version: "22"
           registry-url: "https://registry.npmjs.org"
       # Trusted publishing (OIDC) requires npm CLI >= 11.5.1; Node 22 images still ship npm 10.x.
-      # Without this, `npm publish` can fail with misleading E404 on the registry PUT.
       - name: Install npm for Trusted Publishing
         run: npm install -g npm@^11.5.1
       - uses: dtolnay/rust-toolchain@stable
@@ -35,11 +31,64 @@ jobs:
       - run: npm install
       - run: npm run build
 
+  release:
+    # Sequential per-tier matrix. `max-parallel: 1` serialises tiers so only
+    # one `changeset version` PR is opened against `main` at a time — otherwise
+    # parallel jobs would race the version bump commit and clobber each other.
+    needs: build
+    if: github.repository == 'Formspec-org/formspec'
+    name: Release (${{ matrix.tier }})
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 1
+      fail-fast: false
+      matrix:
+        # Order matters: kernel → foundation → integration → ai mirrors the
+        # dependency layering so downstream tiers see upstream bumps promptly.
+        tier: [kernel, foundation, integration, ai]
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+    concurrency:
+      group: publish-${{ matrix.tier }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+      - name: Install npm for Trusted Publishing
+        run: npm install -g npm@^11.5.1
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - name: Install wasm-pack and wasm-opt
+        run: |
+          curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+          sudo apt-get install -y binaryen
+      - run: npm install
+      - run: npm run build
+
+      - name: Filter changesets for ${{ matrix.tier }} tier
+        run: node scripts/changeset-tier-filter.mjs ${{ matrix.tier }}
+
       - name: Create Release Pull Request or Publish
         id: changesets
         uses: changesets/action@v1
         with:
-          publish: npm run release
+          version: npm run version
+          # Publish with a tier-scoped dist-tag. `<tier>-latest` keeps `latest`
+          # untouched so consumers opt in explicitly to a tier cadence.
+          publish: npm run release -- --tag ${{ matrix.tier }}-latest
+          title: "chore(release): ${{ matrix.tier }} tier"
+          commit: "chore(release): ${{ matrix.tier }} tier version bump"
+          branch: changeset-release/${{ matrix.tier }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
+
+      - name: Restore out-of-tier changesets
+        if: always()
+        run: node scripts/changeset-tier-filter.mjs --restore
