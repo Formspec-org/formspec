@@ -13,8 +13,10 @@ use std::collections::HashMap;
 use unic_langid::LanguageIdentifier;
 
 use crate::ast::*;
+use crate::convert::fel_to_json;
 use crate::error::Diagnostic;
 use crate::iso_duration::{IsoDurationParse, parse_iso8601_duration};
+use crate::trace::{Trace, TraceStep};
 use crate::types::*;
 
 // ── Evaluation context ──────────────────────────────────────────
@@ -165,6 +167,9 @@ pub struct Evaluator<'a> {
     env: &'a dyn Environment,
     diagnostics: Vec<Diagnostic>,
     let_scopes: Vec<HashMap<String, FelValue>>,
+    /// Optional evaluation trace. `None` on the hot path, `Some` when the
+    /// caller entered via [`evaluate_with_trace`].
+    trace: Option<Trace>,
 }
 
 /// Evaluate an expression against an environment.
@@ -173,12 +178,37 @@ pub fn evaluate(expr: &Expr, env: &dyn Environment) -> EvalResult {
         env,
         diagnostics: Vec::new(),
         let_scopes: Vec::new(),
+        trace: None,
     };
     let value = evaluator.eval(expr);
     EvalResult {
         value,
         diagnostics: evaluator.diagnostics,
     }
+}
+
+/// Evaluate and simultaneously record a structured [`Trace`] of key steps.
+///
+/// The returned [`EvalResult`] has identical `value` and `diagnostics` to
+/// [`evaluate`] for the same input; only the side-channel trace is new.
+/// Tracing is opt-in because it allocates per-step and projects values to
+/// JSON — negligible for interactive use, but worth avoiding on hot paths.
+pub fn evaluate_with_trace(expr: &Expr, env: &dyn Environment) -> (EvalResult, Trace) {
+    let mut evaluator = Evaluator {
+        env,
+        diagnostics: Vec::new(),
+        let_scopes: Vec::new(),
+        trace: Some(Trace::new()),
+    };
+    let value = evaluator.eval(expr);
+    let trace = evaluator.trace.take().unwrap_or_default();
+    (
+        EvalResult {
+            value,
+            diagnostics: evaluator.diagnostics,
+        },
+        trace,
+    )
 }
 
 // Decimal constants
@@ -190,6 +220,105 @@ impl<'a> Evaluator<'a> {
     fn diag(&mut self, msg: impl Into<String>) {
         self.diagnostics.push(Diagnostic::error(msg));
     }
+
+    /// True iff this evaluator is recording a trace. Cheap predictable branch.
+    #[inline]
+    fn tracing(&self) -> bool {
+        self.trace.is_some()
+    }
+
+    /// Append a step, no-op when not tracing.
+    #[inline]
+    fn trace_step(&mut self, step: TraceStep) {
+        if let Some(t) = self.trace.as_mut() {
+            t.push(step);
+        }
+    }
+}
+
+/// Functions whose arguments are all eagerly evaluated, pure-ish, and safe
+/// to re-evaluate when tracing. Lazy / short-circuiting functions (`if`,
+/// `coalesce`, `countWhere`, `every`, `some`, `sumWhere`, `avgWhere`, etc.)
+/// are deliberately absent — they explain themselves via [`TraceStep::IfBranch`]
+/// or future dedicated step kinds.
+fn is_eager_traceable_function(name: &str) -> bool {
+    matches!(
+        name,
+        "sum"
+            | "count"
+            | "avg"
+            | "min"
+            | "max"
+            | "length"
+            | "contains"
+            | "startsWith"
+            | "endsWith"
+            | "substring"
+            | "replace"
+            | "upper"
+            | "lower"
+            | "trim"
+            | "matches"
+            | "format"
+            | "round"
+            | "floor"
+            | "ceil"
+            | "abs"
+            | "power"
+            | "empty"
+            | "present"
+            | "selected"
+            | "isNumber"
+            | "isString"
+    )
+}
+
+/// Source-style symbol for a binary operator, used in trace output.
+fn binary_op_symbol(op: BinaryOp) -> &'static str {
+    match op {
+        BinaryOp::Add => "+",
+        BinaryOp::Sub => "-",
+        BinaryOp::Mul => "*",
+        BinaryOp::Div => "/",
+        BinaryOp::Mod => "%",
+        BinaryOp::Concat => "&",
+        BinaryOp::Eq => "==",
+        BinaryOp::NotEq => "!=",
+        BinaryOp::Lt => "<",
+        BinaryOp::Gt => ">",
+        BinaryOp::LtEq => "<=",
+        BinaryOp::GtEq => ">=",
+        BinaryOp::And => "and",
+        BinaryOp::Or => "or",
+    }
+}
+
+/// Render a `$foo.bar[2].baz` style path (sans leading `$`) for trace output.
+fn render_field_path(name: &Option<String>, path: &[PathSegment]) -> String {
+    let mut out = String::new();
+    if let Some(n) = name {
+        out.push_str(n);
+    }
+    for seg in path {
+        match seg {
+            PathSegment::Dot(part) => {
+                if !out.is_empty() {
+                    out.push('.');
+                }
+                out.push_str(part);
+            }
+            PathSegment::Index(idx) => {
+                out.push_str(&format!("[{idx}]"));
+            }
+            PathSegment::Wildcard => {
+                out.push_str("[*]");
+            }
+        }
+    }
+    out
+}
+
+impl<'a> Evaluator<'a> {
 
     fn eval(&mut self, expr: &Expr) -> FelValue {
         match expr {
@@ -218,7 +347,17 @@ impl<'a> Evaluator<'a> {
                     .map(|(k, v)| (k.clone(), self.eval(v)))
                     .collect(),
             ),
-            Expr::FieldRef { name, path } => self.eval_field_ref(name, path),
+            Expr::FieldRef { name, path } => {
+                let value = self.eval_field_ref(name, path);
+                if self.tracing() {
+                    let rendered = render_field_path(name, path);
+                    self.trace_step(TraceStep::FieldResolved {
+                        path: rendered,
+                        value: fel_to_json(&value),
+                    });
+                }
+                value
+            }
             Expr::ContextRef { name, arg, tail } => {
                 self.env.resolve_context(name, arg.as_deref(), tail)
             }
@@ -243,8 +382,24 @@ impl<'a> Evaluator<'a> {
                         self.diag("if: condition evaluated to null");
                         FelValue::Null
                     }
-                    FelValue::Boolean(true) => self.eval(then_branch),
-                    FelValue::Boolean(false) => self.eval(else_branch),
+                    FelValue::Boolean(true) => {
+                        if self.tracing() {
+                            self.trace_step(TraceStep::IfBranch {
+                                condition_value: serde_json::Value::Bool(true),
+                                branch_taken: "then",
+                            });
+                        }
+                        self.eval(then_branch)
+                    }
+                    FelValue::Boolean(false) => {
+                        if self.tracing() {
+                            self.trace_step(TraceStep::IfBranch {
+                                condition_value: serde_json::Value::Bool(false),
+                                branch_taken: "else",
+                            });
+                        }
+                        self.eval(else_branch)
+                    }
                     _ => {
                         self.diag(format!(
                             "if: condition must be boolean, got {}",
@@ -274,7 +429,34 @@ impl<'a> Evaluator<'a> {
                 self.let_scopes.pop();
                 result
             }
-            Expr::FunctionCall { name, args } => self.eval_function(name, args),
+            Expr::FunctionCall { name, args } => {
+                let pre_evaluated_args: Option<Vec<serde_json::Value>> =
+                    if self.tracing() && is_eager_traceable_function(name) {
+                        // Suspend trace *and* diagnostics while we pre-evaluate
+                        // the args to capture their JSON values. `eval_function`
+                        // below walks the same args again — without suspension,
+                        // every sub-step (FieldResolved, BinaryOp, …) and every
+                        // diagnostic would appear twice in the output.
+                        let saved_trace = self.trace.take();
+                        let saved_diag_len = self.diagnostics.len();
+                        let vals: Vec<serde_json::Value> =
+                            args.iter().map(|a| fel_to_json(&self.eval(a))).collect();
+                        self.diagnostics.truncate(saved_diag_len);
+                        self.trace = saved_trace;
+                        Some(vals)
+                    } else {
+                        None
+                    };
+                let result = self.eval_function(name, args);
+                if let Some(arg_vals) = pre_evaluated_args {
+                    self.trace_step(TraceStep::FunctionCalled {
+                        name: name.clone(),
+                        args: arg_vals,
+                        result: fel_to_json(&result),
+                    });
+                }
+                result
+            }
             Expr::PostfixAccess { expr, path } => {
                 if let Expr::FieldRef {
                     name: Some(name),
@@ -493,6 +675,12 @@ impl<'a> Evaluator<'a> {
                     }
                 };
                 if !left_bool {
+                    if self.tracing() {
+                        self.trace_step(TraceStep::ShortCircuit {
+                            op: "and".into(),
+                            reason: "left of 'and' was false, skipped right".into(),
+                        });
+                    }
                     return FelValue::Boolean(false);
                 }
                 let right = self.eval(right_expr);
@@ -500,7 +688,17 @@ impl<'a> Evaluator<'a> {
                     return FelValue::Null;
                 }
                 return match right {
-                    FelValue::Boolean(b) => FelValue::Boolean(b),
+                    FelValue::Boolean(b) => {
+                        if self.tracing() {
+                            self.trace_step(TraceStep::BinaryOp {
+                                op: "and".into(),
+                                lhs: serde_json::Value::Bool(true),
+                                rhs: serde_json::Value::Bool(b),
+                                result: serde_json::Value::Bool(b),
+                            });
+                        }
+                        FelValue::Boolean(b)
+                    }
                     other => {
                         self.diag(format!("cannot apply 'and' to {}", other.type_name()));
                         FelValue::Null
@@ -520,6 +718,12 @@ impl<'a> Evaluator<'a> {
                     }
                 };
                 if left_bool {
+                    if self.tracing() {
+                        self.trace_step(TraceStep::ShortCircuit {
+                            op: "or".into(),
+                            reason: "left of 'or' was true, skipped right".into(),
+                        });
+                    }
                     return FelValue::Boolean(true);
                 }
                 let right = self.eval(right_expr);
@@ -527,7 +731,17 @@ impl<'a> Evaluator<'a> {
                     return FelValue::Null;
                 }
                 return match right {
-                    FelValue::Boolean(b) => FelValue::Boolean(b),
+                    FelValue::Boolean(b) => {
+                        if self.tracing() {
+                            self.trace_step(TraceStep::BinaryOp {
+                                op: "or".into(),
+                                lhs: serde_json::Value::Bool(false),
+                                rhs: serde_json::Value::Bool(b),
+                                result: serde_json::Value::Bool(b),
+                            });
+                        }
+                        FelValue::Boolean(b)
+                    }
                     other => {
                         self.diag(format!("cannot apply 'or' to {}", other.type_name()));
                         FelValue::Null
@@ -542,12 +756,37 @@ impl<'a> Evaluator<'a> {
 
         // Equality does NOT propagate null
         match op {
-            BinaryOp::Eq => return self.eval_equality(&left, &right),
+            BinaryOp::Eq => {
+                let result = self.eval_equality(&left, &right);
+                if self.tracing() && !matches!(left, FelValue::Array(_))
+                    && !matches!(right, FelValue::Array(_))
+                {
+                    self.trace_step(TraceStep::BinaryOp {
+                        op: "==".into(),
+                        lhs: fel_to_json(&left),
+                        rhs: fel_to_json(&right),
+                        result: fel_to_json(&result),
+                    });
+                }
+                return result;
+            }
             BinaryOp::NotEq => {
-                return match self.eval_equality(&left, &right) {
+                let eq = self.eval_equality(&left, &right);
+                let result = match eq {
                     FelValue::Boolean(b) => FelValue::Boolean(!b),
                     other => other,
                 };
+                if self.tracing() && !matches!(left, FelValue::Array(_))
+                    && !matches!(right, FelValue::Array(_))
+                {
+                    self.trace_step(TraceStep::BinaryOp {
+                        op: "!=".into(),
+                        lhs: fel_to_json(&left),
+                        rhs: fel_to_json(&right),
+                        result: fel_to_json(&result),
+                    });
+                }
+                return result;
             }
             _ => {}
         }
@@ -585,7 +824,16 @@ impl<'a> Evaluator<'a> {
             _ => {}
         }
 
-        self.apply_binary(op, &left, &right)
+        let result = self.apply_binary(op, &left, &right);
+        if self.tracing() {
+            self.trace_step(TraceStep::BinaryOp {
+                op: binary_op_symbol(op).into(),
+                lhs: fel_to_json(&left),
+                rhs: fel_to_json(&right),
+                result: fel_to_json(&result),
+            });
+        }
+        result
     }
 
     fn apply_binary(&mut self, op: BinaryOp, left: &FelValue, right: &FelValue) -> FelValue {
@@ -1694,8 +1942,24 @@ impl<'a> Evaluator<'a> {
                 self.diag("if: condition evaluated to null");
                 FelValue::Null
             }
-            FelValue::Boolean(true) => self.eval(&args[1]),
-            FelValue::Boolean(false) => self.eval(&args[2]),
+            FelValue::Boolean(true) => {
+                if self.tracing() {
+                    self.trace_step(TraceStep::IfBranch {
+                        condition_value: serde_json::Value::Bool(true),
+                        branch_taken: "then",
+                    });
+                }
+                self.eval(&args[1])
+            }
+            FelValue::Boolean(false) => {
+                if self.tracing() {
+                    self.trace_step(TraceStep::IfBranch {
+                        condition_value: serde_json::Value::Bool(false),
+                        branch_taken: "else",
+                    });
+                }
+                self.eval(&args[2])
+            }
             _ => {
                 self.diag(format!(
                     "if: condition must be boolean, got {}",

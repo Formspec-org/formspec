@@ -24,6 +24,7 @@ pub mod lexer;
 pub mod parser;
 pub mod prepare_host;
 pub mod printer;
+pub mod trace;
 pub mod types;
 pub mod wire_style;
 
@@ -40,7 +41,9 @@ pub use error::{
     Diagnostic, FelError, Severity, has_error_diagnostics, reject_undefined_functions,
     undefined_function_names_from_diagnostics,
 };
-pub use evaluator::{Environment, EvalResult, Evaluator, MapEnvironment, evaluate};
+pub use evaluator::{
+    Environment, EvalResult, Evaluator, MapEnvironment, evaluate, evaluate_with_trace,
+};
 pub use extensions::{
     BuiltinFunctionCatalogEntry, ExtensionError, ExtensionRegistry, builtin_function_catalog,
     builtin_function_catalog_json_value,
@@ -55,6 +58,7 @@ pub use prepare_host::{
 };
 pub use printer::print_expr;
 pub use rust_decimal::Decimal;
+pub use trace::{Trace, TraceStep};
 pub use types::{FelDate, FelMoney, FelValue, parse_date_literal, parse_datetime_literal};
 pub use wire_style::JsonWireStyle;
 
