@@ -130,7 +130,7 @@ fn walk_items_for_option_sets(
             if let Some(data_type) = ctx.item.get("dataType").and_then(|v| v.as_str())
                 && !OPTION_SET_COMPATIBLE_TYPES.contains(&data_type)
             {
-                diagnostics.push(LintDiagnostic::warning(
+                diagnostics.push(crate::metadata::with_metadata(LintDiagnostic::warning(
                     "W300",
                     3,
                     format!("{}.dataType", ctx.json_path),
@@ -139,7 +139,7 @@ fn walk_items_for_option_sets(
                              (expected one of: {})",
                         OPTION_SET_COMPATIBLE_TYPES.join(", ")
                     ),
-                ));
+                )));
             }
         }
     });
@@ -168,7 +168,9 @@ fn validate_path(
 ) -> Option<LintDiagnostic> {
     match resolve_path(path, label, index) {
         Ok(()) => None,
-        Err(message) => Some(LintDiagnostic::error(error_code, 3, json_path, message)),
+        Err(message) => Some(crate::metadata::with_metadata(LintDiagnostic::error(
+            error_code, 3, json_path, message,
+        ))),
     }
 }
 
@@ -186,12 +188,12 @@ fn validate_simple_key(
     if !index.ambiguous_keys.contains(key) && index.by_key.contains_key(key) {
         return None;
     }
-    Some(LintDiagnostic::error(
+    Some(crate::metadata::with_metadata(LintDiagnostic::error(
         error_code,
         3,
         json_path,
         format!("{label} references unknown item: {key}"),
-    ))
+    )))
 }
 
 #[derive(Clone, Copy)]

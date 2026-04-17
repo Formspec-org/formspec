@@ -125,12 +125,12 @@ fn check_extensions_object(
         let ext_path = format!("{path}.extensions.{ext_name}");
         match registry.lookup(ext_name) {
             None => {
-                out.push(LintDiagnostic::error(
+                out.push(crate::metadata::with_metadata(LintDiagnostic::error(
                     "E600",
                     PASS,
                     &ext_path,
                     format!("Unresolved extension: {ext_name}"),
-                ));
+                )));
             }
             Some(info) => match info.status {
                 RegistryEntryStatus::Retired => {
@@ -192,7 +192,12 @@ pub fn check_extensions(document: &Value, registry_documents: &[Value]) -> Vec<L
         return collect_all_enabled_extensions(document)
             .into_iter()
             .map(|(path, name)| {
-                LintDiagnostic::error("E600", PASS, &path, format!("Unresolved extension: {name}"))
+                crate::metadata::with_metadata(LintDiagnostic::error(
+                    "E600",
+                    PASS,
+                    &path,
+                    format!("Unresolved extension: {name}"),
+                ))
             })
             .collect();
     }

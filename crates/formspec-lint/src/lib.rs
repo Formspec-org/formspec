@@ -19,6 +19,7 @@
 #![warn(clippy::missing_docs_in_private_items)]
 
 mod lint_json;
+mod metadata;
 mod schema_validation;
 mod types;
 

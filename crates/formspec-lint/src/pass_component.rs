@@ -257,10 +257,10 @@ impl<'a> WalkState<'a> {
                     match field_lookup.get(bind) {
                         None => {
                             // W800: Bind doesn't resolve
-                            self.diags.push(LintDiagnostic::warning(
+                            self.diags.push(crate::metadata::with_metadata(LintDiagnostic::warning(
                                 "W800", PASS, path,
                                 format!("Component bind '{bind}' does not resolve to a field in the definition"),
-                            ));
+                            )));
                         }
                         Some(field_info) => {
                             // E802/W802: Type compatibility
@@ -273,10 +273,10 @@ impl<'a> WalkState<'a> {
                                         ));
                                     }
                                     Compatibility::CompatibleWithWarning => {
-                                        self.diags.push(LintDiagnostic::warning(
+                                        self.diags.push(crate::metadata::with_metadata(LintDiagnostic::warning(
                                             "W802", PASS, path,
                                             format!("Component '{comp_type}' is only loosely compatible with field dataType '{dt}'"),
-                                        ));
+                                        )));
                                     }
                                     _ => {}
                                 }

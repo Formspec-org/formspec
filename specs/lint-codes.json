@@ -1,0 +1,377 @@
+{
+  "$schema": "https://formspec.org/schemas/lint-registry.schema.json",
+  "version": "1.0",
+  "description": "Canonical registry of Formspec lint rule codes. Tested rules carry a normative spec pointer (specRef) and an imperative repair hint (suggestedFix) that the authoring loop surfaces to LLMs. Draft entries exist so every emitted code is discoverable — fill them in as rules graduate.",
+  "rules": [
+    {
+      "code": "E100",
+      "pass": 1,
+      "severity": "error",
+      "title": "Cannot determine document type",
+      "specRef": "",
+      "suggestedFix": "",
+      "fixtures": [],
+      "state": "draft"
+    },
+    {
+      "code": "E101",
+      "pass": 1,
+      "severity": "error",
+      "title": "Schema violation",
+      "specRef": "specs/core/spec.md#4-definition-schema",
+      "suggestedFix": "align the document with schemas/*.schema.json — fix the flagged property or value",
+      "fixtures": [],
+      "state": "tested"
+    },
+    {
+      "code": "E200",
+      "pass": 2,
+      "severity": "error",
+      "title": "Duplicate item key",
+      "specRef": "",
+      "suggestedFix": "",
+      "fixtures": [],
+      "state": "draft"
+    },
+    {
+      "code": "E201",
+      "pass": 2,
+      "severity": "error",
+      "title": "Duplicate item full path",
+      "specRef": "",
+      "suggestedFix": "",
+      "fixtures": [],
+      "state": "draft"
+    },
+    {
+      "code": "E300",
+      "pass": 3,
+      "severity": "error",
+      "title": "Bind target not found",
+      "specRef": "specs/core/spec.md#433-path-syntax",
+      "suggestedFix": "change bind target to match an item key, or add the missing item to `items`",
+      "fixtures": [],
+      "state": "tested"
+    },
+    {
+      "code": "E301",
+      "pass": 3,
+      "severity": "error",
+      "title": "Shape target references unknown item",
+      "specRef": "",
+      "suggestedFix": "",
+      "fixtures": [],
+      "state": "draft"
+    },
+    {
+      "code": "E302",
+      "pass": 3,
+      "severity": "error",
+      "title": "Undefined option set reference",
+      "specRef": "",
+      "suggestedFix": "",
+      "fixtures": [],
+      "state": "draft"
+    },
+    {
+      "code": "W300",
+      "pass": 3,
+      "severity": "warning",
+      "title": "Incompatible dataType for optionSet",
+      "specRef": "specs/core/spec.md#46-option-sets",
+      "suggestedFix": "change dataType to one of string/integer/decimal/choice/multiChoice, or drop the optionSet",
+      "fixtures": [],
+      "state": "tested"
+    },
+    {
+      "code": "E400",
+      "pass": 4,
+      "severity": "error",
+      "title": "FEL expression failed to parse",
+      "specRef": "",
+      "suggestedFix": "",
+      "fixtures": [],
+      "state": "draft"
+    },
+    {
+      "code": "E500",
+      "pass": 5,
+      "severity": "error",
+      "title": "Dependency cycle",
+      "specRef": "specs/core/spec.md#362-topological-ordering",
+      "suggestedFix": "break the dependency cycle — remove one bind's reference to the other",
+      "fixtures": [],
+      "state": "tested"
+    },
+    {
+      "code": "E600",
+      "pass": 3,
+      "severity": "error",
+      "title": "Unresolved extension",
+      "specRef": "specs/core/spec.md#85-extension-namespaces",
+      "suggestedFix": "declare the extension in a loaded registry, or remove the extension key",
+      "fixtures": [],
+      "state": "tested"
+    },
+    {
+      "code": "E601",
+      "pass": 3,
+      "severity": "warning",
+      "title": "Retired extension",
+      "specRef": "",
+      "suggestedFix": "",
+      "fixtures": [],
+      "state": "draft"
+    },
+    {
+      "code": "E602",
+      "pass": 3,
+      "severity": "info",
+      "title": "Deprecated extension",
+      "specRef": "",
+      "suggestedFix": "",
+      "fixtures": [],
+      "state": "draft"
+    },
+    {
+      "code": "W700",
+      "pass": 6,
+      "severity": "warning",
+      "title": "Invalid color token value",
+      "specRef": "",
+      "suggestedFix": "",
+      "fixtures": [],
+      "state": "draft"
+    },
+    {
+      "code": "W701",
+      "pass": 6,
+      "severity": "warning",
+      "title": "Invalid size token value",
+      "specRef": "",
+      "suggestedFix": "",
+      "fixtures": [],
+      "state": "draft"
+    },
+    {
+      "code": "W702",
+      "pass": 6,
+      "severity": "warning",
+      "title": "Invalid font weight token value",
+      "specRef": "",
+      "suggestedFix": "",
+      "fixtures": [],
+      "state": "draft"
+    },
+    {
+      "code": "W703",
+      "pass": 6,
+      "severity": "warning",
+      "title": "Invalid duration or easing token value",
+      "specRef": "",
+      "suggestedFix": "",
+      "fixtures": [],
+      "state": "draft"
+    },
+    {
+      "code": "W704",
+      "pass": 6,
+      "severity": "warning",
+      "title": "Unresolved token reference",
+      "specRef": "specs/theme/theme-spec.md#34-token-resolution",
+      "suggestedFix": "define the token in your theme's tokens map, or use an existing token",
+      "fixtures": [],
+      "state": "tested"
+    },
+    {
+      "code": "W705",
+      "pass": 6,
+      "severity": "warning",
+      "title": "Theme item key not in paired definition",
+      "specRef": "",
+      "suggestedFix": "",
+      "fixtures": [],
+      "state": "draft"
+    },
+    {
+      "code": "W706",
+      "pass": 6,
+      "severity": "warning",
+      "title": "Page region references unknown item key",
+      "specRef": "",
+      "suggestedFix": "",
+      "fixtures": [],
+      "state": "draft"
+    },
+    {
+      "code": "W707",
+      "pass": 6,
+      "severity": "warning",
+      "title": "Theme targetDefinition.url does not match paired definition",
+      "specRef": "",
+      "suggestedFix": "",
+      "fixtures": [],
+      "state": "draft"
+    },
+    {
+      "code": "W708",
+      "pass": 6,
+      "severity": "warning",
+      "title": "Unknown non-extension token",
+      "specRef": "",
+      "suggestedFix": "",
+      "fixtures": [],
+      "state": "draft"
+    },
+    {
+      "code": "W709",
+      "pass": 6,
+      "severity": "info",
+      "title": "No tokens declared",
+      "specRef": "",
+      "suggestedFix": "",
+      "fixtures": [],
+      "state": "draft"
+    },
+    {
+      "code": "E710",
+      "pass": 6,
+      "severity": "error",
+      "title": "Duplicate page id",
+      "specRef": "",
+      "suggestedFix": "",
+      "fixtures": [],
+      "state": "draft"
+    },
+    {
+      "code": "W711",
+      "pass": 6,
+      "severity": "warning",
+      "title": "Responsive breakpoint references unknown page region",
+      "specRef": "",
+      "suggestedFix": "",
+      "fixtures": [],
+      "state": "draft"
+    },
+    {
+      "code": "E800",
+      "pass": 7,
+      "severity": "error",
+      "title": "Component tree root must be a layout component",
+      "specRef": "",
+      "suggestedFix": "",
+      "fixtures": [],
+      "state": "draft"
+    },
+    {
+      "code": "E801",
+      "pass": 7,
+      "severity": "error",
+      "title": "Unknown built-in component",
+      "specRef": "",
+      "suggestedFix": "",
+      "fixtures": [],
+      "state": "draft"
+    },
+    {
+      "code": "E802",
+      "pass": 7,
+      "severity": "error",
+      "title": "Component incompatible with field dataType",
+      "specRef": "",
+      "suggestedFix": "",
+      "fixtures": [],
+      "state": "draft"
+    },
+    {
+      "code": "E803",
+      "pass": 7,
+      "severity": "error",
+      "title": "Component requires options but field provides none",
+      "specRef": "",
+      "suggestedFix": "",
+      "fixtures": [],
+      "state": "draft"
+    },
+    {
+      "code": "E804",
+      "pass": 7,
+      "severity": "error",
+      "title": "Richtext TextInput must bind to string field",
+      "specRef": "",
+      "suggestedFix": "",
+      "fixtures": [],
+      "state": "draft"
+    },
+    {
+      "code": "E806",
+      "pass": 7,
+      "severity": "error",
+      "title": "Duplicate bind in component tree",
+      "specRef": "",
+      "suggestedFix": "",
+      "fixtures": [],
+      "state": "draft"
+    },
+    {
+      "code": "E807",
+      "pass": 7,
+      "severity": "error",
+      "title": "Custom component reference cycle",
+      "specRef": "",
+      "suggestedFix": "",
+      "fixtures": [],
+      "state": "draft"
+    },
+    {
+      "code": "W800",
+      "pass": 7,
+      "severity": "warning",
+      "title": "Component bind does not resolve to a field",
+      "specRef": "specs/component/component-spec.md#42-bind-resolution-rules",
+      "suggestedFix": "point bind at an existing field key, or add that field to the definition",
+      "fixtures": [],
+      "state": "tested"
+    },
+    {
+      "code": "W801",
+      "pass": 7,
+      "severity": "warning",
+      "title": "Input component missing required bind",
+      "specRef": "",
+      "suggestedFix": "",
+      "fixtures": [],
+      "state": "draft"
+    },
+    {
+      "code": "W802",
+      "pass": 7,
+      "severity": "warning",
+      "title": "Component compatibility warning (loose match)",
+      "specRef": "specs/component/component-spec.md#46-binddatatype-compatibility-matrix",
+      "suggestedFix": "pick a component whose dataType matrix includes this field's type",
+      "fixtures": [],
+      "state": "tested"
+    },
+    {
+      "code": "W803",
+      "pass": 7,
+      "severity": "warning",
+      "title": "Non-input component has bind",
+      "specRef": "",
+      "suggestedFix": "",
+      "fixtures": [],
+      "state": "draft"
+    },
+    {
+      "code": "W804",
+      "pass": 7,
+      "severity": "warning",
+      "title": "Custom component reference unresolved",
+      "specRef": "",
+      "suggestedFix": "",
+      "fixtures": [],
+      "state": "draft"
+    }
+  ]
+}

@@ -214,7 +214,7 @@ pub fn validate_schema(doc: &Value, doc_type: DocumentType) -> Vec<LintDiagnosti
         .map(|err| {
             let pointer = err.instance_path().as_str();
             let path = json_pointer_to_jsonpath(pointer);
-            LintDiagnostic::error("E101", 1, path, err.to_string())
+            crate::metadata::with_metadata(LintDiagnostic::error("E101", 1, path, err.to_string()))
         })
         .collect()
 }
@@ -248,7 +248,12 @@ fn validate_component_schema(doc: &Value) -> Vec<LintDiagnostic> {
     for err in set.envelope_component.iter_errors(&shallow) {
         let pointer = err.instance_path().as_str();
         let path = json_pointer_to_jsonpath(pointer);
-        diags.push(LintDiagnostic::error("E101", 1, path, err.to_string()));
+        diags.push(crate::metadata::with_metadata(LintDiagnostic::error(
+            "E101",
+            1,
+            path,
+            err.to_string(),
+        )));
     }
 
     // ── Per-node validation ──────────────────────────────────────
@@ -297,7 +302,12 @@ fn walk_and_validate(
                 format!("{p}{err_pointer}")
             };
             let path = json_pointer_to_jsonpath(&full_pointer);
-            diags.push(LintDiagnostic::error("E101", 1, path, err.to_string()));
+            diags.push(crate::metadata::with_metadata(LintDiagnostic::error(
+                "E101",
+                1,
+                path,
+                err.to_string(),
+            )));
         }
     });
 }

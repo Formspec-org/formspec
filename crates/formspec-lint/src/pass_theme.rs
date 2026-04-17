@@ -385,14 +385,14 @@ fn walk_token_refs(
         Value::String(s) => {
             for token_name in extract_token_refs(s) {
                 if !token_names.contains(token_name) {
-                    diags.push(LintDiagnostic::warning(
+                    diags.push(crate::metadata::with_metadata(LintDiagnostic::warning(
                         "W704",
                         PASS,
                         path,
                         format!(
                             "Token reference '$token.{token_name}' not found in declared tokens"
                         ),
-                    ));
+                    )));
                 }
             }
         }
