@@ -7,7 +7,7 @@
 
 ## Context
 
-An external architecture review of `wos-spec/` ([`architecture-review-handoff.md`](../../wos-spec/architecture-review-handoff.md), now archived) opened with two structural critiques and retracted both after maintainer pushback:
+An external architecture review of `wos-spec/` ([`architecture-review-handoff.md`](../../wos-spec/thoughts/archive/reviews/2026-04-16-architecture-review-handoff.md)) opened with two structural critiques and retracted both after maintainer pushback:
 
 1. **"Collapse 18 schemas to 4."** The reviewer read the fine-grained schema split (kernel / companions / governance / ai / advanced / profiles / sidecars / assurance, 18 files total) as bloat.
 2. **"Demote AI from normative to informative."** The reviewer read the 666-line AI Integration spec as scope creep from a governance standard.
@@ -71,7 +71,7 @@ Layer 3 (advanced governance, equity, formal verification) remains appropriately
 
 ## References
 
-- [architecture-review-handoff.md](../../wos-spec/architecture-review-handoff.md) — the review that prompted this ADR (to be archived after this ADR lands)
+- [architecture-review-handoff.md](../../wos-spec/thoughts/archive/reviews/2026-04-16-architecture-review-handoff.md) — the review that prompted this ADR
 - [POSITIONING.md](../../wos-spec/POSITIONING.md) — Claim A / Claim B framing
 - [README.md](../../wos-spec/README.md) — public-facing two-line pitch
 - `wos-spec/LINT-MATRIX.md` — rule registry that benefits from D-1
