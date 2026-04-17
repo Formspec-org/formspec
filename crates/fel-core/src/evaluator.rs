@@ -241,6 +241,14 @@ impl<'a> Evaluator<'a> {
 /// `coalesce`, `countWhere`, `every`, `some`, `sumWhere`, `avgWhere`, etc.)
 /// are deliberately absent — they explain themselves via [`TraceStep::IfBranch`]
 /// or future dedicated step kinds.
+///
+/// **DO NOT add impure functions here.** The tracing path pre-evaluates each
+/// arg once to capture its JSON projection, and even with the trace/diagnostic
+/// suspension in `Expr::FunctionCall`, side effects (I/O, counters, log emission,
+/// network) would still fire twice — once for the pre-eval, once for the real
+/// `eval_function` walk. FEL has no side-effectful builtins today; any future
+/// extension that introduces one must NOT be added to this whitelist without
+/// also restructuring the trace capture to avoid re-evaluation.
 fn is_eager_traceable_function(name: &str) -> bool {
     matches!(
         name,

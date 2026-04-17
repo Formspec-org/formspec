@@ -34,9 +34,14 @@ ERROR_SATURATION = 10  # errors at which score bottoms out at 0.0
 
 # Import the canonical pass title directly so a rename in validate.py breaks
 # this runner at import time (loud failure) rather than silently scoring every
-# candidate as 0.0.
-sys.path.insert(0, str(REPO_ROOT / "src"))
-from formspec.validate import DEFINITION_LINTING_TITLE  # noqa: E402
+# candidate as 0.0. When `formspec` is editable-installed (the normal dev flow),
+# the import succeeds without touching sys.path — we only fall back to the
+# in-repo src tree when running without an install.
+try:
+    from formspec.validate import DEFINITION_LINTING_TITLE  # noqa: E402
+except ImportError:
+    sys.path.insert(0, str(REPO_ROOT / "src"))
+    from formspec.validate import DEFINITION_LINTING_TITLE  # noqa: E402
 
 
 def iter_task_ids() -> list[str]:

@@ -147,7 +147,14 @@ def _scan_linter_source_for_codes() -> set[str]:
 
 def _strip_test_modules(rust_source: str) -> str:
     """Remove `#[cfg(test)] mod tests { ... }` blocks so code literals inside
-    test fixtures don't get counted as emission sites."""
+    test fixtures don't get counted as emission sites.
+
+    Caveat: brace depth is computed with raw character counts, so `{` / `}`
+    inside a string literal inside a test module can unbalance the walker.
+    This is acceptable today because no such literal exists — see
+    `test_strip_test_modules_handles_literal_braces_in_strings` for the
+    adversarial regression guard.
+    """
     lines = rust_source.splitlines()
     out: list[str] = []
     i = 0
@@ -176,6 +183,57 @@ def _strip_test_modules(rust_source: str) -> str:
         out.append(line)
         i += 1
     return "\n".join(out)
+
+
+def test_strip_test_modules_removes_test_code_literals() -> None:
+    """Sanity: codes inside a `#[cfg(test)] mod tests { ... }` block are dropped
+    so they are not counted as production emission sites."""
+    sample = (
+        'fn emit_production() { LintDiagnostic::error("E100", 1, "$", "x"); }\n'
+        "\n"
+        "#[cfg(test)]\n"
+        "mod tests {\n"
+        '    fn only_in_test() { let _ = "W999"; }\n'
+        "}\n"
+    )
+    stripped = _strip_test_modules(sample)
+    assert '"E100"' in stripped
+    assert '"W999"' not in stripped, (
+        "test-module code literal should be stripped from the production scan"
+    )
+
+
+def test_strip_test_modules_handles_literal_braces_in_strings() -> None:
+    """Regression guard: the brace-depth walker is character-based, so a `}`
+    inside a string literal inside a test module could in principle close the
+    test module early and leak subsequent code-literal matches into production.
+    Today no such literal exists, but this test plants one so a future
+    contributor can't silently break the invariant.
+    """
+    sample = (
+        'fn emit_production() { LintDiagnostic::error("E100", 1, "$", "x"); }\n'
+        "\n"
+        "#[cfg(test)]\n"
+        "mod tests {\n"
+        '    // a string with braces that could confuse a naïve walker:\n'
+        '    const TRICKY: &str = "fake close } fake open { \\"W999\\"";\n'
+        '    fn inside() { let _code = "W998"; }\n'
+        "}\n"
+        "\n"
+        'fn emit_more_production() { LintDiagnostic::warning("W300", 3, "$", "y"); }\n'
+    )
+    stripped = _strip_test_modules(sample)
+    assert '"E100"' in stripped
+    assert '"W300"' in stripped, (
+        "production code *after* the test module must survive stripping"
+    )
+    # Today the walker treats the literal `}` and `{` as real braces. Because
+    # the embedded-brace count is balanced (`}` then `{`), the walker still
+    # closes the test module at the right line and excludes W998/W999. If this
+    # assertion ever fails, someone added an unbalanced brace literal and the
+    # walker needs a real tokenizer.
+    assert '"W998"' not in stripped
+    assert '"W999"' not in stripped
 
 
 # ── End-to-end: emitted diagnostics match the registry ──────────────

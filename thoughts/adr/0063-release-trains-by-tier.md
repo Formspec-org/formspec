@@ -61,7 +61,7 @@ The full consumer-facing matrix lives in [`/COMPAT.md`](../../COMPAT.md).
 
 Each step is independently reversible.
 
-1. **This PR — docs only.** Add `COMPAT.md`, four per-tier `CHANGELOG.md` stubs, this ADR, and `.changeset/RELEASE-TRAINS.md`. No config changes. No workflow changes. No version changes. Purely sets context for what follows.
+1. **This PR — docs only.** Add `COMPAT.md`, four per-tier `CHANGELOG.md` stubs, this ADR, and `docs/release-trains.md`. No config changes. No workflow changes. No version changes. Purely sets context for what follows.
 2. **Per-package changesets.** Update author guidance to write narrower changesets that target a single tier. Still one pipeline.
 3. **Split CI workflow.** Add a matrix to `publish.yml` so each tier releases independently. Validate on a dry-run release branch before landing. This is the disruptive step and gets its own PR with explicit rollback plan.
 4. **Dual release tags.** Adopt distinct git tags per stream (`kernel-v…`, `foundation-v…`, `integration-v…`, `ai-v…`) and `dist-tag` conventions on npm.
@@ -82,4 +82,4 @@ Would solve the release-coupling problem at the cost of cross-cutting changes. M
 
 ## Status
 
-Proposed. This PR lands only the documentation scaffolding (COMPAT.md, per-tier CHANGELOGs, this ADR, `.changeset/RELEASE-TRAINS.md`). The CI split is the subject of a follow-on PR that carries its own dry-run validation.
+Proposed. This PR lands only the documentation scaffolding (COMPAT.md, per-tier CHANGELOGs, this ADR, `docs/release-trains.md`). The CI split is the subject of a follow-on PR that carries its own dry-run validation.
