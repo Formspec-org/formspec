@@ -13,7 +13,7 @@ mod tests {
         apply_migrations_to_response_data_wasm, resolve_option_sets_on_definition_wasm,
     };
     use crate::evaluate::evaluate_definition_inner;
-    use crate::fel::{eval_fel_inner, prepare_fel_expression_inner};
+    use crate::fel::{eval_fel_inner, eval_fel_with_trace_inner, prepare_fel_expression_inner};
     #[cfg(feature = "fel-authoring")]
     use crate::fel::{rewrite_fel_for_assembly_inner, tokenize_fel_inner};
     #[cfg(feature = "mapping-api")]
@@ -104,6 +104,47 @@ mod tests {
         let result = eval_fel_inner("42", "").unwrap();
         let val: Value = serde_json::from_str(&result).unwrap();
         assert_eq!(val, json!(42));
+    }
+
+    // ── evalFELWithTrace: bridges `fel_core::evaluate_with_trace` through WASM ──
+
+    /// Wire contract: `{ value, diagnostics, trace }`. Trace steps carry PascalCase
+    /// `kind` discriminants from `fel_core::TraceStep` (serde default).
+    #[test]
+    fn eval_fel_with_trace_inner_addition() {
+        let fields = json!({"a": 3, "b": 4}).to_string();
+        let result = eval_fel_with_trace_inner("$a + $b", &fields).unwrap();
+        let val: Value = serde_json::from_str(&result).unwrap();
+        assert_eq!(val["value"], json!(7));
+        assert!(val["diagnostics"].is_array());
+        let trace = val["trace"].as_array().expect("trace is array");
+        assert_eq!(trace.len(), 3, "expected 3 steps, got {:?}", trace);
+        assert_eq!(trace[0]["kind"], "FieldResolved");
+        assert_eq!(trace[0]["path"], "a");
+        assert_eq!(trace[0]["value"], json!(3));
+        assert_eq!(trace[1]["kind"], "FieldResolved");
+        assert_eq!(trace[1]["path"], "b");
+        assert_eq!(trace[2]["kind"], "BinaryOp");
+        assert_eq!(trace[2]["op"], "+");
+        assert_eq!(trace[2]["result"], json!(7));
+    }
+
+    /// A parse error should still surface as an `Err` through the WASM layer.
+    #[test]
+    fn eval_fel_with_trace_inner_parse_error() {
+        assert!(eval_fel_with_trace_inner("1 +", "{}").is_err());
+    }
+
+    /// Short-circuit paths emit the `ShortCircuit` step and skip the undefined ref.
+    #[test]
+    fn eval_fel_with_trace_inner_short_circuit() {
+        let result = eval_fel_with_trace_inner("false and $undefined", "{}").unwrap();
+        let val: Value = serde_json::from_str(&result).unwrap();
+        let trace = val["trace"].as_array().unwrap();
+        let has_short = trace
+            .iter()
+            .any(|s| s["kind"] == "ShortCircuit" && s["op"] == "and");
+        assert!(has_short, "expected ShortCircuit step: {:?}", trace);
     }
 
     // ── Finding 68: evaluate_definition_inner output shape ──────

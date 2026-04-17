@@ -8,8 +8,9 @@ use fel_core::{
     print_expr, tokenize_to_json_value,
 };
 use fel_core::{
-    evaluate, expr_is_interpolation_static_literal, fel_to_json, field_map_from_json_str,
-    formspec_environment_from_json_map, has_error_diagnostics, parse, prepare_fel_expression_owned,
+    evaluate, evaluate_with_trace, expr_is_interpolation_static_literal, fel_diagnostics_to_json_value,
+    fel_to_json, field_map_from_json_str, formspec_environment_from_json_map,
+    has_error_diagnostics, parse, prepare_fel_expression_owned,
     prepare_fel_host_options_from_json_map, reject_undefined_functions,
 };
 use formspec_core::{
@@ -81,6 +82,33 @@ pub(crate) fn eval_fel_inner(expression: &str, fields_json: &str) -> Result<Stri
     LAST_EVAL_HAD_ERROR_DIAGNOSTICS.with(|c| c.set(has_error_diagnostics(&result.diagnostics)));
     let json = fel_to_json(&result.value);
     to_json_string(&json)
+}
+
+/// Evaluate a FEL expression with a structured trace of evaluation steps.
+///
+/// Returns a JSON string of shape `{ "value": ..., "diagnostics": [...], "trace": [TraceStep, ...] }`.
+/// TraceStep is the tagged union from [`fel_core::TraceStep`] (`kind` = `"FieldResolved"`,
+/// `"FunctionCalled"`, `"BinaryOp"`, `"IfBranch"`, `"ShortCircuit"`).
+#[wasm_bindgen(js_name = "evalFELWithTrace")]
+pub fn eval_fel_with_trace(expression: &str, fields_json: &str) -> Result<String, JsError> {
+    eval_fel_with_trace_inner(expression, fields_json).map_err(|e| JsError::new(&e))
+}
+
+pub(crate) fn eval_fel_with_trace_inner(
+    expression: &str,
+    fields_json: &str,
+) -> Result<String, String> {
+    let expr = parse_fel_source(expression)?;
+    let fields = field_map_from_json_str(fields_json)?;
+    let env = fel_core::MapEnvironment::with_fields(fields);
+    let (result, trace) = evaluate_with_trace(&expr, &env);
+    LAST_EVAL_HAD_ERROR_DIAGNOSTICS.with(|c| c.set(has_error_diagnostics(&result.diagnostics)));
+    let payload = serde_json::json!({
+        "value": fel_to_json(&result.value),
+        "diagnostics": fel_diagnostics_to_json_value(&result.diagnostics),
+        "trace": trace.steps,
+    });
+    to_json_string(&payload)
 }
 
 /// Evaluate a FEL expression with full FormspecEnvironment context.
