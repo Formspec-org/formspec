@@ -7,6 +7,7 @@ import {
     wasmAnalyzeFEL,
     wasmAnalyzeFELWithFieldTypes,
     wasmComputeDependencyGroups,
+    wasmEvalFELWithTrace,
     wasmEvaluateDefinition,
     wasmGetFELDependencies,
     wasmIsValidFelIdentifier,
@@ -14,6 +15,8 @@ import {
     wasmNormalizeIndexedPath,
     wasmSanitizeFelIdentifier,
 } from '../wasm-bridge-runtime.js';
+
+export type { FelTraceStep, FelTraceResult } from '../wasm-bridge-runtime.js';
 
 export const normalizeIndexedPath = wasmNormalizeIndexedPath;
 export const itemAtPath = wasmItemAtPath;
@@ -84,6 +87,12 @@ export function itemLocationAtPath<T extends TreeItemLike<T>>(items: T[], path: 
 export function getFELDependencies(expression: string): string[] {
     return wasmGetFELDependencies(expression);
 }
+
+/**
+ * Evaluate a FEL expression and return a structured trace of evaluation steps.
+ * See `FelTraceStep` for the step variants; wire format matches Rust `fel_core::TraceStep`.
+ */
+export const evalFELWithTrace = wasmEvalFELWithTrace;
 
 export const evaluateDefinition = wasmEvaluateDefinition;
 

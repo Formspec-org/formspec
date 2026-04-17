@@ -8,6 +8,7 @@ export {
     wasmCoerceFieldValue,
     wasmEvalFEL,
     wasmEvalFELWithContext,
+    wasmEvalFELWithTrace,
     wasmEvaluateDefinition,
     wasmEvaluateScreenerDocument,
     wasmGetFELDependencies,
@@ -18,7 +19,7 @@ export {
     wasmResolveOptionSetsOnDefinition,
 } from './wasm-bridge-runtime.js';
 
-export type { WasmFelContext } from './wasm-bridge-runtime.js';
+export type { WasmFelContext, FelTraceStep, FelTraceResult } from './wasm-bridge-runtime.js';
 
 export {
     initWasmTools,

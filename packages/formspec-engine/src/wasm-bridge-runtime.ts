@@ -115,6 +115,86 @@ export function wasmEvalFELWithContext(expression: string, context: WasmFelConte
     return JSON.parse(resultJson);
 }
 
+/**
+ * A single recorded event during FEL evaluation.
+ *
+ * Mirrors `fel_core::TraceStep` verbatim — the `kind` discriminant is the
+ * PascalCase Rust variant name. Extend this union only when the Rust enum
+ * grows a new variant; every variant here must exist in Rust.
+ */
+export type FelTraceStep =
+    | {
+        /** A `$field` reference was resolved against the environment. */
+        kind: 'FieldResolved';
+        /** Dotted path as written in source (e.g. `foo`, `items[2].amount`). */
+        path: string;
+        /** Value returned by the environment, projected to JSON. */
+        value: unknown;
+    }
+    | {
+        /** A function call completed and returned a value. */
+        kind: 'FunctionCalled';
+        /** Function name as written in source. */
+        name: string;
+        /** Argument values, in order. */
+        args: unknown[];
+        /** Return value. */
+        result: unknown;
+    }
+    | {
+        /** A binary operator produced a result from two operand values. */
+        kind: 'BinaryOp';
+        /** Operator symbol (`+`, `==`, `and`, ...). */
+        op: string;
+        /** Left-hand value. */
+        lhs: unknown;
+        /** Right-hand value. */
+        rhs: unknown;
+        /** Result value. */
+        result: unknown;
+    }
+    | {
+        /** A conditional selected a branch. */
+        kind: 'IfBranch';
+        /** The evaluated condition value. */
+        condition_value: unknown;
+        /** Which branch was taken: `"then"` or `"else"`. */
+        branch_taken: 'then' | 'else';
+    }
+    | {
+        /** A logical operator short-circuited; the right-hand side was not evaluated. */
+        kind: 'ShortCircuit';
+        /** Operator symbol (`and` or `or`). */
+        op: string;
+        /** Human-readable reason. */
+        reason: string;
+    };
+
+/** Result of a traced FEL evaluation. */
+export interface FelTraceResult {
+    /** Evaluated value (JSON-projected — no FEL type tags). */
+    value: unknown;
+    /** Diagnostics emitted during evaluation. */
+    diagnostics: Array<Record<string, unknown>>;
+    /** Ordered trace steps, appended in evaluation order. */
+    trace: FelTraceStep[];
+}
+
+/**
+ * Evaluate a FEL expression with a structured trace of evaluation steps.
+ *
+ * Opt-in tracing path — use when surfacing evaluation to humans or LLMs
+ * (MCP tools, error explainers). Values in the trace are projected to JSON,
+ * losing FEL type fidelity (money/date) but gaining universal readability.
+ */
+export function wasmEvalFELWithTrace(
+    expression: string,
+    fields: Record<string, unknown> = {},
+): FelTraceResult {
+    const resultJson = wasm().evalFELWithTrace(expression, JSON.stringify(fields));
+    return JSON.parse(resultJson);
+}
+
 /** Locale §3.3.1 — true if the expression AST is only literals and unary `not` / `!` / `-`. */
 export function wasmFelExprIsInterpolationStaticLiteral(expression: string): boolean {
     return wasm().felExprIsInterpolationStaticLiteral(expression);
