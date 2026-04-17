@@ -7,40 +7,47 @@ Sources: editor/layout split review, chaos-test phase 1 findings + phase 4 follo
 ## Open
 
 ### 22. Bridge FEL traces through WASM → Python → MCP
-- **Source**: LLM-authoring-loop synthesis (#3 tail); code review F-follow-on
-- **Files**: `crates/formspec-wasm/src/fel.rs` (add `eval_fel_with_trace`), `crates/formspec-py/src/fel.rs` (mirror), `packages/formspec-engine/src/wasm-bridge-*.ts` (new `FelTrace` type + method), `packages/formspec-mcp/src/tools/fel.ts` (new `formspec_fel_trace` tool)
-- **Action**: Expose `fel_core::evaluate_with_trace` through every binding so LLMs see structured evaluation traces in the MCP. Foundation at `crates/fel-core/src/trace.rs` already landed; this wires it through.
+- **State**: `evaluate_with_trace` in `crates/fel-core/src/trace.rs` emits ordered `TraceStep` sequences (FieldResolved, FunctionCalled, BinaryOp, IfBranch, ShortCircuit). No binding forwards them.
+- **Why**: LLMs cannot see the trace until the WASM → Python → TS → MCP chain carries it. The Rust foundation sits unused until this wires through.
+- **Files**: `crates/formspec-wasm/src/fel.rs` (add `eval_fel_with_trace` returning `{value, diagnostics, trace}`), `crates/formspec-py/src/fel.rs` (Python binding mirror), `packages/formspec-engine/src/wasm-bridge-*.ts` (add `FelTrace` type + `wasmEvalFELWithTrace` method), `packages/formspec-mcp/src/tools/fel.ts` (new `formspec_fel_trace` tool).
+- **Done when**: `formspec_fel_trace("$a + $b", {a: 3, b: 4})` called through the MCP returns a `TraceStep[]` identical to what Rust produces for the same input.
 
 ### 23. MCP-driven benchmark runner loop
-- **Source**: benchmark harness v0 (#4 tail)
-- **Files**: `benchmarks/tasks/*/requirement.md` → new `benchmarks/run_mcp_loop.py`
-- **Action**: Implement the generate → lint → iterate loop: read `requirement.md`, drive `formspec_create` + `formspec_audit` via MCP in a scratch dir, loop until clean or N rounds elapse, pipe the result through `run_benchmark.py score`. Record `{score, rounds, first-round diags, last-round diags}` per task. This is the falsifiable Claim A demo.
+- **State**: `benchmarks/run_benchmark.py` scores a candidate directory against a reference. Four tasks under `benchmarks/tasks/` each carry a `requirement.md`. Nothing reads those requirements.
+- **Why**: The existing runner proves references validate clean. Measuring whether an LLM can *produce* a clean candidate from prose requires a separate runner that drives the MCP from `requirement.md`.
+- **Files**: new `benchmarks/run_mcp_loop.py`.
+- **Done when**: `python3 benchmarks/run_mcp_loop.py invoice --model <name>` reads `tasks/invoice/requirement.md`, drives `formspec_create` + `formspec_audit` in a scratch dir, iterates until clean or `N` rounds elapse, then writes `{score, rounds, first_round_diags, last_round_diags}` per task. Pair with `run_benchmark.py score` to reuse the scoring function.
 
 ### 24. Split release pipelines by velocity tier
-- **Source**: ADR-0063; release-trains thread (#6 tail)
-- **Files**: `.changeset/config.json` (add `fixed` groups), `.github/workflows/publish.yml` (per-tier matrix), git tag conventions (`kernel-v*`, `foundation-v*`, `ai-v*`)
-- **Action**: Dry-run on a release branch; land only after a full green dry-run. Blocked on ADR-0063 acceptance and COMPAT.md matrix approval.
+- **State**: `COMPAT.md`, ADR-0063, and per-tier `CHANGELOG.md` stubs ship. Every npm package still releases atomically through one Changesets pipeline (`.github/workflows/publish.yml` + `.changeset/config.json`).
+- **Why**: Kernel packages need slow, semver-strict cadence; AI packages want monthly pre-1.0 drops. One pipeline couples kernel stability to AI velocity.
+- **Files**: `.changeset/config.json` (add `fixed` groups per tier), `.github/workflows/publish.yml` (per-tier job matrix), git tag conventions (`kernel-v*`, `foundation-v*`, `ai-v*`), npm `dist-tag` conventions.
+- **Done when**: each tier publishes on its own tag and cadence, proven by a dry-run on a release branch before landing on `main`.
 
 ### 25. CI gate for lint-code registry coverage + per-rule fixtures
-- **Source**: rule-registry v0 (#1 tail)
-- **Files**: `.github/workflows/*.yml`, every entry in `specs/lint-codes.json` (currently `fixtures: []`)
-- **Action**: Wire `tests/unit/test_lint_rule_registry.py` into the required CI test set so a new diagnostic code without a registry entry fails the build. Separately, link each rule to ≥1 fixture under `tests/` or `examples/` so the registry reflects actual coverage, not just code enumeration.
+- **State**: `tests/unit/test_lint_rule_registry.py` passes locally. It enforces that every emitted code appears in `specs/lint-codes.json` and every `tested`/`stable` rule carries `specRef` + `suggestedFix`. CI does not run it. Every `fixtures: []` array in the registry is empty.
+- **Why**: A new diagnostic code can reach `main` today without a registry entry. "Registered" without "exercised" is weak coverage — fixture links close the loop.
+- **Files**: `.github/workflows/*.yml` (wire the test into the required suite), `specs/lint-codes.json` (populate `fixtures` arrays).
+- **Done when**: the Python test runs on every PR, and every rule lists ≥1 fixture path under `tests/` or `examples/` that triggers the rule.
 
 ### 26. Populate authoring metadata on 29 draft lint rules
-- **Source**: `specs/lint-codes.json` (29 entries with `state: "draft"`)
-- **Files**: `crates/formspec-lint/src/metadata.rs`, `specs/lint-codes.json`
-- **Action**: Mechanical follow-on to the 8 `tested` codes. For each draft rule: add a `metadata_for` match arm with `spec_ref` + `suggested_fix`, flip registry state to `tested`. Parallelizable. The consistency test in `tests/unit/test_lint_rule_registry.py` enforces both sides stay aligned.
+- **State**: 8 of 37 rules in `specs/lint-codes.json` are `state: "tested"` with real `specRef` + `suggestedFix`. 29 remain `state: "draft"` with empty strings. After the single-source refactor, `crates/formspec-lint/src/metadata.rs` loads the registry via `include_str!` — metadata flows automatically, no Rust edits.
+- **Why**: A diagnostic without a repair hint costs an LLM a round trip per miss. Every rule stuck at `draft` weakens the authoring loop.
+- **Files**: `specs/lint-codes.json` only. Spec anchors live in `specs/core/spec.md`, `specs/theme/theme-spec.md`, `specs/component/component-spec.md`, `specs/fel/fel-grammar.md` — verify each anchor exists before committing.
+- **Done when**: every rule reaches `state: "tested"` with a verified repo-relative `specRef` and an imperative `suggestedFix` under ~120 characters. `test_tested_and_stable_rules_have_spec_ref_and_suggested_fix` stays green throughout.
 
 ### 27. `generate_changelog` output fails document-type detection (E100)
-- **Source**: benchmark harness work; code review F2
-- **Files**: `crates/formspec-changeset/` (generator), `src/formspec/validate.py:493-531`
-- **Plan**: `thoughts/plans/2026-04-17-changelog-generation-fails-doctype-detection.md`
-- **Action**: `generate_changelog(parent, child, url)` returns a document `detect_document_type` cannot classify. Benchmark `grant-report` task is currently scoped down to work around it; workaround must not persist. Print generator output, identify the missing root marker, fix the generator (or extend `detect_document_type`), round-trip fixture under `tests/conformance/`.
+- **State**: `generate_changelog(parent, child, url)` returns a document that `detect_document_type` cannot classify. `_pass_changelog_generation` at `src/formspec/validate.py:493-531` pipes the output through `lint()`, which emits E100. The `grant-report` benchmark task is scoped to the short form only to avoid tripping this.
+- **Why**: Any directory-validator run over a multi-version definition tree sees a spurious E100. The benchmark workaround hides the defect — remove both together.
+- **Plan**: `thoughts/plans/2026-04-17-changelog-generation-fails-doctype-detection.md`.
+- **Files**: `crates/formspec-changeset/` (generator output shape), `src/formspec/validate.py:493-531`, `crates/formspec-core/src/document_type.rs` if the fix extends detection instead of the generator.
+- **Done when**: a generated changelog round-trips `detect_document_type` → `lint()` cleanly, a fixture under `tests/conformance/` guards the invariant, and the `grant-report` benchmark task widens to cover base + long alongside short.
 
-### 28. Decide ADR-0064 commit + handoff archival
-- **Source**: code review F3
-- **Files**: `thoughts/adr/0064-wos-granularity-and-ai-native-positioning.md`, `wos-spec/architecture-review-handoff.md`
-- **Action**: ADR-0064 was authored out-of-agent-scope during the LLM-authoring-loop session. Content verified coherent; all three referenced files resolve. Decide whether to commit the ADR and, per its "Supersedes" clause, whether to relocate the handoff to `wos-spec/archive/` or similar.
+### 28. Commit ADR-0064 + handoff archival
+- **State**: The handoff has been relocated inside the submodule to `wos-spec/thoughts/archive/reviews/2026-04-16-architecture-review-handoff.md` (submodule change pending). `thoughts/adr/0064-wos-granularity-and-ai-native-positioning.md` carries the updated path references but remains uncommitted.
+- **Why**: ADR-0064's "Supersedes" clause mandates the relocation. The ADR and the submodule pointer bump need to land together so `wos-spec/architecture-review-handoff.md` stops resolving while the ADR is visible.
+- **Files**: `thoughts/adr/0064-wos-granularity-and-ai-native-positioning.md`, the `wos-spec` submodule pointer in the outer repo.
+- **Done when**: ADR-0064 lands on `main`, the `wos-spec` submodule bump lands in the same or a closely-following commit, and the pre-move handoff path no longer resolves from either side.
 
 ## Track / Monitor
 
