@@ -1,6 +1,6 @@
 {
   "id": "grant-report",
   "difficulty": "intermediate",
-  "feature_tags": ["money", "calculations", "shapes", "mapping", "changelog", "reporting"],
+  "feature_tags": ["money", "calculations", "shapes", "mapping", "changelog", "reporting", "derivedFrom", "inheritance"],
   "tiers_covered": ["core", "fel", "theme", "component", "mapping"]
 }

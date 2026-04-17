@@ -1,0 +1,494 @@
+{
+    "$formspec": "1.0",
+    "url": "https://acf.hhs.gov/formspec/csbg/tribal-base",
+    "version": "3.0.0",
+    "status": "active",
+    "title": "CSBG Tribal Annual Report — Base Module",
+    "name": "tribal-base",
+    "description": "Shared items for CSBG Tribal Annual Report short and long variants. Includes basic organization information, expenditure category selection, expenditure amounts, and expenditure description narratives.",
+    "extensions": {
+        "x-formspec-common": {
+            "registryUrl": "https://formspec.org/registries/formspec-common.registry.json",
+            "version": "1.0.0"
+        }
+    },
+    "formPresentation": {
+        "pageMode": "wizard",
+        "labelPosition": "top",
+        "density": "comfortable",
+        "defaultCurrency": "USD"
+    },
+    "items": [
+        {
+            "key": "basicInfo",
+            "type": "group",
+            "label": "Basic Information",
+            "children": [
+                {
+                    "key": "orgName",
+                    "type": "field",
+                    "dataType": "string",
+                    "label": "Name of Tribe or Tribal Organization",
+                    "labels": {
+                        "review": "Tribal Organization"
+                    },
+                    "hint": "Enter the official name of your tribal organization"
+                },
+                {
+                    "key": "contactName",
+                    "type": "field",
+                    "dataType": "string",
+                    "label": "Full name",
+                    "labels": {
+                        "review": "CSBG Program Contact"
+                    }
+                },
+                {
+                    "key": "contactTitle",
+                    "type": "field",
+                    "dataType": "string",
+                    "label": "Role"
+                },
+                {
+                    "key": "phone",
+                    "type": "field",
+                    "dataType": "string",
+                    "label": "Primary phone number",
+                    "extensions": {
+                        "x-formspec-phone-nanp": true
+                    }
+                },
+                {
+                    "key": "email",
+                    "type": "field",
+                    "dataType": "string",
+                    "label": "Email address",
+                    "extensions": {
+                        "x-formspec-email": true
+                    }
+                }
+            ]
+        },
+        {
+            "key": "expenditures",
+            "type": "group",
+            "label": "Expenditure Amounts",
+            "children": [
+                {
+                    "key": "applicableTopics",
+                    "type": "field",
+                    "dataType": "multiChoice",
+                    "label": "Select the expenditure categories that apply to your program",
+                    "hint": "Only the selected categories will appear in the expenditure amounts section",
+                    "options": [
+                        {
+                            "value": "employment",
+                            "label": "Employment"
+                        },
+                        {
+                            "value": "childcare",
+                            "label": "Childcare, Early Childhood, Youth Development & Adult Education"
+                        },
+                        {
+                            "value": "assetBuilding",
+                            "label": "Income & Asset Building"
+                        },
+                        {
+                            "value": "housing",
+                            "label": "Housing"
+                        },
+                        {
+                            "value": "health",
+                            "label": "Health & Nutrition"
+                        },
+                        {
+                            "value": "civic",
+                            "label": "Civic Engagement & Community Involvement"
+                        },
+                        {
+                            "value": "transportation",
+                            "label": "Transportation"
+                        },
+                        {
+                            "value": "partnerships",
+                            "label": "Partnerships, Linkages, and Coordination"
+                        },
+                        {
+                            "value": "other",
+                            "label": "Other"
+                        }
+                    ]
+                },
+                {
+                    "key": "employment",
+                    "type": "field",
+                    "dataType": "money",
+                    "label": "Employment",
+                    "labels": {
+                        "review": "Employment expenses"
+                    },
+                    "extensions": {
+                        "x-formspec-currency-usd": true
+                    }
+                },
+                {
+                    "key": "childcare",
+                    "type": "field",
+                    "dataType": "money",
+                    "label": "Childcare, Early Childhood, Youth Development, and Adult Education",
+                    "labels": {
+                        "review": "Childcare, Early Childhood, Youth Development, and Adult Education expenses"
+                    },
+                    "extensions": {
+                        "x-formspec-currency-usd": true
+                    }
+                },
+                {
+                    "key": "assetBuilding",
+                    "type": "field",
+                    "dataType": "money",
+                    "label": "Income and Asset Building",
+                    "extensions": {
+                        "x-formspec-currency-usd": true
+                    }
+                },
+                {
+                    "key": "housing",
+                    "type": "field",
+                    "dataType": "money",
+                    "label": "Housing",
+                    "extensions": {
+                        "x-formspec-currency-usd": true
+                    }
+                },
+                {
+                    "key": "health",
+                    "type": "field",
+                    "dataType": "money",
+                    "label": "Health and Nutrition",
+                    "extensions": {
+                        "x-formspec-currency-usd": true
+                    }
+                },
+                {
+                    "key": "civic",
+                    "type": "field",
+                    "dataType": "money",
+                    "label": "Civic Engagement and Community Involvement",
+                    "extensions": {
+                        "x-formspec-currency-usd": true
+                    }
+                },
+                {
+                    "key": "transportation",
+                    "type": "field",
+                    "dataType": "money",
+                    "label": "Transportation",
+                    "extensions": {
+                        "x-formspec-currency-usd": true
+                    }
+                },
+                {
+                    "key": "partnerships",
+                    "type": "field",
+                    "dataType": "money",
+                    "label": "Partnerships, Linkages, and Coordination",
+                    "extensions": {
+                        "x-formspec-currency-usd": true
+                    }
+                },
+                {
+                    "key": "other",
+                    "type": "field",
+                    "dataType": "money",
+                    "label": "Other",
+                    "extensions": {
+                        "x-formspec-currency-usd": true
+                    }
+                },
+                {
+                    "key": "total",
+                    "type": "field",
+                    "dataType": "money",
+                    "label": "Total Expenditures",
+                    "labels": {
+                        "review": "Total Expenditures (auto-calculated)"
+                    },
+                    "extensions": {
+                        "x-formspec-currency-usd": true
+                    }
+                },
+                {
+                    "key": "hasAdministrationCosts",
+                    "type": "field",
+                    "dataType": "boolean",
+                    "label": "Did you use any funds toward Administration costs?"
+                },
+                {
+                    "key": "administrationExpenditure",
+                    "type": "field",
+                    "dataType": "money",
+                    "label": "Administration",
+                    "labels": {
+                        "review": "Total administration costs"
+                    },
+                    "extensions": {
+                        "x-formspec-currency-usd": true
+                    }
+                }
+            ]
+        },
+        {
+            "key": "descriptions",
+            "type": "group",
+            "label": "Expenditure Details",
+            "children": [
+                {
+                    "key": "employmentDesc",
+                    "type": "field",
+                    "dataType": "text",
+                    "label": "Description",
+                    "labels": {
+                        "review": "Details about employment related services"
+                    }
+                },
+                {
+                    "key": "educationDesc",
+                    "type": "field",
+                    "dataType": "text",
+                    "label": "Description",
+                    "labels": {
+                        "review": "Details about education related services"
+                    }
+                },
+                {
+                    "key": "incomeDesc",
+                    "type": "field",
+                    "dataType": "text",
+                    "label": "Description",
+                    "labels": {
+                        "review": "Details about income and asset services"
+                    }
+                },
+                {
+                    "key": "housingDesc",
+                    "type": "field",
+                    "dataType": "text",
+                    "label": "Description",
+                    "labels": {
+                        "review": "Details about housing services"
+                    }
+                },
+                {
+                    "key": "healthDesc",
+                    "type": "field",
+                    "dataType": "text",
+                    "label": "Description",
+                    "labels": {
+                        "review": "Details about health services"
+                    }
+                },
+                {
+                    "key": "civicDesc",
+                    "type": "field",
+                    "dataType": "text",
+                    "label": "Description",
+                    "labels": {
+                        "review": "Details about civic services"
+                    }
+                },
+                {
+                    "key": "transportationDesc",
+                    "type": "field",
+                    "dataType": "text",
+                    "label": "Description",
+                    "labels": {
+                        "review": "Details about transportation services"
+                    }
+                },
+                {
+                    "key": "partnershipsDesc",
+                    "type": "field",
+                    "dataType": "text",
+                    "label": "Description",
+                    "labels": {
+                        "review": "Details about partnerships, linkages, and coordination services"
+                    }
+                },
+                {
+                    "key": "otherDesc",
+                    "type": "field",
+                    "dataType": "text",
+                    "label": "Description",
+                    "labels": {
+                        "review": "Details about other services"
+                    }
+                }
+            ]
+        }
+    ],
+    "binds": [
+        {
+            "path": "basicInfo.orgName",
+            "required": "true"
+        },
+        {
+            "path": "basicInfo.contactName",
+            "required": "true"
+        },
+        {
+            "path": "basicInfo.contactTitle",
+            "required": "true"
+        },
+	        {
+	            "path": "basicInfo.phone",
+	            "required": "true"
+	        },
+	        {
+	            "path": "basicInfo.email",
+	            "required": "true"
+	        },
+        {
+            "path": "expenditures.applicableTopics",
+            "required": "true"
+        },
+        {
+            "path": "expenditures.employment",
+            "relevant": "selected($expenditures.applicableTopics, 'employment')",
+            "default": { "amount": 0, "currency": "USD" },
+            "constraint": "moneyAmount($) >= 0",
+            "constraintMessage": "Expenditure amount cannot be negative"
+        },
+        {
+            "path": "expenditures.childcare",
+            "relevant": "selected($expenditures.applicableTopics, 'childcare')",
+            "default": { "amount": 0, "currency": "USD" },
+            "constraint": "moneyAmount($) >= 0",
+            "constraintMessage": "Expenditure amount cannot be negative"
+        },
+        {
+            "path": "expenditures.assetBuilding",
+            "relevant": "selected($expenditures.applicableTopics, 'assetBuilding')",
+            "default": { "amount": 0, "currency": "USD" },
+            "constraint": "moneyAmount($) >= 0",
+            "constraintMessage": "Expenditure amount cannot be negative"
+        },
+        {
+            "path": "expenditures.housing",
+            "relevant": "selected($expenditures.applicableTopics, 'housing')",
+            "default": { "amount": 0, "currency": "USD" },
+            "constraint": "moneyAmount($) >= 0",
+            "constraintMessage": "Expenditure amount cannot be negative"
+        },
+        {
+            "path": "expenditures.health",
+            "relevant": "selected($expenditures.applicableTopics, 'health')",
+            "default": { "amount": 0, "currency": "USD" },
+            "constraint": "moneyAmount($) >= 0",
+            "constraintMessage": "Expenditure amount cannot be negative"
+        },
+        {
+            "path": "expenditures.civic",
+            "relevant": "selected($expenditures.applicableTopics, 'civic')",
+            "default": { "amount": 0, "currency": "USD" },
+            "constraint": "moneyAmount($) >= 0",
+            "constraintMessage": "Expenditure amount cannot be negative"
+        },
+        {
+            "path": "expenditures.transportation",
+            "relevant": "selected($expenditures.applicableTopics, 'transportation')",
+            "default": { "amount": 0, "currency": "USD" },
+            "constraint": "moneyAmount($) >= 0",
+            "constraintMessage": "Expenditure amount cannot be negative"
+        },
+        {
+            "path": "expenditures.partnerships",
+            "relevant": "selected($expenditures.applicableTopics, 'partnerships')",
+            "default": { "amount": 0, "currency": "USD" },
+            "constraint": "moneyAmount($) >= 0",
+            "constraintMessage": "Expenditure amount cannot be negative"
+        },
+        {
+            "path": "expenditures.other",
+            "relevant": "selected($expenditures.applicableTopics, 'other')",
+            "default": { "amount": 0, "currency": "USD" },
+            "constraint": "moneyAmount($) >= 0",
+            "constraintMessage": "Expenditure amount cannot be negative"
+        },
+        {
+            "path": "expenditures.total",
+            "calculate": "coalesce(moneySum([$expenditures.employment, $expenditures.childcare, $expenditures.assetBuilding, $expenditures.housing, $expenditures.health, $expenditures.civic, $expenditures.transportation, $expenditures.partnerships, $expenditures.other]), money(0, 'USD'))",
+            "readonly": "true"
+        },
+        {
+            "path": "expenditures.administrationExpenditure",
+            "relevant": "$expenditures.hasAdministrationCosts = true",
+            "required": "$expenditures.hasAdministrationCosts = true",
+            "constraint": "moneyAmount($) >= 0",
+            "constraintMessage": "Administration amount cannot be negative"
+        },
+        {
+            "path": "descriptions.employmentDesc",
+            "relevant": "selected($expenditures.applicableTopics, 'employment')",
+            "default": "N/A"
+        },
+        {
+            "path": "descriptions.educationDesc",
+            "relevant": "selected($expenditures.applicableTopics, 'childcare')",
+            "default": "N/A"
+        },
+        {
+            "path": "descriptions.incomeDesc",
+            "relevant": "selected($expenditures.applicableTopics, 'assetBuilding')",
+            "default": "N/A"
+        },
+        {
+            "path": "descriptions.housingDesc",
+            "relevant": "selected($expenditures.applicableTopics, 'housing')",
+            "default": "N/A"
+        },
+        {
+            "path": "descriptions.healthDesc",
+            "relevant": "selected($expenditures.applicableTopics, 'health')",
+            "default": "N/A"
+        },
+        {
+            "path": "descriptions.civicDesc",
+            "relevant": "selected($expenditures.applicableTopics, 'civic')",
+            "default": "N/A"
+        },
+        {
+            "path": "descriptions.transportationDesc",
+            "relevant": "selected($expenditures.applicableTopics, 'transportation')",
+            "default": "N/A"
+        },
+        {
+            "path": "descriptions.partnershipsDesc",
+            "relevant": "selected($expenditures.applicableTopics, 'partnerships')",
+            "default": "N/A"
+        },
+        {
+            "path": "descriptions.otherDesc",
+            "relevant": "selected($expenditures.applicableTopics, 'other')",
+            "default": "N/A"
+        }
+    ],
+    "shapes": [
+        {
+            "id": "atLeastOneTopic",
+            "target": "expenditures.applicableTopics",
+            "constraint": "present($)",
+            "message": "Please select at least one expenditure category",
+            "severity": "error",
+            "timing": "submit"
+        },
+        {
+            "id": "totalExpendituresPositive",
+            "target": "expenditures.total",
+            "constraint": "moneyAmount($) > 0",
+            "message": "Total expenditures must be greater than zero",
+            "severity": "warning",
+            "timing": "submit"
+        }
+    ]
+}
