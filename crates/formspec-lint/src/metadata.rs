@@ -126,7 +126,10 @@ mod tests {
     #[test]
     fn draft_codes_return_none() {
         // E100 (Cannot determine document type) ships as `draft` in the
-        // registry — it has no specRef or suggestedFix yet.
+        // registry. It carries specRef + suggestedFix metadata for future
+        // graduation, but `load_registry` only surfaces entries whose state
+        // is `tested` or `stable`, so `metadata_for` must still return None
+        // until a triggering fixture lands and the state is flipped.
         assert!(metadata_for("E100").is_none());
     }
 
