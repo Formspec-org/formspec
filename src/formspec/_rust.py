@@ -519,9 +519,22 @@ def generate_changelog(
     old_def: dict,
     new_def: dict,
     definition_url: str = "",
+    *,
+    wire_style: str = "snake",
 ) -> dict:
-    """Generate a changelog between two definition versions."""
-    return formspec_rust.generate_changelog(old_def, new_def, definition_url)
+    """Generate a changelog between two definition versions.
+
+    Args:
+        old_def: The prior definition document.
+        new_def: The successor definition document.
+        definition_url: Canonical URL identifying the definition being diffed.
+        wire_style: Key casing for the returned dict. ``"snake"`` (default)
+            emits Python-friendly snake_case keys. ``"camel"`` emits the
+            canonical camelCase wire format defined by
+            ``schemas/changelog.schema.json`` — use this when the output
+            will be handed to ``lint()`` or serialized across runtimes.
+    """
+    return formspec_rust.generate_changelog(old_def, new_def, definition_url, wire_style)
 
 
 def apply_migrations_to_response_data(

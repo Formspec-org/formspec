@@ -13,7 +13,6 @@ See: thoughts/plans/2026-04-17-changelog-generation-fails-doctype-detection.md
 from __future__ import annotations
 
 from formspec._rust import detect_document_type, generate_changelog, lint
-from formspec.validate import _changelog_snake_to_camel
 
 
 def _def(version: str, *items: dict) -> dict:
@@ -50,26 +49,73 @@ class TestDetectDocumentTypeRoundTrip:
 
 
 class TestLintRoundTrip:
-    def test_lint_of_translated_changelog_has_no_schema_errors(self):
-        """After snake→camel translation, the generated document passes
-        schema validation (no E100, no E101 from `additionalProperties: false`).
+    def test_camel_output_lints_cleanly_without_any_translation(self):
+        """With `wire_style="camel"`, generator output matches the wire schema
+        directly — no Python-side translation needed, no E100 or E101 fires.
         """
         old = _def("1.0.0")
         new = _def("1.1.0", {
             "key": "name", "type": "field", "dataType": "string", "label": "Name"
         })
-        cl = generate_changelog(old, new, "https://example.org/form")
-        diags = lint(_changelog_snake_to_camel(cl))
+        cl = generate_changelog(old, new, "https://example.org/form", wire_style="camel")
+        diags = lint(cl)
         errors = [d for d in diags if d.severity == "error"]
         assert errors == [], (
-            "generated changelog should validate cleanly after snake→camel "
-            f"translation, got: {[(d.code, d.message) for d in errors]}"
+            "camel-style generated changelog should validate cleanly, got: "
+            f"{[(d.code, d.message) for d in errors]}"
         )
 
-    def test_lint_does_not_emit_e100_on_generated_changelog(self):
-        """Direct regression test: the generator output itself (before any
-        translation) must at least not trip E100. E101 may still fire on
-        snake-style keys, but the document-type detector must succeed.
+    def test_camel_output_has_camelcase_keys(self):
+        """Pin the wire contract: camel style emits the exact keys the schema
+        requires (no snake_case leaking through)."""
+        old = _def("1.0.0")
+        new = _def("1.1.0", {
+            "key": "name", "type": "field", "dataType": "string", "label": "Name"
+        })
+        cl = generate_changelog(old, new, "https://example.org/form", wire_style="camel")
+        assert "definitionUrl" in cl
+        assert "fromVersion" in cl
+        assert "toVersion" in cl
+        assert "semverImpact" in cl
+        assert "definition_url" not in cl
+        assert "from_version" not in cl
+        for change in cl["changes"]:
+            assert "type" in change  # camel change keys
+            assert "change_type" not in change
+
+    def test_camel_output_omits_migration_hint_when_absent(self):
+        """Absence-not-null: on an Added item (never carries migrationHint),
+        the key must be absent from the change object. Schema declares
+        migrationHint as `type: "string"` with no null permitted under
+        `additionalProperties: false`, so null-present would fail lint."""
+        old = _def("1.0.0")
+        new = _def("1.1.0", {
+            "key": "x", "type": "field", "dataType": "string", "label": "X"
+        })
+        cl = generate_changelog(old, new, "https://example.org/form", wire_style="camel")
+        added = next(c for c in cl["changes"] if c.get("type") == "added")
+        assert "migrationHint" not in added, (
+            f"added change must not emit migrationHint, got: {added}"
+        )
+
+    def test_snake_style_is_still_the_default_for_backwards_compat(self):
+        """Callers that do not pass `wire_style` keep getting snake_case."""
+        old = _def("1.0.0")
+        new = _def("1.1.0", {
+            "key": "name", "type": "field", "dataType": "string", "label": "Name"
+        })
+        cl = generate_changelog(old, new, "https://example.org/form")
+        assert "definition_url" in cl
+        assert "from_version" in cl
+        assert "semver_impact" in cl
+        for change in cl["changes"]:
+            assert "change_type" in change
+
+    def test_lint_does_not_emit_e100_on_generated_changelog_snake(self):
+        """Regression: snake output still passes document-type detection
+        (via the `$formspecChangelog` envelope marker, which is casing-
+        agnostic). E101 may fire on snake keys under `additionalProperties:
+        false`, but E100 must not.
         """
         old = _def("1.0.0")
         new = _def("1.1.0", {
@@ -81,3 +127,12 @@ class TestLintRoundTrip:
         assert e100 == [], (
             f"E100 fired on generated changelog: {[d.message for d in e100]}"
         )
+
+    def test_rejects_unknown_wire_style(self):
+        """The binding raises on invalid wire_style values — no silent
+        fallback to snake."""
+        import pytest
+        old = _def("1.0.0")
+        new = _def("1.1.0")
+        with pytest.raises(ValueError, match="unknown wire_style"):
+            generate_changelog(old, new, "u", wire_style="kebab")

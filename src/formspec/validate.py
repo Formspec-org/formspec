@@ -490,58 +490,6 @@ def _pass_mapping_forward(arts: DiscoveredArtifacts) -> PassResult:
     return pr
 
 
-# ── Changelog snake→camel translation (for lint round-trip) ─────────────────
-#
-# `generate_changelog` returns snake_case keys for Python ergonomics, but the
-# JSON wire schema (`changelog.schema.json`) is canonically camelCase with
-# `additionalProperties: false`. Translate the narrow set of known keys before
-# handing the document to `lint()` so schema validation passes on a
-# successfully-generated changelog. See
-# `thoughts/plans/2026-04-17-changelog-generation-fails-doctype-detection.md`.
-
-_CHANGELOG_ROOT_KEYS_SNAKE_TO_CAMEL = {
-    "definition_url": "definitionUrl",
-    "from_version": "fromVersion",
-    "to_version": "toVersion",
-    "semver_impact": "semverImpact",
-    "generated_at": "generatedAt",
-}
-
-_CHANGELOG_CHANGE_KEYS_SNAKE_TO_CAMEL = {
-    "change_type": "type",
-    "migration_hint": "migrationHint",
-}
-
-
-def _changelog_snake_to_camel(changelog: dict) -> dict:
-    """Return a camelCase copy of a snake_case changelog dict for schema validation.
-
-    Drops keys whose value is None so that snake-side Optional fields don't
-    produce `null is not of type "string"` schema errors (the schema omits
-    rather than permits null for these fields).
-    """
-
-    def _clean_change(change: dict) -> dict:
-        out: dict = {}
-        for k, v in change.items():
-            new_key = _CHANGELOG_CHANGE_KEYS_SNAKE_TO_CAMEL.get(k, k)
-            if v is None:
-                continue
-            out[new_key] = v
-        return out
-
-    out: dict = {}
-    for k, v in changelog.items():
-        new_key = _CHANGELOG_ROOT_KEYS_SNAKE_TO_CAMEL.get(k, k)
-        if k == "changes" and isinstance(v, list):
-            out[new_key] = [_clean_change(c) for c in v]
-        elif v is None:
-            continue
-        else:
-            out[new_key] = v
-    return out
-
-
 def _pass_changelog_generation(arts: DiscoveredArtifacts) -> PassResult:
     if not arts.changelog_pairs:
         return PassResult(title="Changelog generation", empty=True)
@@ -551,7 +499,11 @@ def _pass_changelog_generation(arts: DiscoveredArtifacts) -> PassResult:
     for parent, child in arts.changelog_pairs:
         pair_label = f"{parent.path.name} → {child.path.name}"
         try:
-            changelog = generate_changelog(parent.doc, child.doc, child.url)
+            # Request camelCase keys so the generated document matches
+            # `changelog.schema.json` directly — no Python-side translation.
+            changelog = generate_changelog(
+                parent.doc, child.doc, child.url, wire_style="camel"
+            )
         except Exception as e:
             pr.items.append(
                 PassItemResult(
@@ -565,7 +517,7 @@ def _pass_changelog_generation(arts: DiscoveredArtifacts) -> PassResult:
             continue
 
         changes = changelog.get("changes", [])
-        impact = changelog.get("semver_impact", "unknown")
+        impact = changelog.get("semverImpact", "unknown")
         pr.items.append(
             PassItemResult(
                 label=f"generate_changelog({pair_label})",
@@ -579,9 +531,7 @@ def _pass_changelog_generation(arts: DiscoveredArtifacts) -> PassResult:
             )
         )
 
-        # Validate the generated changelog against schema via lint. Translate
-        # snake_case → camelCase so the document matches the wire schema.
-        diags = lint(_changelog_snake_to_camel(changelog))
+        diags = lint(changelog)
         errors = [d for d in diags if d.severity == "error"]
         warnings = [d for d in diags if d.severity == "warning"]
         pr.items.append(

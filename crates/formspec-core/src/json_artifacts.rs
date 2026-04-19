@@ -55,11 +55,23 @@ fn change_to_object(c: &Change, style: JsonWireStyle) -> Value {
     m.insert("target".to_string(), json!(change_target_str(&c.target)));
     m.insert("path".to_string(), json!(c.path));
     m.insert("impact".to_string(), json!(change_impact_str(c.impact)));
-    m.insert("key".to_string(), json!(c.key));
-    m.insert("description".to_string(), json!(c.description));
+    // `key`, `description`, and `migrationHint` are declared as
+    // `type: "string"` in `changelog.schema.json` with
+    // `additionalProperties: false` on the Change object — emitting `null`
+    // would fail schema validation. Since each is optional, absence is the
+    // correct encoding when the Rust `Option<String>` is `None`.
+    if let Some(key) = &c.key {
+        m.insert("key".to_string(), json!(key));
+    }
+    if let Some(description) = &c.description {
+        m.insert("description".to_string(), json!(description));
+    }
+    // `before`/`after` have no type constraint in the schema — null is fine.
     m.insert("before".to_string(), json!(c.before));
     m.insert("after".to_string(), json!(c.after));
-    m.insert(migration_key.to_string(), json!(c.migration_hint));
+    if let Some(hint) = &c.migration_hint {
+        m.insert(migration_key.to_string(), json!(hint));
+    }
     Value::Object(m)
 }
 

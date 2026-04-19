@@ -1,6 +1,7 @@
 //! Integration tests for changelog module.
 
 use formspec_core::changelog::*;
+use formspec_core::{JsonWireStyle, changelog_to_json_value};
 use serde_json::{Value, json};
 
 const URL: &str = "https://example.org/forms/test";
@@ -1127,6 +1128,104 @@ fn screener_item_changes_tracked() {
         .collect();
     // q1 modified (label changed), q2 added
     assert_eq!(item_changes.len(), 2);
+}
+
+// ── Wire-format invariants (schema conformance at the serializer boundary) ──
+//
+// `change_to_object` skips `key` / `description` / `migrationHint` when the
+// Rust `Option<String>` is `None`. The schema declares them `type: "string"`
+// under `additionalProperties: false`, so emitting `null` would fail
+// validation. `before` / `after` have no type constraint — null is valid
+// for them. These tests pin the contract at the Rust boundary so any
+// future change surfaces across both wire styles and both the Python
+// and WASM bindings.
+
+fn _simple_added_changelog() -> Changelog {
+    let old = json!({
+        "url": "u", "version": "1.0.0", "title": "t", "items": []
+    });
+    let new = json!({
+        "url": "u", "version": "1.1.0", "title": "t",
+        "items": [{"key": "x", "type": "field", "dataType": "string"}]
+    });
+    generate_changelog(&old, &new, "u")
+}
+
+#[test]
+fn camel_serialization_omits_optional_string_fields_when_none() {
+    let cl = _simple_added_changelog();
+    let v = changelog_to_json_value(&cl, JsonWireStyle::JsCamel);
+    let changes = v.get("changes").unwrap().as_array().unwrap();
+    for change in changes {
+        let obj = change.as_object().unwrap();
+        // description/migrationHint must be absent (not null) when None,
+        // since the schema rejects null under `type: "string"`.
+        if !obj.contains_key("description") {
+            continue; // absent — correct
+        }
+        assert!(
+            !obj["description"].is_null(),
+            "description key present with null value — schema forbids"
+        );
+    }
+    // Positive cross-check: at least one change in this scenario has no
+    // migrationHint (Added items never carry one), so the absence branch
+    // is exercised.
+    let added = changes.iter().find(|c| c["type"] == "added").unwrap();
+    assert!(
+        !added.as_object().unwrap().contains_key("migrationHint"),
+        "added change must not emit migrationHint at all"
+    );
+}
+
+#[test]
+fn snake_serialization_also_omits_optional_string_fields_when_none() {
+    // The None-stripping is style-independent — same guarantee holds for
+    // snake callers so Python ergonomics do not diverge from schema shape.
+    let cl = _simple_added_changelog();
+    let v = changelog_to_json_value(&cl, JsonWireStyle::PythonSnake);
+    let added = v
+        .get("changes")
+        .unwrap()
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|c| c["change_type"] == "added")
+        .unwrap();
+    let obj = added.as_object().unwrap();
+    assert!(!obj.contains_key("migration_hint"));
+    // `description` may be absent for this Added case; pin absence-not-null.
+    if obj.contains_key("description") {
+        assert!(!obj["description"].is_null());
+    }
+}
+
+#[test]
+fn camel_serialization_emits_migration_hint_when_some() {
+    // Round-trip the positive branch: a Change with Some(hint) must render
+    // the key. This pins that the None-skip is conditional, not a blanket drop.
+    let cl = Changelog {
+        definition_url: "u".into(),
+        from_version: "1.0.0".into(),
+        to_version: "2.0.0".into(),
+        semver_impact: SemverImpact::Major,
+        changes: vec![Change {
+            change_type: ChangeType::Removed,
+            target: ChangeTarget::Item,
+            path: "items.x".into(),
+            impact: ChangeImpact::Breaking,
+            key: Some("x".into()),
+            description: Some("removed x".into()),
+            before: None,
+            after: None,
+            migration_hint: Some("drop".into()),
+        }],
+    };
+    let v = changelog_to_json_value(&cl, JsonWireStyle::JsCamel);
+    let c = &v["changes"][0];
+    assert_eq!(c["key"], "x");
+    assert_eq!(c["description"], "removed x");
+    assert_eq!(c["migrationHint"], "drop");
 }
 
 #[test]
