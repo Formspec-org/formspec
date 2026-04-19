@@ -1,0 +1,19 @@
+{
+  "$formspecTheme": "1.0",
+  "url": "https://example.com/themes/w705",
+  "version": "1.0.0",
+  "targetDefinition": { "url": "https://example.com/forms/w705" },
+  "items": {
+    "phantomField": {}
+  },
+  "_pairedDefinition": {
+    "$formspec": "1.0",
+    "url": "https://example.com/forms/w705",
+    "version": "1.0.0",
+    "status": "draft",
+    "title": "W705 fixture paired definition",
+    "items": [
+      { "key": "name", "type": "field", "label": "Name", "dataType": "string" }
+    ]
+  }
+}

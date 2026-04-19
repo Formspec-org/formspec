@@ -1,0 +1,23 @@
+{
+  "$formspecTheme": "1.0",
+  "url": "https://example.com/themes/w711",
+  "version": "1.0.0",
+  "targetDefinition": { "url": "https://example.com/forms/w711" },
+  "breakpoints": {
+    "md": 768
+  },
+  "pages": [
+    {
+      "id": "main",
+      "title": "Main",
+      "regions": [
+        {
+          "key": "name",
+          "responsive": {
+            "xl": { "span": 12 }
+          }
+        }
+      ]
+    }
+  ]
+}

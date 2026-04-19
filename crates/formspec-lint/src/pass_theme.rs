@@ -433,14 +433,14 @@ pub fn lint_theme(theme: &Value, definition: Option<&Value>) -> Vec<LintDiagnost
 
             // W708: unknown non-extension token
             if !registry.contains(name) && !name.starts_with("x-") {
-                diags.push(LintDiagnostic::warning(
+                diags.push(crate::metadata::with_metadata(LintDiagnostic::warning(
                     "W708",
                     PASS,
                     &path,
                     format!(
                         "Token '{name}' is not a recognized platform token and does not use the 'x-' extension prefix"
                     ),
-                ));
+                )));
             }
 
             // Type-based value validation using registry
@@ -449,16 +449,20 @@ pub fn lint_theme(theme: &Value, definition: Option<&Value>) -> Vec<LintDiagnost
                 Value::String(s) => Some(s.as_str()),
                 Value::Number(n) => {
                     // Numbers are valid for fontWeight and number types; validate inline.
+                    // NOTE: the fontWeight and number arms below are dead code until
+                    // `crates/formspec-lint/schemas/token-registry.json` declares at
+                    // least one token with `type: "fontWeight"` or `type: "number"`.
+                    // The wrappers are in place so graduation becomes "drop in fixture".
                     match token_type {
                         Some("fontWeight") => {
                             let repr = n.to_string();
                             if !is_font_weight(&repr) {
-                                diags.push(LintDiagnostic::warning(
+                                diags.push(crate::metadata::with_metadata(LintDiagnostic::warning(
                                     "W702",
                                     PASS,
                                     &path,
                                     format!("Font weight token '{name}' has invalid value: {repr} (expected 100-900 in steps of 100, or 'normal'/'bold')"),
-                                ));
+                                )));
                             }
                             None
                         }
@@ -466,14 +470,14 @@ pub fn lint_theme(theme: &Value, definition: Option<&Value>) -> Vec<LintDiagnost
                             if let Some(f) = n.as_f64()
                                 && f <= 0.0
                             {
-                                diags.push(LintDiagnostic::warning(
+                                diags.push(crate::metadata::with_metadata(LintDiagnostic::warning(
                                     "W703",
                                     PASS,
                                     &path,
                                     format!(
                                         "Number token '{name}' must be a positive number, got: {f}"
                                     ),
-                                ));
+                                )));
                             }
                             None
                         }
@@ -487,44 +491,44 @@ pub fn lint_theme(theme: &Value, definition: Option<&Value>) -> Vec<LintDiagnost
                 match token_type {
                     Some("color") => {
                         if !is_css_color(s) {
-                            diags.push(LintDiagnostic::warning(
+                            diags.push(crate::metadata::with_metadata(LintDiagnostic::warning(
                                 "W700",
                                 PASS,
                                 &path,
                                 format!("Color token '{name}' has invalid CSS color value: '{s}'"),
-                            ));
+                            )));
                         }
                     }
                     Some("dimension") => {
                         if !is_css_length(s) {
-                            diags.push(LintDiagnostic::warning(
+                            diags.push(crate::metadata::with_metadata(LintDiagnostic::warning(
                                 "W701",
                                 PASS,
                                 &path,
                                 format!(
                                     "Dimension token '{name}' has invalid CSS length value: '{s}'"
                                 ),
-                            ));
+                            )));
                         }
                     }
                     Some("fontWeight") => {
                         if !is_font_weight(s) {
-                            diags.push(LintDiagnostic::warning(
+                            diags.push(crate::metadata::with_metadata(LintDiagnostic::warning(
                                 "W702",
                                 PASS,
                                 &path,
                                 format!("Font weight token '{name}' has invalid value: '{s}' (expected 100-900 in steps of 100, or 'normal'/'bold')"),
-                            ));
+                            )));
                         }
                     }
                     Some("number") => {
                         if !is_line_height(s) {
-                            diags.push(LintDiagnostic::warning(
+                            diags.push(crate::metadata::with_metadata(LintDiagnostic::warning(
                                 "W703",
                                 PASS,
                                 &path,
                                 format!("Number token '{name}' must be a unitless positive number, got: '{s}'"),
-                            ));
+                            )));
                         }
                     }
                     // fontFamily, duration, opacity, shadow, unknown — no value validation
@@ -611,12 +615,12 @@ pub fn lint_theme(theme: &Value, definition: Option<&Value>) -> Vec<LintDiagnost
                     if let Some(responsive) = region.get("responsive").and_then(|v| v.as_object()) {
                         for bp_key in responsive.keys() {
                             if !breakpoint_names.contains(bp_key) {
-                                diags.push(LintDiagnostic::warning(
+                                diags.push(crate::metadata::with_metadata(LintDiagnostic::warning(
                                     "W711",
                                     PASS,
                                     format!("$.pages[{i}].regions[{j}].responsive.{bp_key}"),
                                     format!("Responsive breakpoint '{bp_key}' not declared in theme breakpoints"),
-                                ));
+                                )));
                             }
                         }
                     }
@@ -633,14 +637,14 @@ pub fn lint_theme(theme: &Value, definition: Option<&Value>) -> Vec<LintDiagnost
         if let Some(items) = theme.get("items").and_then(|v| v.as_object()) {
             for key in items.keys() {
                 if !item_keys.contains(key.as_str()) {
-                    diags.push(LintDiagnostic::warning(
+                    diags.push(crate::metadata::with_metadata(LintDiagnostic::warning(
                         "W705",
                         PASS,
                         format!("$.items.{key}"),
                         format!(
                             "Theme item override '{key}' does not match any definition item path"
                         ),
-                    ));
+                    )));
                 }
             }
         }
@@ -653,12 +657,12 @@ pub fn lint_theme(theme: &Value, definition: Option<&Value>) -> Vec<LintDiagnost
                         if let Some(key) = region.get("key").and_then(|v| v.as_str())
                             && !item_keys.contains(key)
                         {
-                            diags.push(LintDiagnostic::warning(
+                            diags.push(crate::metadata::with_metadata(LintDiagnostic::warning(
                                     "W706",
                                     PASS,
                                     format!("$.pages[{i}].regions[{j}].key"),
                                     format!("Page region key '{key}' does not match any definition item path"),
-                                ));
+                                )));
                         }
                     }
                 }
@@ -673,14 +677,14 @@ pub fn lint_theme(theme: &Value, definition: Option<&Value>) -> Vec<LintDiagnost
             && let Some(def_url) = def.get("url").and_then(|v| v.as_str())
             && target_url != def_url
         {
-            diags.push(LintDiagnostic::warning(
+            diags.push(crate::metadata::with_metadata(LintDiagnostic::warning(
                         "W707",
                         PASS,
                         "$.targetDefinition.url",
                         format!(
                             "Theme targets definition URL '{target_url}' but provided definition has URL '{def_url}'"
                         ),
-                    ));
+                    )));
         }
     }
 

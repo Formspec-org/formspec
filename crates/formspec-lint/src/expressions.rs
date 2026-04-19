@@ -332,12 +332,12 @@ fn try_parse(
             });
         }
         Err(e) => {
-            diagnostics.push(LintDiagnostic::error(
+            diagnostics.push(crate::metadata::with_metadata(LintDiagnostic::error(
                 "E400",
                 4,
                 &expression_path,
                 format!("FEL parse error: {e}"),
-            ));
+            )));
         }
     }
 }

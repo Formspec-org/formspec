@@ -104,8 +104,10 @@
       "title": "FEL expression failed to parse",
       "specRef": "specs/fel/fel-grammar.md#4-expression-grammar",
       "suggestedFix": "fix the FEL syntax to match the grammar \u2014 check operators, quotes, and path references",
-      "fixtures": [],
-      "state": "draft"
+      "fixtures": [
+        "tests/fixtures/lint/E400-fel-parse-error.json"
+      ],
+      "state": "tested"
     },
     {
       "code": "E500",
@@ -158,8 +160,10 @@
       "title": "Invalid color token value",
       "specRef": "specs/theme/theme-spec.md#32-token-categories",
       "suggestedFix": "use a valid CSS color (hex, rgb/rgba, hsl/hsla, or named color) for this color token",
-      "fixtures": [],
-      "state": "draft"
+      "fixtures": [
+        "tests/fixtures/lint/W700-invalid-color-token.json"
+      ],
+      "state": "tested"
     },
     {
       "code": "W701",
@@ -168,8 +172,10 @@
       "title": "Invalid size token value",
       "specRef": "specs/theme/theme-spec.md#32-token-categories",
       "suggestedFix": "use a valid CSS length with unit (px, rem, em, %, \u2026) for this size token",
-      "fixtures": [],
-      "state": "draft"
+      "fixtures": [
+        "tests/fixtures/lint/W701-invalid-size-token.json"
+      ],
+      "state": "tested"
     },
     {
       "code": "W702",
@@ -178,7 +184,6 @@
       "title": "Invalid font weight token value",
       "specRef": "specs/theme/theme-spec.md#32-token-categories",
       "suggestedFix": "set font weight to a 100-step numeric (100\u2026900) or a recognized keyword (normal, bold, \u2026)",
-      "fixtures": [],
       "state": "draft"
     },
     {
@@ -188,7 +193,6 @@
       "title": "Invalid duration or easing token value",
       "specRef": "specs/theme/theme-spec.md#32-token-categories",
       "suggestedFix": "use a valid duration (e.g. `200ms`) or an easing function (`ease-in`, `cubic-bezier(...)`)",
-      "fixtures": [],
       "state": "draft"
     },
     {
@@ -210,8 +214,10 @@
       "title": "Theme item key not in paired definition",
       "specRef": "specs/theme/theme-spec.md#54-level-3-item-key-overrides",
       "suggestedFix": "remove the `items` override, or add an item with this key to the paired definition",
-      "fixtures": [],
-      "state": "draft"
+      "fixtures": [
+        "tests/fixtures/lint/W705-theme-item-key-not-in-definition.json"
+      ],
+      "state": "tested"
     },
     {
       "code": "W706",
@@ -220,8 +226,10 @@
       "title": "Page region references unknown item key",
       "specRef": "specs/theme/theme-spec.md#63-regions-and-item-keys",
       "suggestedFix": "change the region `key` to match an item path in the definition, or add that item",
-      "fixtures": [],
-      "state": "draft"
+      "fixtures": [
+        "tests/fixtures/lint/W706-page-region-key-unknown.json"
+      ],
+      "state": "tested"
     },
     {
       "code": "W707",
@@ -230,8 +238,10 @@
       "title": "Theme targetDefinition.url does not match paired definition",
       "specRef": "specs/theme/theme-spec.md#22-target-definition-binding",
       "suggestedFix": "align `targetDefinition.url` with the definition's `url`, or pair with the correct definition",
-      "fixtures": [],
-      "state": "draft"
+      "fixtures": [
+        "tests/fixtures/lint/W707-target-definition-url-mismatch.json"
+      ],
+      "state": "tested"
     },
     {
       "code": "W708",
@@ -240,8 +250,10 @@
       "title": "Unknown non-extension token",
       "specRef": "specs/theme/theme-spec.md#31-token-structure",
       "suggestedFix": "rename the token to a known category, or namespace custom tokens under an `x-` prefix",
-      "fixtures": [],
-      "state": "draft"
+      "fixtures": [
+        "tests/fixtures/lint/W708-unknown-non-extension-token.json"
+      ],
+      "state": "tested"
     },
     {
       "code": "W709",
@@ -272,8 +284,10 @@
       "title": "Responsive breakpoint references unknown page region",
       "specRef": "specs/theme/theme-spec.md#64-responsive-breakpoints",
       "suggestedFix": "declare the breakpoint under `theme.breakpoints`, or remove the unused `responsive` entry",
-      "fixtures": [],
-      "state": "draft"
+      "fixtures": [
+        "tests/fixtures/lint/W711-responsive-breakpoint-undeclared.json"
+      ],
+      "state": "tested"
     },
     {
       "code": "E800",

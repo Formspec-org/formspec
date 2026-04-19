@@ -1,0 +1,14 @@
+{
+  "$formspec": "1.0",
+  "url": "https://example.com/forms/e400",
+  "version": "1.0.0",
+  "status": "draft",
+  "title": "E400 fixture — syntactically malformed FEL expression",
+  "items": [
+    { "key": "amount", "type": "field", "dataType": "integer", "label": "Amount" },
+    { "key": "doubled", "type": "field", "dataType": "integer", "label": "Doubled" }
+  ],
+  "binds": [
+    { "path": "doubled", "calculate": "$amount + + 2" }
+  ]
+}
