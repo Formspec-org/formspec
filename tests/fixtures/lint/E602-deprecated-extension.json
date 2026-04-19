@@ -1,0 +1,40 @@
+{
+  "$formspec": "1.0",
+  "url": "https://example.com/forms/e602",
+  "version": "1.0.0",
+  "status": "draft",
+  "title": "E602 fixture — definition uses a deprecated extension",
+  "items": [
+    {
+      "key": "oldField",
+      "type": "field",
+      "dataType": "string",
+      "label": "Old",
+      "extensions": { "x-formspec-deprecated-bar": true }
+    }
+  ],
+  "_registryDocuments": [
+    {
+      "$formspecRegistry": "1.0",
+      "publisher": {
+        "name": "Fixture Registry",
+        "url": "https://example.com/fixtures",
+        "contact": "fixtures@example.com"
+      },
+      "published": "2026-01-01T00:00:00Z",
+      "entries": [
+        {
+          "name": "x-formspec-deprecated-bar",
+          "category": "dataType",
+          "version": "1.0.0",
+          "status": "deprecated",
+          "deprecationNotice": "Use x-formspec-new-bar instead.",
+          "description": "Deprecated extension for the E602 fixture.",
+          "compatibility": { "formspecVersion": ">=1.0.0 <2.0.0" },
+          "license": "Apache-2.0",
+          "baseType": "string"
+        }
+      ]
+    }
+  ]
+}

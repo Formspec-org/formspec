@@ -1,0 +1,9 @@
+{
+  "$formspecComponent": "1.0",
+  "version": "1.0.0",
+  "targetDefinition": { "url": "https://example.com/forms/e800" },
+  "tree": {
+    "component": "TextInput",
+    "bind": "name"
+  }
+}

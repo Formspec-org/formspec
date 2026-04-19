@@ -1,0 +1,21 @@
+{
+  "$formspecComponent": "1.0",
+  "version": "1.0.0",
+  "targetDefinition": { "url": "https://example.com/forms/e803" },
+  "tree": {
+    "component": "Stack",
+    "children": [
+      { "component": "Select", "bind": "color" }
+    ]
+  },
+  "_pairedDefinition": {
+    "$formspec": "1.0",
+    "url": "https://example.com/forms/e803",
+    "version": "1.0.0",
+    "status": "draft",
+    "title": "E803 paired",
+    "items": [
+      { "key": "color", "type": "field", "label": "Color", "dataType": "choice" }
+    ]
+  }
+}

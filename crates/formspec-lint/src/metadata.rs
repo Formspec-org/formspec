@@ -125,12 +125,13 @@ mod tests {
 
     #[test]
     fn draft_codes_return_none() {
-        // E100 (Cannot determine document type) ships as `draft` in the
-        // registry. It carries specRef + suggestedFix metadata for future
-        // graduation, but `load_registry` only surfaces entries whose state
-        // is `tested` or `stable`, so `metadata_for` must still return None
-        // until a triggering fixture lands and the state is flipped.
-        assert!(metadata_for("E100").is_none());
+        // W803 (Non-input component has bind / Editable Binding Uniqueness)
+        // ships as `draft` in the registry. It carries specRef + suggestedFix
+        // metadata for future graduation, but `load_registry` only surfaces
+        // entries whose state is `tested` or `stable`, so `metadata_for` must
+        // still return None until the Rust-vs-Python semantic divergence is
+        // resolved and a triggering fixture lands. See TODO #29.
+        assert!(metadata_for("W803").is_none());
     }
 
     #[test]
@@ -156,7 +157,7 @@ mod tests {
 
     #[test]
     fn with_metadata_passes_draft_codes_through() {
-        let d = with_metadata(LintDiagnostic::error("E100", 1, "$", "draft"));
+        let d = with_metadata(LintDiagnostic::warning("W803", 8, "$", "draft"));
         assert!(d.suggested_fix.is_none());
         assert!(d.spec_ref.is_none());
     }

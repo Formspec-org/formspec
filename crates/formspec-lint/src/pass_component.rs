@@ -198,12 +198,12 @@ impl<'a> WalkState<'a> {
 
         // E801: Unknown component
         if !is_builtin(comp_type) && !self.custom_names.contains(comp_type) {
-            self.diags.push(LintDiagnostic::error(
+            self.diags.push(crate::metadata::with_metadata(LintDiagnostic::error(
                 "E801",
                 PASS,
                 path,
                 format!("Unknown component type: '{comp_type}'"),
-            ));
+            )));
         }
 
         // E806: Custom component missing required params
@@ -217,14 +217,14 @@ impl<'a> WalkState<'a> {
                 if let Some(param_name) = param_val.as_str()
                     && !provided_params.is_some_and(|params| params.contains_key(param_name))
                 {
-                    self.diags.push(LintDiagnostic::error(
+                    self.diags.push(crate::metadata::with_metadata(LintDiagnostic::error(
                         "E806",
                         PASS,
                         path,
                         format!(
                             "Custom component '{comp_type}' missing required param '{param_name}'"
                         ),
-                    ));
+                    )));
                 }
             }
         }
@@ -233,15 +233,24 @@ impl<'a> WalkState<'a> {
         if let Some(bind) = node.get("bind").and_then(|v| v.as_str()) {
             // W801: Layout/container shouldn't bind
             if should_not_bind(comp_type) {
-                self.diags.push(LintDiagnostic::warning(
+                self.diags.push(crate::metadata::with_metadata(LintDiagnostic::warning(
                     "W801",
                     PASS,
                     path,
                     format!("Layout/container component '{comp_type}' should not declare a bind"),
-                ));
+                )));
             }
 
             // W804: Duplicate bind in tree (any component)
+            // NOTE: intentionally unwrapped — the Rust emission ("Duplicate
+            // bind in tree") diverges from the Python linter's W804
+            // ("unresolved Summary/DataTable bind") and from the registry
+            // title's current wording. Held until the 3-way semantic is
+            // reconciled per TODO #29 / thoughts/research/2026-04-17-
+            // lint-rule-graduation-needs-fixtures.md. Do NOT wrap with
+            // with_metadata until the semantic is resolved — doing so
+            // would bind an ambiguous registry entry to whichever emission
+            // site wins the graduation race.
             if !self.all_binds.insert(bind.to_string()) {
                 self.diags.push(LintDiagnostic::warning(
                     "W804",
@@ -267,10 +276,10 @@ impl<'a> WalkState<'a> {
                             if let Some(ref dt) = field_info.data_type {
                                 match classify_compatibility(comp_type, dt) {
                                     Compatibility::Incompatible => {
-                                        self.diags.push(LintDiagnostic::error(
+                                        self.diags.push(crate::metadata::with_metadata(LintDiagnostic::error(
                                             "E802", PASS, path,
                                             format!("Component '{comp_type}' is incompatible with field dataType '{dt}'"),
-                                        ));
+                                        )));
                                     }
                                     Compatibility::CompatibleWithWarning => {
                                         self.diags.push(crate::metadata::with_metadata(LintDiagnostic::warning(
@@ -284,10 +293,10 @@ impl<'a> WalkState<'a> {
 
                             // E803: Requires options but field has none
                             if requires_options_source(comp_type) && !field_info.has_options {
-                                self.diags.push(LintDiagnostic::error(
+                                self.diags.push(crate::metadata::with_metadata(LintDiagnostic::error(
                                     "E803", PASS, path,
                                     format!("Component '{comp_type}' requires an optionSet or options, but field '{bind}' has neither"),
-                                ));
+                                )));
                             }
 
                             // E804: richtext TextInput must bind to string
@@ -301,6 +310,21 @@ impl<'a> WalkState<'a> {
                                         .data_type
                                         .as_deref()
                                         .is_some_and(|dt| dt == "string" || dt == "text");
+                                    // E804 intentionally unwrapped —
+                                    // the Rust trigger condition
+                                    // `inputMode == "richtext"` is
+                                    // unreachable via any schema-valid
+                                    // document (component.schema.json
+                                    // restricts inputMode to
+                                    // text|email|tel|url|search). The
+                                    // spec §5.6 does not mention
+                                    // richtext; the registry specRef
+                                    // at `#56-textinput` is currently
+                                    // inaccurate. Held until the
+                                    // richtext semantic is specified
+                                    // and a schema-valid fixture can
+                                    // trigger it. See TODO #29 batch 4
+                                    // review (Finding 2).
                                     if !is_string {
                                         self.diags.push(LintDiagnostic::error(
                                             "E804", PASS, path,
@@ -317,6 +341,13 @@ impl<'a> WalkState<'a> {
                 }
 
                 // W803: Multiple editable inputs bind same field
+                // NOTE: intentionally unwrapped — the Rust title ("Non-input
+                // component has bind") drifted from the spec §4.3 Editable
+                // Binding Uniqueness clause this check actually implements.
+                // Held until the semantic is reconciled per TODO #29 /
+                // thoughts/research/2026-04-17-lint-rule-graduation-
+                // needs-fixtures.md. See W804 note above for the parallel
+                // guidance: do NOT wrap with with_metadata yet.
                 if !self.editable_binds.insert(bind.to_string()) {
                     self.diags.push(LintDiagnostic::warning(
                         "W803",
@@ -350,7 +381,7 @@ pub fn lint_component(component: &Value, definition: Option<&Value>) -> Vec<Lint
     // E800: Root must be a layout type
     let root_type = tree.get("component").and_then(|v| v.as_str()).unwrap_or("");
     if root_type.is_empty() || !LAYOUT_ROOTS.contains(&root_type) {
-        diags.push(LintDiagnostic::error(
+        diags.push(crate::metadata::with_metadata(LintDiagnostic::error(
             "E800",
             PASS,
             "$.tree",
@@ -358,7 +389,7 @@ pub fn lint_component(component: &Value, definition: Option<&Value>) -> Vec<Lint
                 "Root component must be a layout type ({}), found '{root_type}'",
                 LAYOUT_ROOTS.join(", ")
             ),
-        ));
+        )));
     }
 
     // E807: Custom component reference cycles
@@ -381,12 +412,12 @@ pub fn lint_component(component: &Value, definition: Option<&Value>) -> Vec<Lint
             }
         }
         for (from, to) in cycles {
-            diags.push(LintDiagnostic::error(
+            diags.push(crate::metadata::with_metadata(LintDiagnostic::error(
                 "E807",
                 PASS,
                 format!("$.components.{from}"),
                 format!("Custom component reference cycle: '{from}' -> '{to}'"),
-            ));
+            )));
         }
     }
 

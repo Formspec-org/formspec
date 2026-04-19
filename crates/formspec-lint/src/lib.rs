@@ -57,12 +57,12 @@ pub fn lint_with_options(doc: &Value, options: &LintOptions) -> LintResult {
     let doc_type = detect_document_type(doc);
 
     if doc_type.is_none() {
-        diagnostics.push(LintDiagnostic::error(
+        diagnostics.push(crate::metadata::with_metadata(LintDiagnostic::error(
             "E100",
             1,
             "$",
             "Cannot determine document type",
-        ));
+        )));
         return LintResult {
             document_type: None,
             diagnostics,

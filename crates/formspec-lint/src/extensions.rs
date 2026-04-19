@@ -135,22 +135,22 @@ fn check_extensions_object(
             Some(info) => match info.status {
                 RegistryEntryStatus::Retired => {
                     let label = info.display_name.as_deref().unwrap_or(ext_name.as_str());
-                    out.push(LintDiagnostic::warning(
+                    out.push(crate::metadata::with_metadata(LintDiagnostic::warning(
                         "E601",
                         PASS,
                         &ext_path,
                         format!("Extension retired: {label}"),
-                    ));
+                    )));
                 }
                 RegistryEntryStatus::Deprecated => {
                     let label = info.display_name.as_deref().unwrap_or(ext_name.as_str());
                     let notice = info.deprecation_notice.as_deref().unwrap_or("deprecated");
-                    out.push(LintDiagnostic::info(
+                    out.push(crate::metadata::with_metadata(LintDiagnostic::info(
                         "E602",
                         PASS,
                         &ext_path,
                         format!("Extension deprecated: {label} — {notice}"),
-                    ));
+                    )));
                 }
                 RegistryEntryStatus::Active | RegistryEntryStatus::Draft => {}
             },

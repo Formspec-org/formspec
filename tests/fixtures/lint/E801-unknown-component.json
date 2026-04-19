@@ -1,0 +1,11 @@
+{
+  "$formspecComponent": "1.0",
+  "version": "1.0.0",
+  "targetDefinition": { "url": "https://example.com/forms/e801" },
+  "tree": {
+    "component": "Stack",
+    "children": [
+      { "component": "MadeUpComponent" }
+    ]
+  }
+}

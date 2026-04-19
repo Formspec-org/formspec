@@ -1,0 +1,23 @@
+{
+  "$formspecComponent": "1.0",
+  "version": "1.0.0",
+  "targetDefinition": { "url": "https://example.com/forms/e806" },
+  "components": {
+    "LabeledInput": {
+      "params": ["label", "fieldKey"],
+      "tree": {
+        "component": "Stack",
+        "children": [
+          { "component": "Text", "text": "$label" },
+          { "component": "TextInput", "bind": "$fieldKey" }
+        ]
+      }
+    }
+  },
+  "tree": {
+    "component": "Stack",
+    "children": [
+      { "component": "LabeledInput", "params": { "label": "Name" } }
+    ]
+  }
+}

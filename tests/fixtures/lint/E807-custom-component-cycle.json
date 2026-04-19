@@ -1,0 +1,21 @@
+{
+  "$formspecComponent": "1.0",
+  "version": "1.0.0",
+  "targetDefinition": { "url": "https://example.com/forms/e807" },
+  "components": {
+    "A": {
+      "params": [],
+      "tree": { "component": "B" }
+    },
+    "B": {
+      "params": [],
+      "tree": { "component": "A" }
+    }
+  },
+  "tree": {
+    "component": "Stack",
+    "children": [
+      { "component": "A" }
+    ]
+  }
+}

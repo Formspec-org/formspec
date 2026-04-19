@@ -10,8 +10,10 @@
       "title": "Cannot determine document type",
       "specRef": "specs/core/spec.md#21-core-abstractions",
       "suggestedFix": "add a recognizable Formspec root (`items`, `components`, or `tokens`) so the document type can be detected",
-      "fixtures": [],
-      "state": "draft"
+      "fixtures": [
+        "tests/fixtures/lint/E100-unknown-document-type.json"
+      ],
+      "state": "tested"
     },
     {
       "code": "E101",
@@ -140,8 +142,10 @@
       "title": "Retired extension",
       "specRef": "specs/registry/extension-registry.md#6-extension-lifecycle",
       "suggestedFix": "stop using this retired extension \u2014 migrate to its replacement or remove the key",
-      "fixtures": [],
-      "state": "draft"
+      "fixtures": [
+        "tests/fixtures/lint/E601-retired-extension.json"
+      ],
+      "state": "tested"
     },
     {
       "code": "E602",
@@ -150,8 +154,10 @@
       "title": "Deprecated extension",
       "specRef": "specs/registry/extension-registry.md#6-extension-lifecycle",
       "suggestedFix": "plan migration away from this deprecated extension before it is retired",
-      "fixtures": [],
-      "state": "draft"
+      "fixtures": [
+        "tests/fixtures/lint/E602-deprecated-extension.json"
+      ],
+      "state": "tested"
     },
     {
       "code": "W700",
@@ -296,8 +302,10 @@
       "title": "Component tree root must be a layout component",
       "specRef": "specs/component/component-spec.md#32-component-tree-semantics-single-root",
       "suggestedFix": "wrap the root in a layout component (e.g. `Page`, `Stack`, `Grid`)",
-      "fixtures": [],
-      "state": "draft"
+      "fixtures": [
+        "tests/fixtures/lint/E800-non-layout-root.json"
+      ],
+      "state": "tested"
     },
     {
       "code": "E801",
@@ -306,8 +314,10 @@
       "title": "Unknown built-in component",
       "specRef": "specs/component/component-spec.md#5-built-in-components--core-18",
       "suggestedFix": "use a built-in component type, or define this type in `components` as a custom component",
-      "fixtures": [],
-      "state": "draft"
+      "fixtures": [
+        "tests/fixtures/lint/E801-unknown-component.json"
+      ],
+      "state": "tested"
     },
     {
       "code": "E802",
@@ -316,8 +326,10 @@
       "title": "Component incompatible with field dataType",
       "specRef": "specs/component/component-spec.md#46-binddatatype-compatibility-matrix",
       "suggestedFix": "pick a component whose matrix accepts this field's `dataType`, or change the field type",
-      "fixtures": [],
-      "state": "draft"
+      "fixtures": [
+        "tests/fixtures/lint/E802-component-incompatible-datatype.json"
+      ],
+      "state": "tested"
     },
     {
       "code": "E803",
@@ -326,8 +338,10 @@
       "title": "Component requires options but field provides none",
       "specRef": "specs/component/component-spec.md#46-binddatatype-compatibility-matrix",
       "suggestedFix": "add `optionSet` or inline `options` to the bound field, or switch to a component that takes no options",
-      "fixtures": [],
-      "state": "draft"
+      "fixtures": [
+        "tests/fixtures/lint/E803-component-requires-options.json"
+      ],
+      "state": "tested"
     },
     {
       "code": "E804",
@@ -336,18 +350,19 @@
       "title": "Richtext TextInput must bind to string field",
       "specRef": "specs/component/component-spec.md#56-textinput",
       "suggestedFix": "bind richtext `TextInput` to a `string` or `text` field, or drop the richtext variant prop",
-      "fixtures": [],
       "state": "draft"
     },
     {
       "code": "E806",
       "pass": 7,
       "severity": "error",
-      "title": "Duplicate bind in component tree",
+      "title": "Custom component instance missing required param",
       "specRef": "specs/component/component-spec.md#7-custom-components",
       "suggestedFix": "provide every parameter the custom component declares in its `params`, or remove the instance",
-      "fixtures": [],
-      "state": "draft"
+      "fixtures": [
+        "tests/fixtures/lint/E806-custom-component-missing-param.json"
+      ],
+      "state": "tested"
     },
     {
       "code": "E807",
@@ -356,8 +371,10 @@
       "title": "Custom component reference cycle",
       "specRef": "specs/component/component-spec.md#74-recursion-prohibition-and-cycle-detection",
       "suggestedFix": "break the custom-component cycle \u2014 a component must not transitively reference itself",
-      "fixtures": [],
-      "state": "draft"
+      "fixtures": [
+        "tests/fixtures/lint/E807-custom-component-cycle.json"
+      ],
+      "state": "tested"
     },
     {
       "code": "W800",
@@ -378,8 +395,10 @@
       "title": "Input component missing required bind",
       "specRef": "specs/component/component-spec.md#42-bind-resolution-rules",
       "suggestedFix": "remove `bind` from layout/container components \u2014 only input components bind to fields",
-      "fixtures": [],
-      "state": "draft"
+      "fixtures": [
+        "tests/fixtures/lint/W801-layout-has-bind.json"
+      ],
+      "state": "tested"
     },
     {
       "code": "W802",

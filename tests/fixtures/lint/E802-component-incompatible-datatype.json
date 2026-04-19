@@ -1,0 +1,21 @@
+{
+  "$formspecComponent": "1.0",
+  "version": "1.0.0",
+  "targetDefinition": { "url": "https://example.com/forms/e802" },
+  "tree": {
+    "component": "Stack",
+    "children": [
+      { "component": "DatePicker", "bind": "amount" }
+    ]
+  },
+  "_pairedDefinition": {
+    "$formspec": "1.0",
+    "url": "https://example.com/forms/e802",
+    "version": "1.0.0",
+    "status": "draft",
+    "title": "E802 paired",
+    "items": [
+      { "key": "amount", "type": "field", "label": "Amount", "dataType": "integer" }
+    ]
+  }
+}

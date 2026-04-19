@@ -289,9 +289,17 @@ def test_every_tested_rule_has_at_least_one_triggering_fixture() -> None:
             # Some rules (W800, W802) only fire when the linter has the paired
             # definition. Fixtures opt in via a top-level `_pairedDefinition`
             # key that is stripped before the document is passed to `lint()`.
+            # Extension-lifecycle rules (E600, E601, E602) additionally need a
+            # registry document; fixtures declare those under
+            # `_registryDocuments` (stripped and forwarded to lint()).
             paired_definition = document.pop("_pairedDefinition", None)
+            registry_documents = document.pop("_registryDocuments", None)
 
-            diagnostics = lint(document, component_definition=paired_definition)
+            diagnostics = lint(
+                document,
+                component_definition=paired_definition,
+                registry_documents=registry_documents,
+            )
             matching = [d for d in diagnostics if d.code == code]
             if not matching:
                 emitted = sorted({d.code for d in diagnostics})

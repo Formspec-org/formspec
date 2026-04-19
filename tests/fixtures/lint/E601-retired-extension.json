@@ -1,0 +1,39 @@
+{
+  "$formspec": "1.0",
+  "url": "https://example.com/forms/e601",
+  "version": "1.0.0",
+  "status": "draft",
+  "title": "E601 fixture — definition uses a retired extension",
+  "items": [
+    {
+      "key": "legacyField",
+      "type": "field",
+      "dataType": "string",
+      "label": "Legacy",
+      "extensions": { "x-formspec-legacy-foo": true }
+    }
+  ],
+  "_registryDocuments": [
+    {
+      "$formspecRegistry": "1.0",
+      "publisher": {
+        "name": "Fixture Registry",
+        "url": "https://example.com/fixtures",
+        "contact": "fixtures@example.com"
+      },
+      "published": "2026-01-01T00:00:00Z",
+      "entries": [
+        {
+          "name": "x-formspec-legacy-foo",
+          "category": "dataType",
+          "version": "1.0.0",
+          "status": "retired",
+          "description": "Retired legacy extension for the E601 fixture.",
+          "compatibility": { "formspecVersion": ">=1.0.0 <2.0.0" },
+          "license": "Apache-2.0",
+          "baseType": "string"
+        }
+      ]
+    }
+  ]
+}
