@@ -67,7 +67,7 @@ One idea sits under everything in this document; the design should internalize i
 
 **Studio's job is to give authors access to that full range of power without it feeling overwhelming at any point on the curve.** A first-time author building their first intake form should feel like they are using a simple, approachable tool. A program director rebuilding a tax package for the next regulatory cycle should feel like they are using a tool that can handle what they are asking of it. The underlying capability surface is the same; the experience of using it should stretch without snapping.
 
-**The JSON is present, never hidden, never primary.** The author can always see, export, and if they want, edit the underlying JSON documents. But they should never *have to*. The complexity of authoring JSON — getting the schema right, writing FEL by hand, keeping Definition / Theme / Component / Mapping consistent with each other — should be invisible. The author works with concepts (fields, rules, pages, styles, outputs); the tool produces correct JSON. When the author opens the JSON panel, they see a readable, sensible document — one they could have written themselves if they had to.
+**The JSON exists, but the author does not work in it.** The audience is program managers, operations leads, and analysts — people who know their domain cold but do not write code, do not read schemas, and will not hand-edit JSON to get their form out the door. The complexity of authoring JSON — keeping schemas valid, writing FEL by hand, keeping Definition / Theme / Component / Mapping consistent with each other — should be fully absorbed by the tool. The author works in concepts (fields, rules, pages, styles, outputs) and the JSON is a downstream artifact, like a compiler's output. Export is available when they need to hand the files to a developer or put them in a repository. A "view source" capability is reasonable for transparency and for the occasional developer who will want it. Neither needs to be a featured surface, and neither should be positioned as a path the primary user is expected to take.
 
 **The conceptual benefits of the spec's separation of concerns should come through in the design, even if the mechanics don't.** The author does not need to know they are editing four separate documents. They *should* come away with an intuitive understanding of three ideas:
 
@@ -83,9 +83,9 @@ These separations pay off the first time an author changes a theme without touch
 
 ## 3. Who uses Studio
 
-The primary audience is **non-technical form authors** — the people who today file tickets with IT to get a form built, or spend months going back and forth with developers. They understand their domain (grants, eligibility, clinical intake, inspections, compliance) deeply. They do not write code. Many have used Google Forms, Typeform, SurveyMonkey, or REDCap; fewer have used ODK or a real expression language.
+The primary audience is **non-technical program managers and analysts** — the people who today file tickets with IT to get a form built, or spend months going back and forth with developers. They understand their domain (grants, eligibility, clinical intake, inspections, compliance) deeply. They do not write code. They do not read JSON. They do not want to learn a schema, a query language, or a markup format. Many have used Google Forms, Typeform, SurveyMonkey, or REDCap; fewer have used ODK or a real expression language. Design for this audience first.
 
-A secondary audience is **developers and form engineers** who will edit the JSON directly, tune FEL expressions, write mapping rules, and integrate the output into their stack. Studio should stay legible to them, but the primary reader of the screen is the domain expert, not the engineer.
+A secondary audience is **developers and form engineers** who will occasionally crack open the bundle, tune FEL expressions, write mapping rules, and integrate the output into their stack. They should not be blocked by the product — they can inspect, export, and extend. But the screen is not for them. If a design decision trades clarity for the program manager against convenience for the engineer, the program manager wins.
 
 The authors typically work in these settings:
 
@@ -290,9 +290,9 @@ Studio itself runs in a browser with a network connection. The *forms Studio pro
 
 Nothing Studio produces can require Studio to run. An author must be able to export, hand the JSON to a developer, and have it work in any runtime (web component, React, iOS, server). The design should not invent Studio-specific concepts that have no representation in the underlying JSON.
 
-### 6.8.1 The JSON is always reachable, never required
+### 6.8.1 JSON is the artifact, not the interface
 
-The author can always open, read, copy, and edit the underlying JSON documents. This is a first-class capability, not a hidden developer escape hatch — domain experts sometimes want to look under the hood, and developers will want to live there. But the author must never *need* to edit JSON to do their job. Every authoring path has a non-JSON expression. The JSON is the artifact; it is not the interface.
+The primary author is non-technical and should never encounter JSON in the course of authoring. Every authoring path has a non-JSON expression; the tool absorbs schema validity, FEL syntax, and cross-document consistency on the author's behalf. JSON is reachable — authors can export the bundle, and a transparency / "view source" affordance exists for the occasional developer or curious domain expert — but it is not a featured surface, not a workflow the product promotes, and not a fallback the author is ever expected to depend on.
 
 ### 6.9 Accessibility is a first-class requirement
 
@@ -354,9 +354,9 @@ This section is not a brief. It is a list of questions the design has to have an
 
 **JSON and transparency**
 
-- How does an author see the underlying JSON when they want to? Where does that surface live?
-- How does the product avoid ever making the author *need* to touch JSON to accomplish a task?
-- How do the JSON documents look when the author opens them — are they readable, organized, commented, or dense?
+- How does the product ensure the primary author never has to touch JSON to accomplish anything?
+- Where does the "export" / "hand this to a developer" capability live, and how is it framed so non-technical authors are not confused or intimidated by it?
+- If a curious domain expert or a developer wants to see the underlying documents, how is that surfaced without promoting it as a path the primary audience should take?
 
 **Conversation as a surface**
 
