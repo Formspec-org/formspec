@@ -59,6 +59,26 @@ The frame implies a product where *conversation is a first-class authoring surfa
 
 Note: the current codebase ships **two separate chat surfaces** — one embedded in the editor (refines the live project via tool calls), one standalone (conversational intake that scaffolds a form, then hands off to the editor). The fact that there are two is an implementation artifact, not a product requirement. A unified design is welcome.
 
+### The design philosophy behind the spec and Studio's role in it
+
+One idea sits under everything in this document; the design should internalize it.
+
+**Formspec the specification was designed to be simple enough for a human to create by hand and structured enough for AI to create forms of effectively unlimited complexity.** A grant budget form is a few dozen lines of JSON a domain expert can read and edit. A 300-field tax return with cascading calculations, conditional branches, multi-format output, and version-locked change history is the same shape — just more of it. Nothing about the spec gets heavier as the form gets harder. The tools scale, the JSON scales, the reader scales.
+
+**Studio's job is to give authors access to that full range of power without it feeling overwhelming at any point on the curve.** A first-time author building their first intake form should feel like they are using a simple, approachable tool. A program director rebuilding a tax package for the next regulatory cycle should feel like they are using a tool that can handle what they are asking of it. The underlying capability surface is the same; the experience of using it should stretch without snapping.
+
+**The JSON is present, never hidden, never primary.** The author can always see, export, and if they want, edit the underlying JSON documents. But they should never *have to*. The complexity of authoring JSON — getting the schema right, writing FEL by hand, keeping Definition / Theme / Component / Mapping consistent with each other — should be invisible. The author works with concepts (fields, rules, pages, styles, outputs); the tool produces correct JSON. When the author opens the JSON panel, they see a readable, sensible document — one they could have written themselves if they had to.
+
+**The conceptual benefits of the spec's separation of concerns should come through in the design, even if the mechanics don't.** The author does not need to know they are editing four separate documents. They *should* come away with an intuitive understanding of three ideas:
+
+- **The data model is separate from how it looks.** Changing the theme does not change what the form collects. Two forms can share data structure and have completely different presentations.
+- **The layout is separate from the data model.** The field "total" can appear in a card, a sidebar, or on its own page — the data it collects is the same.
+- **The output is separate from the input.** The same response can flow out as JSON to one system, XML to another, and CSV to a third, declared once in the mapping — not re-implemented for every destination.
+
+These separations pay off the first time an author changes a theme without touching their logic, or reuses a data model across two visual layouts, or re-targets their output to a new downstream system. The design should make those moments feel like natural consequences of the product, not special tricks.
+
+**AI is how the complexity curve stays flat.** The spec is simple enough to author by hand at the low end and rich enough that an AI can compose arbitrarily complex forms at the high end. Studio is where those two meet. The author stays in conceptual mode ("add a section for household members that repeats"); the AI handles the structural and logical machinery; the JSON stays correct and legible the whole time.
+
 ---
 
 ## 3. Who uses Studio
@@ -83,7 +103,7 @@ These authors share a few traits that shape the design:
 - They are used to forms being second-class citizens in whatever tool they have. They will be surprised by good tooling.
 - They do not think in terms of "definition vs. theme vs. component" — they think in terms of "the form".
 
-That last point is important. Formspec separates concerns across four tiers (Definition, Theme, Component, Mapping) because that separation is architecturally valuable. Whether the author has to *see* that separation is a design call. Today's Studio exposes all four as top-level tabs. That is one answer; it is not the only answer.
+That last point is important. Formspec separates concerns across four tiers (Definition, Theme, Component, Mapping) because that separation is architecturally valuable — and the *benefits* of that separation (change theme without touching logic; reuse data model across layouts; retarget output without rebuilding the form) should be something the author feels in how the product behaves. The *mechanics* of the separation (four JSON documents, four schemas, cross-document consistency) are authoring overhead the tool should absorb. Today's Studio exposes all four as top-level tabs; that is one answer, and it is not necessarily the right one.
 
 ---
 
@@ -238,9 +258,9 @@ These are observations, not directives:
 
 These are things the design cannot change, because they are downstream of the specification or the architecture.
 
-### 6.1 The four tiers are real
+### 6.1 The four tiers are real, but the author shouldn't feel four tools
 
-Definition, Theme, Component, and Mapping are separate JSON documents with separate schemas. They are authored, reviewed, and versioned separately. Studio can hide that separation from a non-technical author, but it cannot collapse it — when the author exports, they get four files. The design needs a coherent story for each tier, even if the author never thinks of them that way.
+Definition, Theme, Component, and Mapping are separate JSON documents with separate schemas. They are authored, reviewed, and versioned separately. The *benefits* of this separation should come through in the product (theme swaps don't affect logic; layout is editable without touching data; output retargets without rebuilding the form). The *mechanics* of this separation (four documents, four schemas, keeping them consistent) should be invisible. When the author exports, they get four files — but getting there should not have felt like running four editors in a trench coat.
 
 ### 6.2 Every mutation is a typed command
 
@@ -269,6 +289,10 @@ Studio itself runs in a browser with a network connection. The *forms Studio pro
 ### 6.8 The output must be portable JSON
 
 Nothing Studio produces can require Studio to run. An author must be able to export, hand the JSON to a developer, and have it work in any runtime (web component, React, iOS, server). The design should not invent Studio-specific concepts that have no representation in the underlying JSON.
+
+### 6.8.1 The JSON is always reachable, never required
+
+The author can always open, read, copy, and edit the underlying JSON documents. This is a first-class capability, not a hidden developer escape hatch — domain experts sometimes want to look under the hood, and developers will want to live there. But the author must never *need* to edit JSON to do their job. Every authoring path has a non-JSON expression. The JSON is the artifact; it is not the interface.
 
 ### 6.9 Accessibility is a first-class requirement
 
@@ -326,6 +350,13 @@ This section is not a brief. It is a list of questions the design has to have an
 - Does the author ever need to know the difference between Definition, Component, Theme, and Mapping? If yes, how is it framed? If no, how are the concerns still separable under the hood?
 - Where does layout (drag-drop arrangement) live relative to structure (the item tree)?
 - Where does theming live — as a separate surface, inline with items, globally, or something else?
+- How do the *benefits* of tier separation (theme swaps, reusable data models, retargetable output) surface as natural moments in the product rather than as things the author has to go hunt for?
+
+**JSON and transparency**
+
+- How does an author see the underlying JSON when they want to? Where does that surface live?
+- How does the product avoid ever making the author *need* to touch JSON to accomplish a task?
+- How do the JSON documents look when the author opens them — are they readable, organized, commented, or dense?
 
 **Conversation as a surface**
 
