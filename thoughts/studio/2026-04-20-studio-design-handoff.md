@@ -1,456 +1,222 @@
 # Formspec Studio — Design Handoff
 
-**Date:** 2026-04-20
-**Status:** Handoff for an original design pass — no current-design constraints
-**Audience:** Designer producing a net-new Studio design from first principles
+**Date:** 2026-04-20 (rewritten after review)
+**Status:** Handoff for an original design pass
+**Audience:** Designer producing a net-new Studio design
 
 ---
 
-## 0. Read this first
+## 1. How to use this document
 
-This document explains what Formspec Studio is, who uses it, and what it has to do. It does **not** tell you how to design it. Every screen layout, panel arrangement, nav pattern, and interaction model is yours to invent. The current Studio codebase shipped a working design — that design is a reference point for *what the product does*, not a constraint on *how it should look or feel*. Assume you are designing from zero.
+This explains what Formspec Studio is, who uses it, what it has to do, and what can't change. It does not specify screens, panels, nav patterns, or interaction models. Those are yours.
 
-The goal is an original design that fits the product described below. If after reading this you think the product should be structured differently from how today's Studio structures it, say so — the conceptual frame ("ChatGPT for forms") is new enough that the right IA is an open question.
-
----
-
-## 1. What Formspec is (30-second version)
-
-Formspec is a **JSON-native specification for complex forms** — tax returns, grant applications, clinical intake, insurance claims, regulatory filings, safety inspections. Not contact forms. Not surveys. Forms with hundreds of fields, conditional sections, cascading calculations, cross-field validation, multi-format output, and offline requirements.
-
-A Formspec form is a set of JSON documents:
-
-- **Definition** — the data model: fields, types, structure, validation rules, calculations, conditional logic
-- **Theme** — presentation tokens, widget catalog, page layout
-- **Component** — interaction widgets, slot binding, responsive design
-- **Mapping** — bidirectional transforms to JSON / XML / CSV for downstream systems
-
-Plus optional sidecars (Locale, References, Ontology, Registry, Changelog, Assist) that most authors will never touch directly.
-
-The same JSON definition renders identically on web, React, iOS, and server. The same validation runs in the browser and on the backend. The same calculations produce the same decimal-exact numbers offline on a tablet and on a cloud server.
-
-Formspec is a **specification**, not a platform. There is no hosted service. Form definitions are JSON files that authors own.
+The current Studio has shipped; a quick summary is in §8. Treat it as a reference for the capability surface, not as a template. If you think the product should be structured differently than it is today, that's a valid outcome.
 
 ---
 
-## 2. What Studio is
+## 2. What Formspec is
 
-Studio is the **authoring environment** for Formspec. It is where someone sits down to build a form and leaves with a valid set of JSON documents. It is a single-page web application; it is not a SaaS; it is the reference implementation of what authoring should feel like.
+Formspec is a **JSON-native specification for complex forms** — tax returns, grant applications, clinical intake, insurance claims, regulatory filings, safety inspections. Not contact forms or surveys. Forms with hundreds of fields, conditional sections, cascading calculations, cross-field validation, multi-format output, and offline requirements.
 
-Studio has to serve two overlapping jobs:
+A Formspec form is a set of JSON documents — a Definition (the data model and its rules), plus optional Theme, Component, and Mapping documents, plus additional sidecars (Locale, References, Ontology, Registry, Changelog, Assist) that most authors never touch.
 
-1. **Visual authoring** — direct manipulation of every tier: definition, component, theme, mapping. Every structural change, rule, token, and transform is editable. Undo, redo, import, export are table stakes. Every mutation flows through a typed command catalog so the edit history is auditable and reversible.
+The same JSON renders identically on web, React, iOS, and server. The same validation runs in the browser and on the backend. The same calculations produce the same decimal-exact numbers offline on a tablet and on a cloud server.
 
-2. **AI-assisted authoring** — a conversational collaborator that can build, modify, refine, and reason about the form alongside the author. The AI calls into the same typed command catalog as the human. Nothing the AI does is unreviewable, un-undoable, or magical.
-
-Studio is not a form-filling tool. End users of the form never see Studio. Studio's output is the JSON documents; those get deployed into any runtime (web component, React, iOS, server) for end users to fill.
-
-### The conceptual frame: "ChatGPT for forms"
-
-The short internal pitch for Studio is **"ChatGPT for forms"**. Take that seriously as a framing device, not as a literal UI pattern:
-
-- A non-technical author describes the form they need in plain language. The system produces a validated first draft.
-- The author reviews, refines, and corrects — through conversation, through direct manipulation, or both.
-- The author's role is **oversight and judgement**, not line-by-line construction.
-- Every AI action is reviewable. The author can always see what changed, why, and undo it.
-- The underlying artifacts (JSON documents) stay human-readable. There is no black box.
-
-The frame implies a product where *conversation is a first-class authoring surface*, not a side panel bolted onto a traditional form builder. How strongly you lean into that is a design decision. You could design Studio as "chat is the whole interface, with a live preview", or "chat and visual editing are equal peers", or "visual editing is primary with chat as an accelerator". Any of those are defensible — the current implementation leans toward the third, but nothing forces that choice.
-
-Note: the current codebase ships **two separate chat surfaces** — one embedded in the editor (refines the live project via tool calls), one standalone (conversational intake that scaffolds a form, then hands off to the editor). The fact that there are two is an implementation artifact, not a product requirement. A unified design is welcome.
-
-### The design philosophy behind the spec and Studio's role in it
-
-One idea sits under everything in this document; the design should internalize it.
-
-**Formspec the specification was designed to be simple enough for a human to create by hand and structured enough for AI to create forms of effectively unlimited complexity.** A grant budget form is a few dozen lines of JSON a domain expert can read and edit. A 300-field tax return with cascading calculations, conditional branches, multi-format output, and version-locked change history is the same shape — just more of it. Nothing about the spec gets heavier as the form gets harder. The tools scale, the JSON scales, the reader scales.
-
-**Studio's job is to give authors access to that full range of power without it feeling overwhelming at any point on the curve.** A first-time author building their first intake form should feel like they are using a simple, approachable tool. A program director rebuilding a tax package for the next regulatory cycle should feel like they are using a tool that can handle what they are asking of it. The underlying capability surface is the same; the experience of using it should stretch without snapping.
-
-**The JSON exists, but the author does not work in it.** The audience is program managers, operations leads, and analysts — people who know their domain cold but do not write code, do not read schemas, and will not hand-edit JSON to get their form out the door. The complexity of authoring JSON — keeping schemas valid, writing FEL by hand, keeping Definition / Theme / Component / Mapping consistent with each other — should be fully absorbed by the tool. The author works in concepts (fields, rules, pages, styles, outputs) and the JSON is a downstream artifact, like a compiler's output. Export is available when they need to hand the files to a developer or put them in a repository. A "view source" capability is reasonable for transparency and for the occasional developer who will want it. Neither needs to be a featured surface, and neither should be positioned as a path the primary user is expected to take.
-
-**The conceptual benefits of the spec's separation of concerns should come through in the design, even if the mechanics don't.** The author does not need to know they are editing four separate documents. They *should* come away with an intuitive understanding of three ideas:
-
-- **The data model is separate from how it looks.** Changing the theme does not change what the form collects. Two forms can share data structure and have completely different presentations.
-- **The layout is separate from the data model.** The field "total" can appear in a card, a sidebar, or on its own page — the data it collects is the same.
-- **The output is separate from the input.** The same response can flow out as JSON to one system, XML to another, and CSV to a third, declared once in the mapping — not re-implemented for every destination.
-
-These separations pay off the first time an author changes a theme without touching their logic, or reuses a data model across two visual layouts, or re-targets their output to a new downstream system. The design should make those moments feel like natural consequences of the product, not special tricks.
-
-**AI is how the complexity curve stays flat.** The spec is simple enough to author by hand at the low end and rich enough that an AI can compose arbitrarily complex forms at the high end. Studio is where those two meet. The author stays in conceptual mode ("add a section for household members that repeats"); the AI handles the structural and logical machinery; the JSON stays correct and legible the whole time.
-
-### The design carries the pitch
-
-Studio is the most visible artifact in the Formspec project. Before anyone reads the spec, the schemas, or a single README, they will see a screenshot. Before they try the product, they will watch a demo video, or skim a tweet, or scroll past a post on a feed. The design is what tells them — in under three seconds — whether Formspec is a serious piece of work that deserves their attention or yet another form builder that can be skipped.
-
-This is a real requirement, not an afterthought. The product has to be *visibly* different from the tools it replaces — Google Forms, Typeform, REDCap, ODK, SurveyJS, JSON Forms. A design that looks like a nicer version of an existing form builder will be read as a nicer version of an existing form builder. A design that looks like its own thing — a tool that couldn't have existed five years ago, built for a kind of work the old tools can't do — gets a second look.
-
-Concretely, the design has to:
-
-- **Make someone stop scrolling.** A single screenshot should communicate that something meaningfully different is happening here. Not "prettier form builder" — something whose category is not immediately obvious, in the way that Linear did not look like a Jira skin and Figma did not look like a faster Illustrator.
-- **Look like a professional tool, not a hobby project.** The audience — government, nonprofit, clinical, insurance — is serious. Procurement officers and program directors do not adopt tools that look like weekend projects. Craft, polish, typographic discipline, and restraint matter. This is a tool that people will use for hours a day to do work that matters; it should look like it.
-- **Make the AI collaboration legible at a glance.** The "ChatGPT for forms" frame is the headline. A person looking at a screenshot should immediately see that conversation and direct manipulation are first-class peers, not that chat is bolted onto an existing form builder. The AI's presence in the product should be obvious from the first frame, not something you have to discover in a side panel.
-- **Demo well.** A 90-second video of someone describing a form and watching it materialize, then refining it through a mix of conversation and direct edits, should be compelling on its own — no voiceover required to explain what is happening. The transitions, the reactivity, the moments where the AI proposes something and the author accepts or modifies it, should read cleanly at demo speed.
-- **Photograph well at multiple crops.** Full-window hero shots, tight detail shots of the editing surface, sequence shots showing conversation → form materializing. The design has to hold up as marketing imagery without requiring a caption to explain what the reader is looking at.
-- **Carry a point of view.** Formspec's positioning is that complex forms deserve a serious tool, and that AI + a good spec can change what form authoring looks like. The visual design should have that opinion in it. Neutral, corporate, "safe SaaS" design will undersell the project. The design should feel authored — like someone made deliberate choices — without being gimmicky or trend-chasing.
-
-None of this is a license for form over function. A design that is beautiful to look at and miserable to use will not survive contact with the 200-field tax form. The bar is both: it has to work for a program manager iterating on a real form for hours, and it has to make someone on the outside — a potential adopter, a government CIO, a clinical informaticist, a technical decision-maker — stop and think "I want to know more about this."
-
-If the design achieves both, the vision sells itself. If it achieves only the working part, the project stays a well-built tool nobody hears about.
+Formspec is a specification, not a platform. There is no hosted service.
 
 ---
 
-## 3. Who uses Studio
+## 3. What Studio is
 
-The primary audience is **non-technical program managers and analysts** — the people who today file tickets with IT to get a form built, or spend months going back and forth with developers. They understand their domain (grants, eligibility, clinical intake, inspections, compliance) deeply. They do not write code. They do not read JSON. They do not want to learn a schema, a query language, or a markup format. Many have used Google Forms, Typeform, SurveyMonkey, or REDCap; fewer have used ODK or a real expression language. Design for this audience first.
+Studio is the authoring environment for Formspec — where someone sits down to build a form and leaves with a valid set of documents. It is a single-page web application, the reference implementation of what authoring should feel like. End users filling out the form never see Studio.
 
-A secondary audience is **developers and form engineers** who will occasionally crack open the bundle, tune FEL expressions, write mapping rules, and integrate the output into their stack. They should not be blocked by the product — they can inspect, export, and extend. But the screen is not for them. If a design decision trades clarity for the program manager against convenience for the engineer, the program manager wins.
+Studio has one job with two halves. Authors should be able to build and modify forms by **direct manipulation** of the form itself — items, rules, pages, styles, outputs. Authors should also be able to build and modify forms by **conversation with an AI collaborator** that understands the form and can mutate it through the same typed operations a human would. Neither half is a side panel on the other. Both are first-class. How they relate visually and interactively is open.
 
-The authors typically work in these settings:
+The short internal pitch is **"ChatGPT for forms"** — a non-technical author describes what they need in plain language, reviews what the system produces, refines through conversation and direct edits, and ends up with a working form without ever having written code. Take that frame seriously, but not literally: the question of whether conversation dominates the interface, shares it equally with direct manipulation, or lives alongside it is a design decision.
 
-- **Government program staff** — benefits eligibility, permitting, tax, licensing. Risk-averse, compliance-sensitive, long procurement cycles, Section 508 / WCAG expectations.
-- **Nonprofit and grant operations** — grant applications, reports, compliance submissions. Often small teams; one person wears many hats.
-- **Clinical and health intake** — patient questionnaires, screening tools, referrals. Coded vocabularies (ICD-10, SNOMED, LOINC) matter.
+The AI is not freeform. It mutates the form through typed tool calls against a command catalog, constrained by JSON Schema, static analysis, and FEL validity. Nothing the AI produces can be structurally invalid; nothing it does is unreviewable or un-undoable. That is an asset the design can lean on — the product can truthfully promise that the AI cannot break the form.
+
+---
+
+## 4. Design philosophy
+
+The specification was designed to be simple enough for a human to create by hand and structured enough for AI to compose forms of effectively unlimited complexity. A grant budget form is a few dozen lines of JSON a domain expert can read. A 300-field tax return with cascading calculations and multi-format output is the same shape — just more of it. Nothing about the spec gets heavier as the form gets harder. Studio's job is to give authors access to that full range of power without it feeling overwhelming at any point on the curve.
+
+The spec separates concerns across several documents — data model, presentation, layout, output transforms, translations, references, ontology. That separation is architecturally valuable. The *benefits* should come through in the product: change the theme without touching logic, reuse a data model across layouts, retarget output to a new system by editing one document. The *mechanics* — four schemas, cross-document consistency, the coordination that separation requires — are authoring overhead the tool should absorb.
+
+The JSON is the artifact, not the interface. The author works in concepts — fields, rules, pages, styles, outputs — and the tool produces correct JSON. Export exists so the author can hand the files to a developer or check them into a repository. A view-source affordance is reasonable for transparency. Neither needs to be prominent, and the primary user is never expected to edit JSON to accomplish a task.
+
+---
+
+## 5. Who uses Studio
+
+The primary user is a **non-technical program manager or analyst** — the person who today files tickets with IT to get a form built, or spends months going back and forth with developers. They know their domain cold (grants, eligibility, clinical intake, inspections, compliance). They do not write code. They do not read schemas. They will not hand-edit JSON.
+
+They can, however, read and write **FEL expressions**. FEL (the Formspec Expression Language) is deliberately Excel-like: `$personnel + $travel`, `if($income > 50000, $rate_a, $rate_b)`, `sum(items[*].amount)`. Someone who has written a formula in Excel or a calculated column in a spreadsheet can read and write the common cases. The AI will write most expressions for them; they will read what it produced and tweak it. For unusual expressions the AI struggles with, the author can edit directly. FEL is not a language this user is afraid of — treat it like a spreadsheet formula, not like code.
+
+Typical settings:
+
+- **Government program staff** — benefits, permitting, tax, licensing. Compliance-sensitive, Section 508 / WCAG expectations.
+- **Nonprofit and grant operations** — grant applications, reports, submissions. Small teams, one person wearing many hats.
+- **Clinical and health intake** — questionnaires, screening, referrals. Coded vocabularies (ICD-10, SNOMED, LOINC) matter.
 - **Insurance and financial services** — claims, applications, underwriting. Calculation correctness and audit trails are non-negotiable.
-- **Field inspection and compliance** — safety checklists, site surveys. Offline is not optional.
+- **Field inspection and compliance** — checklists, site surveys. Offline is not optional for the forms they produce.
 
-These authors share a few traits that shape the design:
+Shared traits:
 
-- They are accountable for the form being correct. A calculation error is their problem.
-- They iterate a lot. Rules change mid-cycle. Wording gets tweaked. New sections appear.
-- They do not read docs. They expect the tool to teach them by being legible.
-- They are used to forms being second-class citizens in whatever tool they have. They will be surprised by good tooling.
-- They do not think in terms of "definition vs. theme vs. component" — they think in terms of "the form".
+- Accountable for the form being correct. A bad calculation is their problem.
+- Iterate constantly. Rules change mid-cycle, wording gets tweaked, sections come and go.
+- Do not read docs. Expect the tool to teach them by being legible.
+- Used to forms being second-class citizens in every tool they have.
 
-That last point is important. Formspec separates concerns across four tiers (Definition, Theme, Component, Mapping) because that separation is architecturally valuable — and the *benefits* of that separation (change theme without touching logic; reuse data model across layouts; retarget output without rebuilding the form) should be something the author feels in how the product behaves. The *mechanics* of the separation (four JSON documents, four schemas, cross-document consistency) are authoring overhead the tool should absorb. Today's Studio exposes all four as top-level tabs; that is one answer, and it is not necessarily the right one.
-
----
-
-## 4. What Studio must be able to do
-
-This section enumerates the capability surface — what the tool has to support. It does not prescribe screens, panels, or flows. Think of this as the complete list of verbs an author needs. How you group them, surface them, and sequence them is the design.
-
-### 4.1 Create and seed a form
-
-- Start from nothing (blank form).
-- Start from a conversation ("I need a grant budget form with personnel, travel, and equipment sections and a $500k cap").
-- Start from a template (built-in archetypes: housing intake, grant application, patient intake, compliance checklist, employee onboarding).
-- Start from an uploaded file (PDF, Word, CSV, screenshot — the AI extracts structure).
-- Start from an existing JSON bundle (paste, drag-drop, or import).
-
-### 4.2 Edit the data model (Definition tier)
-
-- Add, remove, rename, reorder, move, duplicate, and wrap items.
-- Items come in three kinds: **fields** (collect a value), **groups** (nest other items), **content** (headings, paragraphs, banners, dividers — display only).
-- Field types: text, integer, decimal, boolean, date, datetime, choice, multi-choice, currency, email, phone, file, signature, rating, slider, URL.
-- Mark groups as **repeatable** (min/max instances, add/remove labels).
-- Define **named option sets** (reusable choice lists with usage tracking).
-- Define **variables** (named FEL expressions the form can reference).
-- Define **instances** (external data sources the form can reference).
-- Edit per-field metadata: label, hint, placeholder, default value, concept URI (for ontology), help text, references.
-
-### 4.3 Express logic (Binds and Shapes)
-
-Formspec has two logic mechanisms; the author needs access to both:
-
-- **Binds** attach behavior to a single field: `required`, `relevant` (show/hide), `readonly`, `constraint`, `calculate`, `default`.
-- **Shapes** attach cross-field or form-level rules with severity (error / warning / info), timing (continuous / deferred / disabled), and activation conditions.
-
-Binds and shapes are expressed in **FEL** — the Formspec Expression Language. FEL is Excel-like: `$personnel + $travel`, `if($income > 50000, 'A', 'B')`, `sum(items[*].amount)`. Authors will write FEL. The editor has to help them:
-
-- Autocomplete for field names, function names, variables.
-- Real-time parse error feedback.
-- Dependency visualization (what does this field depend on? what depends on this field?).
-- Static error surfacing (circular references, type mismatches, undefined names).
-- A human-readable rendering of expressions ("Show this field when income is greater than $50,000") for authors who prefer prose.
-
-### 4.4 Organize into pages and flows
-
-- Multi-page forms (wizard mode, tabs mode, single-page mode).
-- Assign items to pages; pages have order, title, description.
-- **Screener routing** — an upfront mini-form that routes users into different branches based on their answers. (Think: "Are you a resident? Employee? Contractor?" → different downstream form.)
-
-### 4.5 Shape presentation (Theme tier)
-
-- Design tokens: colors, spacing, typography, radii.
-- Theme defaults: label position, density, help text style.
-- Selector cascade: match items by type / concept / path and apply styling overrides.
-- Per-item overrides for one-off adjustments.
-- Breakpoints and responsive behavior.
-
-### 4.6 Shape layout (Component tier)
-
-- Visual layout of the form: which fields go where, how they cluster.
-- Layout containers: stacks, cards, collapsibles, columns (2/3/4), sidebars, inline groups.
-- Drag-and-drop arrangement on a canvas.
-- Widget selection per field (which of the 33 built-in components renders this field).
-- Multi-page composition.
-
-### 4.7 Shape output (Mapping tier)
-
-- Define transforms from form response → target format (JSON, XML, CSV).
-- Field-level rules: source path → target path, with coercion and value maps.
-- Preview the mapping result against a test response.
-
-### 4.8 Preview and test
-
-- Live preview of the form as an end-user would see it.
-- Viewport switcher (mobile / tablet / desktop).
-- Test with scenario data — pre-fill answers and watch conditional logic, calculations, and validation react.
-- **Behavior lab** — a panel where the author sees bind states (relevance, required, readonly, calculations) update in real time as scenario values change.
-- Inspect generated JSON documents (Definition, Component, Theme, Mapping) at any point.
-- Validate a response — check whether a set of answers is complete and correct against the rules.
-
-### 4.9 Conversational authoring
-
-Two distinct conversational flows exist today; the design may keep them separate or unify them:
-
-- **Scaffolding conversation** — the AI interviews the author, gathers requirements, and produces a first-draft form. Works from plain language, templates, or uploaded files. The author watches the form materialize.
-- **Refinement conversation** — once a form exists, the author talks to the AI to modify it. ("Add an email field with validation." "Make the budget section only appear for large grants." "Split the address into street, city, state, ZIP.") The AI calls typed tools that mutate the live project, producing reviewable changesets.
-
-Characteristics the conversational surface has to support:
-
-- Streaming responses.
-- Source tracing — every element the AI created should be traceable back to the conversation turn or upload that produced it.
-- Issue tracking — contradictions, low-confidence choices, and missing config surface as a reviewable queue.
-- Regeneration — discard and re-scaffold from the full conversation.
-- Message truncation — "go back to here and try again."
-- Diff view — after a refinement, show what changed.
-- Tool-call transparency — the author can see which operations the AI invoked.
-
-### 4.10 History and collaboration primitives
-
-- Undo / redo at the command level.
-- Command history as a visible log (who did what, when).
-- Import / export of the full bundle.
-- Save / restore / list sessions (for conversational state).
-
-### 4.11 Cross-cutting: selection, navigation, search
-
-- A persistent notion of "the selected item" (a field, a group, a rule, a variable) that drives contextual panels.
-- Fast navigation across all entities: items, binds, shapes, variables, option sets, mappings, pages.
-- Full-text / command-palette search.
-- Entity counts at a glance (how many fields, how many rules, how many unresolved issues).
-
-### 4.12 Settings and metadata
-
-- Form metadata: title, description, version, status, page mode, density, label position.
-- Extension registry configuration (which extensions are loaded).
-- Presentation defaults.
+A secondary user is the **developer or form engineer** who will inspect the bundle, integrate it into a stack, write mapping rules against an unusual target system, or extend the registry. They are not blocked — they can export, view source, and edit files in their own editor. But the screen is not for them. When a decision trades clarity for the program manager against convenience for the engineer, the program manager wins.
 
 ---
 
-## 5. Unpacking the "ChatGPT for forms" frame
+## 6. What Studio must be able to do
 
-The frame is intentionally provocative. "ChatGPT for forms" is shorthand for a cluster of ideas worth spelling out so the design can decide how much of each to adopt.
+A list of verbs, not screens. How you group, surface, sequence, or collapse them is the design.
 
-**What "ChatGPT for X" products share:**
+**Start a form.** From nothing, from conversation, from a built-in template (housing intake, grant application, patient intake, compliance checklist, employee onboarding), from an uploaded file (the AI adapter accepts file attachments today; only generic extraction exists — no per-format pipelines yet), from an existing JSON bundle (paste, drop, or import).
 
-- The primary input is natural language intent, not direct manipulation of artifacts.
-- The system produces a first draft the user reviews, rather than requiring the user to produce the first draft themselves.
-- Iteration happens in conversation: "make it shorter", "add a section about X", "change the tone".
-- The user's artifacts (a document, an image, a slide deck) exist alongside the conversation — they are the subject of the conversation, not its output.
-- The user can edit the artifacts directly when conversation is too slow or imprecise.
-- Nothing is hidden. The user sees what the system produced and can modify or reject it.
+**Shape the data model.** Add, remove, rename, reorder, move, duplicate, and wrap items. Items are fields (collect a value), groups (nest items), or content (headings, paragraphs, banners, dividers — display only). Field types include single-line text, multi-line text, integer, decimal, boolean, date, datetime, time, choice, multi-choice, currency, email, phone, URL, file, signature, rating, and slider. Groups can be made repeatable with min/max cardinality. Authors also define named option sets (reusable choice lists), named variables (FEL expressions other logic can reference), and named instances (external data sources). Per-item metadata includes label, hint, placeholder, default, concept URI, help text, and references.
 
-**What is different for Formspec:**
+**Express logic.** Formspec has two mechanisms and the author needs both. **Binds** attach behavior to a single field: required, relevant (show/hide), readonly, constraint, calculate, default. **Shapes** attach cross-field or form-level rules with severity (error / warning / info), timing (continuous / deferred / disabled), and activation conditions. Both are written in FEL. The editor must help the author read and write FEL — autocomplete for field and function names, real-time parse feedback, dependency visualization (what does this field depend on; what depends on it), and static-error surfacing (circular references, undefined names, type mismatches). The AI will write most expressions; the human will read and tweak them.
 
-- Forms are **structured artifacts with rules**. The AI cannot ship something invalid — it has to pass JSON Schema validation, FEL static analysis, and cross-tier consistency checks. Every AI action flows through typed tool calls that the engine can reject.
-- Forms have a **behavior dimension**, not just a content dimension. "Add a field" is trivial; "make the total update when any line item changes" is the actual work. Conversation has to be able to express logic, not just structure.
-- Forms have **end users who are not the author**. The author is designing an experience for someone else. The preview / testing surface matters as much as the authoring surface — the author is constantly asking "what does the respondent see?"
-- Forms have **multiple correct answers**. There is no single "good" budget form. The design has to leave room for the author's judgement and domain expertise — the AI is a collaborator, not an oracle.
-- Forms are **long-lived**. A form shipped this year may run for five years and collect thousands of responses. Revision, versioning, and the ability to audit every change matter more than in a chat-to-produce-a-document product.
+**Organize into pages and flows.** Multi-page forms in wizard, tabs, or single-page modes. Assign items to pages; pages have order, title, description. **Screener routing** — an upfront mini-form that routes users into different branches based on their answers — is a first-class feature.
 
-**What this means for the design:**
+**Shape presentation.** Design tokens (colors, spacing, typography, radii), global defaults (label position, density, help text), a selector cascade that targets items by type, concept, or path, and per-item overrides. Breakpoints and responsive behavior.
 
-These are observations, not directives:
+**Shape layout.** Visual arrangement: which fields go where, how they cluster. Layout containers (stacks, cards, collapsibles, columns, sidebars, inline groups), drag-and-drop on a canvas, widget selection per field (which of the built-in components renders it), multi-page composition.
 
-- Conversation is not the only surface, but it should feel native — not a support chat widget in the corner. A first-time author should be able to go from empty state to a working first draft entirely through conversation.
-- Direct manipulation has to be seamless with conversation. If the author fixes something by hand, the AI should pick up where they left off. If the AI changes something, the author should see it in the direct-manipulation surface immediately.
-- The system's trustworthiness comes from the author being able to see and undo anything. Design should expose, not hide, what the AI did.
-- Preview is not a separate mode you enter — it is part of the authoring loop. The author should see the form-as-respondent as they build.
-- The AI is most valuable for the tedious parts: initial scaffolding, writing FEL expressions, suggesting validation rules, extracting structure from documents, naming things, translating. The direct manipulation is most valuable for the structural decisions only the author can make. The design should make the handoff between the two frictionless.
+**Shape output.** Transforms from form response to target format — JSON, XML, CSV. Field-level rules with coercion and value maps. Preview the mapped result against a test response.
 
----
+**Preview and test.** A live preview of the form as an end user would see it. Viewport switcher (mobile / tablet / desktop). Scenario data — pre-fill answers and watch conditional logic, calculations, and validation react. A **behavior view** that surfaces bind states (relevance, required, readonly, calculations) and diagnostics as scenario values change. Validate a response against the rules without leaving Studio. Headless evaluation is available (the underlying API exposes `previewForm` and `validateResponse` that run a form engine without a browser), which means preview and behavior views can be scenario-driven without full DOM rendering.
 
-## 6. Constraints the design must respect
+**Converse with the AI.** Two conversational flows exist in the product today and the design may unify or separate them:
+- **Scaffolding** — the AI interviews the author, gathers requirements (from plain language, a template, or an uploaded file), and produces a first-draft form. The scaffold step produces a complete `FormDefinition` and swaps it in wholesale — it does not go through the incremental command catalog.
+- **Refinement** — once a form exists, the author talks to the AI to modify it. Refinement goes through typed tool calls against the command catalog; every change is the same kind of operation a human would make and is therefore undoable and auditable. Refinement operations are grouped into **changesets** the author can open, review, accept, or reject as a unit.
+Both flows stream, produce structural diffs, and support regenerating or truncating the conversation. Source tracing — linking elements back to the conversation turn that produced them — is populated today only in the standalone scaffold path; parity across both surfaces is a design/implementation question, not a given.
 
-These are things the design cannot change, because they are downstream of the specification or the architecture.
+**Track issues.** Contradictions, low-confidence AI choices, missing configuration, and validation problems surface as a reviewable queue with severities and categories. Issues can be resolved, deferred, or reopened.
 
-### 6.1 The four tiers are real, but the author shouldn't feel four tools
+**Undo, redo, and look back.** Every human or AI mutation is a typed command. Undo and redo work across both. The underlying command history is available as data; whether Studio exposes it as a visible log is a design call (today it doesn't).
 
-Definition, Theme, Component, and Mapping are separate JSON documents with separate schemas. They are authored, reviewed, and versioned separately. The *benefits* of this separation should come through in the product (theme swaps don't affect logic; layout is editable without touching data; output retargets without rebuilding the form). The *mechanics* of this separation (four documents, four schemas, keeping them consistent) should be invisible. When the author exports, they get four files — but getting there should not have felt like running four editors in a trench coat.
+**Save, restore, hand off.** Session persistence — authors close tabs, crash, walk away, come back. Sessions list, open, resume. Export and import of the full bundle. Import from a partial bundle is undoable like any other operation.
 
-### 6.2 Every mutation is a typed command
+**Navigate a large form.** A persistent notion of the selected item (field, group, rule, variable, mapping rule) that drives contextual panels. Fast navigation across all entities. Full-text / command-palette search. Entity counts at a glance. Filtering and scoped views at real form sizes (50–300 fields is typical; hundreds of binds, dozens of shapes, multiple repeat groups).
 
-All edits flow through a command catalog (`definition.addItem`, `theme.setToken`, `component.addNode`, `mapping.mapField`, etc.). This is what makes undo/redo, audit logging, and AI tool calls work uniformly. The design does not have to expose commands as a concept, but it cannot invent ad-hoc edit paths that bypass them.
-
-### 6.3 FEL is the logic language
-
-Calculations and conditions are FEL expressions. The design must provide a way to author, read, and debug FEL. Authors of complex forms will write non-trivial expressions — `sum(items[*].amount)`, `if($income > 50000, $rate_a, $rate_b)`, nested `let`-bindings, etc. The design can offer a visual/prose abstraction over FEL, but the raw expression has to be reachable.
-
-### 6.4 Validation has two mechanisms
-
-**Binds** (per-field) and **shapes** (cross-field) are structurally different. Shapes have severity levels (error / warning / info) and timing (continuous / deferred / disabled). The design needs to make the distinction legible — authors will want to express "this field is required" (a bind) and "the budget total must balance" (a shape) and will conflate them unless the UI helps.
-
-### 6.5 Preview is a real form runtime
-
-The preview surface runs the actual `FormEngine` against the live definition. It is not a mock or an approximation. Reactive updates, conditional visibility, calculations, and validation all run through the same engine an end user would hit. The design can rely on this being accurate.
-
-### 6.6 The AI runs through typed tools, not freeform generation
-
-The scaffold step produces a `FormDefinition` through structured output against a JSON schema. The refinement step calls tools from a catalog (the MCP server exposes ~48 typed tools). The AI cannot produce invalid state because the tools reject invalid inputs. This is an asset, not a limitation — the design can promise "the AI cannot break your form" and mean it.
-
-### 6.7 Offline-first authoring is not required, but runtime offline-first is
-
-Studio itself runs in a browser with a network connection. The *forms Studio produces* must work offline, which affects what Studio has to show the author (calculation correctness, on-device validation semantics) but not how Studio itself is architected.
-
-### 6.8 The output must be portable JSON
-
-Nothing Studio produces can require Studio to run. An author must be able to export, hand the JSON to a developer, and have it work in any runtime (web component, React, iOS, server). The design should not invent Studio-specific concepts that have no representation in the underlying JSON.
-
-### 6.8.1 JSON is the artifact, not the interface
-
-The primary author is non-technical and should never encounter JSON in the course of authoring. Every authoring path has a non-JSON expression; the tool absorbs schema validity, FEL syntax, and cross-document consistency on the author's behalf. JSON is reachable — authors can export the bundle, and a transparency / "view source" affordance exists for the occasional developer or curious domain expert — but it is not a featured surface, not a workflow the product promotes, and not a fallback the author is ever expected to depend on.
-
-### 6.9 Accessibility is a first-class requirement
-
-Studio targets government, clinical, and nonprofit authors. Many work in organizations with WCAG 2.2 AA requirements. Studio itself must meet accessibility standards (keyboard operability, screen reader support, focus management, sufficient contrast). The forms Studio produces must also meet accessibility standards — Studio should teach the author to do the right thing (e.g., surfacing when a field is missing a label).
-
-### 6.10 Session persistence and recovery
-
-Authors walk away and come back. They close tabs. They crash. The design needs a session model — sessions persist, can be listed, can be resumed. Both the project state and any active conversation must be restorable.
-
-### 6.11 Scale
-
-A realistic form is 50–300 fields with dozens of binds, several shapes, multiple repeat groups, and a few pages. The design has to work at that scale without becoming unusable — searching, filtering, and navigating large forms matters. A design that looks beautiful at 5 fields and breaks at 150 is not acceptable.
+**Configure metadata and extensions.** Form title, description, version, status, page mode, density, label position. Extension registry configuration — which extensions are loaded, how they resolve. Authors of forms in regulated domains will also touch sidecars beyond the four main tiers (Locale for translations, References for citations and help text, Ontology for concept URIs, Changelog for versioned change logs, Assist for filling-side tooling). These are optional for most authors and rarely edited in-band; their authoring surface is a real scope question, not a given.
 
 ---
 
-## 7. What a good design answers
+## 7. Constraints and technical realities
 
-This section is not a brief. It is a list of questions the design has to have an answer to. How it answers them is open.
+Things the design cannot change and things it should know about before making IA decisions.
 
-**Framing and identity**
+**The four tiers are real, but the author shouldn't feel four tools.** Definition, Theme, Component, and Mapping are separate JSON documents with separate schemas, separately versioned. The benefits of that separation should come through in product behavior (theme swaps don't touch logic; layouts are editable without touching data; output retargets without rebuilding). The mechanics should be absorbed.
 
-- What does a first-time author see in the first ten seconds? What does the product look like it is for?
-- What does an author who has built forms before recognize? What is the closest mental-model anchor — IDE, design tool, word processor, notebook, document editor, agent interface?
-- Does conversation feel like a peer to direct manipulation, a front door to it, a supporting surface, or something else entirely?
-- Does a single hero screenshot communicate, without explanation, that this is not a skin on an existing form builder? What is the one frame that sells the product?
-- Does a 90-second demo — conversation, form materializing, a few refinements, a moment of preview — land without a voiceover?
+**Sidecars exist.** Beyond the four main tiers there are Locale, References, Ontology, Registry, Changelog, and Assist documents. Most authors won't touch them; regulated / multilingual / ontology-bound forms will. The design should have an answer for how a sidecar-authoring user reaches those surfaces without cluttering the primary experience.
 
-**Core authoring loop**
+**Every mutation is a typed command.** All edits — human or AI — flow through a command catalog. This is what makes undo/redo, audit logging, and AI tool-calling work uniformly. The design does not expose commands as a concept, but it cannot invent ad-hoc edit paths that bypass them.
 
-- How does an author go from "I need a form" to "I have a first draft"?
-- Once a draft exists, how do they see what's there, what's missing, and what's wrong?
-- When they want to change something, what's the fastest path — conversation, direct edit, keyboard, search?
-- How does the author move between thinking about the structure (what fields exist), the behavior (what rules apply), the presentation (how it looks), and the output (what systems consume it)?
+**The AI's two paths are architecturally different.** Scaffolding produces a complete `FormDefinition` via structured output and swaps it in wholesale — it does not go through the command catalog, it replaces the definition. Refinement goes through the command catalog (the MCP server exposes roughly 48 tools, organized into around 28 consolidated families). This asymmetry matters for the design: an AI scaffold feels like a reset; an AI refinement feels like an edit. Today the two live in separate surfaces (integrated sidebar for refinement, standalone page for scaffolding). That split is implementation-driven, not product-required — a unified conversational experience is welcome.
 
-**Trust and review**
+**Changesets are the refinement primitive.** When the AI modifies an existing form, it opens a changeset, makes a batch of edits, and leaves it for the author to accept or reject as a unit. This is the mechanism behind "reviewable AI actions" — the design should assume it exists and build its review UX around it.
 
-- When the AI does something, how does the author see what changed?
-- How does the author accept, reject, or modify an AI action?
-- What does the history of the form look like? Can the author read it?
-- How does the author know the form is correct — no broken rules, no undefined references, no unreachable fields?
+**Imports go through a two-phase lifecycle.** When a file is uploaded or a bundle is imported, the system first enters a **bootstrap** phase where the draft accumulates schema errors, then transitions to an **authoring** phase against a live project. This directly shapes empty-state, broken-import, and recovery UX.
 
-**Complexity management**
+**FEL is the logic language.** Excel-like syntax, statically analyzable, deterministic, side-effect-free. The AI writes most expressions; humans read and tweak them. The design needs authoring, reading, and debugging surfaces for FEL — the raw expression must be reachable even if a prose or visual rendering is offered alongside.
 
-- Where do logic, validation, and calculations live? How does an author with 40 rules not get lost?
-- How does the author see the dependency graph — what depends on this field? what does this field depend on?
-- How does search and navigation work at 200 fields?
-- How does the author work on one part of the form without losing context on the rest?
+**Validation is two mechanisms, not one.** Binds (per-field) and shapes (cross-field, with severity and timing) are structurally different. The distinction should be legible — authors will conflate "this field is required" (bind) with "the budget must balance" (shape) unless the product helps them see the difference.
 
-**Preview and testing**
+**Preview is the real engine.** The preview surface runs the actual `FormEngine` against the live definition. It is not a mock. Reactive updates, conditional visibility, calculations, and validation all execute through the same engine an end user would hit. The design can trust that what preview shows is what respondents will see.
 
-- When and where does the author see the form-as-respondent? Is it a separate mode, a constant companion, an on-demand overlay?
-- How does the author test behavior — conditional visibility, calculations, validation — with sample data?
-- How does the author switch between author-view and respondent-view mentally?
+**JSON is the artifact, not the interface.** The primary user never encounters JSON in the normal flow. Export exists. A view-source affordance exists for transparency. Neither is featured. No authoring path requires touching JSON.
 
-**Tier legibility**
+**The output must be portable.** Nothing Studio produces can require Studio to run. An exported bundle has to work in any runtime (web component, React, iOS, server). The design should not invent Studio-only concepts with no representation in the JSON.
 
-- Does the author ever need to know the difference between Definition, Component, Theme, and Mapping? If yes, how is it framed? If no, how are the concerns still separable under the hood?
-- Where does layout (drag-drop arrangement) live relative to structure (the item tree)?
-- Where does theming live — as a separate surface, inline with items, globally, or something else?
-- How do the *benefits* of tier separation (theme swaps, reusable data models, retargetable output) surface as natural moments in the product rather than as things the author has to go hunt for?
+**Accessibility is first-class.** Studio targets government, nonprofit, and clinical audiences — many with WCAG 2.2 AA requirements. Studio itself must meet accessibility standards. Studio should also help authors produce accessible forms (for example, surfacing when a field is missing a label).
 
-**JSON and transparency**
+**Session persistence and recovery.** Authors close tabs, crash, walk away. Sessions persist, list, and resume. Both project state and conversational state must be restorable.
 
-- How does the product ensure the primary author never has to touch JSON to accomplish anything?
-- Where does the "export" / "hand this to a developer" capability live, and how is it framed so non-technical authors are not confused or intimidated by it?
-- If a curious domain expert or a developer wants to see the underlying documents, how is that surfaced without promoting it as a path the primary audience should take?
+**Known gaps the designer should not design around as if they work today:**
+- **`renameVariable` is not implemented.** Renaming a named variable is blocked at the core; the helper throws. The design can plan for variable renames, but if variable rename flows are critical path to an early demo, they are not wireable today.
+- **Upload-to-scaffold is generic.** The AI adapter accepts file attachments and passes them to the model; there is no per-format extraction (no "drop a CSV and see columns map to fields"). Designs assuming format-specific upload UX are ahead of the implementation.
+- **Source tracing is partial.** Links from form elements back to the conversation turn that produced them populate in the standalone scaffold path; the integrated refinement path does not feed them back today. Parity is a design question, not a given.
+- **Command history is data, not yet UI.** The command log is queryable; no visible audit panel ships.
 
-**Conversation as a surface**
-
-- Is there one conversation or many? Per-form, per-session, per-topic?
-- Does the conversation remember context across sessions?
-- How does the author see what tools the AI is calling, and at what granularity?
-- How does the author redirect, correct, or roll back an AI action?
-- How does conversation surface issues, suggestions, and warnings the AI has surfaced?
-
-**Empty states, error states, edge cases**
-
-- What does the first-run experience look like?
-- What does a broken form (invalid FEL, dangling reference, circular calculation) look like?
-- What does a large, production-scale form look like three months into its life?
-- What does a form imported from a file look like before the author has cleaned it up?
-
-A complete design answers all of the above, consistently, without resorting to "it's in a settings menu somewhere."
+**Scale.** Realistic forms are 50–300 fields with dozens of binds, several shapes, multiple repeat groups, and several pages. A design that looks clean at 5 fields and breaks at 150 is not viable. Search, filter, navigation, and scoping at real form sizes are first-order concerns.
 
 ---
 
-## 8. What the current Studio has, for reference
+## 8. Today's Studio, for reference
 
-The existing implementation is not the design to match — it is a working reference for the capability surface. Treat it like a feature catalog, not a layout proposal. Look at it to understand what has to be supported; do not copy its structure.
+A brief factual summary of what ships now. Use it to understand the capability surface; do not use it as a layout proposal.
 
-Quick summary of what ships today:
-
-- **Tabbed workspace**: Editor (item tree), Logic (variables, binds, shapes), Data (schema, instances, option sets), Layout (visual canvas), Theme (tokens, cascades), Mapping (rules, preview), Preview (live form + behavior lab).
-- **Blueprint sidebar** with nine sections: Structure, Component Tree, Theme, Screener, Variables, Data Sources, Option Sets, Mappings, Settings.
+- **Tabbed workspace** with Editor (item tree), Logic (variables, binds, shapes), Data (schema, instances, option sets), Layout (visual canvas), Theme (tokens, selector cascade), Mapping (rules, preview), and Preview (live form, behavior view, viewport switcher).
+- **Blueprint sidebar** with nine sections (Structure, Component Tree, Theme, Screener, Variables, Data Sources, Option Sets, Mappings, Settings) and entity count badges.
 - **Right-hand properties panel** driven by the current selection.
 - **Header** with tab navigation, undo/redo, import/export, command palette (⌘K).
-- **Two chat entry points**: an embedded sidebar panel (refinement via MCP tools) and a standalone conversational intake page (scaffolds a form, hands off to the editor).
+- **Two separate chat entry points** — an embedded sidebar that refines the live project via MCP tool calls (integrated refinement), and a standalone page that runs a conversational intake, scaffolds a definition, and hands off to the editor (standalone scaffolding).
 - **Preview** with viewport switcher, scenario data editor, and a diagnostics panel.
-- **Source tracing**: every AI-created element links back to the conversation turn that produced it.
-- **Issue queue**: contradictions, low-confidence choices, and missing config surface as a reviewable list.
+- **Issue queue** for AI-surfaced contradictions, low-confidence choices, and missing config.
 
-This is *an* answer to the product described in this document. Your job is to produce a new answer.
+This is one answer to the product described above. The rewrite ask is to produce a new one.
 
 ---
 
-## 9. Source material
+## 9. Questions a good design answers
 
-For deeper context, the following are canonical:
+The design has to have an answer to these. How is open.
 
-- `context.md` (repo root) — Formspec project context, audiences, positioning.
-- `packages/formspec-studio/README.md` — current Studio architecture and workspace inventory.
-- `packages/formspec-studio-core/README.md` — the authoring API the UI is a surface over (51+ helpers, the vocabulary of things Studio can do).
-- `packages/formspec-chat/README.md` — the conversational authoring core (sessions, adapters, scaffolding, refinement, source tracing, issues).
+1. What does a first-time author see in the first ten seconds, and what does the product look like it is for?
+2. How does an author go from "I need a form" to "I have a first draft"?
+3. How does conversation relate to direct manipulation — and how does the handoff between them feel when the author switches mid-task?
+4. When the AI does something, how does the author see what changed, accept or reject it, and keep going?
+5. Where do logic, validation, and calculations live, and how does the author not get lost in them at 40+ rules?
+6. When and where does the author see the form-as-respondent? Is preview a mode, a companion, an overlay, or something else?
+7. How do the benefits of tier separation (swap theme without touching logic; reuse data model across layouts; retarget output) surface as natural product moments?
+8. How does search and navigation work at 200 fields?
+9. What does a broken form look like — invalid FEL, dangling references, circular calculations, failed import?
+10. What does this product look like three months into the life of a real form, when the author is maintaining it rather than building it?
+
+---
+
+## 10. The real tension
+
+Studio has to do two things at once. It has to be a tool a program manager uses for hours at a stretch to build and maintain a correct, complex, high-stakes form — craftwork, not spectacle. It also has to be the most visible surface of the Formspec project, the thing people see in a screenshot or a short demo before they decide whether any of this is worth their attention. Those two pressures can reinforce each other (a tool that is a genuine pleasure to use is also a tool that demos well), but they can also pull apart (flourishes that look good in a hero shot and get in the way at hour six; depth that takes a walkthrough to appreciate).
+
+The ask is to hold both. A design that only serves the program manager will be competent and invisible. A design that only serves the screenshot will be beautiful and unusable. The design should look, at a single glance, like something meaningfully different from the form builders it competes with — because it is. It should also earn the second hour, the tenth hour, the hundredth.
+
+---
+
+## 11. Deliverables and inputs
+
+**What the designer returns:** high-fidelity designs for the primary authoring flows — empty state, scaffolding-by-conversation, direct editing of items and rules, preview, refinement-by-conversation, review of an AI changeset, navigation of a large form. Coverage of mobile is not required for authoring surfaces (authors work on desktop); preview must show how authored forms render across viewports.
+
+**What the designer gets:**
+- This document.
+- `context.md` at the repo root for project-level positioning.
+- `packages/formspec-studio/README.md` for the current Studio's architecture summary.
+- `packages/formspec-studio-core/README.md` for the authoring API (the vocabulary of operations the product supports — 51+ helpers).
+- `packages/formspec-chat/README.md` for the conversational layer (session lifecycle, adapters, scaffolding, refinement, changesets, issues).
+- A canonical reference form will be provided separately (suggested: a grant budget form at the simple end, a patient intake form at the complex end). Design mockups should use real form content, not lorem ipsum.
+- Access to a running instance of today's Studio, for reference. Open it to see the current answer; don't copy it.
+- Formspec brand assets (logo, typography, palette) if and when they exist. If they don't, the designer is free to propose.
+
+---
+
+## 12. Source material for deeper context
+
 - `specs/core/spec.llm.md` — Formspec core specification.
-- `specs/fel/fel-grammar.llm.md` — FEL expression language grammar and semantics.
-- `specs/theme/theme-spec.llm.md` — Theme specification.
-- `specs/component/component-spec.llm.md` — Component specification, including the 33 built-in components.
-- `specs/mapping/mapping-spec.llm.md` — Mapping DSL specification.
-- `thoughts/studio/` — prior Studio design reviews, visual specs, product requirements docs (historical, not binding).
+- `specs/fel/fel-grammar.llm.md` — FEL grammar and semantics.
+- `specs/theme/theme-spec.llm.md` — theme specification.
+- `specs/component/component-spec.llm.md` — component specification, including the built-in component catalog.
+- `specs/mapping/mapping-spec.llm.md` — mapping DSL.
+- `thoughts/studio/` — prior Studio design reviews and product requirements. Historical, not binding.
 
-You do not need to read all of this to design. Start with this handoff, `context.md`, and the Studio README. Reach for the specs when you need to understand a specific capability in depth.
-
----
-
-## 10. The ask
-
-Produce an original design for Formspec Studio that:
-
-- Fits the product described in sections 1–6.
-- Answers the questions in section 7.
-- Takes the "ChatGPT for forms" frame seriously without being bound to any existing ChatGPT-like layout.
-- Is grounded in the real audiences (non-technical domain experts in government, nonprofit, clinical, and compliance settings).
-- Does not assume the current Studio structure is correct.
-
-Nothing about tabs, sidebars, canvases, panels, or modes is load-bearing in this document. If the right design has none of those things, that's a valid answer. If the right design has all of them but arranged differently, that's a valid answer. If the right design looks like a notebook, a document, a chat, a spreadsheet, or something that doesn't have a common name yet — those are all valid answers.
-
-What is load-bearing: the product has to let a non-technical domain expert build, review, refine, and ship a complex, correct form, alongside an AI collaborator, while keeping the author in control of everything that ends up in the final JSON.
-
-
+Start with this document, `context.md`, and the three package READMEs. Reach for the specs when you need to understand a specific capability in depth.
 
 
 
