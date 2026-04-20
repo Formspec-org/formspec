@@ -79,6 +79,25 @@ These separations pay off the first time an author changes a theme without touch
 
 **AI is how the complexity curve stays flat.** The spec is simple enough to author by hand at the low end and rich enough that an AI can compose arbitrarily complex forms at the high end. Studio is where those two meet. The author stays in conceptual mode ("add a section for household members that repeats"); the AI handles the structural and logical machinery; the JSON stays correct and legible the whole time.
 
+### The design carries the pitch
+
+Studio is the most visible artifact in the Formspec project. Before anyone reads the spec, the schemas, or a single README, they will see a screenshot. Before they try the product, they will watch a demo video, or skim a tweet, or scroll past a post on a feed. The design is what tells them — in under three seconds — whether Formspec is a serious piece of work that deserves their attention or yet another form builder that can be skipped.
+
+This is a real requirement, not an afterthought. The product has to be *visibly* different from the tools it replaces — Google Forms, Typeform, REDCap, ODK, SurveyJS, JSON Forms. A design that looks like a nicer version of an existing form builder will be read as a nicer version of an existing form builder. A design that looks like its own thing — a tool that couldn't have existed five years ago, built for a kind of work the old tools can't do — gets a second look.
+
+Concretely, the design has to:
+
+- **Make someone stop scrolling.** A single screenshot should communicate that something meaningfully different is happening here. Not "prettier form builder" — something whose category is not immediately obvious, in the way that Linear did not look like a Jira skin and Figma did not look like a faster Illustrator.
+- **Look like a professional tool, not a hobby project.** The audience — government, nonprofit, clinical, insurance — is serious. Procurement officers and program directors do not adopt tools that look like weekend projects. Craft, polish, typographic discipline, and restraint matter. This is a tool that people will use for hours a day to do work that matters; it should look like it.
+- **Make the AI collaboration legible at a glance.** The "ChatGPT for forms" frame is the headline. A person looking at a screenshot should immediately see that conversation and direct manipulation are first-class peers, not that chat is bolted onto an existing form builder. The AI's presence in the product should be obvious from the first frame, not something you have to discover in a side panel.
+- **Demo well.** A 90-second video of someone describing a form and watching it materialize, then refining it through a mix of conversation and direct edits, should be compelling on its own — no voiceover required to explain what is happening. The transitions, the reactivity, the moments where the AI proposes something and the author accepts or modifies it, should read cleanly at demo speed.
+- **Photograph well at multiple crops.** Full-window hero shots, tight detail shots of the editing surface, sequence shots showing conversation → form materializing. The design has to hold up as marketing imagery without requiring a caption to explain what the reader is looking at.
+- **Carry a point of view.** Formspec's positioning is that complex forms deserve a serious tool, and that AI + a good spec can change what form authoring looks like. The visual design should have that opinion in it. Neutral, corporate, "safe SaaS" design will undersell the project. The design should feel authored — like someone made deliberate choices — without being gimmicky or trend-chasing.
+
+None of this is a license for form over function. A design that is beautiful to look at and miserable to use will not survive contact with the 200-field tax form. The bar is both: it has to work for a program manager iterating on a real form for hours, and it has to make someone on the outside — a potential adopter, a government CIO, a clinical informaticist, a technical decision-maker — stop and think "I want to know more about this."
+
+If the design achieves both, the vision sells itself. If it achieves only the working part, the project stays a well-built tool nobody hears about.
+
 ---
 
 ## 3. Who uses Studio
@@ -317,6 +336,8 @@ This section is not a brief. It is a list of questions the design has to have an
 - What does a first-time author see in the first ten seconds? What does the product look like it is for?
 - What does an author who has built forms before recognize? What is the closest mental-model anchor — IDE, design tool, word processor, notebook, document editor, agent interface?
 - Does conversation feel like a peer to direct manipulation, a front door to it, a supporting surface, or something else entirely?
+- Does a single hero screenshot communicate, without explanation, that this is not a skin on an existing form builder? What is the one frame that sells the product?
+- Does a 90-second demo — conversation, form materializing, a few refinements, a moment of preview — land without a voiceover?
 
 **Core authoring loop**
 
