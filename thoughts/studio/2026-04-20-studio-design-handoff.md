@@ -1,18 +1,20 @@
 # Formspec Studio — Design Exploration Brief
 
 **Date:** 2026-04-20
-**Status:** Exploratory design brief — multiple directions welcome
-**Audience:** Designer producing exploratory concepts for Formspec Studio
+**Status:** Exploratory design brief — multiple directions, built as functional demos
+**Audience:** AI design team building exploratory functional demos of Formspec Studio
 
 ---
 
 ## 1. How to use this document
 
-This brief explains what Formspec Studio is, who uses it, what it has to do for them, and what about it can't change. It is deliberately **not** a list of screens to design. The goal of this engagement is to produce several **exploratory design directions** — different ways the same product could look, feel, and work — not to refine a single answer.
+This brief explains what Formspec Studio is, who uses it, what it has to do for them, and what about it can't change. It is deliberately **not** a list of screens to build. The goal of this engagement is to produce several **exploratory design directions, each shipped as a functional demo** — different ways the same product could look, feel, and work, each running well enough to walk through end-to-end.
 
-Read the brief, form your own opinions, and propose directions that you think fit. If two of your directions disagree with each other, good. If one of them disagrees with what's described here, tell us why — the brief captures our current thinking, not a contract.
+Read the brief, form your own opinions, and build directions that you think fit. If two of your directions disagree with each other, good. If one of them disagrees with what's described here, tell us why in the demo — the brief captures our current thinking, not a contract.
 
-A version of Studio already exists; §8 describes it at a product level. Treat that as a reference for *what* the product does, not as a template for *how* it should be designed. Starting from zero is encouraged.
+A version of Studio already exists; §8 describes it at a product level, and the running instance is available to you as a reference. Treat it as a reference for *what* the product does, not as a template for *how* it should be designed. Starting from zero is encouraged.
+
+The bar is higher than usual because you're building, not mocking. A functional demo is more convincing than a figma file — and it's also more honest, because the moments that look good in a still image but fall apart in motion show up immediately. Lean into that. The goal isn't to ship a product; it's to get a direction far enough along that someone can use it for ten minutes and feel what it would be like.
 
 ---
 
@@ -191,26 +193,44 @@ These two pressures reinforce each other when they can (a tool that's a pleasure
 
 ## 11. What we're asking for
 
-**Multiple exploratory directions**, not one refined design. Ideally three to five distinct directions that take genuinely different positions on the open questions — different relationships between conversation and direct manipulation, different answers to where preview lives, different takes on how the author navigates a large form, different visual languages. Pick directions that you think have merit; the goal is to widen the space of what Studio could be before we narrow.
+**Multiple exploratory directions, each a functional demo**, not one refined design. Ideally three to five distinct directions that take genuinely different positions on the open questions — different relationships between conversation and direct manipulation, different answers to where preview lives, different takes on how the author navigates a large form, different visual languages, different mental-model anchors. Pick directions that you think have merit; the goal is to widen the space of what Studio could be before we narrow.
 
-For each direction, enough to evaluate it — a high-level description of the point of view, a few key flows (empty state, scaffolding-by-conversation, direct editing, review of an AI change, preview), and one "hero" frame that captures the direction's visual and conceptual identity. Fidelity and polish should be high enough to read the direction clearly; you don't need to mock every screen.
+Each direction should be a runnable application that a person can sit down with, open, and use for at least one canonical end-to-end flow — opening an empty state, going from "I need a form" to a first draft through conversation, making at least one meaningful edit by direct manipulation, seeing the AI respond to a follow-up request with a visible and reviewable change, previewing the form as a respondent, and handing off the result. Real interactions beat mocked ones. If the demo requires stubbing somewhere (for example, using a scripted AI response rather than a live one), that's fine — mark it clearly and keep the stubbed behavior faithful to what the real thing would do.
 
-Use real form content in your mockups — not lorem ipsum. We'll provide one or two canonical example forms you can work from.
+Fidelity guidance:
 
-If you have strong opinions about what's wrong with the brief itself, say so. This is the first version.
+- **High enough to read the direction.** Typography, spacing, rhythm, motion, and state transitions matter — they carry more than half of what a direction is trying to say. Rough sketches in code will read as rough sketches.
+- **Coverage over polish.** Better to have the full end-to-end flow working at medium fidelity than one beautiful screen and dead links everywhere else.
+- **Edge cases on the canonical flow only.** Empty state, loading state, AI-is-thinking state, error state, and "the author made a choice that needs confirmation" state should exist along the canonical flow. You do not need to cover every field type, every rule kind, every sidecar, or every import source.
+
+Use real form content throughout. We'll provide canonical example forms to work from. No lorem ipsum; it undermines the whole point.
+
+Deliver each direction with:
+
+1. A short written framing — what this direction's point of view is and why you took it.
+2. The running demo.
+3. A ~2 minute walkthrough video demonstrating the canonical flow, with voiceover explaining what the direction is doing differently.
+4. A summary of what the direction does better than the others and where it pays for it.
+
+If you have strong opinions about what's wrong with the brief itself, build them into the demos as counter-proposals rather than marginal comments. A direction that ignores part of the brief because you think we're wrong is welcome — just tell us which part and why.
 
 ---
 
-## 12. What you'll be given
+## 12. What you'll have access to
 
-- This brief.
-- A short written overview of the Formspec project (the "what and why" at a higher level than this brief goes into).
-- Access to a running instance of today's Studio to look at.
-- One or two canonical example forms (form content, as you'd see it on paper) to use in your mockups.
-- Formspec brand assets — logo, typography, palette — if they exist. If they don't or are incomplete, you're welcome to propose.
-- Access to subject-matter experts to answer questions as they come up, either synchronously or in writing.
+**The Formspec stack is available to you.** You're building real demos, so you have real resources:
 
-You do not need, and will not be given, access to the Formspec source code or internal documentation. This brief contains everything about the product you need to design against; if something is missing, ask.
+- **The form runtime.** The engine that actually renders and runs Formspec forms — live preview, conditional logic, calculations, validation — is available as an open-source package you can drop into your demo. Preview should use the real engine; that's one of the few truthful promises the product can make. Don't mock it.
+- **The authoring API.** Programmatic access to create, modify, and manipulate form definitions, themes, components, and mappings. Every mutation you make in a demo should go through it, so undo/redo, audit history, and AI tool-calling all just work. This also means the AI half of your demo has a real surface to call into — you don't need to simulate what the AI can do.
+- **AI integration.** There is a working integration with a major model provider for both scaffolding (producing a first draft from a conversation) and refinement (modifying an existing form through a conversation). You can use the live integration or stub it for reliability in the demo. If stubbing, use real scripts captured from the live integration, not made-up dialog.
+- **Example form content.** Two to three canonical example forms at different complexity levels — a small one (a grant budget), a medium one (a patient intake), and a large one (a regulatory application or tax form). Use them in every demo so the directions are directly comparable.
+- **Today's Studio.** A running instance to look at. You have its source as a reference if you want to see how any of the capabilities above are used today. You do not need to match its structure; treat it as one possible answer.
+- **Formspec brand assets** — logo, typography, palette — where they exist. Where they don't, or don't fit a direction, propose.
+- **Subject-matter experts.** Access to people who know the product, the specification, and the audiences. Ask questions in writing or synchronously; don't guess in the dark on things that have known answers.
+
+**What you don't need to build.** Authentication, storage, deployment, billing, real-time collaboration, workflow after submission, or anything downstream of "the form is authored and ready to hand off." The demos end when the author hands off a finished form. What happens next is out of scope.
+
+**What the demos are not.** Not production software. Not a single shared system behind all the directions. Not responsive to every viewport. Not internationalized. Not instrumented. Not accessible-conformant (though the design should not obviously violate accessibility — keyboard operability, focus management, and sensible contrast are table stakes even at demo fidelity). Each direction is a disposable exploration built to answer "what could this feel like" and nothing more.
 
 
 
