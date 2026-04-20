@@ -1,236 +1,237 @@
 # Formspec Studio — Design Exploration Brief
 
 **Date:** 2026-04-20
-**Status:** Exploratory design brief — multiple directions, built as functional demos
-**Audience:** AI design team building exploratory functional demos of Formspec Studio
+**Status:** Exploratory brief. Multiple directions. Functional demos.
+**Audience:** AI design team building functional demos of Formspec Studio.
 
 ---
 
 ## 1. How to use this document
 
-This brief explains what Formspec Studio is, who uses it, what it has to do for them, and what about it can't change. It is deliberately **not** a list of screens to build. The goal of this engagement is to produce several **exploratory design directions, each shipped as a functional demo** — different ways the same product could look, feel, and work, each running well enough to walk through end-to-end.
+This brief describes what Studio is, who uses it, what it must do, and what cannot change. It does not list screens to build. Produce **several exploratory directions, each a functional demo** — different takes on how Studio could look, feel, and work, each running well enough to walk through end-to-end.
 
-Read the brief, form your own opinions, and build directions that you think fit. If two of your directions disagree with each other, good. If one of them disagrees with what's described here, tell us why in the demo — the brief captures our current thinking, not a contract.
+Read the brief, form your own opinions, and build directions you believe in. If two of your directions contradict each other, good. If one contradicts the brief, say so in the demo. The brief is our current thinking, not a contract.
 
-A version of Studio already exists; §8 describes it at a product level, and the running instance is available to you as a reference. Treat it as a reference for *what* the product does, not as a template for *how* it should be designed. Starting from zero is encouraged.
+Studio already exists. §8 describes it at a product level, and a running instance is available as reference. Treat it as evidence of *what* the product does, not a template for *how* it should look. Start from zero.
 
-The bar is higher than usual because you're building, not mocking. A functional demo is more convincing than a figma file — and it's also more honest, because the moments that look good in a still image but fall apart in motion show up immediately. Lean into that. The goal isn't to ship a product; it's to get a direction far enough along that someone can use it for ten minutes and feel what it would be like.
+A functional demo convinces more than a Figma file, and tells the truth faster. Moments that look fine in a still image collapse in motion. Lean into that. The goal is not a shipped product — it is a direction a person can use for ten minutes and feel.
 
 ---
 
 ## 2. What Formspec is
 
-Formspec is a way to define complex forms as portable, version-controlled documents — not to build them in a specific tool or run them on a specific service. It's aimed at the kind of forms where getting the behavior right is most of the work: tax returns, grant applications, clinical intake, insurance claims, regulatory filings, inspection checklists. Not contact forms, not surveys.
+Formspec defines complex forms as portable, version-controlled documents. It is not a builder tool and not a hosted service. It is aimed at forms where behavior is most of the work: tax returns, grant applications, clinical intake, insurance claims, regulatory filings, inspection checklists. Not contact forms. Not surveys.
 
-A Formspec form knows its own rules. Conditional sections, calculations, cross-field validation, different output formats for different downstream systems, translations for different audiences, offline use when there's no connectivity — all of it is described inside the form itself. The same form definition can render on a web page, in a phone app, on a tablet at a remote clinic, and on a server re-checking the answers after submission. The rules behave identically everywhere.
+A Formspec form carries its own rules. Conditional sections, calculations, cross-field validation, output formats for downstream systems, translations, offline use — the form itself describes all of it. The same definition renders on a web page, a phone, a tablet at a remote clinic, and a server rechecking answers after submission. The rules behave identically everywhere.
 
-Formspec is a specification and a set of open-source tools, not a hosted service. The forms people create with it are their own — they can move them, version them, hand them to other systems, keep them forever.
+Formspec is a specification and a set of open-source tools. Authors own the forms they create — they can move them, version them, hand them off, keep them forever.
 
 ---
 
 ## 3. What Studio is
 
-Studio is where someone sits down to build a Formspec form. It's the authoring environment — the tool someone opens when they have a blank page and a job to do, and closes when they have a working form they can ship. The people who will eventually fill out the form never see Studio.
+Studio is where someone builds a Formspec form. Authors open it with a blank page and close it with a working form. Respondents — the people who fill the form out — never see Studio.
 
 Studio has one job with two halves.
 
-**Direct manipulation.** The author can build and modify the form by working on it directly — adding fields, writing rules, arranging pages, adjusting how it looks, defining how the answers map to their downstream systems.
+**Direct manipulation.** The author builds the form by working on it: adding fields, writing rules, arranging pages, adjusting the look, mapping answers to downstream systems.
 
-**Conversation with an AI.** The author can also build and modify the form by talking to an AI that understands the form and can make the same kinds of changes the author would make. Anything the AI does is something the author could have done themselves; everything is reviewable and reversible.
+**Conversation with an AI.** The author also builds the form by talking to an AI that understands it and makes the same kinds of changes the author would. The AI does nothing the author could not do. Everything it does is reviewable and reversible.
 
-Neither half is a side-panel on the other. Both are first-class. The short internal pitch is **"ChatGPT for forms"** — describe what you need, see the system produce a first draft, refine it in conversation or by hand, walk away with a working form. Take the frame seriously, but not literally. Whether conversation dominates the interface, shares it equally with direct manipulation, or lives alongside it, is genuinely open — different exploration directions can try different answers.
+Neither half is a side-panel on the other. Both are first-class. The internal pitch is **"ChatGPT for forms"**: describe what you need, watch a first draft appear, refine it in conversation or by hand, leave with a working form. Take the frame seriously, not literally. Whether conversation dominates, shares the canvas, or lives alongside direct manipulation is open. Different directions should try different answers.
 
-One thing the design can truthfully promise: the AI cannot break the form. It works through the same controlled set of operations a human does, and the system won't accept structurally invalid changes from anyone, human or AI.
+One promise the design can keep: the AI cannot break the form. It works through the same controlled operations a human uses, and the system rejects structurally invalid changes from anyone.
 
 ---
 
 ## 4. Design philosophy
 
-Formspec was designed to be simple enough for a person to create a small form by hand and rich enough for an AI to compose an arbitrarily large and intricate form. A grant budget form might be a few dozen lines of plain, readable description. A 300-field tax return with conditional sections, cascading calculations, and multi-format output is the same shape — just more of it. The underlying specification doesn't get heavier as the form gets harder. Studio's job is to give authors access to that full range of power without it feeling overwhelming at any point on the curve.
+Formspec is simple enough to hand-write a small form and rich enough for an AI to compose an enormous one. A grant budget form runs a few dozen lines of readable description. A 300-field tax return with conditional sections, cascading calculations, and multi-format output has the same shape, only larger. The specification does not grow heavier as the form grows harder. Studio's job is to open that full range to authors without overwhelming them at any point on the curve.
 
-Formspec keeps several concerns separate on purpose — what the form collects, how it looks, how it's laid out, how its data flows to downstream systems, what languages it speaks. That separation is valuable; the author shouldn't have to feel it as four or five different tools. The *benefits* should come through as natural product moments — swap the look without changing the logic; reuse the same data model in two different layouts; send the same answers to three different downstream systems by adjusting one thing. The *mechanics* of keeping those concerns separate should be invisible.
+Formspec separates several concerns on purpose: what the form collects, how it looks, how it is laid out, how its data flows to downstream systems, what languages it speaks. The separation is valuable. The author should not feel it as four or five tools. Let the *benefits* surface as natural product moments — swap the look without touching the logic, reuse one data model in two layouts, feed three downstream systems from a single mapping. Hide the *mechanics*.
 
-The underlying form definition is just structured text — portable, versionable, readable, editable outside Studio if someone wants to. The author never has to touch it. Export is available; a "view source" affordance is reasonable for transparency. Neither needs to be prominent, and the primary user should never be expected to open the raw form to get their job done.
+The form definition is structured text — portable, versionable, readable, editable outside Studio. The author never needs to touch it. Offer export. Offer "view source" for transparency. Neither belongs at the center. The primary user never opens the raw form to do their job.
 
 ---
 
 ## 5. Who uses Studio
 
-The person you are designing for is a **non-technical program manager or analyst** — the person who today files tickets with IT to get a form built, or spends months going back and forth with developers. They know their domain cold: grants, eligibility, clinical intake, inspections, compliance, benefits, licensing, underwriting. They do not write code. They do not read schemas. They will not hand-edit structured text to get a form out the door.
+Design for a **non-technical program manager or analyst** — the person who today files IT tickets to get a form built, or spends months trading drafts with developers. They know their domain cold: grants, eligibility, clinical intake, inspections, compliance, benefits, licensing, underwriting. They do not write code. They do not read schemas. They will not hand-edit structured text to ship a form.
 
-They *can*, however, read and write simple formulas the way someone writes them in Excel or Google Sheets. The form's logic — "show this section if income is over $50,000", "the total is the sum of personnel, travel, and equipment", "flag this as a warning if the budget is over $500,000" — is written in an Excel-like formula language. Most of the time the AI will write the formula and the author will read it and maybe tweak a number or a comparison; for the occasional case the AI gets wrong, the author can edit the formula directly. Treat the formula language the way you'd treat a spreadsheet formula — something the user can read and adjust, not something scary.
+They *can* read and write simple formulas, the way anyone uses Excel or Google Sheets. The form's logic — "show this section if income is over $50,000", "the total is the sum of personnel, travel, and equipment", "warn if the budget is over $500,000" — is written in an Excel-like formula language. The AI writes most formulas; the author reads them and tweaks a number or comparison. For the occasional case the AI gets wrong, the author edits the formula directly. Treat formulas like spreadsheet formulas — something the user reads and adjusts, not something scary.
 
 Typical settings:
 
-- **Government program staff** — benefits, permitting, tax, licensing. Compliance-sensitive, often required to meet accessibility standards.
-- **Nonprofit and grant operations** — applications, reports, submissions. Small teams; one person often wearing many hats.
+- **Government program staff** — benefits, permitting, tax, licensing. Compliance-sensitive. Often required to meet accessibility standards.
+- **Nonprofit and grant operations** — applications, reports, submissions. Small teams. One person wearing many hats.
 - **Clinical and health intake** — patient questionnaires, screening, referrals. Coded medical vocabularies matter.
 - **Insurance and financial services** — claims, applications, underwriting. Calculation correctness and audit trails matter.
-- **Field inspection and compliance** — safety checklists, site surveys. The forms they produce must work offline.
+- **Field inspection and compliance** — safety checklists, site surveys. Forms must work offline.
 
-Shared traits to design for:
+Shared traits:
 
-- They're accountable for the form being correct. A calculation error is their problem.
-- They iterate constantly. Rules change mid-cycle. Wording gets tweaked. Sections come and go.
-- They don't read docs. They expect the tool to teach them by being legible.
-- They're used to forms being a second-class citizen in every tool they have. A tool that treats this work seriously will surprise them.
+- They are accountable for correctness. A calculation error is their problem.
+- They iterate constantly. Rules change mid-cycle. Wording shifts. Sections come and go.
+- They do not read docs. They expect the tool to teach them by being legible.
+- They are used to forms being a second-class citizen in every tool they own. A tool that takes this work seriously will surprise them.
 
-A secondary user is the developer or engineer who will help integrate the finished form into a larger system. They're not blocked by the design — they can export and work with the files in their own tools — but the screen is not for them. When a design choice trades clarity for the program manager against convenience for the engineer, the program manager wins.
+A secondary user is the developer who integrates the finished form into a larger system. They are not blocked by the design — they can export and work in their own tools — but the screen is not for them. When a choice trades clarity for the program manager against convenience for the engineer, the program manager wins.
 
 ---
 
-## 6. What the author needs to be able to do
+## 6. What the author needs to do
 
-A list of things the product has to support, in verbs. How these are grouped, surfaced, or sequenced is the design.
+Verbs the product must support. How to group, surface, or sequence them is the design.
 
-**Start a form.** From nothing. From a conversation with the AI. From a built-in template (things like a housing intake, a grant application, a patient intake form). From an uploaded document — someone drops in a PDF, a Word doc, or a screenshot of an existing form, and the AI tries to turn it into a starting draft. From pasting in an existing form someone else made.
+**Start a form.** From nothing. From a conversation with the AI. From a built-in template — a housing intake, a grant application, a patient intake form. From an uploaded PDF, Word doc, or screenshot, which the AI converts to a starting draft. From a pasted form someone else made.
 
-**Shape what the form collects.** Add, remove, rename, reorder, and move the parts of the form. The building blocks are fields (a place where a respondent enters a value), groups (a way to nest fields into sections), and content (headings, paragraphs, banners, dividers — visible but not collected). Fields come in common kinds — text, number, yes/no, date, a choice from a list, multiple choices from a list, money, email, phone, file upload, signature, rating, slider, and so on. Sections can be marked as repeatable with a minimum and maximum (think "household members" or "line items").
+**Shape what the form collects.** Add, remove, rename, reorder, and move the parts of the form. The building blocks are fields (where a respondent enters a value), groups (sections that nest fields), and content (headings, paragraphs, banners, dividers — visible, not collected). Fields come in common kinds: text, number, yes/no, date, single choice, multiple choice, money, email, phone, file upload, signature, rating, slider. Sections can repeat with a minimum and maximum — "household members," "line items."
 
-**Set up reusable building blocks.** Named lists of options (used in several places across the form, edited in one place). Named formulas (so a value computed once can be referenced from multiple places). External data sources (so a form can reference a list that lives somewhere outside the form).
+**Set up reusable building blocks.** Named option lists, edited in one place and used in several. Named formulas, computed once and referenced anywhere. External data sources, pointing to a list that lives outside the form.
 
-**Express logic.** The author writes rules that say things like: "this field is required if the respondent selected 'yes' above", "this section is hidden unless they're applying for grant type A", "the total is the sum of these three line items", "warn if the budget exceeds $500,000 but don't block submission". There are two kinds: rules that attach to a single field (is this required? should it be hidden? should it be computed from other fields? is its value valid?) and rules that span the whole form (does the budget balance? does the start date come before the end date?). Cross-form rules also have a *severity* — is this a blocking error, a warning, or a note — and can fire continuously as the respondent types or only when they try to submit. The AI writes most of these rules; the author reads them and adjusts.
+**Express logic.** The author writes rules like "this field is required if the respondent selected 'yes' above," "hide this section unless they're applying for grant type A," "the total is the sum of these three line items," "warn if the budget exceeds $500,000 but don't block submission." Rules come in two kinds. Field rules attach to one field: is it required? hidden? computed? valid? Form rules span the whole form: does the budget balance? does the start date come before the end date? Form rules also carry a *severity* — error, warning, or note — and fire continuously or only on submit. The AI writes most rules; the author reads and adjusts.
 
-**Organize the respondent's journey.** Break a long form into pages. Multi-page forms can be wizards (one page at a time, next / back), tabs (free movement between pages), or a single long page. Authors can also set up an **upfront screener** — a quick set of questions at the start that routes the respondent into a different branch of the form based on their answers.
+**Organize the respondent's journey.** Break a long form into pages. Multi-page forms run as wizards (one page at a time, next/back), tabs (free movement), or a single scrolling page. Authors can also set up a **screener** — a short set of questions up front that routes the respondent into a branch of the form based on their answers.
 
-**Shape how the form looks.** Global choices — colors, type, spacing, density, label position. Overrides for specific kinds of fields or specific fields. Responsive behavior for mobile, tablet, and desktop. A theme is swappable without touching the form's logic or data model.
+**Shape how the form looks.** Global choices — colors, type, spacing, density, label position. Overrides for field kinds or specific fields. Responsive behavior for mobile, tablet, desktop. Themes swap without touching logic or data.
 
-**Shape how the form is laid out.** Where each field sits on the page, how fields cluster into cards or columns, what widget is used for a given field (a dropdown vs. a radio group vs. a segmented control, for example). This is visual arrangement, separate from what the form collects.
+**Shape how the form is laid out.** Where each field sits, how fields cluster into cards or columns, what widget a field uses — dropdown, radio group, segmented control. Visual arrangement, separate from what the form collects.
 
-**Shape where the answers go.** When a form is submitted, the answers usually need to feed one or more downstream systems — an API expecting JSON, a legacy system expecting XML, a spreadsheet expecting CSV. The author sets up how each field in the form maps to each downstream format, previews the result, and adjusts. The same submission can feed multiple downstream formats without the author re-entering anything.
+**Shape where the answers go.** On submit, answers usually feed one or more downstream systems — a JSON API, a legacy XML system, a CSV spreadsheet. The author maps each field to each format, previews the result, adjusts. One submission can feed many formats without re-entry.
 
-**Preview and test.** See the form as a respondent would see it — on a phone, a tablet, a desktop. Fill it in with sample answers and watch the conditional logic, calculations, and validation react in real time. Inspect which rules are firing and why. Feed a saved response in and check whether it would pass validation.
+**Preview and test.** See the form as a respondent sees it — phone, tablet, desktop. Fill it with sample answers and watch the logic, calculations, and validation react live. Inspect which rules fire and why. Feed in a saved response and check whether it would pass validation.
 
 **Converse with the AI.** Two moments:
-- *When the form is empty or very early*, the AI interviews the author, asks what they're trying to build, and produces a first draft to work from.
-- *Once a form exists*, the author can ask the AI to change it — "add an email field with validation", "split the address into street, city, state, zip", "make the budget section only appear for large grants". The AI makes the changes, shows what it did, and the author can accept, reject, or modify.
-The two moments may be one surface or two, one mode or many. That's a design question.
+- *Empty or early form.* The AI interviews the author, asks what they're building, and produces a first draft.
+- *Existing form.* The author asks the AI to change it: "add an email field with validation," "split the address into street, city, state, zip," "make the budget section appear only for large grants." The AI changes the form, shows what it did, and the author accepts, rejects, or modifies.
 
-**Review what the AI did.** When the AI proposes changes, the author needs to see what's changing before committing to it — a clear before/after, grouped into a coherent unit the author can accept or reject as a whole. After the changes are accepted, they're undoable like any other edit.
+The two moments may share one surface or split into two. That is a design question.
 
-**See problems that need attention.** Contradictions between rules, low-confidence choices the AI made, missing configuration, references to things that don't exist, rules that can never fire — these surface as a reviewable queue with severities. The author can resolve an issue, defer it, or reopen one they resolved.
+**Review what the AI did.** The author sees a clear before/after before accepting — changes grouped into one coherent unit, accepted or rejected as a whole. Once accepted, changes undo like any other edit.
 
-**Undo and redo.** Every change — whether the author made it or the AI made it — is reversible. The author can walk back any number of steps.
+**See problems.** A queue surfaces issues with severities: contradictions between rules, low-confidence AI choices, missing configuration, references to things that don't exist, rules that can never fire. The author resolves an issue, defers it, or reopens one they resolved.
 
-**Save, leave, come back.** Authors close tabs, walk away, crash their browser, and come back the next day. Their work is still there, the conversation with the AI is still there, and they can pick up where they left off. Authors can also have several forms in flight, list them, and switch between them.
+**Undo and redo.** Every change reverses — whether the author or the AI made it. The author walks back any number of steps.
 
-**Export and hand off.** At any point, the author can export the form as a set of files to hand to a developer, save to a shared drive, or check into version control.
+**Save, leave, come back.** Authors close tabs, walk away, crash, and return the next day. The form is still there. The conversation is still there. They pick up where they left off. Authors can also keep several forms in flight, list them, and switch between them.
 
-**Work at real form sizes.** Real forms are often 50–300 fields with dozens of rules, several pages, and multiple repeatable sections. Finding a specific field, filtering to the rules that apply to a given field, searching across the whole form — these stop being nice-to-haves once the form gets past about 30 fields.
+**Export and hand off.** At any point, the author exports the form as files — to a developer, a shared drive, or version control.
 
-**Set form-level metadata.** Title, description, version, status, page mode, density. There are also specialized sidecar documents — translations into other languages, citations to regulations, semantic tagging that ties fields to standard medical or legal concepts — that only certain kinds of authors (multilingual forms, regulated forms, clinical forms) will ever touch. Whether and how those surface in Studio is a scope question worth flagging.
+**Work at real form sizes.** Real forms run 50–300 fields with dozens of rules, several pages, and multiple repeatable sections. Finding a field, filtering rules by field, searching across the form — these stop being nice-to-haves past about 30 fields.
+
+**Set form metadata.** Title, description, version, status, page mode, density. Specialized sidecar documents also exist — translations, regulatory citations, semantic tagging for medical or legal concepts — that only some authors will touch. Whether and how those surface in Studio is a scope question worth flagging.
 
 ---
 
 ## 7. What can't change
 
-A few things about the product are load-bearing — the design can express them in any form, but it can't work around them.
+A few things are load-bearing. The design can express them any way, but not work around them.
 
-**The author works in concepts, not code.** Program managers don't write code or read raw form files. The design cannot require them to.
+**The author works in concepts, not code.** Program managers do not write code or read raw form files. The design cannot require them to.
 
-**The form's logic is Excel-like formulas.** The author will occasionally read and tweak them, mostly with the AI's help. The design needs a place for formulas — writing, reading, debugging — that feels like editing a spreadsheet formula, not like editing code.
+**The form's logic is Excel-like formulas.** The author occasionally reads and tweaks them, mostly with the AI's help. Give formulas a place — writing, reading, debugging — that feels like editing a spreadsheet formula, not like editing code.
 
-**The AI is always reviewable and reversible.** Anything the AI does has to be visible, understandable, and undoable. The design has to answer: when the AI does something, how does the author see it, evaluate it, and keep or roll it back?
+**The AI is always reviewable and reversible.** Everything the AI does must be visible, understandable, and undoable. Answer: when the AI acts, how does the author see it, evaluate it, and keep or roll it back?
 
-**There are two kinds of rules and the difference matters.** Rules that attach to a single field ("is this required?", "what's the computed value?") and rules that span the form ("does the budget balance?", "is the start date before the end date?") are structurally different — the cross-form ones also have severities and timing. The design should make the distinction legible or the author will conflate them.
+**Two kinds of rules. The difference matters.** Field rules ("is this required?", "what's the computed value?") and form rules ("does the budget balance?", "is the start date before the end date?") are structurally different. Form rules also carry severity and timing. Make the distinction legible or the author will conflate them.
 
-**Several concerns are separate on purpose.** The form's data model, its visual theme, its layout, and its downstream output are different things. Changing one doesn't and shouldn't change the others. The design can hide that separation from the author's attention, but the *benefits* (swap the theme, reuse the data model, re-target the output) should come through as natural moments in the product.
+**Several concerns are separate on purpose.** Data model, theme, layout, downstream output — different things. Changing one does not change the others. The design can hide the separation from the author's attention, but the *benefits* (swap the theme, reuse the data, retarget the output) should surface as natural product moments.
 
-**Preview is real.** What the author sees in preview is exactly what a respondent will see — same logic, same calculations, same validation. The design can lean on this truthfully.
+**Preview is real.** What the author sees in preview is what a respondent sees — same logic, same calculations, same validation. Lean on this truthfully.
 
-**The form must work at 200+ fields.** Not 20. The design should anticipate real forms, which means search, filter, scoping, and navigation at scale matter early.
+**The form must work at 200+ fields. Not 20.** Real forms are large. Search, filter, scoping, and navigation at scale matter from the start.
 
-**Accessibility is first-class.** Government, nonprofit, and clinical audiences often require accessibility conformance. Studio itself should meet accessibility standards, and Studio should help authors produce forms that meet them (for example, by surfacing when a field is missing a label).
+**Accessibility is first-class.** Government, nonprofit, and clinical audiences often require accessibility conformance. Studio itself must meet accessibility standards, and it must help authors produce forms that do — for instance, by flagging a field without a label.
 
-**Authors walk away and come back.** Sessions persist. Both the form in progress and the conversation with the AI should still be there the next morning, in another tab, or after a crash.
+**Authors walk away and come back.** Sessions persist. The form in progress and the AI conversation remain, in a new tab, the next morning, after a crash.
 
 ---
 
 ## 8. Today's Studio, at a product level
 
-A brief description of what the current version of Studio does, so you know what exists to react to. You'll be given access to a running instance to look at. Use it to understand the capability surface; do not use it as a layout proposal.
+A short description of what the current Studio does, so you know what exists to react to. A running instance is available. Use it to understand the capability surface. Do not treat it as a layout proposal.
 
-- The workspace is organized around a set of **tabs** — one for the form's structure, one for its logic, one for reference data (options, formulas, external sources), one for the visual layout, one for the theme, one for the downstream output mapping, and one for preview.
-- There is a **sidebar** on one side that lets the author jump between views of the form — its structure, its variables, its options, its settings, and so on — with counts showing how many of each thing exist.
-- There is a **properties panel** on the other side that changes based on whatever is currently selected.
-- There is a **header** with the tab switcher, undo/redo, import/export, and a search palette.
-- **Two separate AI surfaces** exist today — one embedded in the editor (for refining an existing form) and one standalone (for starting a form from a conversation). A single unified conversational experience would be welcome.
-- **Preview** has a viewport switcher, a place to feed in sample answers, and a diagnostics panel that shows which rules are firing.
-- An **issue queue** shows problems the AI or the system has flagged.
+- The workspace organizes around **tabs** — structure, logic, reference data (options, formulas, external sources), layout, theme, downstream mapping, and preview.
+- A **sidebar** lets the author jump between views of the form — structure, variables, options, settings — with counts for each.
+- A **properties panel** on the other side changes with whatever is selected.
+- A **header** holds the tab switcher, undo/redo, import/export, and a search palette.
+- **Two separate AI surfaces** exist today — one embedded in the editor for refining an existing form, one standalone for starting a form from a conversation. A single unified experience would be welcome.
+- **Preview** has a viewport switcher, a place to feed in sample answers, and a diagnostics panel showing which rules fire.
+- An **issue queue** surfaces problems the AI or the system has flagged.
 
-That's one answer to what's described in this brief. The exercise is to explore different answers.
+That is one answer to the brief. The exercise is to explore others.
 
 ---
 
 ## 9. Questions a good exploration answers
 
-Any direction you propose should have a point of view on these. You don't need to answer all of them in words — your design should answer them by the way it's put together.
+Every direction should have a point of view on these. The design should answer them by how it is put together, not in words.
 
 1. What does a first-time author see in the first ten seconds, and what does the product look like it is for?
 2. How does an author go from "I need a form" to "I have a first draft"?
-3. How does conversation relate to direct manipulation — and what does it feel like when the author switches between them mid-task?
-4. When the AI does something, how does the author see what changed and decide whether to keep it?
-5. Where do the form's rules live, and how does the author not get lost in them at 40+ rules?
+3. How does conversation relate to direct manipulation, and how does switching between them mid-task feel?
+4. When the AI acts, how does the author see what changed and decide whether to keep it?
+5. Where do the form's rules live, and how does the author stay oriented at 40+ rules?
 6. When and where does the author see the form-as-respondent? Is preview a mode, a companion, an overlay, or something else?
-7. How do the benefits of separation of concerns (swap the theme, reuse the data model, retarget the output) show up as natural moments in the product?
+7. How do the benefits of separation — swap the theme, reuse the data model, retarget the output — surface as natural product moments?
 8. How does search and navigation work at 200 fields?
-9. What does a broken form look like — a rule that can never fire, a reference to a field that doesn't exist, a failed import?
+9. What does a broken form look like — a rule that can never fire, a reference to a missing field, a failed import?
 10. What does the product look like three months into the life of a real form, when the author is maintaining it rather than building it?
 
 ---
 
 ## 10. The real tension
 
-Studio has to do two things at once.
+Studio must do two things at once.
 
-It has to be a tool a program manager uses for hours at a stretch to build and maintain a correct, complex, high-stakes form. That's craft work — restrained, legible, forgiving, designed for the ninety-eighth minute of use, not the first.
+It must be a tool a program manager uses for hours to build and maintain a correct, complex, high-stakes form. That is craft work — restrained, legible, forgiving, built for the ninety-eighth minute of use, not the first.
 
-It *also* has to be the most visible surface of the Formspec project — the thing someone sees in a screenshot or a short demo before they decide whether any of this is worth their attention. That means the design has to look, at a single glance, like something meaningfully different from the form builders it competes with. Because it is.
+It must *also* be the most visible surface of the Formspec project — the thing someone sees in a screenshot or a short demo before deciding whether any of this is worth their attention. The design must look, at a glance, meaningfully different from the form builders it competes with. Because it is.
 
-These two pressures reinforce each other when they can (a tool that's a pleasure to use for hours is also a tool that demos well) and pull apart when they can't (flourishes that look great in a hero shot get in the way at hour six; depth takes a walkthrough to appreciate). The brief is to hold both. A direction that only serves the program manager will be competent and invisible. A direction that only serves the screenshot will be beautiful and unusable.
+The two pressures reinforce each other when they can: a tool that pleases for hours also demos well. They pull apart when they can't: hero-shot flourishes get in the way at hour six, and depth takes a walkthrough to appreciate. Hold both. A direction that serves only the program manager will be competent and invisible. A direction that serves only the screenshot will be beautiful and unusable.
 
 ---
 
 ## 11. What we're asking for
 
-**Multiple exploratory directions, each a functional demo**, not one refined design. Ideally three to five distinct directions that take genuinely different positions on the open questions — different relationships between conversation and direct manipulation, different answers to where preview lives, different takes on how the author navigates a large form, different visual languages, different mental-model anchors. Pick directions that you think have merit; the goal is to widen the space of what Studio could be before we narrow.
+**Multiple exploratory directions, each a functional demo.** Not one refined design. Ideally three to five distinct directions, each taking a different position on the open questions: different relationships between conversation and direct manipulation, different homes for preview, different takes on navigating a large form, different visual languages, different mental-model anchors. Pick directions you believe in. Widen the space before we narrow it.
 
-Each direction should be a runnable application that a person can sit down with, open, and use for at least one canonical end-to-end flow — opening an empty state, going from "I need a form" to a first draft through conversation, making at least one meaningful edit by direct manipulation, seeing the AI respond to a follow-up request with a visible and reviewable change, previewing the form as a respondent, and handing off the result. Real interactions beat mocked ones. If the demo requires stubbing somewhere (for example, using a scripted AI response rather than a live one), that's fine — mark it clearly and keep the stubbed behavior faithful to what the real thing would do.
+Each direction should be a runnable application that a person can open and use for one canonical end-to-end flow: land in an empty state, go from "I need a form" to a first draft through conversation, make at least one meaningful edit by direct manipulation, watch the AI respond to a follow-up with a visible and reviewable change, preview the form as a respondent, hand off the result. Real interactions beat mocked ones. Stubs are fine where necessary — a scripted AI response rather than a live one, for example — but mark them clearly and keep them faithful to what the real thing would do.
 
 Fidelity guidance:
 
-- **High enough to read the direction.** Typography, spacing, rhythm, motion, and state transitions matter — they carry more than half of what a direction is trying to say. Rough sketches in code will read as rough sketches.
-- **Coverage over polish.** Better to have the full end-to-end flow working at medium fidelity than one beautiful screen and dead links everywhere else.
-- **Edge cases on the canonical flow only.** Empty state, loading state, AI-is-thinking state, error state, and "the author made a choice that needs confirmation" state should exist along the canonical flow. You do not need to cover every field type, every rule kind, every sidecar, or every import source.
+- **High enough to read the direction.** Typography, spacing, rhythm, motion, and state transitions carry more than half of what a direction is saying. Rough sketches in code read as rough sketches.
+- **Coverage over polish.** A full end-to-end flow at medium fidelity beats one beautiful screen with dead links around it.
+- **Edge cases on the canonical flow only.** Empty state, loading state, AI-thinking state, error state, and "the author made a choice that needs confirmation" state should exist along the canonical flow. You do not need every field type, every rule kind, every sidecar, or every import source.
 
-Use real form content throughout. We'll provide canonical example forms to work from. No lorem ipsum; it undermines the whole point.
+Use real form content throughout. We will provide canonical example forms. No lorem ipsum.
 
 Deliver each direction with:
 
-1. A short written framing — what this direction's point of view is and why you took it.
+1. A short written framing: what this direction's point of view is and why you took it.
 2. The running demo.
-3. A ~2 minute walkthrough video demonstrating the canonical flow, with voiceover explaining what the direction is doing differently.
-4. A summary of what the direction does better than the others and where it pays for it.
+3. A ~2 minute walkthrough video of the canonical flow, with voiceover explaining what the direction does differently.
+4. A summary: what this direction does better than the others, and where it pays for it.
 
-If you have strong opinions about what's wrong with the brief itself, build them into the demos as counter-proposals rather than marginal comments. A direction that ignores part of the brief because you think we're wrong is welcome — just tell us which part and why.
+If you have strong opinions about the brief, build them into the demos as counter-proposals. A direction that ignores part of the brief because you think we are wrong is welcome. Tell us which part, and why.
 
 ---
 
 ## 12. What you'll have access to
 
-**The Formspec stack is available to you.** You're building real demos, so you have real resources:
+**The Formspec stack is yours.** You are building real demos, so you have real resources.
 
-- **The form runtime.** The engine that actually renders and runs Formspec forms — live preview, conditional logic, calculations, validation — is available as an open-source package you can drop into your demo. Preview should use the real engine; that's one of the few truthful promises the product can make. Don't mock it.
-- **The authoring API.** Programmatic access to create, modify, and manipulate form definitions, themes, components, and mappings. Every mutation you make in a demo should go through it, so undo/redo, audit history, and AI tool-calling all just work. This also means the AI half of your demo has a real surface to call into — you don't need to simulate what the AI can do.
-- **AI integration.** There is a working integration with a major model provider for both scaffolding (producing a first draft from a conversation) and refinement (modifying an existing form through a conversation). You can use the live integration or stub it for reliability in the demo. If stubbing, use real scripts captured from the live integration, not made-up dialog.
-- **Example form content.** Two to three canonical example forms at different complexity levels — a small one (a grant budget), a medium one (a patient intake), and a large one (a regulatory application or tax form). Use them in every demo so the directions are directly comparable.
-- **Today's Studio.** A running instance to look at. You have its source as a reference if you want to see how any of the capabilities above are used today. You do not need to match its structure; treat it as one possible answer.
-- **Formspec brand assets** — logo, typography, palette — where they exist. Where they don't, or don't fit a direction, propose.
-- **Subject-matter experts.** Access to people who know the product, the specification, and the audiences. Ask questions in writing or synchronously; don't guess in the dark on things that have known answers.
+- **The form runtime.** An open-source package that renders and runs Formspec forms — live preview, conditional logic, calculations, validation. Preview should use the real engine. That is one of the few truthful promises the product can make. Do not mock it.
+- **The authoring API.** Programmatic access to create and modify form definitions, themes, components, and mappings. Route every mutation through it. Undo/redo, audit history, and AI tool-calling then all work. The AI half of your demo has a real surface to call into.
+- **AI integration.** A working integration with a major model provider, for both scaffolding (first draft from conversation) and refinement (modifying an existing form through conversation). Use the live integration, or stub for reliability. If stubbing, use real scripts captured from the live integration, not invented dialog.
+- **Example form content.** Two or three canonical forms at different sizes — a small one (grant budget), a medium one (patient intake), a large one (regulatory application or tax form). Use them in every demo so the directions compare directly.
+- **Today's Studio.** A running instance and its source, as reference. Do not match its structure. Treat it as one possible answer.
+- **Formspec brand assets** — logo, typography, palette — where they exist. Where they do not, or where they do not fit a direction, propose.
+- **Subject-matter experts.** People who know the product, the specification, and the audiences. Ask, in writing or synchronously. Do not guess in the dark on answerable questions.
 
-**What you don't need to build.** Authentication, storage, deployment, billing, real-time collaboration, workflow after submission, or anything downstream of "the form is authored and ready to hand off." The demos end when the author hands off a finished form. What happens next is out of scope.
+**What you do not need to build.** Authentication. Storage. Deployment. Billing. Real-time collaboration. Workflow after submission. Anything downstream of "the form is authored and ready to hand off." The demos end at hand-off.
 
-**What the demos are not.** Not production software. Not a single shared system behind all the directions. Not responsive to every viewport. Not internationalized. Not instrumented. Not accessible-conformant (though the design should not obviously violate accessibility — keyboard operability, focus management, and sensible contrast are table stakes even at demo fidelity). Each direction is a disposable exploration built to answer "what could this feel like" and nothing more.
+**What the demos are not.** Not production software. Not a single shared system behind all directions. Not responsive to every viewport. Not internationalized. Not instrumented. Not accessibility-conformant — though the design should not obviously violate accessibility. Keyboard operability, focus management, and sensible contrast are table stakes even at demo fidelity. Each direction is a disposable exploration, built to answer "what could this feel like," and nothing more.
 
 
 
