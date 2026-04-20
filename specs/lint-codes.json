@@ -357,11 +357,12 @@
       "severity": "error",
       "title": "Formatted-variant TextInput must bind to string field",
       "specRef": "specs/component/component-spec.md#56-textinput",
-      "suggestedFix": "bind a richtext or markdown TextInput to a field whose dataType is string or text, or set variant back to plain",
+      "suggestedFix": "bind a formatted TextInput (variant: richtext, markdown, or latex) to a field whose dataType is string or text, or set variant back to plain",
       "state": "tested",
       "fixtures": [
         "tests/fixtures/lint/E804-richtext-must-bind-string.json",
-        "tests/fixtures/lint/E804-markdown-must-bind-string.json"
+        "tests/fixtures/lint/E804-markdown-must-bind-string.json",
+        "tests/fixtures/lint/E804-latex-must-bind-string.json"
       ]
     },
     {

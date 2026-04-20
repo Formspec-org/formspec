@@ -60,123 +60,21 @@ type ValidationResult = FormspecValidationResult;
 type ValidationReport = FormspecValidationReport;
 ```
 
-#### class `FormEngine`
-
-##### `constructor(definition: FormDefinition, runtimeContext?: FormEngineRuntimeContext, registryEntries?: RegistryEntry[])`
-
-##### `resolvePinnedDefinition(response: PinnedResponseReference, definitions: T[]): T`
-
-##### `setRuntimeContext(context?: FormEngineRuntimeContext): void`
-
-##### `setDefinition(definition: FormDefinition, options?: {
-        values?: Record<string, any>;
-        variables?: Record<string, any>;
-    }): void`
-
-##### `getOptions(path: string): OptionEntry[]`
-
-##### `getOptionsSignal(path: string): Signal<OptionEntry[]> | undefined`
-
-##### `getOptionsState(path: string): RemoteOptionsState`
-
-##### `getOptionsStateSignal(path: string): Signal<RemoteOptionsState> | undefined`
-
-##### `waitForRemoteOptions(): Promise<void>`
-
-##### `waitForInstanceSources(): Promise<void>`
-
-##### `setInstanceValue(name: string, path: string | undefined, value: any): void`
-
-##### `getInstanceData(name: string, path?: string): any`
-
-##### `getDisabledDisplay(path: string): 'hidden' | 'protected'`
-
-##### `getVariableValue(name: string, scopePath: string): any`
-
-##### `addRepeatInstance(itemName: string): number | undefined`
-
-##### `removeRepeatInstance(itemName: string, index: number): void`
-
-##### `compileExpression(expression: string, currentItemName?: string): () => any`
-
-##### `setValue(name: string, value: any): void`
-
-##### `getValidationReport(options?: {
-        mode?: 'continuous' | 'submit';
-    }): ValidationReport`
-
-##### `evaluateShape(shapeId: string): ValidationResult[]`
-
-##### `isPathRelevant(path: string): boolean`
-
-##### `getResponse(meta?: {
-        id?: string;
-        author?: {
-            id: string;
-            name?: string;
-        };
-        subject?: {
-            id: string;
-            type?: string;
-        };
-        mode?: 'continuous' | 'submit';
-    }): any`
-
-##### `getDiagnosticsSnapshot(options?: {
-        mode?: 'continuous' | 'submit';
-    }): FormEngineDiagnosticsSnapshot`
-
-##### `applyReplayEvent(event: EngineReplayEvent): EngineReplayApplyResult`
-
-##### `replay(events: EngineReplayEvent[], options?: {
-        stopOnError?: boolean;
-    }): EngineReplayResult`
-
-##### `getDefinition(): FormDefinition`
-
-##### `setLabelContext(context: string | null): void`
-
-##### `getLabel(item: FormItem): string`
-
-##### `injectExternalValidation(results: Array<{
-        path: string;
-        severity: string;
-        code: string;
-        message: string;
-        source?: string;
-    }>): void`
-
-##### `clearExternalValidation(path?: string): void`
-
-##### `dispose(): void`
-
-##### `setRegistryEntries(entries: any[]): void`
-
-##### `evaluateScreener(answers: Record<string, any>): {
-        target: string;
-        label?: string;
-        extensions?: Record<string, any>;
-    } | null`
-
-##### `migrateResponse(responseData: Record<string, any>, fromVersion: string): Record<string, any>`
-
-## `collectExtensionNames(items: unknown[], names: Set<string>): void`
-
-## `parseRef(ref: string): {
-    url: string;
-    version?: string;
-    fragment?: string;
-}`
-
-## `collectRefs(node: unknown, refs: Set<string>): void`
-
-## `collectResolvedFragmentsAsync(definition: FormDefinition, resolver: DefinitionResolver): Promise<Record<string, unknown>>`
-
-## `collectResolvedFragmentsSync(definition: FormDefinition, resolver: (url: string, version?: string) => unknown): Record<string, unknown>`
+## `assembleDefinitionSync(definition: FormDefinition, resolver: Record<string, unknown> | ((url: string, version?: string) => unknown)): AssemblyResult`
 
 ## `assembleDefinition(definition: FormDefinition, resolver: DefinitionResolver): Promise<AssemblyResult>`
 
-## `assembleDefinitionSync(definition: FormDefinition, resolver: Record<string, unknown> | ((url: string, version?: string) => unknown)): AssemblyResult`
+## `optionMatchesComboboxQuery(opt: ComboboxOptionSearchShape, queryRaw: string): boolean`
+
+True if query is empty or matches label, value, or any keyword (substring, case-insensitive).
+
+#### interface `ComboboxOptionSearchShape`
+
+@filedesc Case-insensitive combobox type-ahead: label, value, and optional option keywords.
+
+- **value**: `string`
+- **label**: `string`
+- **keywords?**: `readonly string[] | undefined`
 
 ## `diffEvalResults(previous: EvalResult | null, next: EvalResult): EvalDelta`
 
@@ -210,97 +108,241 @@ type ValidationReport = FormspecValidationReport;
 - **variables**: `Record<string, unknown>`
 - **removedVariables**: `string[]`
 
-## `cloneValue(value: T): T`
+#### class `FormEngine`
 
-Deep clone a JSON-serializable value.
+##### `constructor(definition: FormDefinition, runtimeContext?: FormEngineRuntimeContext, registryEntries?: RegistryEntry[], reactiveRuntime?: EngineReactiveRuntime)`
 
-## `flattenObject(value: any, prefix?: string, output?: Record<string, any>): Record<string, any>`
+##### `resolvePinnedDefinition(response: PinnedResponseReference, definitions: T[]): T`
 
-Flatten a nested object into a dot-path record (excluding arrays).
+##### `setRuntimeContext(context?: FormEngineRuntimeContext): void`
 
-## `toValidationResult(result: EvalValidation): ValidationResult`
+##### `getOptions(path: string): OptionEntry[]`
 
-Convert a WASM EvalValidation result to a public ValidationResult.
+##### `getOptionsSignal(path: string): EngineSignal<OptionEntry[]> | undefined`
 
-## `toValidationResults(results: EvalValidation[]): ValidationResult[]`
+##### `getOptionsState(path: string): RemoteOptionsState`
 
-Convert an array of WASM EvalValidation results to public ValidationResults.
+##### `getOptionsStateSignal(path: string): EngineSignal<RemoteOptionsState> | undefined`
 
-## `replaceBareCurrentFieldRefs(expression: string, currentFieldName: string): string`
+##### `waitForRemoteOptions(): Promise<void>`
 
-Replace $ references in an expression with the current field name.
+##### `waitForInstanceSources(): Promise<void>`
 
-## `safeEvaluateExpression(expression: string, context: WasmFelContext): any`
+##### `setInstanceValue(name: string, path: string | undefined, value: any): void`
 
-Evaluate an FEL expression safely within a WASM context.
+##### `getInstanceData(name: string, path?: string): any`
 
-## `resolveNowProvider(now: FormEngineRuntimeContext['now']): () => Date`
+##### `getDisabledDisplay(path: string): 'hidden' | 'protected'`
 
-Resolve a "now" provider function for the engine runtime context.
+##### `getVariableValue(name: string, scopePath: string): any`
 
-## `coerceDate(value: RuntimeNowInput): Date`
+##### `addRepeatInstance(itemName: string): number | undefined`
 
-Coerce various date inputs into a native Date object.
+##### `removeRepeatInstance(itemName: string, index: number): void`
 
-## `deepEqual(left: unknown, right: unknown): boolean`
+##### `compileExpression(expression: string, currentItemName?: string): () => any`
 
-Check if two values are deeply equal.
+##### `setValue(name: string, value: any): void`
 
-## `isEmptyValue(value: unknown): boolean`
+##### `getValidationReport(options?: {
+        mode?: 'continuous' | 'submit';
+    }): ValidationReport`
 
-Check if a value is "empty" according to Formspec semantics.
+##### `evaluateShape(shapeId: string): ValidationResult[]`
 
-## `detectNamedCycle(graph: Map<string, Set<string>>, message: string): void`
+##### `isPathRelevant(path: string): boolean`
 
-Detect circular dependencies in a directed graph.
+##### `getFieldPaths(): string[]`
+
+##### `getProgress(): import('../interfaces.js').FormProgress`
+
+##### `getResponse(meta?: {
+        id?: string;
+        author?: {
+            id: string;
+            name?: string;
+        };
+        subject?: {
+            id: string;
+            type?: string;
+        };
+        mode?: 'continuous' | 'submit';
+    }): any`
+
+##### `getDiagnosticsSnapshot(options?: {
+        mode?: 'continuous' | 'submit';
+    }): FormEngineDiagnosticsSnapshot`
+
+##### `applyReplayEvent(event: EngineReplayEvent): EngineReplayApplyResult`
+
+##### `replay(events: EngineReplayEvent[], options?: {
+        stopOnError?: boolean;
+    }): EngineReplayResult`
+
+##### `getDefinition(): FormDefinition`
+
+##### `setLabelContext(context: string | null): void`
+
+##### `getLabel(item: FormItem): string`
+
+##### `loadLocale(doc: LocaleDocument): void`
+
+##### `setLocale(code: string): void`
+
+##### `getActiveLocale(): string`
+
+##### `getAvailableLocales(): string[]`
+
+##### `getLocaleDirection(): 'ltr' | 'rtl'`
+
+##### `getFieldVM(path: string): FieldViewModel | undefined`
+
+##### `getFormVM(): FormViewModel`
+
+##### `resolveLocaleString(key: string, fallback: string): string`
+
+##### `injectExternalValidation(results: Array<{
+        path: string;
+        severity: string;
+        code: string;
+        message: string;
+        source?: string;
+    }>): void`
+
+##### `clearExternalValidation(path?: string): void`
+
+##### `dispose(): void`
+
+##### `setRegistryEntries(entries: any[]): void`
+
+##### `migrateResponse(responseData: Record<string, any>, fromVersion: string): Record<string, any>`
+
+## `resolveOptionSetsOnDefinition(definition: FormDefinition): FormDefinition`
+
+## `validateVariableDefinitionCycles(variableDefs: FormVariable[]): void`
+
+## `validateCalculateBindCycles(bindConfigs: Record<string, EngineBindConfig>): void`
 
 ## `normalizeRemoteOptions(payload: any): OptionEntry[]`
 
-Normalize remote options payload.
-
 ## `makeValidationResult(result: Pick<ValidationResult, 'path' | 'severity' | 'constraintKind' | 'code' | 'message' | 'source'> & Partial<Pick<ValidationResult, 'shapeId' | 'context'>>): ValidationResult`
 
-Create a standard ValidationResult.
+## `toValidationResult(result: EvalValidation): ValidationResult`
+
+## `toValidationResults(results: EvalValidation[]): ValidationResult[]`
+
+## `toRuntimeMappingResult(result: {
+    direction: string;
+    output: any;
+    rulesApplied: number;
+    diagnostics: any[];
+}): RuntimeMappingResult`
 
 ## `emptyValueForItem(item: FormItem): any`
 
-Get the empty value for a form item.
-
 ## `coerceInitialValue(item: FormItem, value: any): any`
-
-Coerce initial value for a form item.
 
 ## `coerceFieldValue(item: FormItem, bind: EngineBindConfig | undefined, definition: FormDefinition, value: any): any`
 
-Coerce field value based on bind config.
-
 ## `validateDataType(value: any, dataType: string): boolean`
 
-Validate a value against a data type.
+## `cloneValue(value: T): T`
 
 ## `normalizeWasmValue(value: T): T`
 
-Convert a WASM value back to a standard JS value.
-
 ## `toWasmContextValue(value: T): T`
 
-Convert a JS value to a WASM-compatible context value.
+## `deepEqual(left: unknown, right: unknown): boolean`
 
-## `topoSortKeys(nodes: T[], graph: Map<string, Set<string>>): T[]`
+## `resolveNowProvider(now: FormEngineRuntimeContext['now']): () => Date`
 
-Topologically sort keys based on a dependency graph.
+## `coerceDate(value: RuntimeNowInput): Date`
 
-## `snapshotSignals(signals: Record<string, Signal<any>>): Record<string, any>`
+## `toBasePath(path: string): string`
 
-Take a current snapshot of signal values.
+## `parseInstanceTarget(path: string): {
+    instanceName: string;
+    instancePath?: string;
+} | null`
+
+## `splitIndexedPath(path: string): string[]`
+
+## `appendPath(base: string, segment: string): string`
+
+## `parentPathOf(path: string): string`
+
+## `getAncestorBasePaths(path: string): string[]`
+
+## `getScopeAncestors(scopePath: string): string[]`
+
+## `getNestedValue(target: any, path: string): any`
+
+## `setNestedPathValue(target: Record<string, any>, path: string, value: any): void`
+
+## `setExpressionContextValue(target: Record<string, any>, path: string, value: any): void`
+
+## `setResponsePathValue(target: Record<string, any>, path: string, value: any): void`
+
+## `replaceBareCurrentFieldRefs(expression: string, currentFieldName: string): string`
+
+## `flattenObject(value: any, prefix?: string, output?: Record<string, any>): Record<string, any>`
+
+## `buildGroupSnapshotForPath(prefix: string, signals: Record<string, EngineSignal<any>>): Record<string, any>`
+
+## `buildRepeatCollection(groupPath: string, count: number, signals: Record<string, EngineSignal<any>>): any[]`
+
+## `getRepeatAncestors(currentItemPath: string, repeats: Record<string, EngineSignal<number>>): Array<{
+    groupPath: string;
+    index: number;
+    count: number;
+}>`
+
+## `isEmptyValue(value: unknown): boolean`
+
+## `safeEvaluateExpression(expression: string, context: WasmFelContext): any`
 
 ## `extractInlineBind(item: FormItem, path: string): EngineBindConfig | null`
 
-Extract bind config properties from a form item.
+## `detectNamedCycle(graph: Map<string, Set<string>>, message: string): void`
+
+## `topoSortKeys(nodes: T[], graph: Map<string, Set<string>>): T[]`
+
+## `snapshotSignals(signals: Record<string, EngineSignal<any>>): Record<string, any>`
+
+## `toFelIndexedPath(path: string): string`
+
+## `buildRepeatValueAliases(valuesByPath: Record<string, any>): Array<[string, any[]]>`
+
+## `toRepeatWildcardPath(alias: string): string`
 
 ## `escapeRegExp(value: string): string`
 
-Escape string for use in RegExp.
+## `resolveQualifiedGroupRefs(expression: string, currentItemPath: string, repeatAncestors: Array<{
+    groupPath: string;
+    index: number;
+    count: number;
+}>): string`
+
+Resolve $group.field qualified refs to sibling refs within repeat context.
+
+When evaluating an expression for a field inside a repeat group (e.g., line_items[0].total),
+a reference like $line_items.qty should resolve to the sibling field "qty" in the same
+instance, not to a wildcard collecting all instances.
+
+For nested repeats (e.g., orders[0].items[0].line_total), $items.qty resolves to the
+innermost sibling, and $orders.discount_pct resolves to the enclosing group's concrete path.
+
+## `resolveRelativeDependency(dep: string, parentPath: string, selfPath: string): string | null`
+
+#### type `EngineBindConfig`
+
+```ts
+type EngineBindConfig = FormBind & {
+    remoteOptions?: string;
+    precision?: number;
+    disabledDisplay?: 'hidden' | 'protected';
+};
+```
 
 #### type `RuntimeNowInput`
 
@@ -308,11 +350,126 @@ Escape string for use in RegExp.
 type RuntimeNowInput = Date | string | number;
 ```
 
-## `validateVariableDefinitionCycles(variableDefs: FormVariable[]): void`
+## `createFormEngine(definition: FormDefinition, context?: FormEngineRuntimeContext, registryEntries?: RegistryEntry[], reactiveRuntime?: EngineReactiveRuntime): FormEngine`
 
-## `validateCalculateBindCycles(bindConfigs: Record<string, EngineBindConfig>): void`
+## `validateInstanceDataAgainstSchema(instanceName: string, data: unknown, schema: Record<string, unknown> | undefined): void`
 
-## `resolveOptionSetsOnDefinition(definition: FormDefinition): FormDefinition`
+@filedesc Validate instance JSON against optional per-instance schema (datatype strings).
+
+## `patchValueSignalsFromWasm(options: {
+    values: Record<string, unknown>;
+    signals: Record<string, EngineSignal<any>>;
+    data: Record<string, any>;
+    fieldItems: Map<string, FormItem>;
+    bindConfigs: Record<string, EngineBindConfig>;
+    calculatedFields: Set<string>;
+}): void`
+
+## `patchDeltaSignalsFromWasm(rx: EngineReactiveRuntime, delta: EvalDelta, options: {
+    relevantSignals: Record<string, EngineSignal<boolean>>;
+    requiredSignals: Record<string, EngineSignal<boolean>>;
+    readonlySignals: Record<string, EngineSignal<boolean>>;
+    validationResults: Record<string, EngineSignal<ValidationResult[]>>;
+    shapeResults: Record<string, EngineSignal<ValidationResult[]>>;
+    variableSignals: Record<string, EngineSignal<any>>;
+    variableSignalKeys: Map<string, string[]>;
+    prePopulateReadonly: Set<string>;
+}): void`
+
+## `patchErrorSignalsFromWasm(rx: EngineReactiveRuntime, options: {
+    validationResults: Record<string, EngineSignal<ValidationResult[]>>;
+    errorSignals: Record<string, EngineSignal<string | null>>;
+}): void`
+
+## `clearRepeatIndexedSubtree(options: {
+    rootRepeatPath: string;
+    signals: Record<string, EngineSignal<any>>;
+    relevantSignals: Record<string, EngineSignal<boolean>>;
+    requiredSignals: Record<string, EngineSignal<boolean>>;
+    readonlySignals: Record<string, EngineSignal<boolean>>;
+    errorSignals: Record<string, EngineSignal<string | null>>;
+    validationResults: Record<string, EngineSignal<ValidationResult[]>>;
+    optionSignals: Record<string, EngineSignal<OptionEntry[]>>;
+    optionStateSignals: Record<string, EngineSignal<RemoteOptionsState>>;
+    repeats: Record<string, EngineSignal<number>>;
+    data: Record<string, any>;
+}): void`
+
+Remove indexed paths under a repeat root from signal stores and `_data` (reactive structure only).
+
+## `snapshotRepeatGroupTree(items: FormItem[], prefix: string, readFieldValue: (path: string) => unknown, getRepeatCount: (path: string) => number): Record<string, unknown>`
+
+Snapshot nested field values under a repeat prefix (used when removing a repeat row).
+
+## `applyRepeatGroupTreeSnapshot(items: FormItem[], prefix: string, snapshot: Record<string, unknown> | undefined, writeField: (path: string, value: unknown) => void): void`
+
+Restore nested field values after repeat rows were reindexed.
+
+## `buildFormspecResponseEnvelope(options: {
+    definition: FormDefinition;
+    data: Record<string, unknown>;
+    report: ValidationReport;
+    timestamp: string;
+    meta?: {
+        id?: string;
+        author?: {
+            id: string;
+            name?: string;
+        };
+        subject?: {
+            id: string;
+            type?: string;
+        };
+    };
+}): Record<string, unknown>`
+
+## `collectSubmitModeShapeValidationResults(submitEval: EvalResult, shapeTiming: Map<string, EvalShapeTiming>): ValidationResult[]`
+
+Shape validations that only run on submit, from a WASM eval with `trigger: 'submit'`.
+
+## `buildValidationReportEnvelope(results: ValidationResult[], timestamp: string): ValidationReport`
+
+Strip optional cardinality `source`, compute counts, and wrap the spec envelope.
+
+## `migrateResponseData(definition: FormDefinition, responseData: Record<string, any>, fromVersion: string, options: {
+    nowIso: string;
+}): Record<string, any>`
+
+## `resolvePinnedDefinition(response: PinnedResponseReference, definitions: T[]): T`
+
+## `wasmEvaluateDefinitionPayload(options: {
+    nowIso: string;
+    trigger?: 'continuous' | 'submit' | 'demand' | 'disabled';
+    previousResult: EvalResult | null;
+    instances: Record<string, unknown>;
+    registryDocuments: unknown[];
+    /** Authoritative repeat row counts by group base path (matches engine repeat signals). */
+    repeatCounts: Record<string, number>;
+}): {
+    nowIso: string;
+    trigger?: 'continuous' | 'submit' | 'demand' | 'disabled';
+    previousValidations: WasmPreviousValidation | undefined;
+    previousNonRelevant: string[] | undefined;
+    instances: Record<string, unknown>;
+    registryDocuments: unknown[];
+    repeatCounts: Record<string, number>;
+}`
+
+Options object consumed by the WASM definition evaluator (JSON-serialized internally).
+
+## `mergeWasmEvalWithExternalValidations(result: EvalResult, options: {
+    externalValidations: EvalValidation[];
+}): EvalResult`
+
+Append engine-owned validations (e.g. extension hooks) after WASM batch evaluation.
+
+## `normalizeExpressionForWasmEvaluation(options: {
+    expression: string;
+    currentItemPath: string;
+    replaceSelfRef: boolean;
+    repeats: Record<string, EngineSignal<number>>;
+    fieldSignals: Record<string, EngineSignal<any>>;
+}): string`
 
 ## `resolveFelFieldValueForWasm(path: string, value: unknown, bindConfigs: Record<string, EngineBindConfig>, fieldIsIrrelevant: (path: string) => boolean): unknown`
 
@@ -345,190 +502,8 @@ type RuntimeNowInput = Date | string | number;
 - **variableSignals**: `Record<string, EngineSignal<any>>`
 - **instanceData**: `Record<string, unknown>`
 - **nowIso**: `string`
-
-## `normalizeExpressionForWasmEvaluation(options: {
-    expression: string;
-    currentItemPath: string;
-    replaceSelfRef: boolean;
-    repeats: Record<string, EngineSignal<number>>;
-    fieldSignals: Record<string, EngineSignal<any>>;
-}): string`
-
-## `toRuntimeMappingResult(result: {
-    direction: string;
-    output: any;
-    rulesApplied: number;
-    diagnostics: any[];
-}): RuntimeMappingResult`
-
-## `toBasePath(path: string): string`
-
-## `parseInstanceTarget(path: string): {
-    instanceName: string;
-    instancePath?: string;
-} | null`
-
-## `splitIndexedPath(path: string): string[]`
-
-## `appendPath(base: string, segment: string): string`
-
-## `parentPathOf(path: string): string`
-
-## `getAncestorBasePaths(path: string): string[]`
-
-## `getScopeAncestors(scopePath: string): string[]`
-
-## `getNestedValue(target: any, path: string): any`
-
-## `setNestedPathValue(target: Record<string, any>, path: string, value: any): void`
-
-## `setExpressionContextValue(target: Record<string, any>, path: string, value: any): void`
-
-## `setResponsePathValue(target: Record<string, any>, path: string, value: any): void`
-
-## `buildGroupSnapshotForPath(prefix: string, signals: Record<string, EngineSignal<any>>): Record<string, any>`
-
-## `buildRepeatCollection(groupPath: string, count: number, signals: Record<string, EngineSignal<any>>): any[]`
-
-## `getRepeatAncestors(currentItemPath: string, repeats: Record<string, EngineSignal<number>>): Array<{
-    groupPath: string;
-    index: number;
-    count: number;
-}>`
-
-## `toFelIndexedPath(path: string): string`
-
-## `buildRepeatValueAliases(valuesByPath: Record<string, any>): Array<[string, any[]]>`
-
-## `toRepeatWildcardPath(alias: string): string`
-
-## `resolveQualifiedGroupRefs(expression: string, currentItemPath: string, repeatAncestors: Array<{
-    groupPath: string;
-    index: number;
-    count: number;
-}>): string`
-
-Resolve $group.field qualified refs to sibling refs within repeat context.
-
-When evaluating an expression for a field inside a repeat group (e.g., line_items[0].total),
-a reference like $line_items.qty should resolve to the sibling field "qty" in the same
-instance, not to a wildcard collecting all instances.
-
-For nested repeats (e.g., orders[0].items[0].line_total), $items.qty resolves to the
-innermost sibling, and $orders.discount_pct resolves to the enclosing group's concrete path.
-
-## `resolveRelativeDependency(dep: string, parentPath: string, selfPath: string): string | null`
-
-#### type `EngineBindConfig`
-
-```ts
-type EngineBindConfig = FormBind & {
-    remoteOptions?: string;
-    precision?: number;
-    disabledDisplay?: 'hidden' | 'protected';
-};
-```
-
-## `createFormEngine(definition: FormDefinition, context?: FormEngineRuntimeContext, registryEntries?: RegistryEntry[], reactiveRuntime?: EngineReactiveRuntime): FormEngine`
-
-## `validateInstanceDataAgainstSchema(instanceName: string, data: unknown, schema: Record<string, unknown> | undefined): void`
-
-@filedesc Validate instance JSON against optional per-instance schema (datatype strings).
-
-## `migrateResponseData(definition: FormDefinition, responseData: Record<string, any>, fromVersion: string, options: {
-    nowIso: string;
-    evaluateTransform: (expression: string, context: WasmFelContext) => unknown;
-}): Record<string, any>`
-
-## `resolvePinnedDefinition(response: PinnedResponseReference, definitions: T[]): T`
-
-## `patchValueSignalsFromWasm(options: {
-    values: Record<string, unknown>;
-    signals: Record<string, EngineSignal<any>>;
-    data: Record<string, any>;
-    fieldItems: Map<string, FormItem>;
-    bindConfigs: Record<string, EngineBindConfig>;
-    calculatedFields: Set<string>;
-}): void`
-
-## `patchDeltaSignalsFromWasm(rx: EngineReactiveRuntime, delta: EvalDelta, options: {
-    relevantSignals: Record<string, EngineSignal<boolean>>;
-    requiredSignals: Record<string, EngineSignal<boolean>>;
-    readonlySignals: Record<string, EngineSignal<boolean>>;
-    validationResults: Record<string, EngineSignal<ValidationResult[]>>;
-    shapeResults: Record<string, EngineSignal<ValidationResult[]>>;
-    variableSignals: Record<string, EngineSignal<any>>;
-    variableSignalKeys: Map<string, string[]>;
-    prePopulateReadonly: Set<string>;
-}): void`
-
-## `patchErrorSignalsFromWasm(rx: EngineReactiveRuntime, options: {
-    validationResults: Record<string, EngineSignal<ValidationResult[]>>;
-    errorSignals: Record<string, EngineSignal<string | null>>;
-}): void`
-
-## `snapshotRepeatGroupTree(items: FormItem[], prefix: string, readFieldValue: (path: string) => unknown, getRepeatCount: (path: string) => number): Record<string, unknown>`
-
-## `applyRepeatGroupTreeSnapshot(items: FormItem[], prefix: string, snapshot: Record<string, unknown> | undefined, writeField: (path: string, value: unknown) => void): void`
-
-## `clearRepeatIndexedSubtree(options: {
-    rootRepeatPath: string;
-    signals: Record<string, EngineSignal<any>>;
-    relevantSignals: Record<string, EngineSignal<boolean>>;
-    requiredSignals: Record<string, EngineSignal<boolean>>;
-    readonlySignals: Record<string, EngineSignal<boolean>>;
-    errorSignals: Record<string, EngineSignal<string | null>>;
-    validationResults: Record<string, EngineSignal<ValidationResult[]>>;
-    optionSignals: Record<string, EngineSignal<OptionEntry[]>>;
-    optionStateSignals: Record<string, EngineSignal<RemoteOptionsState>>;
-    repeats: Record<string, EngineSignal<number>>;
-    data: Record<string, any>;
-}): void`
-
-Remove indexed paths under a repeat root from signal stores and `_data` (reactive structure only).
-
-## `buildFormspecResponseEnvelope(options: {
-    definition: FormDefinition;
-    data: Record<string, unknown>;
-    report: ValidationReport;
-    timestamp: string;
-    meta?: {
-        id?: string;
-        author?: {
-            id: string;
-            name?: string;
-        };
-        subject?: {
-            id: string;
-            type?: string;
-        };
-    };
-}): Record<string, unknown>`
-
-## `collectSubmitModeShapeValidationResults(submitEval: EvalResult, shapeTiming: Map<string, EvalShapeTiming>): ValidationResult[]`
-
-Shape validations that only run on submit, from a WASM eval with `trigger: 'submit'`.
-
-## `buildValidationReportEnvelope(results: ValidationResult[], timestamp: string): ValidationReport`
-
-Strip optional cardinality `source`, compute counts, and wrap the spec envelope.
-
-## `wasmEvaluateDefinitionPayload(options: {
-    nowIso: string;
-    trigger?: 'continuous' | 'submit' | 'demand' | 'disabled';
-    previousResult: EvalResult | null;
-    instances: Record<string, unknown>;
-    registryDocuments: unknown[];
-}): {
-    nowIso: string;
-    trigger?: 'continuous' | 'submit' | 'demand' | 'disabled';
-    previousValidations: WasmPreviousValidation | undefined;
-    previousNonRelevant: string[] | undefined;
-    instances: Record<string, unknown>;
-    registryDocuments: unknown[];
-}`
-
-Options object consumed by the WASM definition evaluator (JSON-serialized internally).
+- **locale?**: `string`
+- **meta?**: `Record<string, string | number | boolean>`
 
 #### type `WasmPreviousValidation`
 
@@ -547,31 +522,17 @@ type WasmPreviousValidation = Array<{
 }>;
 ```
 
-## `mergeWasmEvalWithRepeatCardinality(result: EvalResult, options: {
-    repeatCounts: Record<string, number>;
-    groupItems: Map<string, FormItem>;
-    externalValidations: EvalValidation[];
-}): EvalResult`
-
-Drop WASM cardinality, normalize REQUIRED copy, append TS-owned repeat min/max and external validations.
-
-## `filterEvalResultContinuousShapes(result: EvalResult, shapeTiming: Map<string, EvalShapeTiming>): EvalResult`
-
-Keep only validations for shapes evaluated continuously (for signal diff / UI).
-
 #### type `EvalShapeTiming`
 
 ```ts
 type EvalShapeTiming = 'continuous' | 'submit' | 'demand';
 ```
 
-## `mergeWasmEvalWithExternalValidations(result: EvalResult, options: {
-    externalValidations: EvalValidation[];
-}): EvalResult`
-
-Append engine-owned validations (e.g. extension hooks) after WASM batch evaluation.
-
 ## `analyzeFEL(expression: string): FELAnalysis`
+
+## `analyzeFELWithFieldTypes(expression: string, fieldTypes: Record<string, string>): FELAnalysis`
+
+Analyze a FEL expression with field data type context for type-mismatch warnings.
 
 ## `normalizePathSegment(segment: string): string`
 
@@ -590,6 +551,11 @@ Find the mutable parent/index/item triple for a dotted tree path.
 ## `normalizeIndexedPath: typeof wasmNormalizeIndexedPath`
 
 ## `itemAtPath: typeof wasmItemAtPath`
+
+## `evalFELWithTrace: typeof wasmEvalFELWithTrace`
+
+Evaluate a FEL expression and return a structured trace of evaluation steps.
+See `FelTraceStep` for the step variants; wire format matches Rust `fel_core::TraceStep`.
 
 ## `evaluateDefinition: typeof wasmEvaluateDefinition`
 
@@ -668,8 +634,7 @@ Rewrite FEL references using callback options (bridges to WASM rewrite).
 
 #### interface `ResolvedOption`
 
-- **value**: `string`
-- **label**: `string`
+- **keywords** (`string[]`): Abbreviations / alternate names for combobox type-ahead (from definition option.keywords).
 
 #### interface `FieldViewModelDeps`
 
@@ -691,10 +656,7 @@ Rewrite FEL references using callback options (bridges to WASM rewrite).
 - **getReadonly**: `() => EngineSignal<boolean>`
 - **getDisabledDisplay**: `() => 'hidden' | 'protected'`
 - **getErrors**: `() => EngineSignal<any[]>`
-- **getOptions**: `() => EngineSignal<Array<{
-        value: string;
-        label: string;
-    }>>`
+- **getOptions**: `() => EngineSignal<OptionEntry[]>`
 - **getOptionsState**: `() => EngineSignal<{
         loading: boolean;
         error: string | null;
@@ -1058,12 +1020,6 @@ Resolve a locale string key with fallback. For component-tier `$component.` keys
 
 ##### `setRegistryEntries(entries: any[]): void`
 
-##### `evaluateScreener(answers: Record<string, any>): {
-        target: string;
-        label?: string;
-        extensions?: Record<string, any>;
-    } | null`
-
 ##### `migrateResponse(responseData: Record<string, any>, fromVersion: string): Record<string, any>`
 
 #### interface `MappingDiagnostic`
@@ -1187,6 +1143,8 @@ for active locale and text direction.
 Normalize BCP 47: lowercase language, title-case script (4 chars),
 uppercase region (2 chars), lowercase variants/extensions.
 
+## `createMappingEngine(mappingDoc: unknown): IRuntimeMappingEngine`
+
 #### class `RuntimeMappingEngine`
 
 ##### `constructor(mappingDocument: any)`
@@ -1194,8 +1152,6 @@ uppercase region (2 chars), lowercase variants/extensions.
 ##### `forward(source: any): RuntimeMappingResult`
 
 ##### `reverse(source: any): RuntimeMappingResult`
-
-## `createMappingEngine(mappingDoc: unknown): IRuntimeMappingEngine`
 
 #### interface `FormspecEnginePackage`
 
@@ -1296,6 +1252,14 @@ Evaluate a FEL expression with optional field values. Returns the evaluated resu
 
 Evaluate a FEL expression with full FormspecEnvironment context.
 
+## `wasmEvalFELWithTrace(expression: string, fields?: Record<string, unknown>): FelTraceResult`
+
+Evaluate a FEL expression with a structured trace of evaluation steps.
+
+Opt-in tracing path — use when surfacing evaluation to humans or LLMs
+(MCP tools, error explainers). Values in the trace are projected to JSON,
+losing FEL type fidelity (money/date) but gaining universal readability.
+
 ## `wasmFelExprIsInterpolationStaticLiteral(expression: string): boolean`
 
 Locale §3.3.1 — true if the expression AST is only literals and unary `not` / `!` / `-`.
@@ -1371,14 +1335,10 @@ Resolve an item's parent path, index, and value in a nested item tree.
 
 Evaluate a Formspec definition against provided data.
 
-## `wasmEvaluateScreener(definition: unknown, answers: Record<string, unknown>): {
-    target: string;
-    label?: string;
-    message?: string;
-    extensions?: Record<string, unknown>;
-} | null`
+## `wasmEvaluateScreenerDocument(screener: unknown, answers: Record<string, unknown>, context?: Record<string, unknown>): import('@formspec-org/types').DeterminationRecord`
 
-Evaluate screener routes against an isolated answer payload.
+Evaluate a standalone Screener Document against respondent inputs.
+Returns a Determination Record (always non-null).
 
 ## `wasmAnalyzeFEL(expression: string): {
     valid: boolean;
@@ -1390,6 +1350,17 @@ Evaluate screener routes against an isolated answer payload.
 }`
 
 Analyze a FEL expression and return structural info.
+
+## `wasmAnalyzeFELWithFieldTypes(expression: string, fieldTypes: Record<string, string>): {
+    valid: boolean;
+    errors: string[];
+    warnings: string[];
+    references: string[];
+    variables: string[];
+    functions: string[];
+}`
+
+Analyze a FEL expression with field data type context for type-mismatch warnings.
 
 ## `wasmIsValidFelIdentifier(s: string): boolean`
 
@@ -1413,6 +1384,14 @@ FEL evaluation context for the richer WASM evaluator.
 - **locale** (`string`): Active locale code (BCP 47) — backs `locale()` and default for `pluralCategory()`.
 - **meta** (`Record<string, string | number | boolean>`): Runtime metadata bag — backs `runtimeMeta(key)`.
 
+#### interface `FelTraceResult`
+
+Result of a traced FEL evaluation.
+
+- **value** (`unknown`): Evaluated value (JSON-projected — no FEL type tags).
+- **diagnostics** (`Array<Record<string, unknown>>`): Diagnostics emitted during evaluation.
+- **trace** (`FelTraceStep[]`): Ordered trace steps, appended in evaluation order.
+
 #### type `WasmModule`
 
 @filedesc Runtime WASM — init, accessors, and wrappers that use only the runtime `formspec_wasm_runtime` module.
@@ -1420,6 +1399,14 @@ FEL evaluation context for the richer WASM evaluator.
 ```ts
 type WasmModule = typeof import('../wasm-pkg-runtime/formspec_wasm_runtime.js');
 ```
+
+#### type `FelTraceStep`
+
+A single recorded event during FEL evaluation.
+
+Mirrors `fel_core::TraceStep` verbatim — the `kind` discriminant is the
+PascalCase Rust variant name. Extend this union only when the Rust enum
+grows a new variant; every variant here must exist in Rust.
 
 ## `resolveWasmAssetPathForNode(relativeToThisModule: string): Promise<string>`
 

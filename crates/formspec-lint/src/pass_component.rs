@@ -293,15 +293,15 @@ impl<'a> WalkState<'a> {
 
                             // E804: formatted-variant TextInput must bind
                             // to a string/text field (spec §5.6). Applies
-                            // to `variant: "richtext"` and `"markdown"` —
-                            // both are string-encoded and cannot serialize
-                            // into any other primitive.
+                            // to `variant: "richtext"`, `"markdown"`, and
+                            // `"latex"` — all three are string-encoded and
+                            // cannot serialize into any other primitive.
                             if comp_type == "TextInput" {
                                 let variant = node
                                     .get("variant")
                                     .and_then(|v| v.as_str())
                                     .unwrap_or("plain");
-                                let needs_string = matches!(variant, "richtext" | "markdown");
+                                let needs_string = matches!(variant, "richtext" | "markdown" | "latex");
                                 if needs_string {
                                     let is_string = field_info
                                         .data_type

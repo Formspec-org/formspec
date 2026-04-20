@@ -19,6 +19,13 @@ Map a definition item to its default component type based on `dataType`.
 Used as a fallback when no component document is provided or when the
 theme's widget cascade doesn't resolve to an available component.
 
+## `mergeFormPresentationForPlanning(fromDefinition?: unknown, fromComponentDocument?: unknown): Record<string, unknown> | undefined`
+
+Merges tier-1 `formPresentation` from the core definition with the optional
+component document. Component document wins on key conflicts — layout
+documents can set `pageMode`, `showProgress`, etc. without duplicating the
+whole definition.
+
 ## `resolvePageSequence(definition: FormDefinition, options?: {
     component?: ComponentDocument;
     theme?: ThemeDocument;
@@ -53,6 +60,7 @@ Append a SubmitButton node to a plan root if one doesn't already exist
 and the plan isn't owned by a Wizard (which provides its own submit).
 Also skips when the root has direct Page children — pageMode wizard/tabs
 synthesizes its own submit via the wizard behavior's Next→Submit button.
+For Accordion (and similar), children are sections — wrap in Stack so submit is not a section.
 
 ## `resetNodeIdCounter(): void`
 
@@ -75,6 +83,47 @@ document is provided).
 Walks the definition items array, runs the theme cascade for each item,
 selects default widgets, and emits LayoutNode trees.
 
+## `buildPlatformTheme(): ThemeDocument`
+
+Build a complete ThemeDocument from the token registry and platform defaults.
+
+Light-mode tokens come from each entry's `default` value. Dark-mode tokens
+are derived from `dark` values, keyed under the category's `darkPrefix`.
+
+## `platformDefaults: PresentationBlock`
+
+Default presentation applied to all items before selector matching.
+
+## `platformSelectors: ThemeSelector[]`
+
+Type-based selector rules applied in document order during theme cascade.
+
+## `positionPopupNearTrigger(triggerEl: HTMLElement, overlayEl: HTMLElement, placement?: PopupPlacement): void`
+
+Pin `overlayEl` with fixed coordinates near `triggerEl`. Call only when a placement is chosen;
+omit to keep native dialog centered presentation.
+
+## `clearPopupFixedPosition(overlayEl: HTMLElement): void`
+
+Clear inline positioning from a previous anchored open so the dialog can use default centering.
+
+## `POPUP_EDGE_PADDING`
+
+## `POPUP_TRIGGER_GAP`
+
+## `MODAL_FIRST_FOCUSABLE_SELECTOR`
+
+First focusable in modal/dialog content (disabled controls skipped).
+
+#### type `PopupPlacement`
+
+Position anchored overlays (modal, popover) near a trigger.
+Shared by React and web component renderers; optional for native centered dialogs.
+
+```ts
+type PopupPlacement = 'top' | 'right' | 'bottom' | 'left';
+```
+
 ## `resolveResponsiveProps(comp: any, activeBreakpoint: string | null, breakpoints?: Record<string, number | string> | null): any`
 
 Merge responsive breakpoint overrides onto a component descriptor.
@@ -86,6 +135,85 @@ With a breakpoints map, performs a mobile-first cumulative cascade per
 Component Spec §9.3: all breakpoints whose minWidth ≤ the active
 breakpoint's minWidth are applied in ascending minWidth order, so later
 breakpoints win over earlier ones for conflicting keys.
+
+## `renderTemplateToDOM(doc: Document, node: TemplateNode): Node`
+
+## `fieldRequiredIndicatorTemplate({ text, }?: FieldRequiredIndicatorTemplateProps): TemplateNode`
+
+## `fieldErrorTemplate({ id, className, message, role, ariaLive, }: FieldErrorTemplateProps): TemplateNode`
+
+## `fieldHintTemplate({ id, className, message, }: FieldHintTemplateProps): TemplateNode`
+
+## `fieldDescriptionTemplate({ id, className, message, }: FieldDescriptionTemplateProps): TemplateNode`
+
+## `validationSummaryHeaderTemplate({ message, }: ValidationSummaryHeaderTemplateProps): TemplateNode`
+
+## `validationSummaryRowTemplate({ severity, icon, message, jumpable, extraClassName, }: ValidationSummaryRowTemplateProps): TemplateNode`
+
+## `actionButtonTemplate({ className, label, type, ariaLabel, disabled, ariaDisabled, }: ActionButtonTemplateProps): TemplateNode`
+
+#### interface `FieldRequiredIndicatorTemplateProps`
+
+- **text?**: `string`
+
+#### interface `FieldErrorTemplateProps`
+
+- **id**: `string`
+- **className?**: `string`
+- **message?**: `string`
+- **role?**: `string`
+- **ariaLive?**: `'off' | 'polite' | 'assertive'`
+
+#### interface `FieldHintTemplateProps`
+
+- **id**: `string`
+- **className?**: `string`
+- **message?**: `string`
+
+#### interface `FieldDescriptionTemplateProps`
+
+- **id**: `string`
+- **className?**: `string`
+- **message?**: `string`
+
+#### interface `ValidationSummaryHeaderTemplateProps`
+
+- **message**: `string`
+
+#### interface `ValidationSummaryRowTemplateProps`
+
+- **severity**: `string`
+- **icon**: `string`
+- **message**: `string`
+- **jumpable?**: `boolean`
+- **extraClassName?**: `string`
+
+#### interface `ActionButtonTemplateProps`
+
+- **className**: `string`
+- **label**: `string`
+- **type?**: `'button' | 'submit' | 'reset'`
+- **ariaLabel?**: `string`
+- **disabled?**: `boolean`
+- **ariaDisabled?**: `boolean`
+
+## `h(type: string | typeof Fragment, props: Record<string, unknown> | null, children: unknown[]): TemplateNode`
+
+## `Fragment: unique symbol`
+
+@filedesc Framework-neutral template AST types shared by renderer shells.
+
+#### interface `TemplateNode`
+
+- **type**: `string | typeof Fragment`
+- **props**: `Record<string, unknown>`
+- **children**: `TemplateChild[]`
+
+#### type `TemplateChild`
+
+```ts
+type TemplateChild = TemplateNode | string | number | boolean | null | undefined;
+```
 
 Theme cascade resolver.
 
@@ -257,6 +385,14 @@ Resolve a `$token.xxx` reference against component and theme token maps.
 Component tokens take precedence over theme tokens. Values that are not
 `$token.` prefixed strings pass through unchanged. Logs a warning when
 a token reference cannot be resolved in either map.
+
+## `emitMergedThemeCssVars(target: HTMLElement, options: {
+    themeTokens?: Record<string, string | number> | null;
+    componentTokens?: Record<string, string | number> | null;
+}): void`
+
+Emit merged theme + component tokens as `--formspec-*` CSS custom properties on `target`.
+Component tokens override theme tokens (same merge order as `emitTokenProperties` in the web component).
 
 #### interface `LayoutNode`
 

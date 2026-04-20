@@ -496,9 +496,9 @@
         },
         "variant": {
           "type": "string",
-          "enum": ["plain", "richtext", "markdown"],
+          "enum": ["plain", "richtext", "markdown", "latex"],
           "default": "plain",
-          "description": "Content-type variant. `plain` (default) accepts unstyled text. `richtext` accepts formatted text (bold, italic, links) with runtime-defined serialization. `markdown` accepts Markdown source — portable, diffable, and degrades gracefully to plain text. `richtext` and `markdown` both MUST bind to a field whose `dataType` is `string` or `text`."
+          "description": "Content-type variant. `plain` (default) accepts unstyled text. `richtext` accepts formatted text with runtime-defined serialization. `markdown` accepts Markdown source — portable, diffable, degrades gracefully. `latex` accepts LaTeX source — authoritative for math and scientific documents; degrades to raw source. All formatted variants (`richtext`, `markdown`, `latex`) MUST bind to a field whose `dataType` is `string` or `text`."
         }
       },
       "unevaluatedProperties": false,

@@ -34,6 +34,11 @@ Consumers import types from THIS package — never from formspec-core.
 
 ## `getFieldTypeCatalog(): FieldTypeCatalogEntry[]`
 
+## `registryExtensionPaletteEntries(allTypes: DataTypeInfo[], resolveExtension: (name: string) => Record<string, unknown> | undefined): FieldTypeCatalogEntry[]`
+
+Map loaded registry `dataType` extensions into palette rows.
+`extra.registryDataType` is the extension name passed to `Project.addField`.
+
 ## `widgetHintForComponent(component: string, dataType?: string): string`
 
 ## `componentForWidgetHint(widgetHint?: string | null): string | null`
@@ -58,13 +63,41 @@ Consumers import types from THIS package — never from formspec-core.
 
 ## `flattenComponentTree(root: CompNode, defLookup: Map<string, DefLookupEntry>, bindKeyMap?: Map<string, string>): FlatEntry[]`
 
-## `findComponentNodeById(node: Record<string, unknown> | undefined, nodeId: string): Record<string, unknown> | null`
+## `resolveLayoutSelectionNodeRef(tree: CompNode | undefined, selectionKey: string): {
+    nodeId: string;
+} | {
+    bind: string;
+}`
+
+Map a layout-canvas selection key (def path, short bind, `__node:id`, or raw display `nodeId`) to a
+`NodeRef` that `component.setNodeStyle` and related commands resolve via `findNode`.
+
+## `isCircularComponentMove(root: CompNode | undefined, sourceRef: {
+    bind?: string;
+    nodeId?: string;
+}, targetParentRef: {
+    bind?: string;
+    nodeId?: string;
+}): boolean`
+
+True if moving `sourceRef` under `targetParentRef` would violate
+`component.moveNode` (target is the source node or any of its descendants).
+Used by Layout DnD before calling move helpers.
 
 ## `buildBatchMoveCommands(paths: Set<string>, targetGroupPath: string): MoveCommand[]`
 
-## `humanizeFEL(expression: string): string`
+## `humanizeFEL(expression: string): {
+    text: string;
+    supported: boolean;
+}`
 
 ## `propertyHelp: Record<string, string>`
+
+## `LAYOUT_CONTAINER_COMPONENTS: Set<string>`
+
+Canonical set of layout container component types.
+Single source of truth for both the toolbar preset list and container
+detection in the properties panel. Update here to add new containers.
 
 #### interface `DataTypeDisplay`
 
@@ -110,14 +143,6 @@ Consumers import types from THIS package — never from formspec-core.
 - **path**: `string`
 - **parentPath**: `string | null`
 
-#### interface `CompNode`
-
-- **component**: `string`
-- **bind?**: `string`
-- **nodeId?**: `string`
-- **_layout?**: `boolean`
-- **children?**: `CompNode[]`
-
 #### interface `FlatEntry`
 
 - **id**: `string`
@@ -138,11 +163,29 @@ Consumers import types from THIS package — never from formspec-core.
         targetIndex: number;
     }`
 
+## `parseCommaSeparatedKeywords(raw: string): string[] | undefined`
+
+Parse comma-separated type-ahead aliases; returns undefined when empty so JSON omits the key.
+
+## `formatCommaSeparatedKeywords(keywords: string[] | undefined): string`
+
+Display keywords in a single-line editor.
+
 ## `summarizeExpression(expression: string): string`
 
 ## `buildRowSummaries(item: FormItem, binds: Record<string, string>): RowSummaryEntry[]`
 
-## `buildStatusPills(binds: Record<string, string>, item: FormItem): RowStatusPill[]`
+## `buildCategorySummaries(item: FormItem, binds: Record<string, string>): CategorySummaries`
+
+## `buildExpressionDiagnostics(binds: Record<string, string>, definitionKeys: string[]): Record<string, ExpressionDiagnostic | null>`
+
+## `buildStatusPills(binds: Record<string, string>, item: FormItem, options?: BuildStatusPillsOptions): RowStatusPill[]`
+
+## `buildAdvisories(binds: Record<string, string>, item: FormItem): Advisory[]`
+
+## `buildDefinitionAdvisoryIssues(items: FormItem[], allBinds: FormBind[] | undefined | null): DefinitionAdvisoryIssue[]`
+
+Collects `buildAdvisories` results for every field in the definition (for sidebar / health UI).
 
 ## `buildMissingPropertyActions(item: FormItem, binds: Record<string, string>, itemLabel: string): MissingPropertyAction[]`
 
@@ -153,8 +196,13 @@ Consumers import types from THIS package — never from formspec-core.
 
 #### interface `RowStatusPill`
 
-- **text**: `string`
-- **color**: `'accent' | 'logic' | 'error' | 'green' | 'amber' | 'muted'`
+- **specTerm** (`string`): Spec-normative term for tooltip discoverability.
+- **warn** (`boolean`): When true, the pill should render a warning indicator.
+
+#### interface `ExpressionDiagnostic`
+
+- **message**: `string`
+- **suggestions?**: `string[]`
 
 #### interface `MissingPropertyAction`
 
@@ -162,7 +210,58 @@ Consumers import types from THIS package — never from formspec-core.
 - **label**: `string`
 - **ariaLabel**: `string`
 
-## `previewForm(project: Project, scenario?: Record<string, unknown>): {
+#### interface `BuildStatusPillsOptions`
+
+- **categorySummaries** (`CategorySummaries`): When provided, `calculate` / `readonly` pills are omitted if the Value category
+cell already conveys them (`formula`, `locked`, or stacked text like `25 · locked`).
+
+#### interface `AdvisoryAction`
+
+- **key**: `AdvisoryActionKey`
+- **label**: `string`
+
+#### interface `Advisory`
+
+- **code**: `string`
+- **severity**: `AdvisorySeverity`
+- **message**: `string`
+- **actions**: `AdvisoryAction[]`
+
+#### interface `DefinitionAdvisoryIssue`
+
+Flat list of advisory messages for Form Health and similar surfaces.
+
+- **path**: `string`
+- **label**: `string`
+- **code**: `string`
+- **severity**: `AdvisorySeverity`
+- **message**: `string`
+
+#### type `CategorySummaries`
+
+Category-keyed summaries: one representative entry per task category.
+
+```ts
+type CategorySummaries = Record<string, string>;
+```
+
+#### type `AdvisoryActionKey`
+
+Stable keys for advisory action buttons (studio UI maps these to handlers).
+
+```ts
+type AdvisoryActionKey = 'remove_required' | 'remove_readonly' | 'add_formula' | 'add_initial_value' | 'add_pre_fill' | 'remove_pre_populate' | 'remove_formula' | 'review_formula';
+```
+
+#### type `AdvisorySeverity`
+
+```ts
+type AdvisorySeverity = 'warning' | 'info';
+```
+
+## `previewForm(project: Project, scenario?: Record<string, unknown>, options?: {
+    validationMode?: 'continuous' | 'submit' | 'none';
+}): {
     visibleFields: string[];
     hiddenFields: {
         path: string;
@@ -287,15 +386,13 @@ Return type for all helper methods
     }`
 - **affectedPaths**: `string[]`
 - **createdId?**: `string`
-- **groupKey?**: `string`
 - **warnings?**: `HelperWarning[]`
 
 #### interface `ChoiceOption`
 
-Choice option for inline options or defineChoices
+Choice option for inline options or defineChoices (matches definition OptionEntry).
 
-- **value**: `string`
-- **label**: `string`
+- **keywords** (`string[]`): Optional combobox type-ahead strings (abbreviations, codes).
 
 #### interface `FieldProps`
 
@@ -358,13 +455,8 @@ Placement options for placeOnPage
 
 Layout-side add-item request
 
-- **itemType**: `'field' | 'group' | 'display' | 'layout'`
-- **label**: `string`
-- **key?**: `string`
-- **dataType?**: `string`
-- **component?**: `string`
-- **repeatable?**: `boolean`
-- **presentation?**: `Record<string, unknown>`
+- **dataType** (`string`): Core data type when not using a registry extension.
+- **registryDataType** (`string`): Registry `dataType` extension name (e.g. `x-formspec-email`).
 
 #### interface `FlowProps`
 
@@ -512,18 +604,13 @@ Thrown by helpers when pre-validation fails
 
 ## `buildLayoutContextMenuItems(menu: LayoutContextMenuState | null): LayoutContextMenuItem[]`
 
-## `executeLayoutAction({ action, menu, project, deselect, select, closeMenu, }: ExecuteLayoutActionOptions): void`
+## `executeLayoutAction({ action, menu, project, tree, layoutFlatOrder, deselect, select, closeMenu, }: ExecuteLayoutActionOptions): void`
 
 #### interface `LayoutContextMenuState`
 
-- **x**: `number`
-- **y**: `number`
-- **kind**: `'node' | 'canvas'`
-- **nodeType?**: `'field' | 'group' | 'display' | 'layout'`
-- **nodeRef?**: `{
-        bind?: string;
-        nodeId?: string;
-    }`
+- **layoutTargetKeys** (`string[]`): Layout selection keys at menu open (def paths, `__node:id`, etc.).
+When set, context actions apply to every key — not only `nodeRef`.
+- **selectionCount** (`number`): Mirrors `layoutTargetKeys.length` for menu chrome (e.g. hide move when multi-select).
 
 #### interface `LayoutContextMenuItem`
 
@@ -533,14 +620,353 @@ Thrown by helpers when pre-validation fails
 
 #### interface `ExecuteLayoutActionOptions`
 
-- **action**: `string`
-- **menu**: `LayoutContextMenuState | null`
-- **project**: `Project`
-- **deselect**: `() => void`
-- **select**: `(key: string, type: 'field' | 'group' | 'display' | 'layout') => void`
-- **closeMenu**: `() => void`
+- **layoutFlatOrder** (`string[]`): DFS order of layout row keys — batch delete/wrap use this for stable ordering.
 
-## `generateDefinitionSampleData(definition: FormDefinition, options?: MappingSampleOptions): Promise<Record<string, unknown>>`
+## `componentTreeForLayout(component: Pick<ComponentDocument, 'tree'>): CompNode`
+
+The component document `tree` for layout walks. Schema `AnyComponent3` unions are wider than
+{@link CompNode} (e.g. `width: string | number`); this helper is the single sanctioned assertion
+at that boundary (no `unknown` / `any`).
+
+## `hasTier3Content(nodeProps: Record<string, unknown> | undefined): boolean`
+
+Check if a component node has any Tier 3 (presentation) properties set.
+Used to show a dot indicator on overflow buttons when the node has custom styles,
+accessibility info, or CSS classes.
+
+## `setColumnSpan(project: Project, ref: NodeRef, n: number): void`
+
+Set `style.gridColumn = "span N"` on a component node.
+Clamps N to [1, 12]. Preserves all other style properties.
+
+## `setRowSpan(project: Project, ref: NodeRef, n: number): void`
+
+Set `style.gridRow = "span N"` on a component node.
+Clamps N to [1, 12]. Preserves all other style properties.
+
+## `setPadding(project: Project, ref: NodeRef, value: string): void`
+
+Set `style.padding` on a component node.
+Preserves all other style properties.
+
+## `setStyleProperty(project: Project, ref: NodeRef, key: string, value: string): void`
+
+Add or update a single style property on a component node.
+Preserves all other style properties.
+
+## `removeStyleProperty(project: Project, ref: NodeRef, key: string): void`
+
+Remove a single style property from a component node.
+Preserves all other style properties.
+
+## `getPropertySources(project: Project, itemKey: string, prop: string, itemType?: string, itemDataType?: string): PropertySource[]`
+
+Walk all cascade levels for a PresentationBlock property on a given item.
+Returns entries in ascending level order: default → selector(s) → item-override.
+Only selectors whose match criteria apply to the item's type and dataType are included.
+
+## `getEditableThemeProperties(project: Project, itemKey: string): EditableThemeProperty[]`
+
+Returns type-aware theme properties that can be overridden for a given item.
+Properties returned vary by component type:
+- Display components: no labelPosition, widget, or fallback
+- Group components: no labelPosition or fallback
+- Input components: all properties available
+- Other: all properties available
+
+## `setThemeOverride(project: Project, itemKey: string, prop: string, value: unknown): HelperResult`
+
+Set a per-item theme override via the existing project.setItemOverride path.
+
+## `clearThemeOverride(project: Project, itemKey: string, prop: string): HelperResult`
+
+Remove a single per-item theme override property.
+Calls theme.setItemOverride with value=null, which deletes the property.
+
+#### interface `DataTableColumnSpec`
+
+DataTable `columns` entry shape (schema-aligned) — kept explicit so `CompNode` can accept both Grid
+`columns` (number|string) and DataTable column arrays without using `unknown`.
+
+- **header**: `string`
+- **bind**: `string`
+- **min?**: `number`
+- **max?**: `number`
+- **step?**: `number`
+
+#### interface `CompNode`
+
+Layout/component tree node for traversal and editing. Matches schema component objects (including
+numeric `gap` / `columns` where allowed) plus studio-only fields (`nodeId`, etc.). Intentionally not
+a schema union so every branch exposes optional `bind` / `children` for walks. No index signature,
+so document roots (`ComponentDocument.tree`) remain assignable (e.g. `CustomComponentRef`).
+
+- **definitionItemPath** (`string`): Absolute definition item path (e.g. `pageA.contact.email`) set when the tree is
+reconciled from the definition. Studio-only — not part of the shipped component
+schema. Lets layout tooling resolve the correct item when duplicate leaf keys
+exist across pages or groups without relying solely on `bindKeyMap`.
+- **columns** (`number | string | DataTableColumnSpec[]`): Grid: count or template string. DataTable: column definitions.
+- **defaultOpen** (`boolean | number`): Accordion/Collapsible may use a numeric default in schema types.
+- **span** (`number`): Grid region column span (1-12). Studio-internal; not in component schema.
+- **start** (`number`): Grid region column start (1-12). Studio-internal; not in component schema.
+- **responsive** (`Record<string, unknown>`): Breakpoint-keyed responsive overrides on layout nodes.
+
+#### interface `ContainerLayoutProps`
+
+Layout-specific properties extracted from LayoutContainerProps.
+
+- **columns?**: `number`
+- **gap?**: `string`
+- **direction?**: `string`
+- **wrap?**: `boolean`
+- **align?**: `string`
+- **elevation?**: `number`
+- **width?**: `string`
+- **position?**: `string`
+- **title?**: `string`
+- **defaultOpen?**: `boolean`
+- **nodeStyle?**: `Record<string, unknown>`
+
+#### interface `NodeRef`
+
+A node reference — either a nodeId or a bind key, matching component.setNodeStyle's NodeRef.
+
+- **nodeId?**: `string`
+- **bind?**: `string`
+
+#### interface `PropertySource`
+
+One entry in the cascade provenance array returned by getPropertySources.
+
+- **source** (`'default' | 'selector' | 'item-override'`): Human-readable cascade source label. Matches ResolvedProperty.source from resolveThemeCascade.
+- **sourceDetail** (`string`): Optional detail (e.g. "selector #2: field + string").
+- **value** (`unknown`): The value at this cascade level.
+
+#### interface `EditableThemeProperty`
+
+Type-aware theme property descriptor returned by getEditableThemeProperties.
+
+- **prop** (`string`): Property name (e.g. 'labelPosition', 'widget').
+- **type** (`'enum' | 'string' | 'object'`): Property type: enum has fixed valid values, string is free text, object is complex.
+- **options** (`string[]`): Valid enum values (only when type === 'enum').
+
+## `resolveLayoutInsertTarget(project: Project, pageId?: string): LayoutInsertTarget`
+
+Resolves the correct parent node for adding a new item to the layout.
+In multi-page projects, the parent is the active page node.
+In single-page projects, the parent is always 'root'.
+
+Mirrors LayoutCanvas parent resolution for `addItemToLayout` / `addLayoutNode`.
+
+## `getItemOverrides(project: Project, itemKey: string): Record<string, unknown>`
+
+Returns the current per-item theme overrides for an item.
+Replaces direct `(project.state.theme as any)?.items?.[itemKey] ?? {}` access.
+
+Extracted from AppearanceSection.tsx:70.
+
+## `addStyleOverride(project: Project, itemKey: string, key: string, value: string): void`
+
+Adds a style key/value to the per-item theme style override.
+Validates that key is a non-empty string (after trimming).
+
+Extracted from AppearanceSection.tsx:81-88.
+
+## `validateTokenName(name: string): boolean`
+
+Returns true if the token name contains only valid characters:
+alphanumeric, hyphens, and underscores. Empty string is rejected.
+
+Extracted from ColorPalette.tsx:22.
+
+## `applyBreakpointPresets(project: Project): void`
+
+Sets standard breakpoints on the theme: mobile (0), tablet (768), desktop (1024).
+
+Extracted from ScreenSizes.tsx:31-35.
+
+## `summarizeSelectorRule(rule: Record<string, unknown>): string`
+
+Returns a human-readable string for a selector rule.
+Format: "{type} + {dataType}", or just one if only one is set.
+Falls back to "Any item" if neither is set.
+
+Extracted from FieldTypeRules.tsx:11-17.
+
+## `getTokensByGroup(project: Project, group: string): Token[]`
+
+Returns tokens whose name starts with `{group}.`.
+Each token has key, name (suffix after dot), and value.
+
+Extracted from ColorPalette.tsx:14-15.
+
+## `getGroupedTokens(project: Project): Map<string, Token[]>`
+
+Groups all tokens by dot-prefix. Tokens without a dot go in "other".
+
+Extracted from AllTokens.tsx:23-28.
+
+## `getSortedBreakpoints(project: Project): Breakpoint[]`
+
+Returns breakpoints sorted by numeric width ascending.
+
+Extracted from ScreenSizes.tsx:14-15.
+
+## `getEditablePropertiesForNode(project: Project, nodeRef: string): string[]`
+
+Returns which properties are valid to set on a given component node.
+Heading and Divider nodes hide container layout properties.
+
+Extracted from ComponentProperties.tsx:128-134.
+
+## `parseTokenRegistry(registryDoc: Record<string, unknown>): TokenRegistryMap`
+
+Parse a token-registry.json document into a lookup-friendly structure.
+
+## `getTokenRegistryEntry(key: string, registry: TokenRegistryMap): TokenRegistryEntry | undefined`
+
+Look up registry metadata for a single token key.
+
+## `getEnrichedTokensByGroup(tokens: Record<string, string | number>, group: string, registry?: TokenRegistryMap): EnrichedToken[]`
+
+Get enriched tokens for a category group, merging live theme values with registry metadata.
+Dark-mode tokens (color.dark.*) are NOT returned as separate entries — they are
+folded into the darkValue/darkKey fields of their light counterpart.
+
+## `getEnrichedGroupedTokens(tokens: Record<string, string | number>, registry?: TokenRegistryMap): Map<string, EnrichedToken[]>`
+
+Get all tokens grouped by category, enriched with registry metadata.
+Returns a Map of group name -> EnrichedToken[].
+
+#### interface `Token`
+
+- **key**: `string`
+- **name**: `string`
+- **value**: `string`
+
+#### interface `TokenRegistryEntry`
+
+A single entry from a parsed token registry category.
+
+- **key**: `string`
+- **description?**: `string`
+- **type**: `TokenType`
+- **defaultValue?**: `string | number`
+- **dark?**: `string | number`
+- **darkKey?**: `string`
+
+#### interface `TokenRegistryCategory`
+
+A parsed registry category.
+
+- **description?**: `string`
+- **type**: `TokenType`
+- **darkPrefix?**: `string`
+- **entries**: `Map<string, TokenRegistryEntry>`
+
+#### interface `EnrichedToken`
+
+A token enriched with registry metadata.
+
+- **description?**: `string`
+- **type**: `TokenType`
+- **defaultValue?**: `string | number`
+- **isModified**: `boolean`
+- **isCustom**: `boolean`
+- **darkValue?**: `string`
+- **darkDefaultValue?**: `string | number`
+- **darkKey?**: `string`
+
+#### interface `Breakpoint`
+
+- **name**: `string`
+- **width**: `number`
+
+#### interface `LayoutInsertTarget`
+
+- **pageId** (`string`): The resolved page node ID (or undefined for single-page).
+- **parentNodeId** (`string`): The parent node ID to pass to addLayoutNode / addItemToLayout.
+
+#### type `TokenType`
+
+Semantic token type from the registry.
+
+```ts
+type TokenType = 'color' | 'dimension' | 'fontFamily' | 'fontWeight' | 'duration' | 'opacity' | 'shadow' | 'number';
+```
+
+#### type `TokenRegistryMap`
+
+Parsed token registry lookup structure.
+
+```ts
+type TokenRegistryMap = Map<string, TokenRegistryCategory>;
+```
+
+## `componentTargetRef(target: string): {
+    bind: string;
+} | {
+    nodeId: string;
+}`
+
+Resolve a layout selection target or path to a component node ref.
+
+## `checkVariableSelfReference(name: string, expression: string): void`
+
+Throw CIRCULAR_REFERENCE if the expression references the variable being defined.
+
+## `buildRepeatScopeRewriter(authoredTarget: string, _normalizedTarget: string): {
+    rewriteExpression: (expr: string) => string;
+    rewriteMessage: (msg: string) => string;
+}`
+
+Build a rewriter that canonicalizes FEL references from template (authored)
+paths to row-scoped paths after normalizeShapeTarget inserts [*].
+
+## `editDistance(a: string, b: string): number`
+
+Levenshtein distance for fuzzy path matching.
+
+## `resolvePath(path: string, parentPath?: string): {
+    key: string;
+    parentPath?: string;
+    fullPath: string;
+}`
+
+Unified path resolution for addField/addGroup/addContent.
+
+- When `parentPath` is given, `path` is treated as relative: split on dots,
+  last segment = key, preceding segments prepended to parentPath.
+- When `parentPath` is NOT given, `path` is split on dots: last = key,
+  preceding = parentPath.
+
+## `sampleValues(): Record<string, unknown>`
+
+Default sample values by data type. Uses today's date for date/dateTime.
+
+## `sampleValueForField(item: FormItem, fieldIndex: number): unknown`
+
+Generate a context-aware sample value for a field.
+
+## `filterByRelevance(definition: unknown, data: Record<string, unknown>): Record<string, unknown>`
+
+Load sample data into a FormEngine and strip fields whose
+show_when/relevant condition evaluates to false.
+
+## `pruneObject(value: unknown): unknown`
+
+Recursively prune null values, empty arrays, and empty objects from a value.
+
+## `sampleFieldValue(key: string, dataType: string | undefined, options?: {
+    firstOptionValue?: string;
+    secondOptionValue?: string;
+}): unknown`
+
+Returns a realistic sample value for a field based on its dataType and key name.
+Deterministic — same inputs always produce the same output.
+Used by both the mapping preview (actual values) and the output blueprint (display strings).
+
+## `generateDefinitionSampleData(definition: FormDefinition, _options?: MappingSampleOptions): Promise<Record<string, unknown>>`
 
 #### interface `MappingSampleOptions`
 
@@ -651,6 +1077,11 @@ For raw project access (dispatch, state, queries), use formspec-core directly.
 ##### `constructor(core: IProjectCore, _recorderControl?: ChangesetRecorderControl | undefined)`
 
 - **(get) proposals** (`ProposalManager | null`): Access the ProposalManager for changeset operations. Null if not enabled.
+- **(get) isDirty** (`boolean`): True when the project has unsaved mutations since the last markClean() or creation.
+
+##### `markClean(): void`
+
+Reset the dirty flag (call after saving/publishing).
 
 ##### `localeAt(code: string): LocaleState | undefined`
 
@@ -668,7 +1099,9 @@ For raw project access (dispatch, state, queries), use formspec-core directly.
 
 ##### `instanceNames(): string[]`
 
-##### `statistics(): ProjectStatistics`
+##### `statistics(): ProjectStatistics & {
+        isDirty: boolean;
+    }`
 
 ##### `commandHistory(): readonly LogEntry[]`
 
@@ -683,6 +1116,10 @@ For raw project access (dispatch, state, queries), use formspec-core directly.
 ##### `searchItems(filter: ItemFilter): ItemSearchResult[]`
 
 ##### `parseFEL(expression: string, context?: FELParseContext): FELParseResult`
+
+##### `traceFEL(expression: string, fields?: Record<string, unknown>): import("@formspec-org/engine/fel-runtime").FelTraceResult`
+
+Evaluate a FEL expression and return a structured trace of evaluation steps.
 
 ##### `felFunctionCatalog(): FELFunctionEntry[]`
 
@@ -704,7 +1141,10 @@ Validate a FEL expression and return detailed diagnostics.
 
 Return autocomplete suggestions for a partial FEL expression.
 
-##### `humanizeFELExpression(expression: string): string`
+##### `humanizeFELExpression(expression: string): {
+        text: string;
+        supported: boolean;
+    }`
 
 Convert a FEL expression to a human-readable English string.
 
@@ -716,9 +1156,13 @@ Returns all known widgets with their compatible data types.
 
 Returns widget names (component types) compatible with a given data type or alias.
 
-##### `fieldTypeCatalog(): FieldTypeCatalogEntry[]`
+##### `fieldTypeCatalog(): FieldTypeAliasRow[]`
 
 Returns the field type alias table (all types the user can specify in addField).
+
+##### `mergedFieldTypeCatalog(): FieldTypeCatalogEntry[]`
+
+Built-in add-item palette rows plus registry `dataType` extensions from loaded registries.
 
 ##### `registryDocuments(): unknown[]`
 
@@ -822,6 +1266,10 @@ Collects ALL dependents BEFORE mutations, then dispatches cleanup + delete atomi
 
 Update any property of an existing item — fan-out helper.
 
+##### `setItemExtension(path: string, extension: string, value: unknown): HelperResult`
+
+Set or clear a custom extension payload on a definition item.
+
 ##### `moveItem(path: string, targetParentPath?: string, targetIndex?: number): HelperResult`
 
 Move item to a new parent or position.
@@ -845,6 +1293,10 @@ Define a reusable named option set.
 ##### `makeRepeatable(target: string, props?: RepeatProps): HelperResult`
 
 Make a group repeatable with optional cardinality constraints.
+
+##### `setGroupDisplayMode(groupKey: string, mode: 'stack' | 'table'): HelperResult`
+
+Set the display mode for a repeatable group — 'stack' (default) or 'table' (DataTable).
 
 ##### `copyItem(path: string, deep?: boolean, targetPath?: string): HelperResult`
 
@@ -874,12 +1326,9 @@ Batch duplicate multiple items using copyItem for full bind/shape handling.
 
 Add a submit button.
 
-##### `addPage(title: string, description?: string, id?: string, opts?: {
-        standalone?: boolean;
-    }): HelperResult`
+##### `addPage(title: string, description?: string, id?: string): HelperResult`
 
-Add a page. By default creates a paired definition group and places it on the new page.
-With `opts.standalone`, creates only the page with no paired group.
+Add a page — creates a Page node in the component tree.
 
 ##### `removePage(pageId: string): HelperResult`
 
@@ -921,6 +1370,10 @@ Remove item from page assignment.
 
 Set flow mode.
 
+##### `setGroupRef(path: string, ref: string | null, keyPrefix?: string): HelperResult`
+
+Set or clear the `$ref` for a group item.
+
 ##### `setComponentWhen(target: string, when: string | null): HelperResult`
 
 Set a component-level visual condition (`when`) on a bound item or layout node.
@@ -928,6 +1381,19 @@ Set a component-level visual condition (`when`) on a bound item or layout node.
 ##### `setComponentAccessibility(target: string, property: string, value: unknown): HelperResult`
 
 Set a component accessibility override on a bound item or layout node.
+
+##### `setLayoutNodeProp(target: string, property: string, value: unknown): HelperResult`
+
+Set an arbitrary property on a component tree node (identified by `__node:<id>` or bind key).
+
+##### `setNodeStyleProperty(ref: {
+        nodeId?: string;
+        bind?: string;
+    }, property: string, value: string): void`
+
+Set a single style property on a component tree node by NodeRef.
+Uses `component.setNodeStyle`, which merges into the existing style map
+without clobbering other keys.
 
 ##### `addItemToLayout(spec: LayoutAddItemSpec, pageId?: string): HelperResult`
 
@@ -961,6 +1427,18 @@ Set a default theme property (e.g. labelPosition, widget, cssClass).
 
 Set or delete a responsive breakpoint (null minWidth = delete).
 
+##### `setLocaleString(key: string, value: string, localeId?: string): HelperResult`
+
+Set a localized string for the selected or explicit locale.
+
+##### `removeLocaleString(key: string, localeId?: string): HelperResult`
+
+Remove a localized string for the selected or explicit locale.
+
+##### `setLocaleMetadata(property: string, value: unknown, localeId?: string): HelperResult`
+
+Update a locale metadata property such as name, title, or description.
+
 ##### `addThemeSelector(match: Record<string, unknown>, apply: Record<string, unknown>): HelperResult`
 
 Add a theme selector rule.
@@ -979,6 +1457,25 @@ Delete a theme selector rule by index.
 ##### `reorderThemeSelector(index: number, direction: 'up' | 'down'): HelperResult`
 
 Reorder a theme selector rule.
+
+##### `addMigration(fromVersion: string, description?: string): HelperResult`
+
+Ensure a migration descriptor exists for a source version.
+
+##### `addMigrationRule(params: {
+        fromVersion: string;
+        source: string;
+        target: string | null;
+        transform: string;
+        expression?: string;
+        insertIndex?: number;
+    }): HelperResult`
+
+Add a field-map rule to a migration descriptor.
+
+##### `removeMigrationRule(fromVersion: string, index: number): HelperResult`
+
+Remove a field-map rule from a migration descriptor.
 
 ##### `setItemOverride(itemKey: string, property: string, value: unknown): HelperResult`
 
@@ -1045,6 +1542,22 @@ Reorder an item within a page (by key, not index).
 
 Move an item to an arbitrary position on a page by target index.
 
+##### `addComponentNode(parent: {
+        bind?: string;
+        nodeId?: string;
+    }, component: string, options?: {
+        bind?: string;
+        props?: Record<string, unknown>;
+        insertIndex?: number;
+    }): HelperResult & {
+        nodeRef?: {
+            bind?: string;
+            nodeId?: string;
+        };
+    }`
+
+Add a component-tree node under an arbitrary parent ref.
+
 ##### `addLayoutNode(parentNodeId: string, component: string): HelperResult`
 
 Add a layout-only node to the component tree.
@@ -1065,12 +1578,40 @@ Delete a layout node from the component tree.
 
 Wrap a component node (by bind or nodeId ref) in any layout component.
 
+##### `wrapSiblingComponentNodes(refs: Array<{
+        bind: string;
+    } | {
+        nodeId: string;
+    }>, component: string): HelperResult`
+
+Wrap multiple sibling nodes in one layout container (same parent, visual order preserved).
+
 ##### `reorderComponentNode(ref: {
         bind?: string;
         nodeId?: string;
     }, direction: 'up' | 'down'): HelperResult`
 
 Reorder a component node (by bind or nodeId ref) up or down.
+
+##### `moveComponentNodeToContainer(ref: {
+        bind?: string;
+        nodeId?: string;
+    }, targetParent: {
+        bind?: string;
+        nodeId?: string;
+    }): HelperResult`
+
+Move a component node (by bind or nodeId ref) as the last child of a target container.
+
+##### `moveComponentNodeToIndex(ref: {
+        bind?: string;
+        nodeId?: string;
+    }, targetParent: {
+        bind?: string;
+        nodeId?: string;
+    }, insertIndex: number): HelperResult`
+
+Move a component node (by bind or nodeId ref) to a specific index within a target container.
 
 ##### `deleteComponentNode(ref: {
         bind?: string;
@@ -1130,6 +1671,7 @@ Set configuration for a specific wire-format adapter (JSON, XML, CSV).
 Update the top-level mapping defaults.
 
 ##### `autoGenerateMappingRules(params?: {
+        mappingId?: string;
         scopePath?: string;
         priority?: number;
         replace?: boolean;
@@ -1173,7 +1715,12 @@ Remove a variable — warns about dangling references.
 
 ##### `renameVariable(name: string, newName: string): HelperResult`
 
-Rename a variable — Future Work, handler not implemented.
+Rename a definition variable and rewrite FEL references — **not implemented**.
+
+Blocked on a `definition.renameVariable` (or equivalent) command in
+`@formspec-org/core`; until that exists this helper always throws
+{@link HelperError} with code `NOT_IMPLEMENTED`. See the studio README
+“Known limitations” section for the product-facing note.
 
 ##### `addInstance(name: string, props: InstanceProps): HelperResult`
 
@@ -1191,9 +1738,16 @@ Rename an instance — rewrites FEL references.
 
 Remove an instance.
 
-##### `setScreener(enabled: boolean): HelperResult`
+##### `createScreenerDocument(options?: {
+        url?: string;
+        title?: string;
+    }): HelperResult`
 
-Enable/disable screener.
+Create a new screener document with a default first-match phase.
+
+##### `deleteScreenerDocument(): HelperResult`
+
+Remove the screener document.
 
 ##### `addScreenField(key: string, label: string, type: string, props?: FieldProps): HelperResult`
 
@@ -1203,30 +1757,84 @@ Add a screener question.
 
 Remove a screener question.
 
-##### `addScreenRoute(condition: string, target: string, label?: string, message?: string): HelperResult`
+##### `updateScreenField(key: string, changes: {
+        label?: string;
+        helpText?: string;
+        required?: boolean | string;
+    }): HelperResult`
 
-Add a screener routing rule.
+Update properties on a screener question.
 
-##### `updateScreenRoute(routeIndex: number, changes: {
+##### `reorderScreenField(key: string, direction: 'up' | 'down'): HelperResult`
+
+Reorder a screener question by key.
+
+##### `addEvaluationPhase(id: string, strategy: string, label?: string): HelperResult`
+
+Add an evaluation phase.
+
+##### `removeEvaluationPhase(phaseId: string): HelperResult`
+
+Remove an evaluation phase.
+
+##### `reorderPhase(phaseId: string, direction: 'up' | 'down'): HelperResult`
+
+Reorder an evaluation phase.
+
+##### `setPhaseStrategy(phaseId: string, strategy: string, config?: Record<string, unknown>): HelperResult`
+
+Set strategy and config on a phase.
+
+##### `addScreenRoute(phaseId: string, route: {
+        condition?: string;
+        target: string;
+        label?: string;
+        message?: string;
+        score?: string;
+        threshold?: number;
+    }, insertIndex?: number): HelperResult`
+
+Add a route to a phase.
+
+##### `updateScreenRoute(phaseId: string, routeIndex: number, changes: {
         condition?: string;
         target?: string;
         label?: string;
         message?: string;
+        score?: string;
+        threshold?: number;
+        override?: boolean;
+        terminal?: boolean;
     }): HelperResult`
 
-Update a screener route.
+Update properties on a route.
 
-##### `reorderScreenRoute(routeIndex: number, direction: 'up' | 'down'): HelperResult`
+##### `reorderScreenRoute(phaseId: string, routeIndex: number, direction: 'up' | 'down'): HelperResult`
 
-Reorder a screener route.
+Reorder a route within a phase.
 
-##### `removeScreenRoute(routeIndex: number): HelperResult`
+##### `removeScreenRoute(phaseId: string, routeIndex: number): HelperResult`
 
-Remove a screener route.
+Remove a route from a phase.
 
-##### `generateSampleData(): Record<string, unknown>`
+##### `setScreenerAvailability(from?: string | null, until?: string | null): HelperResult`
+
+Set screener availability window. Pass null to clear.
+
+##### `setScreenerResultValidity(duration: string | null): HelperResult`
+
+Set screener result validity duration. Pass null to clear.
+
+##### `generateSampleData(overrides?: Record<string, unknown>): Record<string, unknown>`
 
 Generate plausible sample data for each field based on its data type.
+When overrides are provided, those values replace the generated defaults
+for matching field paths. Override keys that don't match any field path
+are silently ignored.
+
+Fields hidden by show_when/relevant conditions are excluded from the
+result. Relevance is evaluated by loading the sample data into a
+FormEngine and reading its relevance signals.
 
 ##### `normalizeDefinition(): Record<string, unknown>`
 
@@ -1330,6 +1938,14 @@ Disabled while a changeset is open — the changeset IS the undo mechanism.
 - **(get) canRedo** (`boolean`): Whether redo is currently allowed.
 Disabled while a changeset is open.
 
+##### `subscribe(listener: () => void): () => void`
+
+Subscribe to changeset state changes.
+
+##### `getChangeset(): Readonly<Changeset> | null`
+
+Stable snapshot of the current changeset — same reference until state changes.
+
 ##### `openChangeset(): string`
 
 Open a new changeset. Captures a state snapshot and starts recording.
@@ -1366,17 +1982,66 @@ Reject a pending changeset. Restores to snapshot and replays user overlay.
 Discard the current changeset without merging or rejecting.
 Restores to the snapshot before the changeset was opened.
 
+## `platformTokenRegistry: TokenRegistryMap`
+
+The platform token registry, parsed once at module load.
+
+## `pageChildren(page: CompNode): CompNode[]`
+
+Direct children of a Page node in the component tree.
+
+## `refForCompNode(node: CompNode): {
+    bind: string;
+} | {
+    nodeId: string;
+}`
+
+NodeRef for a component node: prefers `bind` when it is a string, else `nodeId`.
+
+## `findKeyInItems(items: FormItem[], leafKey: string, prefix: string): string | null`
+
+Walk the item tree to find any item with the given leaf key. Returns its full path or null.
+
+## `findComponentNodeById(tree: CompNode | undefined, nodeId: string): CompNode | null`
+
+Depth-first search for a node by `nodeId`. Matches the root if it carries the id.
+Returns `null` when no match is found (null-style matches the public surface).
+
+## `findComponentNodeByRef(tree: CompNode | undefined, ref: NodeRef): CompNode | null`
+
+Depth-first search for a node by `nodeId` OR `bind`. If both are given, a match on
+either field is accepted (nodeId checked first). Returns `null` when no match.
+
+## `treeContainsRef(tree: CompNode | undefined, ref: NodeRef): boolean`
+
+True if any node in the subtree (including the root) matches `ref` by bind or nodeId.
+
+## `findParentOfNodeRef(tree: CompNode | undefined, ref: NodeRef): CompNode | null | undefined`
+
+Find the parent node of the node matching `ref`.
+
+Tri-state return distinguishes three meaningful cases:
+- A `CompNode` — the parent containing the match.
+- `null` — the match IS the root (no parent exists).
+- `undefined` — nothing matched.
+
+## `findParentRefOfNodeRef(tree: CompNode | undefined, ref: NodeRef): {
+    nodeId: string;
+} | {
+    bind: string;
+} | null`
+
+Parent expressed as a single-key ref — `{ nodeId }` when the parent has a stable id,
+otherwise `{ bind }`. Returns `null` when the match IS the root, when nothing matches,
+or when the parent has neither id nor bind.
+
 #### interface `ProjectSnapshot`
 
 Read-only snapshot of the project's authored artifacts.
 This is what `project.state` returns — the four editable artifacts
 without internal bookkeeping (extensions and versioning).
 
-- **definition**: `FormDefinition`
-- **component**: `ComponentDocument`
-- **theme**: `ThemeDocument`
-- **mappings**: `Record<string, MappingDocument>`
-- **selectedMappingId?**: `string`
+- **screener** (`ScreenerDocument | null`): Standalone Screener Document, or null if no screener is loaded.
 
 #### interface `CreateProjectOptions`
 

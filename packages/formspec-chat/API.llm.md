@@ -12,6 +12,15 @@ Uses createRawProject to generate the component tree, theme, and mapping
 that the definition implies. On failure (degenerate definition), returns
 a minimal bundle with the definition and empty/null documents.
 
+#### interface `ChatSessionOptions`
+
+Options for constructing a ChatSession.
+
+- **buildBundle** (`(definition: FormDefinition) => ProjectBundle`): Converts a bare FormDefinition into a full ProjectBundle.
+Injected by the host (e.g. Studio) so chat does not depend on
+project-creation logic. When omitted, the session stores only
+the definition — getBundle() returns null.
+
 #### class `ChatSession`
 
 Orchestrates a conversational form-building session.
@@ -20,10 +29,23 @@ Composes SourceTraceManager, IssueQueue, and an AIAdapter
 into a coherent conversation flow. Manages message history, form state,
 and session serialization.
 
-##### `constructor(options: {
-        adapter: AIAdapter;
-        id?: string;
-    })`
+The host (e.g. Studio) provides a `ToolContext` via `setToolContext()`
+after scaffolding. The ChatSession does NOT own a Project or MCP server;
+it delegates tool calls through the host-provided context.
+
+##### `constructor(options: ChatSessionOptions)`
+
+##### `setToolContext(ctx: ToolContext): void`
+
+Provide a ToolContext for MCP-backed refinement.
+
+The host calls this after scaffolding to connect the session
+to the Studio's existing MCP server. The session uses this
+context for all subsequent tool calls (refinement, auto-fix, audit).
+
+##### `getToolContext(): ToolContext | null`
+
+Returns the currently set ToolContext, or null if none has been provided.
 
 ##### `getMessages(): ChatMessage[]`
 
@@ -97,9 +119,12 @@ Export the full project bundle (definition + component + theme + mapping).
 
 Serialize the full session state for persistence.
 
-##### `fromState(state: ChatSessionState, adapter: AIAdapter): Promise<ChatSession>`
+##### `fromState(state: ChatSessionState, adapter: AIAdapter, buildBundle?: (def: FormDefinition) => ProjectBundle): Promise<ChatSession>`
 
 Restore a session from serialized state.
+
+Note: The restored session has no ToolContext. The host must call
+`setToolContext()` before refinement can proceed.
 
 ##### `truncate(messageId: string, includeSelf?: boolean): void`
 
@@ -226,6 +251,20 @@ Intended for unit/integration tests only. Production uses GeminiAdapter.
 
 ##### `extractFromFile(_attachment: Attachment): Promise<string>`
 
+#### class `OpenAIAdapter`
+
+##### `constructor(apiKey: string, model?: string, registryHints?: string)`
+
+##### `isAvailable(): Promise<boolean>`
+
+##### `chat(messages: ChatMessage[]): Promise<ConversationResponse>`
+
+##### `generateScaffold(request: ScaffoldRequest, onProgress?: ScaffoldProgressCallback): Promise<ScaffoldResult>`
+
+##### `refineForm(messages: ChatMessage[], instruction: string, toolContext: ToolContext): Promise<RefinementResult>`
+
+##### `extractFromFile(attachment: Attachment): Promise<string>`
+
 ## `validateProviderConfig(config: ProviderConfig): ProviderValidationError[]`
 
 #### interface `ProviderValidationError`
@@ -264,6 +303,28 @@ usage examples the model can follow.
 Minimal registry document shape accepted by {@link extractRegistryHints}.
 
 - **entries**: `RegistryHintEntry[]`
+
+## `deriveScaffoldSchema(definitionSchema: Record<string, unknown>, provider: Provider): Record<string, unknown>`
+
+Derive a scaffold-appropriate JSON Schema from the full definition schema.
+
+Reads property definitions (types, enums, descriptions) from the canonical
+source but only includes the scaffold-relevant subset. The result is
+adapted for the target provider's structured output constraints.
+
+## `scaffoldOutputToDefinition(output: {
+    title: string;
+    items: unknown[];
+}): FormDefinition`
+
+Convert scaffold output (from any provider) into a FormDefinition.
+Strips nulls from OpenAI strict mode, adds envelope fields.
+
+#### type `Provider`
+
+```ts
+type Provider = 'openai' | 'gemini' | 'anthropic';
+```
 
 #### class `SessionStore`
 
@@ -368,6 +429,12 @@ Result of executing a single MCP tool call.
 Passed to adapters so they can discover and invoke MCP tools.
 
 ##### `callTool(name: string, args: Record<string, unknown>): Promise<ToolCallResult>`
+
+##### `getProjectSnapshot(): Promise<{
+        definition: FormDefinition;
+    } | null>`
+
+Get the current project state snapshot (for diff tracking after refinement).
 
 #### interface `ToolCallRecord`
 

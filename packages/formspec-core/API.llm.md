@@ -216,27 +216,6 @@ definition-pages
 
 ## `definitionPagesHandlers: Record<string, CommandHandler>`
 
-Screener command handlers for the Formspec Studio Core.
-
-The screener is a pre-form eligibility check mechanism -- a self-contained
-routing subsystem with its own items, binds, and conditional routes. It
-operates in its own scope, entirely separate from the main form's instance
-data. The purpose of the screener is to collect a small set of answers
-(screening questions) and then evaluate routing rules to determine which
-form definition (or variant) the respondent should be directed to.
-
-A screener consists of:
-- **Items**: form fields presented to the respondent (same shape as main form
-  items, but scoped to the screener).
-- **Binds**: FEL-based bind expressions (calculate, relevant, required, etc.)
-  that target screener item keys.
-- **Routes**: an ordered list of condition/target pairs. Each route has a FEL
-  `condition` expression evaluated against screener item values and a `target`
-  URI pointing to the destination definition. Routes are evaluated in order;
-  first match wins.
-
-definition-screener
-
 ## `definitionScreenerHandlers: Record<string, CommandHandler>`
 
 Command handlers for managing definition-level shapes (cross-field validation rules).
@@ -354,6 +333,8 @@ handlers/project
 
 ## `projectHandlers: Record<string, CommandHandler>`
 
+## `screenerHandlers: Record<string, CommandHandler>`
+
 Theme command handlers.
 
 The Formspec theme document controls visual presentation through a three-level
@@ -392,7 +373,15 @@ Initializes `component.tree` with a synthetic Stack root if absent.
 Internal representation of a component tree node.
 
 - `component` -- the component type name (built-in or custom).
-- `bind` -- present when the node is bound to a definition item key.
+- `bind` -- present when the node is bound to a definition item key. In memory
+  this stores the **leaf `item.key`** only (e.g. `"email"`), not the full dotted
+  path. At export time, `cleanTreeForExport()` in `raw-project.ts` rewrites it to
+  the absolute path by prepending the group prefix accumulated from ancestor nodes
+  (e.g. `"contact.email"`). Code that reads `bind` from an in-memory `TreeNode`
+  must not assume it is a rooted path.
+- `definitionItemPath` -- optional absolute definition path for this node (set by
+  `reconcileComponentTree`). Studio-only; stripped on export. Disambiguates
+  duplicate leaf keys across pages and layout wrappers.
 - `nodeId` -- present on unbound nodes (layout, container).
 - `children` -- child nodes; only meaningful for Layout and Container types.
 - `style`, `accessibility`, `responsive` -- typed sub-objects for property handlers.
@@ -586,6 +575,12 @@ Invalidates all cached views.
 ##### `allDataTypes(): DataTypeInfo[]`
 
 ##### `parseFEL(expression: string, context?: FELParseContext): FELParseResult`
+
+##### `traceFEL(expression: string, fields?: Record<string, unknown>): import('@formspec-org/engine/fel-runtime').FelTraceResult`
+
+Evaluate a FEL expression and return a structured trace of evaluation
+steps. Intended for MCP / LLM surfaces; values are projected to JSON
+so type fidelity (money, date) is lost but readability is universal.
 
 ##### `felFunctionCatalog(): FELFunctionEntry[]`
 
@@ -1008,6 +1003,8 @@ command-dispatch pipeline. Queries are delegated to pure functions in `queries/`
 
 ##### `parseFEL(expression: string, context?: FELParseContext): FELParseResult`
 
+##### `traceFEL(expression: string, fields?: Record<string, unknown>): FelTraceResult`
+
 ##### `felFunctionCatalog(): FELFunctionEntry[]`
 
 ##### `availableReferences(context?: string | FELParseContext): FELReferenceSet`
@@ -1040,6 +1037,24 @@ command-dispatch pipeline. Queries are delegated to pure functions in `queries/`
 
 ##### `restoreState(snapshot: ProjectState): void`
 
+Wholesale replace project state with a prior snapshot.
+
+CONTRACT — the snapshot is held BY REFERENCE:
+  - Callers MUST NOT mutate `snapshot` after this call. The project will
+    observe those mutations as corruption of its internal state.
+  - Callers who intend to keep using their own copy MUST clone before
+    passing (see ProposalManager — every call site wraps with
+    `structuredClone`).
+
+Why by-reference rather than cloning inside?  Snapshots are already full
+`ProjectState` graphs (definition + component + theme + mappings + locales
++ baseline). In snapshot-and-replay flows (reject / partial-merge) the
+caller clones once from the stored `snapshotBefore`; cloning again here
+would double the cost of every replay for a guarantee the caller already
+provides.  In dev builds we deep-freeze the snapshot after assignment so
+accidental mutation throws at the mutation site rather than silently
+corrupting downstream reads.
+
 ##### `undo(): boolean`
 
 ##### `redo(): boolean`
@@ -1055,6 +1070,11 @@ command-dispatch pipeline. Queries are delegated to pure functions in `queries/`
 ##### `clearRedo(): void`
 
 ##### `batch(commands: AnyCommand[]): CommandResult[]`
+
+## `indexRegistryPayload(registry: Record<string, unknown>, fallbackUrl?: string): LoadedRegistry`
+
+Build a loaded registry record from a registry document payload.
+Ensures a stable `url` on the stored document for `project.removeRegistry`.
 
 ## `normalizeState(state: ProjectState): void`
 
@@ -1218,6 +1238,7 @@ Mutations happen exclusively through dispatched commands; never mutate directly.
 - **locales** (`Record<string, LocaleState>`): Loaded locale documents keyed by BCP 47 code.
 - **selectedLocaleId** (`string`): BCP 47 code of the active locale in the editor.
 - **extensions** (`ExtensionsState`): Loaded extension registries providing custom types, functions, and constraints.
+- **screener** (`ScreenerDocument | null`): Standalone Screener Document, or null if no screener is loaded.
 - **versioning** (`VersioningState`): Baseline snapshot and release history for changelog generation.
 
 #### interface `Command`
@@ -1242,6 +1263,11 @@ Tells the Project (and consumers) what side effects are needed.
 - **clearHistory** (`boolean`): If true, discard all undo/redo history (e.g. after a full project replacement).
 - **insertedPath** (`string`): Canonical path of a newly inserted item, returned by add-item style handlers.
 - **newPath** (`string`): Canonical path after a move or rename operation.
+- **nodeRef** (`{
+        bind?: string;
+        nodeId?: string;
+    }`): Reference to a created/wrapped component node, returned by component tree handlers.
+- **nodeNotFound** (`boolean`): True when the target component node was not found (non-throwing).
 
 #### interface `LogEntry`
 
@@ -1289,8 +1315,9 @@ Returned by `Project.statistics()` for dashboards and heuristic checks.
 - **componentNodeCount** (`number`): Number of nodes in the component tree.
 - **totalMappingRuleCount** (`number`): Total number of mapping rules across all integrations.
 - **mappingCount** (`number`): Number of distinct mapping documents.
-- **screenerFieldCount** (`number`): Number of fields in the screener (0 if no screener or disabled).
-- **screenerRouteCount** (`number`): Number of routing rules in the screener (0 if no screener or disabled).
+- **screenerFieldCount** (`number`): Number of fields in the screener (0 if no screener loaded).
+- **screenerRouteCount** (`number`): Total routing rules across all screener phases (0 if no screener loaded).
+- **screenerPhaseCount** (`number`): Number of evaluation phases in the screener (0 if no screener loaded).
 
 #### interface `ItemFilter`
 
@@ -1463,7 +1490,10 @@ Returned by `Project.fieldDependents()`.
     }[]`): Shape rules whose expressions reference this field.
 - **variables** (`string[]`): Names of variables whose expressions reference this field.
 - **mappingRules** (`string[]`): Identifiers of mapping rules that reference this field (format: `mappingId:index`).
-- **screenerRoutes** (`number[]`): Indices of screener routes whose conditions reference this field.
+- **screenerRoutes** (`Array<{
+        phaseId: string;
+        routeIndex: number;
+    }>`): Screener routes whose expressions reference this field.
 
 #### interface `Diagnostic`
 
@@ -1475,6 +1505,8 @@ Used across structural, expression, extension, and consistency checks.
 - **severity** (`'error' | 'warning' | 'info'`): Severity level.
 - **code** (`string`): Machine-readable diagnostic code (e.g. `'UNRESOLVED_EXTENSION'`).
 - **message** (`string`): Human-readable description of the issue.
+- **line** (`number`): 1-based line number within the expression, when available (FEL parse errors).
+- **column** (`number`): 1-based column number within the expression, when available (FEL parse errors).
 
 #### interface `Diagnostics`
 

@@ -4,6 +4,8 @@
 
 `<formspec-render>` custom element that binds a FormEngine to the DOM. Provides a component registry, styling pipeline, navigation (wizard/field focus), and accessibility attributes.
 
+## `defaultTheme: import("@formspec-org/layout").ThemeDocument`
+
 ## `renderCheckboxGroup: AdapterRenderFn<CheckboxGroupBehavior>`
 
 ## `renderCheckbox: AdapterRenderFn<FieldBehavior>`
@@ -60,6 +62,10 @@
 
 ## `renderRating: AdapterRenderFn<RatingBehavior>`
 
+## `SelectClearSentinel`
+
+Distinct value for the native select "clear" row (must stay in sync with `select.ts` behavior change handler).
+
 ## `renderSelect: AdapterRenderFn<SelectBehavior>`
 
 ## `createFieldDOM(behavior: FieldBehavior, actx: AdapterContext, options?: FieldDOMOptions): FieldDOM`
@@ -76,10 +82,16 @@ Returns element references for adapter-specific control insertion.
 Finalize field DOM: append remote options status, error display, and apply theme styles.
 Call this AFTER inserting the control element.
 
-## `applyControlSlotClass(control: HTMLElement, behavior: FieldBehavior, actx: AdapterContext, isGroup?: boolean): void`
+## `watchFieldValueChanges(behavior: FieldBehavior, fallbackControl: HTMLSelectElement, fn: () => void): () => void`
 
-Apply widgetClassSlots.control to the actual input element(s).
-For radio/checkbox groups, applies to each input. For others, applies to the control.
+Run `fn` whenever the field value may have changed.
+
+With a {@link FieldBehavior.vm}, tracks `vm.value` via Preact `effect` (engine view-model cells are typed as
+read-only signal accessors only; observing them goes through `effect`, not `.subscribe` on the public type).
+
+Without a VM, subscribes to `change` on `fallbackControl` (native &lt;select&gt; / similar).
+
+## `applyControlSlotClass(control: HTMLElement, behavior: FieldBehavior, actx: AdapterContext, isGroup?: boolean): void`
 
 #### interface `FieldDOMOptions`
 
@@ -433,6 +445,10 @@ Custom adapters can ignore this — they own their own styling.
         keywords?: string[];
     }>`
 
+##### `setValue(val: any): void`
+
+##### `touch(): void`
+
 ##### `bind(refs: FieldRefs): () => void`
 
 #### interface `RadioGroupBehavior`
@@ -472,12 +488,14 @@ Custom adapters can ignore this — they own their own styling.
 - **step?**: `number`
 - **showStepper**: `boolean`
 - **dataType**: `string`
+- **placeholder?**: `string`
 
 #### interface `DatePickerBehavior`
 
 - **inputType**: `string`
 - **minDate?**: `string`
 - **maxDate?**: `string`
+- **placeholder?**: `string`
 
 #### interface `MoneyInputBehavior`
 
@@ -841,6 +859,8 @@ If the engine hasn't been created yet, the locale code is buffered
 and applied when the engine boots.
 - **(get) locale** (`string`): The currently active locale code, or empty string if none set.
 - **findItemByKey** (`(key: string, items?: any[]) => any | null`): @internal
+
+##### `attributeChangedCallback(name: string): void`
 
 ##### `classifyScreenerRoute(route: ScreenerRoute | null | undefined): ScreenerRouteType`
 

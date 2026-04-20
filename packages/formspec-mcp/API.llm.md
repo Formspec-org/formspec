@@ -510,12 +510,32 @@ type DataAction = 'add' | 'update' | 'remove' | 'rename';
     }[];
 }`
 
+## `handleFelTrace(registry: ProjectRegistry, projectId: string, params: FelTraceParams): {
+    structuredContent?: Record<string, unknown> | undefined;
+    content: {
+        type: "text";
+        text: string;
+    }[];
+}`
+
+Evaluate a FEL expression and return a structured trace of evaluation steps.
+
+The trace is identical in shape to what Rust `fel_core::evaluate_with_trace`
+produces — each step carries a PascalCase `kind` tag (`FieldResolved`,
+`FunctionCalled`, `BinaryOp`, `IfBranch`, `ShortCircuit`) plus per-kind payload.
+Intended for LLM / error-explainer surfaces.
+
 #### interface `FelParams`
 
 - **action**: `FelAction`
 - **path?**: `string`
 - **expression?**: `string`
 - **context_path?**: `string`
+
+#### interface `FelTraceParams`
+
+- **expression**: `string`
+- **fields?**: `Record<string, unknown>`
 
 #### type `FelAction`
 
@@ -737,7 +757,7 @@ type PublishAction = 'set_version' | 'set_status' | 'validate_transition' | 'get
 type LifecycleStatus = 'draft' | 'active' | 'retired';
 ```
 
-## `handleDescribe(registry: ProjectRegistry, projectId: string, mode: 'structure' | 'audit', target?: string): {
+## `handleDescribe(registry: ProjectRegistry, projectId: string, mode: 'structure' | 'audit' | 'shapes', target?: string): {
     structuredContent?: Record<string, unknown> | undefined;
     content: {
         type: "text";
@@ -840,28 +860,31 @@ type ResponseAction = 'set_test_response' | 'get_test_response' | 'clear_test_re
 #### interface `ScreenerParams`
 
 - **action**: `ScreenerAction`
-- **enabled?**: `boolean`
+- **url?**: `string`
+- **title?**: `string`
 - **key?**: `string`
 - **label?**: `string`
 - **type?**: `string`
 - **props?**: `FieldProps`
+- **phase_id?**: `string`
+- **strategy?**: `string`
+- **config?**: `Record<string, unknown>`
+- **route_index?**: `number`
 - **condition?**: `string`
 - **target?**: `string`
 - **message?**: `string`
-- **route_index?**: `number`
-- **changes?**: `{
-        condition?: string;
-        target?: string;
-        label?: string;
-        message?: string;
-    }`
+- **score?**: `string`
+- **threshold?**: `number`
+- **override?**: `boolean`
+- **terminal?**: `boolean`
+- **changes?**: `Record<string, unknown>`
 - **direction?**: `'up' | 'down'`
+- **insert_index?**: `number`
+- **availability_from?**: `string | null`
+- **availability_until?**: `string | null`
+- **result_validity?**: `string | null`
 
 #### type `ScreenerAction`
-
-```ts
-type ScreenerAction = 'enable' | 'add_field' | 'remove_field' | 'add_route' | 'update_route' | 'reorder_route' | 'remove_route';
-```
 
 ## `handleStructureBatch(registry: ProjectRegistry, projectId: string, params: {
     action: string;
@@ -945,15 +968,12 @@ type ScreenerAction = 'enable' | 'add_field' | 'remove_field' | 'add_route' | 'u
 
 ## `handleUpdate(registry: ProjectRegistry, projectId: string, target: 'item' | 'metadata', params: {
     path?: string;
-    changes: ItemChanges | MetadataChanges;
+    changes?: ItemChanges | MetadataChanges;
+    items?: Array<{
+        path: string;
+        changes: ItemChanges;
+    }>;
 }): {
-    isError: true;
-    content: {
-        type: "text";
-        text: string;
-    }[];
-    structuredContent: Record<string, unknown>;
-} | {
     structuredContent?: Record<string, unknown> | undefined;
     content: {
         type: "text";
@@ -1025,14 +1045,11 @@ type StyleAction = 'layout' | 'style' | 'style_all';
 - **key?**: `string`
 - **value?**: `unknown`
 - **property?**: `string`
+- **itemKey?**: `string`
 - **match?**: `unknown`
 - **apply?**: `unknown`
 
 #### type `ThemeAction`
-
-```ts
-type ThemeAction = 'set_token' | 'remove_token' | 'list_tokens' | 'set_default' | 'list_defaults' | 'add_selector' | 'list_selectors';
-```
 
 ## `handleWidget(registry: ProjectRegistry, projectId: string, params: WidgetParams): {
     structuredContent?: Record<string, unknown> | undefined;

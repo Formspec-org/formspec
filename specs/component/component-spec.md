@@ -946,7 +946,7 @@ than 1, the input renders as a multi-line textarea.
 | `inputMode` | string | `"text"` | No | Input mode hint. One of `"text"`, `"email"`, `"tel"`, `"url"`, `"search"`. |
 | `prefix` | string | — | No | Static text rendered before the input (e.g., `"https://"`). |
 | `suffix` | string | — | No | Static text rendered after the input (e.g., `".com"`). |
-| `variant` | string | `"plain"` | No | Content-type variant. `"plain"` accepts unstyled text. `"richtext"` accepts formatted text with runtime-defined serialization. `"markdown"` accepts Markdown source — portable, diffable, and degrades gracefully to plain text. `"richtext"` and `"markdown"` both MUST bind to a `string` or `text` field. |
+| `variant` | string | `"plain"` | No | Content-type variant. `"plain"` accepts unstyled text. `"richtext"` accepts formatted text with runtime-defined serialization. `"markdown"` accepts Markdown source — portable, diffable, and degrades gracefully to plain text. `"latex"` accepts LaTeX source — authoritative for mathematical and scientific notation; degrades to raw source on renderers without a LaTeX renderer. `"richtext"`, `"markdown"`, and `"latex"` all MUST bind to a `string` or `text` field. |
 
 #### Rendering Requirements
 
@@ -963,10 +963,16 @@ than 1, the input renders as a multi-line textarea.
   is the preferred variant when the document will be diffed, version-
   controlled, or consumed by non-renderer tooling — the source is plain
   text and degrades gracefully.
-- For both `"richtext"` and `"markdown"`, the bound field's `dataType`
-  MUST be `string` or `text` — neither representation is encodable in
-  any other primitive. A non-string bind with either variant MUST
-  produce a lint error (E804).
+- When `variant` is `"latex"`, MUST render a LaTeX-aware surface (source
+  editor with an optional rendered preview via a LaTeX engine such as
+  KaTeX or MathJax) and store the raw LaTeX source in the bound string
+  field. LaTeX is the authoritative variant for mathematical, scientific,
+  and typeset-document content; a renderer without a LaTeX engine MUST
+  display the raw source rather than silently discard formatting.
+- For `"richtext"`, `"markdown"`, and `"latex"`, the bound field's
+  `dataType` MUST be `string` or `text` — none of these representations
+  is encodable in any other primitive. A non-string bind with any of
+  these variants MUST produce a lint error (E804).
 - MUST propagate the bound item's `required`, `readOnly`, and
   `relevant` state.
 - MUST display validation errors from the bound item.
@@ -1001,6 +1007,16 @@ than 1, the input renders as a multi-line textarea.
   "variant": "markdown",
   "maxLines": 12,
   "placeholder": "# Heading\n\nWrite in Markdown…"
+}
+```
+
+```json
+{
+  "component": "TextInput",
+  "bind": "abstractEquation",
+  "variant": "latex",
+  "maxLines": 6,
+  "placeholder": "\\int_0^\\infty e^{-x^2}\\,dx"
 }
 ```
 
