@@ -163,7 +163,7 @@ Five contracts exist; more are known to be needed. Naming them honestly matters 
 
 - **Evidence integrity.** Files attached during intake — pay stubs, ID photos, supporting documents — are load-bearing for rights-impacting decisions. A contract declaring how their content hashes bind into the chain and travel in the export bundle is missing. Storage is an adapter; the binding is center.
 - **Identity attestation shape.** Identity proofing is an adapter slot. The normalized attestation that lands in the ledger is a center concern, currently described in prose rather than contracted.
-- **Signature attestation shape.** Signing workflows — multi-party signatures, countersignatures, consent capture under ESIGN, UETA, or eIDAS — are load-bearing for any rights-impacting use case that needs legal weight. A contract declaring the shape of a signature event in the record — who signed, what document-hash they bound to, under which identity-proofing strength, under which consent capture — is missing. Signing ceremonies remain adapters and are explicitly not baked into the center (see "What this is not"); the center concern is only the claim shape that lands in the chain and travels in the export bundle.
+- **Signature attestation shape.** Signing workflows — multi-party signatures, countersignatures, consent capture under ESIGN, UETA, or eIDAS — are load-bearing for any rights-impacting use case that needs legal weight. WOS pins the governance semantics in its Signature Profile: signer roles, flow patterns, intent capture, and a provenance record kind covering signer, document-hash binding, identity-proofing reference, and consent-capture reference. Trellis owns certificate-of-completion composition in the export bundle. What is open is the cross-layer contract that connects them: the exact shape of the record that crosses the governance custody hook, harmonized with identity-attestation shape and document-hash binding. Signing ceremonies remain adapters (see "What this is not").
 - **Actor authorization.** Governance constrains AI agents through deontic modalities and structures human review. A parallel shape for *human* authorization — actor acted under which policy at which moment, attested into the chain — is implicit. IAM is an adapter; the claim shape is center.
 - **Amendment and supersession.** Append-only is correct until a decision is wrong. Cross-layer semantics for one decision superseding another — new chain, linked chain, governance event shape — are undefined. No adapter supplies this; it is fully center work.
 - **Statutory clocks.** Rights-impacting workflows run on deadlines — appeal windows, SLA limits, expirations. A contract declaring how a deadline attaches to an event, what fires when it elapses, and how clock state seals into the chain is missing. Timers are adapters; deadline semantics are center.
@@ -229,16 +229,20 @@ Each project tracks its own finishing work. Current counts, gate names, open dec
 
 ## Positioning
 
-The stack admits multiple valid audiences because the center is multi-valent, but multiple valid audiences is an architectural property, not a go-to-market strategy. The lead wedge for the near term is mid-market regulated-industry CTOs with a current audit finding about AI-assisted decisioning — a budget, a clear pain (compliance cannot reconstruct what the model saw), and a sales cycle short enough for a pre-release stack to land.
+The stack admits multiple valid audiences because the center is multi-valent, but multiple valid audiences is an architectural property, not a go-to-market strategy. Two delivery vehicles carry the near-term wedge; both are stack-level and exercise all three layers.
+
+**Federal-agency rights-impacting pilot.** A DocuSign and Adobe Forms replacement for a government workflow where the record must outlive the vendor. Validates the three layers end-to-end on a concrete rights-impacting case. Governance artifacts, offline-verifiable bundles, and declared AI-agent constraints are scored differentiators against incumbent form-and-signature vendors that offer none of them.
+
+**Public SaaS.** A multi-tenant form builder on the same three-spec center — Jotform, Google Forms, and Typeform on the core UX, with two differentiators no incumbent combines: built-in AI-agent governance and a cryptographically-verifiable signature ledger. The ledger is the mechanism that makes a verifiable, DocuSign-equivalent signature available without the DocuSign business model.
 
 Supporting audiences — each genuinely valid but not prioritized:
 
-- Government, primes, and SBIR channels: governance artifacts as a scored differentiator on rights-impacting-workflow proposals.
+- Primes and SBIR channels beyond the first pilot: governance artifacts as a scored differentiator on rights-impacting-workflow proposals.
 - Press and founder-led attention: the record survives the vendor.
 - The developer community: portable form runtime, shared kernel, identical semantics on every platform.
 - The design-systems community: honest seams between data, behavior, and presentation.
 
-The supporting wedges do not fight the lead architecturally. They compete for engineering hours; the lead wins them by default and supporting wedges earn them with concrete pull signal.
+The supporting wedges do not fight the two leads architecturally. They compete for engineering hours; the leads win them by default and supporting wedges earn them with concrete pull signal.
 
 The one positioning mistake that is load-bearing: letting any wedge leak into the center. Chasing a pitch by modifying the specs to flatter it is how multi-valent stacks become narrow ones.
 
@@ -246,7 +250,7 @@ The one positioning mistake that is load-bearing: letting any wedge leak into th
 
 ## What this is not
 
-- **A hosted product.** No SaaS exists. Each project is a specification plus reference implementation; you host it or integrate it.
+- **A hosted product — today.** No SaaS exists yet; see Positioning for the planned one. Each project is a specification plus reference implementation; you host it or integrate it.
 - **A workflow engine.** The governance layer runs on top of existing engines. It does not durably execute workflows; it governs them.
 - **A rendering library.** The intake layer is a data and behavior specification. Rendering is a pluggable sidecar.
 - **A blockchain.** The integrity layer anchors to external trust substrates. Specific substrate choices are pluggable; none is required.
