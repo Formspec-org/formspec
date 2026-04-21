@@ -8,9 +8,9 @@ use fel_core::{
     print_expr, tokenize_to_json_value,
 };
 use fel_core::{
-    evaluate, evaluate_with_trace, expr_is_interpolation_static_literal, fel_diagnostics_to_json_value,
-    fel_to_json, field_map_from_json_str, formspec_environment_from_json_map,
-    has_error_diagnostics, parse, prepare_fel_expression_owned,
+    evaluate, evaluate_with_trace, expr_is_interpolation_static_literal,
+    fel_diagnostics_to_json_value, fel_to_json, field_map_from_json_str,
+    formspec_environment_from_json_map, has_error_diagnostics, parse, prepare_fel_expression_owned,
     prepare_fel_host_options_from_json_map, reject_undefined_functions,
 };
 use formspec_core::{

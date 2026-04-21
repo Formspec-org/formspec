@@ -3,9 +3,7 @@
 //! These tests assert on the shape of emitted [`TraceStep`]s for small FEL
 //! programs. They are the contract for the v0 trace API and the regression
 //! guard for the non-tracing hot path.
-use fel_core::{
-    FelValue, MapEnvironment, Trace, TraceStep, evaluate, evaluate_with_trace, parse,
-};
+use fel_core::{FelValue, MapEnvironment, Trace, TraceStep, evaluate, evaluate_with_trace, parse};
 use rust_decimal::Decimal;
 use serde_json::json;
 use std::collections::HashMap;
@@ -123,11 +121,9 @@ fn sum_emits_function_called_step() {
         .steps
         .iter()
         .find_map(|s| match s {
-            TraceStep::FunctionCalled {
-                name,
-                args,
-                result,
-            } => Some((name.clone(), args.clone(), result.clone())),
+            TraceStep::FunctionCalled { name, args, result } => {
+                Some((name.clone(), args.clone(), result.clone()))
+            }
             _ => None,
         })
         .expect("FunctionCalled step");
@@ -243,11 +239,14 @@ fn tracing_and_non_tracing_paths_agree_on_result() {
         ("a", FelValue::Number(Decimal::from(7))),
         ("b", FelValue::Number(Decimal::from(11))),
         ("n", FelValue::Number(Decimal::from(4))),
-        ("items", FelValue::Array(vec![
-            FelValue::Number(Decimal::from(1)),
-            FelValue::Number(Decimal::from(2)),
-            FelValue::Number(Decimal::from(3)),
-        ])),
+        (
+            "items",
+            FelValue::Array(vec![
+                FelValue::Number(Decimal::from(1)),
+                FelValue::Number(Decimal::from(2)),
+                FelValue::Number(Decimal::from(3)),
+            ]),
+        ),
         ("maybe", FelValue::Null),
         ("fallback", FelValue::Number(Decimal::from(99))),
     ]);
@@ -266,14 +265,14 @@ fn tracing_and_non_tracing_paths_agree_on_result() {
         "$a * ($b - 1)",
         // F4: expression kinds that deliberately emit no trace steps today.
         // Their *values* still have to match the plain path.
-        "-$a",                                          // UnaryOp
-        "let x = $a + 1 in x * 2",                      // LetBinding
-        "coalesce($maybe, $fallback)",                  // lazy function
-        "length($items)",                               // pure eager fn on an array
-        "$items[*]",                                    // wildcard postfix access
-        "$a in [1, 7, 42]",                             // Membership
-        "{ key: $a, doubled: $a * 2 }",                 // Object literal
-        "[$a, $b, $n]",                                 // Array literal
+        "-$a",                          // UnaryOp
+        "let x = $a + 1 in x * 2",      // LetBinding
+        "coalesce($maybe, $fallback)",  // lazy function
+        "length($items)",               // pure eager fn on an array
+        "$items[*]",                    // wildcard postfix access
+        "$a in [1, 7, 42]",             // Membership
+        "{ key: $a, doubled: $a * 2 }", // Object literal
+        "[$a, $b, $n]",                 // Array literal
     ] {
         let expr = parse(source).expect("parse");
         let plain = evaluate(&expr, &env);

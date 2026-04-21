@@ -82,8 +82,9 @@ pub fn eval_fel_with_trace(
 
     let value = fel_to_python(py, &result.value)?;
     let diagnostics = json_to_python(py, &fel_diagnostics_to_json_value(&result.diagnostics))?;
-    let trace_json = serde_json::to_value(&trace.steps)
-        .map_err(|e| pyo3::exceptions::PyValueError::new_err(format!("trace serialization: {e}")))?;
+    let trace_json = serde_json::to_value(&trace.steps).map_err(|e| {
+        pyo3::exceptions::PyValueError::new_err(format!("trace serialization: {e}"))
+    })?;
     let trace_py = json_to_python(py, &trace_json)?;
 
     let payload = PyDict::new(py);

@@ -327,7 +327,6 @@ fn render_field_path(name: &Option<String>, path: &[PathSegment]) -> String {
 }
 
 impl<'a> Evaluator<'a> {
-
     fn eval(&mut self, expr: &Expr) -> FelValue {
         match expr {
             Expr::Null => FelValue::Null,
@@ -766,7 +765,8 @@ impl<'a> Evaluator<'a> {
         match op {
             BinaryOp::Eq => {
                 let result = self.eval_equality(&left, &right);
-                if self.tracing() && !matches!(left, FelValue::Array(_))
+                if self.tracing()
+                    && !matches!(left, FelValue::Array(_))
                     && !matches!(right, FelValue::Array(_))
                 {
                     self.trace_step(TraceStep::BinaryOp {
@@ -784,7 +784,8 @@ impl<'a> Evaluator<'a> {
                     FelValue::Boolean(b) => FelValue::Boolean(!b),
                     other => other,
                 };
-                if self.tracing() && !matches!(left, FelValue::Array(_))
+                if self.tracing()
+                    && !matches!(left, FelValue::Array(_))
                     && !matches!(right, FelValue::Array(_))
                 {
                     self.trace_step(TraceStep::BinaryOp {

@@ -36,8 +36,8 @@ pub(crate) struct RuleMetadata {
 static REGISTRY: LazyLock<HashMap<String, RuleMetadata>> = LazyLock::new(load_registry);
 
 fn load_registry() -> HashMap<String, RuleMetadata> {
-    let parsed: Value = serde_json::from_str(REGISTRY_JSON)
-        .expect("specs/lint-codes.json must be valid JSON");
+    let parsed: Value =
+        serde_json::from_str(REGISTRY_JSON).expect("specs/lint-codes.json must be valid JSON");
     let rules = parsed
         .get("rules")
         .and_then(Value::as_array)
@@ -105,9 +105,11 @@ mod tests {
 
     #[test]
     fn registry_parses_and_populates_tested_codes() {
-        for code in ["E101", "E300", "E500", "E600", "W300", "W704", "W800", "W802"] {
-            let meta = metadata_for(code)
-                .unwrap_or_else(|| panic!("expected tested metadata for {code}"));
+        for code in [
+            "E101", "E300", "E500", "E600", "W300", "W704", "W800", "W802",
+        ] {
+            let meta =
+                metadata_for(code).unwrap_or_else(|| panic!("expected tested metadata for {code}"));
             assert!(!meta.spec_ref.is_empty(), "{code} spec_ref empty");
             assert!(
                 meta.spec_ref.starts_with("specs/"),
@@ -150,5 +152,4 @@ mod tests {
         assert!(d.suggested_fix.is_none());
         assert!(d.spec_ref.is_none());
     }
-
 }

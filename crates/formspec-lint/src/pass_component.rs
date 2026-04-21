@@ -198,12 +198,13 @@ impl<'a> WalkState<'a> {
 
         // E801: Unknown component
         if !is_builtin(comp_type) && !self.custom_names.contains(comp_type) {
-            self.diags.push(crate::metadata::with_metadata(LintDiagnostic::error(
-                "E801",
-                PASS,
-                path,
-                format!("Unknown component type: '{comp_type}'"),
-            )));
+            self.diags
+                .push(crate::metadata::with_metadata(LintDiagnostic::error(
+                    "E801",
+                    PASS,
+                    path,
+                    format!("Unknown component type: '{comp_type}'"),
+                )));
         }
 
         // E806: Custom component missing required params
@@ -233,23 +234,27 @@ impl<'a> WalkState<'a> {
         if let Some(bind) = node.get("bind").and_then(|v| v.as_str()) {
             // W801: Layout/container shouldn't bind
             if should_not_bind(comp_type) {
-                self.diags.push(crate::metadata::with_metadata(LintDiagnostic::warning(
-                    "W801",
-                    PASS,
-                    path,
-                    format!("Layout/container component '{comp_type}' should not declare a bind"),
-                )));
+                self.diags
+                    .push(crate::metadata::with_metadata(LintDiagnostic::warning(
+                        "W801",
+                        PASS,
+                        path,
+                        format!(
+                            "Layout/container component '{comp_type}' should not declare a bind"
+                        ),
+                    )));
             }
 
             // W804: Duplicate bind in tree — a single field MUST NOT be
             // bound by more than one component in the same tree (spec §4.2).
             if !self.all_binds.insert(bind.to_string()) {
-                self.diags.push(crate::metadata::with_metadata(LintDiagnostic::warning(
-                    "W804",
-                    PASS,
-                    path,
-                    format!("Duplicate bind in component tree: {bind}"),
-                )));
+                self.diags
+                    .push(crate::metadata::with_metadata(LintDiagnostic::warning(
+                        "W804",
+                        PASS,
+                        path,
+                        format!("Duplicate bind in component tree: {bind}"),
+                    )));
             }
 
             // Cross-artifact checks for input components
@@ -301,7 +306,8 @@ impl<'a> WalkState<'a> {
                                     .get("variant")
                                     .and_then(|v| v.as_str())
                                     .unwrap_or("plain");
-                                let needs_string = matches!(variant, "richtext" | "markdown" | "latex");
+                                let needs_string =
+                                    matches!(variant, "richtext" | "markdown" | "latex");
                                 if needs_string {
                                     let is_string = field_info
                                         .data_type
@@ -325,12 +331,13 @@ impl<'a> WalkState<'a> {
                 // W803: Multiple editable inputs bind to the same field
                 // (spec §4.3 Editable Binding Uniqueness).
                 if !self.editable_binds.insert(bind.to_string()) {
-                    self.diags.push(crate::metadata::with_metadata(LintDiagnostic::warning(
-                        "W803",
-                        PASS,
-                        path,
-                        format!("Multiple editable inputs bind to the same field: '{bind}'"),
-                    )));
+                    self.diags
+                        .push(crate::metadata::with_metadata(LintDiagnostic::warning(
+                            "W803",
+                            PASS,
+                            path,
+                            format!("Multiple editable inputs bind to the same field: '{bind}'"),
+                        )));
                 }
             }
         }

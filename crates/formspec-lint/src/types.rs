@@ -361,7 +361,10 @@ mod tests {
             .with_suggested_fix("fix it")
             .with_spec_ref("specs/core/spec.md#bind-target");
         assert_eq!(diag.suggested_fix.as_deref(), Some("fix it"));
-        assert_eq!(diag.spec_ref.as_deref(), Some("specs/core/spec.md#bind-target"));
+        assert_eq!(
+            diag.spec_ref.as_deref(),
+            Some("specs/core/spec.md#bind-target")
+        );
     }
 
     // ── Finding 47: sort_diagnostics stability ───────────────────

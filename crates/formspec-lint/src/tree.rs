@@ -81,27 +81,31 @@ pub fn build_item_index(document: &Value) -> ItemTreeIndex {
         // E200: duplicate key (different location in the tree)
         if index.by_key.contains_key(ctx.key) {
             index.ambiguous_keys.insert(ctx.key.to_string());
-            index.diagnostics.push(crate::metadata::with_metadata(LintDiagnostic::error(
-                "E200",
-                2,
-                &ctx.json_path,
-                format!(
-                    "Duplicate item key '{}' (first seen at {})",
-                    ctx.key, index.by_key[ctx.key].json_path
-                ),
-            )));
+            index
+                .diagnostics
+                .push(crate::metadata::with_metadata(LintDiagnostic::error(
+                    "E200",
+                    2,
+                    &ctx.json_path,
+                    format!(
+                        "Duplicate item key '{}' (first seen at {})",
+                        ctx.key, index.by_key[ctx.key].json_path
+                    ),
+                )));
         } else {
             index.by_key.insert(ctx.key.to_string(), item_ref.clone());
         }
 
         // E201: duplicate full path
         if index.by_full_path.contains_key(&ctx.dotted_path) {
-            index.diagnostics.push(crate::metadata::with_metadata(LintDiagnostic::error(
-                "E201",
-                2,
-                &ctx.json_path,
-                format!("Duplicate item path '{}'", ctx.dotted_path),
-            )));
+            index
+                .diagnostics
+                .push(crate::metadata::with_metadata(LintDiagnostic::error(
+                    "E201",
+                    2,
+                    &ctx.json_path,
+                    format!("Duplicate item path '{}'", ctx.dotted_path),
+                )));
         } else {
             index.by_full_path.insert(ctx.dotted_path.clone(), item_ref);
         }
