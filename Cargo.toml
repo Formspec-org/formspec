@@ -6,7 +6,7 @@ members = [
     "crates/formspec-eval",
     "crates/formspec-lint",
     "crates/formspec-py",
-    "crates/formspec-wasm",
+    "crates/formspec-wasm", "trellis/crates/trellis-cddl", "trellis/crates/trellis-cli", "trellis/crates/trellis-conformance", "trellis/crates/trellis-core", "trellis/crates/trellis-cose", "trellis/crates/trellis-export", "trellis/crates/trellis-store-memory", "trellis/crates/trellis-store-postgres", "trellis/crates/trellis-types", "trellis/crates/trellis-verify",
 ]
 resolver = "2"
 
