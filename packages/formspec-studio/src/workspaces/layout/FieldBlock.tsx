@@ -46,8 +46,6 @@ interface FieldBlockProps {
   onSelect?: (ev: MouseEvent | KeyboardEvent, selectionKey: string) => void;
   sortableGroup: string;
   sortableIndex: number;
-  /** Must exceed ancestor `LayoutContainer` sortable priority so inner rows win collision (nested Stack/Accordion). */
-  collisionPriority?: number;
   /** Dot-delimited parent path prefix (e.g. `demographics.`) shown before the key when inline editing. */
   groupPathPrefix?: string | null;
   /** Tier 1 definition copy — shown as inline summary rows when selected. */
@@ -94,7 +92,6 @@ export function FieldBlock({
   layoutPrimaryKey = null,
   sortableGroup,
   sortableIndex,
-  collisionPriority: _collisionPriority,
   onSelect,
   groupPathPrefix = null,
   description = null,
@@ -111,7 +108,6 @@ export function FieldBlock({
   onRemove,
   onStyleRemove,
 }: FieldBlockProps) {
-  void _collisionPriority;
   const buttonRef = useRef<HTMLDivElement | null>(null);
   const dragHandleRef = useRef<Element | null>(null);
   const [shellEl, setShellEl] = useState<HTMLDivElement | null>(null);

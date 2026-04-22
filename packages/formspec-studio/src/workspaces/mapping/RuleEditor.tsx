@@ -4,15 +4,11 @@ import { Section } from '../../components/ui/Section';
 import { RuleCard } from './RuleCard';
 import { InnerRules } from './InnerRules';
 import { useProject } from '../../state/useProject';
+import type { MappingRule } from './types';
 
 export function RuleEditor() {
   const mapping = useMapping();
-  const rules = (mapping?.rules ?? []) as Array<{
-    source?: string; sourcePath?: string;
-    target?: string; targetPath?: string;
-    transform?: string;
-    innerRules?: Array<{ source?: string; sourcePath?: string; target?: string; targetPath?: string; transform?: string }>;
-  }>;
+  const rules = (mapping?.rules ?? []) as MappingRule[];
   const project = useProject();
 
   const addRule = () => {

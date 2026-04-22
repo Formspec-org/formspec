@@ -51,6 +51,9 @@ export function FELEditor({ value, onSave, onCancel, placeholder, className, aut
   const definition = useOptionalDefinition();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [draft, setDraft] = useState(value);
+  const draftRef = useRef(value);
+  const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  draftRef.current = draft;
   const [activeOptionIndex, setActiveOptionIndex] = useState(0);
   const [autocomplete, setAutocomplete] = useState<FELAutocompleteTrigger | null>(null);
   const [autocompleteKind, setAutocompleteKind] = useState<'path' | 'function' | 'instanceName' | null>(null);
@@ -71,6 +74,12 @@ export function FELEditor({ value, onSave, onCancel, placeholder, className, aut
   useEffect(() => {
     setDraft(value);
   }, [value]);
+
+  useEffect(() => {
+    return () => {
+      if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
+    };
+  }, []);
 
   useLayoutEffect(() => {
     if (autoFocus && textareaRef.current) {
@@ -379,14 +388,14 @@ export function FELEditor({ value, onSave, onCancel, placeholder, className, aut
             }}
             onKeyDown={handleKeyDown}
             onBlur={(e) => {
-              // Don't save if focus moved to a sibling (e.g. the FEL reference popup).
               const container = e.currentTarget.closest('[data-fel-editor-root]');
               const next = e.relatedTarget as Node | null;
               if (container && next && container.contains(next)) return;
-              setTimeout(() => {
+              if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
+              blurTimeoutRef.current = setTimeout(() => {
                 setAutocomplete(null);
                 setAutocompleteKind(null);
-                onSave(draft);
+                onSave(draftRef.current);
               }, 150);
             }}
             style={{ caretColor: 'var(--studio-color-ink)' }}

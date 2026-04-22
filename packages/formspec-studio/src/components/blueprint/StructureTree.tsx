@@ -6,6 +6,7 @@ import { useProject } from '../../state/useProject';
 import { useCanvasTargets } from '../../state/useCanvasTargets';
 import { FieldIcon } from '../ui/FieldIcon';
 import { AddItemPalette, type FieldTypeOption } from '../AddItemPalette';
+import { EmptyBlueprintState } from '../shared/EmptyBlueprintState';
 
 interface ItemNode {
   key: string;
@@ -195,9 +196,7 @@ export function StructureTree() {
 
           <div className="flex flex-col gap-1 border-l border-border/55 pl-2">
             {items.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-5 border border-dashed border-border/70 rounded-[6px] bg-subtle/30 text-muted mx-1">
-                <span className="text-[12px] font-medium font-ui tracking-tight">No items defined</span>
-              </div>
+              <EmptyBlueprintState message="No items defined" />
             ) : (
               items.map((item) => (
                 <TreeNode

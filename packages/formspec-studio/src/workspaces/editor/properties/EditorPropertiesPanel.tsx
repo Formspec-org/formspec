@@ -1,6 +1,6 @@
 /** @filedesc Editor-tab properties panel showing only Tier 1 (definition) properties — no appearance, widget, or layout. */
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { bindsFor, shapesFor, buildDefLookup, isLayoutId, dataTypeInfo, propertyHelp } from '@formspec-org/studio-core';
+import { bindsFor, shapesFor, buildDefLookup, isLayoutId, dataTypeInfo, propertyHelp, getPresentationCascade } from '@formspec-org/studio-core';
 import { useDefinition } from '../../../state/useDefinition';
 import { useProject } from '../../../state/useProject';
 import { useSelection } from '../../../state/useSelection';
@@ -11,6 +11,8 @@ import { FieldConfigSection } from './FieldConfigSection';
 import { GroupConfigSection } from './GroupConfigSection';
 import { OptionsSection } from './OptionsSection';
 import { ContentSection } from './ContentSection';
+import { WidgetConstraintSection } from './WidgetConstraintSection';
+import { PresentationCascadeSection } from './PresentationCascadeSection';
 import { Section } from '../../../components/ui/Section';
 import { PropertyRow } from '../../../components/ui/PropertyRow';
 import { HelpTip } from '../../../components/ui/HelpTip';
@@ -37,6 +39,11 @@ export function EditorPropertiesPanel({ showActions = true }: { showActions?: bo
   const lookup = useMemo(() => buildDefLookup(items), [items]);
   const found = selectedKey ? lookup.get(selectedKey) : null;
   const itemPath = found?.path ?? '';
+
+  const presentationCascade = useMemo(
+    () => itemPath ? getPresentationCascade(project, itemPath) : {},
+    [project, itemPath],
+  );
 
   const handleRename = useCallback((originalPath: string, inputEl: HTMLInputElement) => {
     const nextKey = inputEl.value;
@@ -216,6 +223,16 @@ export function EditorPropertiesPanel({ showActions = true }: { showActions?: bo
         {isField && isChoice && (
           <OptionsSection path={path} item={item} project={project} />
         )}
+
+        {isField && (
+          <WidgetConstraintSection
+            path={path}
+            project={project}
+            widgetState={project.getWidgetConstraints(path)}
+          />
+        )}
+
+        <PresentationCascadeSection cascade={presentationCascade} />
 
         <BindsInlineSection
           path={path}

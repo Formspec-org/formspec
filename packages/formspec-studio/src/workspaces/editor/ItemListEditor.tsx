@@ -419,7 +419,7 @@ export function ItemListEditor({ config }: { config: ItemListEditorConfig }) {
     [items, allBinds, treeCtx],
   );
 
-  const paletteScope = allowGroups ? 'editor' : 'editor';
+  const paletteScope = 'editor';
 
   return (
     <WorkspacePage maxWidth="max-w-none" className="w-full">

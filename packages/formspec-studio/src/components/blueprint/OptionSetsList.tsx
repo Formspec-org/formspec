@@ -1,27 +1,20 @@
 /** @filedesc Blueprint section listing named option sets and their option counts from the definition. */
 import { useDefinition } from '../../state/useDefinition';
 import { Pill } from '../ui/Pill';
+import { EmptyBlueprintState } from '../shared/EmptyBlueprintState';
 
 export function OptionSetsList() {
   const definition = useDefinition();
   const optionSets = definition.optionSets;
 
   if (!optionSets || typeof optionSets !== 'object') {
-    return (
-      <div className="flex flex-col items-center justify-center py-5 border border-dashed border-border/70 rounded-[6px] bg-subtle/30 text-muted mx-1">
-        <span className="text-[12px] font-medium font-ui tracking-tight">No option sets defined</span>
-      </div>
-    );
+    return <EmptyBlueprintState message="No option sets defined" />;
   }
 
   const names = Object.keys(optionSets);
 
   if (names.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-5 border border-dashed border-border/70 rounded-[6px] bg-subtle/30 text-muted mx-1">
-        <span className="text-[12px] font-medium font-ui tracking-tight">No option sets defined</span>
-      </div>
-    );
+    return <EmptyBlueprintState message="No option sets defined" />;
   }
 
   return (

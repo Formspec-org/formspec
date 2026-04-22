@@ -5,16 +5,7 @@ import { useProject } from '../../state/useProject';
 import { AddBehaviorMenu } from '../../components/ui/AddBehaviorMenu';
 import { PrePopulateCard } from '../../components/ui/PrePopulateCard';
 import { useState, useMemo } from 'react';
-
-interface BindEntry {
-  required?: string;
-  relevant?: string;
-  calculate?: string;
-  constraint?: string;
-  readonly?: string;
-  'pre-populate'?: any;
-  [key: string]: any;
-}
+import { type BindEntry, bindTypes } from './bind-types';
 
 interface BindsSectionProps {
   binds: Record<string, BindEntry>;
@@ -22,8 +13,6 @@ interface BindsSectionProps {
   allPaths?: string[];
   onSelectPath?: (path: string) => void;
 }
-
-const bindTypes = ['required', 'relevant', 'calculate', 'constraint', 'readonly', 'pre-populate'] as const;
 
 export function BindsSection({ binds, activeFilter = null, allPaths = [], onSelectPath }: BindsSectionProps) {
   const project = useProject();

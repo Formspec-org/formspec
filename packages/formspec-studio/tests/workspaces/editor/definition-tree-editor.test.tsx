@@ -93,8 +93,8 @@ describe('DefinitionTreeEditor', () => {
     expect(row.getByTestId('field-email-category-Visibility')).toBeInTheDocument();
     fireEvent.click(row.getByTestId('field-email-category-Visibility'));
     expect(row.getByRole('region', { name: 'Field details' })).toBeInTheDocument();
-    // Visibility click auto-creates an empty relevant bind and opens the expression editor.
-    expect(row.getByPlaceholderText('Click to add expression')).toBeInTheDocument();
+    // Visibility click auto-creates an empty relevant bind and opens the guided editor.
+    expect(row.getByTestId('condition-builder')).toBeInTheDocument();
   });
 
   it('hides empty description and hint rows when unselected', () => {

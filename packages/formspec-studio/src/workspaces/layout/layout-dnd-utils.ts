@@ -1,7 +1,7 @@
 /** @filedesc Pure DnD event handlers for the layout canvas — routes drag-end events to project methods. */
 import type { CompNode, NodeRef, Project } from '@formspec-org/studio-core';
 import { findParentOfNodeRef, isCircularComponentMove } from '@formspec-org/studio-core';
-import { LAYOUT_PDND_KIND } from './layout-pdnd-kind';
+import { LAYOUT_PDND_KIND } from './layout-pdnd';
 
 export type UnassignedItemData = { key: string; label: string; itemType: 'field' | 'group' | 'display' };
 /** Opaque drag payload from the monitor layer (tests may stub). */

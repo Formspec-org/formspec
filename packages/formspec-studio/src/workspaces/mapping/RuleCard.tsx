@@ -2,6 +2,7 @@
 import { useEffect, useId, useState } from 'react';
 import { Pill } from '../../components/ui/Pill';
 import { useProject } from '../../state/useProject';
+import type { MappingRule } from './types';
 
 const TRANSFORMS = [
   'preserve', 'drop', 'expression', 'coerce', 'valueMap',
@@ -26,7 +27,7 @@ interface RuleCardProps {
   source: string;
   target: string;
   transform?: string;
-  rule: any;
+  rule: MappingRule;
 }
 
 export function RuleCard({ index, source, target, transform = 'preserve', rule }: RuleCardProps) {

@@ -1,5 +1,6 @@
 /** @filedesc Manages shell layout: viewport detection, sidebar widths, resize handles, blueprint drawer, and panel visibility. */
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useEscapeKey } from './useEscapeKey';
 
 export interface ShellLayoutState {
   compactLayout: boolean;
@@ -59,17 +60,11 @@ export function useShellLayout(): ShellLayoutState {
     };
   }, [compactLayout, showBlueprintDrawer]);
 
-  useEffect(() => {
-    if (!overlayOpen) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
-      if (showBlueprintDrawer) {
-        setShowBlueprintDrawer(false);
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [overlayOpen, showBlueprintDrawer]);
+  useEscapeKey(() => {
+    if (showBlueprintDrawer) {
+      setShowBlueprintDrawer(false);
+    }
+  }, overlayOpen);
 
   return {
     compactLayout,

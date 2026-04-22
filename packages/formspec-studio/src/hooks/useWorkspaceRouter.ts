@@ -22,6 +22,16 @@ export interface WorkspaceRouterState {
   setPreviewMode: (mode: PreviewMode) => void;
 }
 
+const VALID_TABS = new Set(['Editor', 'Layout', 'Mapping', 'Preview']);
+const VALID_MAPPING_TAB_IDS = new Set<string>(['all', 'config', 'rules', 'adapter', 'preview']);
+const VALID_EDITOR_VIEWS = new Set<string>(['build', 'manage', 'screener', 'health']);
+
+function isCustomEventWithDetail(
+  event: Event,
+): event is CustomEvent<Record<string, unknown>> {
+  return 'detail' in event && typeof (event as CustomEvent).detail === 'object' && (event as CustomEvent).detail !== null;
+}
+
 export function useWorkspaceRouter(): WorkspaceRouterState {
   const [activeTab, setActiveTab] = useState<string>('Editor');
   const [activeSection, setActiveSection] = useState<string>('Structure');
@@ -33,18 +43,22 @@ export function useWorkspaceRouter(): WorkspaceRouterState {
 
   useEffect(() => {
     const onNavigateWorkspace = (event: Event) => {
-      const detail = (event as CustomEvent<{ tab?: string; subTab?: string; view?: EditorView; section?: string }>).detail ?? {};
-      let { tab, subTab, view, section } = detail;
+      if (!isCustomEventWithDetail(event)) return;
+      const detail = event.detail as Record<string, unknown>;
+      let tab = typeof detail.tab === 'string' ? detail.tab : undefined;
+      const subTab = typeof detail.subTab === 'string' ? detail.subTab : undefined;
+      const view = typeof detail.view === 'string' ? detail.view : undefined;
+      const section = typeof detail.section === 'string' ? detail.section : undefined;
       if (tab === 'Theme') {
         tab = 'Layout';
       }
-      if (tab && (tab === 'Editor' || ['Layout', 'Mapping', 'Preview'].includes(tab))) {
+      if (tab && VALID_TABS.has(tab)) {
         setActiveTab(tab);
-        if (tab === 'Editor' && view) {
-          setActiveEditorView(view);
+        if (tab === 'Editor' && view && VALID_EDITOR_VIEWS.has(view)) {
+          setActiveEditorView(view as EditorView);
         }
-        if (subTab) {
-          if (tab === 'Mapping') setActiveMappingTab(subTab as MappingTabId);
+        if (subTab && tab === 'Mapping' && VALID_MAPPING_TAB_IDS.has(subTab)) {
+          setActiveMappingTab(subTab as MappingTabId);
         }
         if (section) {
           setActiveSection(section);

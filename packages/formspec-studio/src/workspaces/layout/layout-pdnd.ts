@@ -5,10 +5,9 @@ import type { CompNode, Project } from '@formspec-org/studio-core';
 import { findComponentNodeByRef } from '@formspec-org/studio-core';
 import { finalIndexFromRowEdge, postRemovalIndexForFinalIndex } from '../shared/reorder-insert-index';
 import { sortGroupToParentRef, type DragEndEvent } from './layout-dnd-utils';
-import { LAYOUT_PDND_KIND } from './layout-pdnd-kind';
 import { isRecord } from '../shared/runtime-guards';
 
-export { LAYOUT_PDND_KIND } from './layout-pdnd-kind';
+export const LAYOUT_PDND_KIND = 'layout-canvas' as const;
 
 export type LayoutPdndSourceData = {
   kind: typeof LAYOUT_PDND_KIND;

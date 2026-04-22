@@ -3,6 +3,7 @@ import { useState, useRef } from 'react';
 import { useTheme } from '../../state/useTheme';
 import { useProject } from '../../state/useProject';
 import { getTokensByGroup, validateTokenName } from '@formspec-org/studio-core';
+import { InlineCreateForm } from '../../components/shared/InlineCreateForm';
 
 export function ColorPalette() {
   useTheme();
@@ -40,7 +41,10 @@ export function ColorPalette() {
       </div>
 
       {isAdding && (
-        <div className="border border-accent/30 rounded-lg bg-accent/5 p-3 space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+        <InlineCreateForm
+          onCancel={() => setIsAdding(false)}
+          onCreate={handleAdd}
+        >
           <input
             autoFocus
             type="text"
@@ -53,21 +57,7 @@ export function ColorPalette() {
             }}
             className="w-full bg-transparent border-none outline-none text-sm font-mono text-ink placeholder:text-muted/40"
           />
-          <div className="flex justify-end gap-2">
-            <button
-              onClick={() => setIsAdding(false)}
-              className="text-[10px] uppercase font-bold text-muted hover:text-ink transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleAdd}
-              className="text-[10px] uppercase font-bold text-accent hover:text-accent-hover transition-colors"
-            >
-              Create
-            </button>
-          </div>
-        </div>
+        </InlineCreateForm>
       )}
 
       {colorTokens.length === 0 && !isAdding && (

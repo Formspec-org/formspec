@@ -5,6 +5,7 @@ import { DragHandle } from '../../components/ui/DragHandle';
 import type { FormItem } from '@formspec-org/types';
 import type { StatusPill } from '../shared/item-row-shared';
 import { useSelection } from '../../state/useSelection';
+import { useInlineIdentityEdit } from './useInlineIdentityEdit';
 
 function EditMark({ testId }: { testId?: string }) {
   return (
@@ -97,12 +98,9 @@ export function GroupNode({
       setExpanded(true);
     }
   }, [selectedKey, itemPath]);
-  const [activeIdentityField, setActiveIdentityField] = useState<'label' | 'key' | null>(null);
   const [editingContent, setEditingContent] = useState<'description' | 'hint' | 'both' | null>(null);
   const [editingBehavior, setEditingBehavior] = useState(false);
   const [editingRepeats, setEditingRepeats] = useState(false);
-  const [draftKey, setDraftKey] = useState(itemKey);
-  const [draftLabel, setDraftLabel] = useState(() => (label?.trim() ? label.trim() : ''));
   const [activeInlineSummary, setActiveInlineSummary] = useState<string | null>(null);
   const contentSummaryMap = new Map(
     summaries
@@ -146,6 +144,26 @@ export function GroupNode({
   const resolvedLabel = label || itemKey;
   const labelForDescription =
     label?.trim() && label.trim() !== itemKey ? label.trim() : null;
+
+  const {
+    activeIdentityField,
+    draftKey,
+    draftLabel,
+    setActiveIdentityField,
+    setDraftKey,
+    setDraftLabel,
+    openIdentityField,
+    commitIdentityField,
+    cancelIdentityField,
+  } = useInlineIdentityEdit({
+    itemKey,
+    label,
+    selected,
+    onRenameIdentity,
+    isField: false,
+    resolvedLabel,
+  });
+
   const closeOtherEditors = (kind: 'content' | 'behavior' | 'repeats') => {
     setActiveIdentityField(null);
     setEditingContent(kind === 'content' ? 'both' : null);
@@ -155,15 +173,7 @@ export function GroupNode({
   };
 
   useEffect(() => {
-    if (!activeIdentityField) {
-      setDraftKey(itemKey);
-      setDraftLabel(label?.trim() ? label.trim() : '');
-    }
-  }, [activeIdentityField, itemKey, label]);
-
-  useEffect(() => {
     if (!selected) {
-      setActiveIdentityField(null);
       setEditingContent(null);
       setEditingBehavior(false);
       setEditingRepeats(false);
@@ -196,35 +206,10 @@ export function GroupNode({
   };
 
   const resetEditors = () => {
-    setActiveIdentityField(null);
     setEditingContent(null);
     setEditingBehavior(false);
     setEditingRepeats(false);
     setActiveInlineSummary(null);
-  };
-
-  const openIdentityField = (field: 'label' | 'key') => {
-    resetEditors();
-    if (field === 'key') setDraftKey(itemKey);
-    if (field === 'label') setDraftLabel(label?.trim() ? label.trim() : '');
-    setActiveIdentityField(field);
-  };
-
-  const commitIdentityField = (field: 'label' | 'key') => {
-    if (!onRenameIdentity) {
-      setActiveIdentityField(null);
-      return;
-    }
-    const nextKey = field === 'key' ? draftKey.trim() || itemKey : itemKey;
-    const nextLabel = field === 'label' ? draftLabel.trim() || itemKey : resolvedLabel;
-    onRenameIdentity(nextKey, nextLabel);
-    setActiveIdentityField(null);
-  };
-
-  const cancelIdentityField = () => {
-    setDraftKey(itemKey);
-    setDraftLabel(label?.trim() ? label.trim() : '');
-    setActiveIdentityField(null);
   };
 
   const handleIdentityKeyDown = (field: 'label' | 'key') => (event: KeyboardEvent<HTMLInputElement>) => {

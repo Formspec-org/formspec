@@ -170,10 +170,6 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
     project.setMetadata({ [property]: value || undefined } as MetadataChanges);
   };
 
-  const setPresentation = (property: string, value: string) => {
-    project.setMetadata({ [property]: value || undefined } as MetadataChanges);
-  };
-
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px]"
@@ -225,10 +221,10 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
           {/* Presentation */}
           <div className="space-y-4">
             <SectionHeading>Presentation</SectionHeading>
-            <SelectField id="settings-pageMode" label="Page Mode" value={presentation.pageMode ?? 'single'} options={PAGE_MODE_OPTIONS} onChange={(v) => setPresentation('pageMode', v)} help="How top-level groups are paginated. single: one page. wizard: sequential steps. tabs: tabbed sections." />
-            <SelectField id="settings-labelPosition" label="Label Position" value={presentation.labelPosition ?? 'top'} options={LABEL_POSITION_OPTIONS} onChange={(v) => setPresentation('labelPosition', v)} help="Default label placement. top: above input. start: beside input. hidden: visually hidden but accessible." />
-            <SelectField id="settings-density" label="Density" value={presentation.density ?? 'comfortable'} options={DENSITY_OPTIONS} onChange={(v) => setPresentation('density', v)} help="Spacing density for form layout. Affects padding and margins between fields." />
-            <TextInputField id="settings-currency" label="Default Currency" value={presentation.defaultCurrency ?? ''} onCommit={(v) => setPresentation('defaultCurrency', v)} help="Default ISO 4217 currency code for money fields (e.g. USD, EUR)." />
+            <SelectField id="settings-pageMode" label="Page Mode" value={presentation.pageMode ?? 'single'} options={PAGE_MODE_OPTIONS} onChange={(v) => setProperty('pageMode', v)} help="How top-level groups are paginated. single: one page. wizard: sequential steps. tabs: tabbed sections." />
+            <SelectField id="settings-labelPosition" label="Label Position" value={presentation.labelPosition ?? 'top'} options={LABEL_POSITION_OPTIONS} onChange={(v) => setProperty('labelPosition', v)} help="Default label placement. top: above input. start: beside input. hidden: visually hidden but accessible." />
+            <SelectField id="settings-density" label="Density" value={presentation.density ?? 'comfortable'} options={DENSITY_OPTIONS} onChange={(v) => setProperty('density', v)} help="Spacing density for form layout. Affects padding and margins between fields." />
+            <TextInputField id="settings-currency" label="Default Currency" value={presentation.defaultCurrency ?? ''} onCommit={(v) => setProperty('defaultCurrency', v)} help="Default ISO 4217 currency code for money fields (e.g. USD, EUR)." />
           </div>
 
           <div className="border-t border-border" />

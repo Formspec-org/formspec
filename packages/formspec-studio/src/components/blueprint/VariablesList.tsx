@@ -1,5 +1,6 @@
 /** @filedesc Blueprint section listing computed variables with their FEL expressions and a navigate-to-Manage link. */
 import { useDefinition } from '../../state/useDefinition';
+import { EmptyBlueprintState } from '../shared/EmptyBlueprintState';
 
 export function VariablesList() {
   const definition = useDefinition();
@@ -12,11 +13,7 @@ export function VariablesList() {
   };
 
   if (variables.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-5 border border-dashed border-border/70 rounded-[6px] bg-subtle/30 text-muted mx-1">
-        <span className="text-[12px] font-medium font-ui tracking-tight">No variables defined</span>
-      </div>
-    );
+    return <EmptyBlueprintState message="No variables defined" />;
   }
 
   return (

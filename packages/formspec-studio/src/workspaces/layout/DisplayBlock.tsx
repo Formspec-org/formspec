@@ -70,8 +70,6 @@ interface DisplayBlockProps {
   /** Layout canvas: parent reorder list id (with sortableIndex + treeDragNodeRef). */
   sortableGroup?: string;
   sortableIndex?: number;
-  /** Must exceed ancestor `LayoutContainer` sortable priority when nested in containers. */
-  collisionPriority?: number;
   treeDragNodeRef?: { bind?: string; nodeId?: string };
 }
 
@@ -100,10 +98,8 @@ export function DisplayBlock({
   onCommitDisplayLabel,
   sortableGroup,
   sortableIndex,
-  collisionPriority: _collisionPriority,
   treeDragNodeRef,
 }: DisplayBlockProps) {
-  void _collisionPriority;
   const blockRef = useRef<HTMLDivElement | null>(null);
   const dragHandleRef = useRef<Element | null>(null);
   const [shellEl, setShellEl] = useState<HTMLDivElement | null>(null);

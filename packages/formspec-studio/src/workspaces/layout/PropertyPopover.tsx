@@ -1,6 +1,6 @@
 /** @filedesc Overflow popover for Tier 3 layout properties (accessibility, style overrides, CSS class) with dirty guard. */
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { DirtyGuardConfirm } from './DirtyGuardConfirm';
+import { DirtyGuardConfirm, useDirtyGuard } from './DirtyGuardConfirm';
 import { useOptionalLayoutMode } from './LayoutModeContext';
 
 // ── Types ─────────────────────────────────────────────────────────────────
@@ -82,15 +82,15 @@ export function PropertyPopover({
   onClose,
 }: PropertyPopoverProps) {
   const layoutMode = useOptionalLayoutMode();
-  const [dirtyInputs, setDirtyInputs] = useState<Set<string>>(new Set());
+  const { isDirty: hasDirtyInputs, markDirty: trackDirty, reset: resetDirty } = useDirtyGuard();
+  const hasDirtyInputsRef = useRef(hasDirtyInputs);
+  hasDirtyInputsRef.current = hasDirtyInputs;
   const [showDirtyGuard, setShowDirtyGuard] = useState(false);
   const [addingStyle, setAddingStyle] = useState(false);
   const [newStyleKey, setNewStyleKey] = useState('');
   const [newStyleValue, setNewStyleValue] = useState('');
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
-  const dirtyInputsRef = useRef<Set<string>>(new Set());
-  dirtyInputsRef.current = dirtyInputs;
 
   const clampPopoverInViewport = useCallback(() => {
     if (!open) return;
@@ -164,35 +164,27 @@ export function PropertyPopover({
   // Reset dirty state when the popover opens/closes
   useEffect(() => {
     if (!open) {
-      setDirtyInputs(new Set());
+      resetDirty();
       setShowDirtyGuard(false);
       setAddingStyle(false);
       setNewStyleKey('');
       setNewStyleValue('');
     }
-  }, [open]);
+  }, [open, resetDirty]);
 
   useEffect(() => {
     if (!layoutMode) return;
     const popoverId = 'property-popover';
-    if (open && dirtyInputs.size > 0) {
+    if (open && hasDirtyInputs) {
       layoutMode.registerDirtyPopover(popoverId);
     } else {
       layoutMode.clearDirtyPopover(popoverId);
     }
     return () => layoutMode.clearDirtyPopover(popoverId);
-  }, [layoutMode, open, dirtyInputs.size]);
-
-  function trackDirty(id: string, isDirty: boolean) {
-    setDirtyInputs((prev) => {
-      const next = new Set(prev);
-      if (isDirty) next.add(id); else next.delete(id);
-      return next;
-    });
-  }
+  }, [layoutMode, open, hasDirtyInputs]);
 
   const requestClose = useCallback(() => {
-    if (dirtyInputsRef.current.size > 0) {
+    if (hasDirtyInputsRef.current) {
       setShowDirtyGuard(true);
     } else {
       onClose();

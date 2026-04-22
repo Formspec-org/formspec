@@ -1,5 +1,5 @@
 /** @filedesc DnD wrapper for the Layout canvas — Pragmatic drag-and-drop, reorders component tree nodes. */
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
 import { useProject } from '../../state/useProject';
 import { useSelection } from '../../state/useSelection';
@@ -13,6 +13,7 @@ import { layoutDragOverlayFromPdndSource } from './LayoutDragOverlay';
 import {
   LayoutCanvasDragFeedbackProvider,
   type LayoutCanvasDragFeedbackState,
+  type LayoutCanvasDragPointer,
 } from './LayoutCanvasDragFeedbackContext';
 import { layoutCanvasDragOverlayPositionStyle } from './layout-canvas-drag-chrome';
 import { isRecord } from '../shared/runtime-guards';
@@ -24,11 +25,28 @@ interface LayoutDndProviderProps {
 
 const emptyFeedback: LayoutCanvasDragFeedbackState = { pointer: null, indicator: null };
 
+function indicatorEquals(
+  a: LayoutCanvasDragFeedbackState['indicator'],
+  b: LayoutCanvasDragFeedbackState['indicator'],
+): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  if (a.mode !== b.mode) return false;
+  if (a.mode === 'row' && b.mode === 'row') {
+    return a.sortGroup === b.sortGroup && a.sortableIndex === b.sortableIndex && a.edge === b.edge;
+  }
+  if (a.mode === 'container' && b.mode === 'container') {
+    return a.nodeRef?.nodeId === b.nodeRef?.nodeId && a.nodeRef?.bind === b.nodeRef?.bind;
+  }
+  return false;
+}
+
 export function LayoutDndProvider({ children, activePageId = null }: LayoutDndProviderProps) {
   const project = useProject();
   const { select } = useSelection();
   const [overlaySource, setOverlaySource] = useState<Record<string, unknown> | null>(null);
   const [dragFeedback, setDragFeedback] = useState<LayoutCanvasDragFeedbackState>(emptyFeedback);
+  const pointerRef = useRef<LayoutCanvasDragPointer | null>(null);
 
   const onDrop = useCallback(
     (payload: Parameters<NonNullable<Parameters<typeof monitorForElements>[0]['onDrop']>>[0]) => {
@@ -42,6 +60,7 @@ export function LayoutDndProvider({ children, activePageId = null }: LayoutDndPr
         }
       } finally {
         setOverlaySource(null);
+        pointerRef.current = null;
         setDragFeedback(emptyFeedback);
       }
     },
@@ -53,8 +72,9 @@ export function LayoutDndProvider({ children, activePageId = null }: LayoutDndPr
       const d = payload.source.data;
       setOverlaySource(isRecord(d) ? d : null);
       const input = payload.location.current.input;
+      pointerRef.current = { clientX: input.clientX, clientY: input.clientY };
       setDragFeedback({
-        pointer: { clientX: input.clientX, clientY: input.clientY },
+        pointer: pointerRef.current,
         indicator: null,
       });
     },
@@ -64,6 +84,7 @@ export function LayoutDndProvider({ children, activePageId = null }: LayoutDndPr
   const onDrag = useCallback(
     (payload: Parameters<NonNullable<Parameters<typeof monitorForElements>[0]['onDrag']>>[0]) => {
       const input = payload.location.current.input;
+      pointerRef.current = { clientX: input.clientX, clientY: input.clientY };
       const targets = payload.location.current.dropTargets;
       let indicator = null;
       if (targets.length > 0) {
@@ -72,9 +93,9 @@ export function LayoutDndProvider({ children, activePageId = null }: LayoutDndPr
           indicator = layoutCanvasDropIndicatorFromTargetData(data);
         }
       }
-      setDragFeedback({
-        pointer: { clientX: input.clientX, clientY: input.clientY },
-        indicator,
+      setDragFeedback((prev) => {
+        if (indicatorEquals(prev.indicator, indicator)) return prev;
+        return { pointer: pointerRef.current, indicator };
       });
     },
     [],

@@ -1,8 +1,12 @@
 /** @filedesc Expand/collapse card for a single screener routing rule with strategy-aware editing. */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useProject } from '../../../state/useProject';
 import { InlineExpression } from '../../../components/ui/InlineExpression';
+import { ConditionBuilder, ConditionBuilderPreview } from '../../../components/ui/ConditionBuilder';
+import { flatItems, type FELEditorFieldOption } from '@formspec-org/studio-core';
 import type { Route } from '@formspec-org/types';
+import { ExpandableCard } from '../../../components/shared/ExpandableCard';
+import { ConfirmDialog } from '../../../components/ConfirmDialog';
 
 interface RouteCardProps {
   route: Route;
@@ -22,10 +26,22 @@ export function RouteCard({ route, index, phaseId, strategy, isExpanded, onToggl
   const [editTarget, setEditTarget] = useState(route.target);
   const [editMessage, setEditMessage] = useState(route.message ?? '');
   const [editThreshold, setEditThreshold] = useState(String(route.threshold ?? 0));
+  const [editingCondition, setEditingCondition] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   useEffect(() => { setEditLabel(route.label ?? ''); }, [route.label]);
   useEffect(() => { setEditTarget(route.target); }, [route.target]);
   useEffect(() => { setEditMessage(route.message ?? ''); }, [route.message]);
   useEffect(() => { setEditThreshold(String(route.threshold ?? 0)); }, [route.threshold]);
+
+  const screenerFields = useMemo<FELEditorFieldOption[]>(() => {
+    const items = project.state.screener?.items;
+    if (!items) return [];
+    return flatItems(items).map((fi) => ({
+      path: fi.path,
+      label: fi.item.label || fi.path,
+      dataType: fi.item.dataType,
+    }));
+  }, [project.state.screener?.items]);
 
   const isScoreStrategy = strategy === 'score-threshold';
   const badge = isScoreStrategy ? 'SCORE' : 'IF';
@@ -79,9 +95,12 @@ export function RouteCard({ route, index, phaseId, strategy, isExpanded, onToggl
   };
 
   const handleDelete = () => {
-    if (window.confirm('Delete this routing rule?')) {
-      project.removeScreenRoute(phaseId, index);
-    }
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = () => {
+    project.removeScreenRoute(phaseId, index);
+    setShowDeleteConfirm(false);
   };
 
   // Summary for collapsed view
@@ -90,41 +109,38 @@ export function RouteCard({ route, index, phaseId, strategy, isExpanded, onToggl
     : (route.condition ?? '(no condition)');
 
   return (
-    <div
-      data-testid={`route-card-${phaseId}-${index}`}
-      className={`rounded-xl border transition-all ${isExpanded ? 'border-accent shadow-md ring-1 ring-accent/10 bg-surface' : 'border-border bg-surface/50 hover:border-muted hover:bg-surface'}`}
-    >
-      {/* Collapsed header */}
-      <div className="flex items-start justify-between p-4 cursor-pointer" onClick={onToggle}>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber/20 text-amber text-[10px] font-bold flex-shrink-0">
-              {index + 1}
-            </span>
-            <span className="text-[10px] font-bold text-amber uppercase tracking-wider">{badge}</span>
-            {route.label ? (
-              <span className="text-[13px] font-bold text-ink truncate">{route.label}</span>
-            ) : (
-              <code className="text-[11px] font-mono text-muted truncate">{summaryText}</code>
-            )}
-            {route.override && (
-              <span className="text-[9px] font-bold uppercase tracking-wider text-error bg-error/10 px-1.5 py-0.5 rounded">
-                override{route.terminal ? ' (terminal)' : ''}
+    <>
+    <ExpandableCard
+      expanded={isExpanded}
+      onToggle={onToggle}
+      header={
+        <>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber/20 text-amber text-[10px] font-bold flex-shrink-0">
+                {index + 1}
               </span>
-            )}
+              <span className="text-[10px] font-bold text-amber uppercase tracking-wider">{badge}</span>
+              {route.label ? (
+                <span className="text-[13px] font-bold text-ink truncate">{route.label}</span>
+              ) : (
+                <code className="text-[11px] font-mono text-muted truncate">{summaryText}</code>
+              )}
+              {route.override && (
+                <span className="text-[9px] font-bold uppercase tracking-wider text-error bg-error/10 px-1.5 py-0.5 rounded">
+                  override{route.terminal ? ' (terminal)' : ''}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5 mt-1 ml-7">
+              <span className="text-[10px] text-muted">&#8594;</span>
+              <span className="text-[11px] text-muted font-mono truncate">{route.target || '(no target)'}</span>
+            </div>
           </div>
-          <div className="flex items-center gap-1.5 mt-1 ml-7">
-            <span className="text-[10px] text-muted">&#8594;</span>
-            <span className="text-[11px] text-muted font-mono truncate">{route.target || '(no target)'}</span>
-          </div>
-        </div>
-        <div className={`text-[12px] text-muted transition-transform duration-200 flex-shrink-0 ml-2 ${isExpanded ? 'rotate-180' : ''}`}>&#9660;</div>
-      </div>
-
-      {/* Expanded editor */}
-      {isExpanded && (
-        <div className="p-6 pt-0 border-t border-border animate-in fade-in slide-in-from-top-1 duration-200">
-          <div className="space-y-4 mt-4">
+        </>
+      }
+    >
+      <div className="space-y-4 mt-4">
             {/* Label */}
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-muted uppercase tracking-[0.2em] block">Label</label>
@@ -164,11 +180,23 @@ export function RouteCard({ route, index, phaseId, strategy, isExpanded, onToggl
             ) : (
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-muted uppercase tracking-[0.2em] block">Condition</label>
-                <InlineExpression
-                  value={route.condition ?? ''}
-                  onSave={handleConditionSave}
-                  placeholder="FEL boolean expression"
-                />
+                {editingCondition ? (
+                  <ConditionBuilder
+                    value={route.condition ?? ''}
+                    onSave={(fel) => {
+                      setEditingCondition(false);
+                      handleConditionSave(fel);
+                    }}
+                    onCancel={() => setEditingCondition(false)}
+                    fields={screenerFields}
+                    autoEdit
+                  />
+                ) : (
+                  <ConditionBuilderPreview
+                    value={route.condition ?? ''}
+                    onClick={() => setEditingCondition(true)}
+                  />
+                )}
               </div>
             )}
 
@@ -254,10 +282,17 @@ export function RouteCard({ route, index, phaseId, strategy, isExpanded, onToggl
                   Delete
                 </button>
               )}
-            </div>
-          </div>
         </div>
-      )}
-    </div>
+      </div>
+    </ExpandableCard>
+    <ConfirmDialog
+      open={showDeleteConfirm}
+      title="Delete routing rule"
+      description="Delete this routing rule?"
+      confirmLabel="Delete"
+      onConfirm={confirmDelete}
+      onCancel={() => setShowDeleteConfirm(false)}
+    />
+    </>
   );
 }

@@ -2,6 +2,8 @@
 import { useState, useEffect } from 'react';
 import { useProject } from '../../../state/useProject';
 import { FieldIcon } from '../../../components/ui/FieldIcon';
+import { ExpandableCard } from '../../../components/shared/ExpandableCard';
+import { ConfirmDialog } from '../../../components/ConfirmDialog';
 type ScreenerQuestion = { key: string; type: string; dataType?: string; label?: string; helpText?: string; [k: string]: unknown };
 
 interface QuestionCardProps {
@@ -27,6 +29,7 @@ export function QuestionCard({ item, index, isExpanded, onToggle, isFirst, isLas
   const project = useProject();
   const [editLabel, setEditLabel] = useState(item.label ?? '');
   const [editHelpText, setEditHelpText] = useState(item.helpText ?? '');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   useEffect(() => { setEditLabel(item.label ?? ''); }, [item.label]);
   useEffect(() => { setEditHelpText(item.helpText ?? ''); }, [item.helpText]);
 
@@ -56,45 +59,50 @@ export function QuestionCard({ item, index, isExpanded, onToggle, isFirst, isLas
   };
 
   const handleDelete = () => {
-    if (window.confirm(`Delete "${displayLabel}"?`)) {
-      project.removeScreenField(item.key);
-    }
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = () => {
+    project.removeScreenField(item.key);
+    setShowDeleteConfirm(false);
   };
 
   return (
-    <div
-      data-testid={`question-card-${item.key}`}
-      className={`rounded-xl border transition-all ${isExpanded ? 'border-accent shadow-md ring-1 ring-accent/10 bg-surface' : 'border-border bg-surface/50 hover:border-muted hover:bg-surface'}`}
-    >
-      {/* Collapsed header */}
-      <div
-        className="flex items-center justify-between p-4 cursor-pointer"
-        onClick={onToggle}
-      >
-        <div className="flex items-center gap-3 min-w-0">
-          <FieldIcon dataType={item.dataType ?? 'string'} className="text-lg flex-shrink-0" />
-          <div className="min-w-0">
-            <div className="font-bold text-[14px] text-ink truncate">{displayLabel}</div>
-            {!isExpanded && (
-              <div className="text-[11px] text-muted truncate mt-0.5">
-                <span className="font-mono">{item.key}</span>
-              </div>
+    <>
+    <ConfirmDialog
+      open={showDeleteConfirm}
+      title="Delete question"
+      description={`Delete "${displayLabel}"?`}
+      confirmLabel="Delete"
+      onConfirm={confirmDelete}
+      onCancel={() => setShowDeleteConfirm(false)}
+    />
+    <ExpandableCard
+      expanded={isExpanded}
+      onToggle={onToggle}
+      header={
+        <>
+          <div className="flex items-center gap-3 min-w-0">
+            <FieldIcon dataType={item.dataType ?? 'string'} className="text-lg flex-shrink-0" />
+            <div className="min-w-0">
+              <div className="font-bold text-[14px] text-ink truncate">{displayLabel}</div>
+              {!isExpanded && (
+                <div className="text-[11px] text-muted truncate mt-0.5">
+                  <span className="font-mono">{item.key}</span>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <span className="text-[10px] text-muted font-mono uppercase tracking-wider">{typeBadge}</span>
+            {isRequired && (
+              <span className="text-[10px] text-amber font-bold uppercase tracking-wider">Required</span>
             )}
           </div>
-        </div>
-        <div className="flex items-center gap-3 flex-shrink-0">
-          <span className="text-[10px] text-muted font-mono uppercase tracking-wider">{typeBadge}</span>
-          {isRequired && (
-            <span className="text-[10px] text-amber font-bold uppercase tracking-wider">Required</span>
-          )}
-          <div className={`text-[12px] text-muted transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>&#9660;</div>
-        </div>
-      </div>
-
-      {/* Expanded editor */}
-      {isExpanded && (
-        <div className="p-6 pt-0 border-t border-border animate-in fade-in slide-in-from-top-1 duration-200">
-          <div className="space-y-4 mt-4">
+        </>
+      }
+    >
+      <div className="space-y-4 mt-4">
             {/* Key display */}
             <div className="flex items-center gap-2 px-3 py-2 bg-accent/5 rounded-lg border border-accent/10">
               <span className="text-[11px] text-muted">Key:</span>
@@ -168,10 +176,9 @@ export function QuestionCard({ item, index, isExpanded, onToggle, isFirst, isLas
               >
                 Delete
               </button>
-            </div>
-          </div>
         </div>
-      )}
-    </div>
+      </div>
+    </ExpandableCard>
+    </>
   );
 }

@@ -4,6 +4,8 @@ import { sanitizeIdentifier } from '@formspec-org/studio-core';
 import { useProject } from '../../state/useProject';
 import { useDefinition } from '../../state/useDefinition';
 import { InlineExpression } from '../../components/ui/InlineExpression';
+import { InlineCreateForm } from '../../components/shared/InlineCreateForm';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 
 function InlineDataEditor({ data, hasSource, onSave }: {
   data: unknown;
@@ -80,6 +82,7 @@ export function DataSources() {
   const [expandedName, setExpandedName] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [newName, setNewName] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const instances: Instance[] = Object.entries(rawInstances || {}).map(([name, inst]) => ({
     name,
@@ -100,14 +103,27 @@ export function DataSources() {
   };
 
   const handleDelete = (name: string) => {
-    if (window.confirm(`Delete data source "${name}"? FEL expressions using @instance('${name}') will break.`)) {
-      project.removeInstance(name);
-      if (expandedName === name) setExpandedName(null);
+    setDeleteTarget(name);
+  };
+
+  const confirmDelete = () => {
+    if (deleteTarget) {
+      project.removeInstance(deleteTarget);
+      if (expandedName === deleteTarget) setExpandedName(null);
+      setDeleteTarget(null);
     }
   };
 
   return (
     <div className="space-y-4">
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Delete data source"
+        description={`Delete data source "${deleteTarget ?? ''}"? FEL expressions using @instance('${deleteTarget ?? ''}') will break.`}
+        confirmLabel="Delete"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
       <div className="flex justify-between items-center mb-1">
         <h4 className="text-[12px] font-bold text-muted uppercase tracking-wider">External Data Catalog</h4>
         {!isAdding && (
@@ -123,7 +139,11 @@ export function DataSources() {
 
       {/* Inline add form */}
       {isAdding && (
-        <div className="border border-accent/30 rounded-xl bg-accent/5 p-4 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
+        <InlineCreateForm
+          onCancel={() => { setIsAdding(false); setNewName(''); }}
+          onCreate={handleAdd}
+          example={<span>e.g. <code className="font-mono text-accent/70">patient_record</code>, <code className="font-mono text-accent/70">drug_database</code>, <code className="font-mono text-accent/70">agency_config</code></span>}
+        >
           <div className="flex items-center gap-2">
             <span className="text-accent font-mono text-sm font-bold">@</span>
             <input
@@ -139,26 +159,7 @@ export function DataSources() {
               className="flex-1 bg-transparent border-none outline-none text-sm font-mono text-ink placeholder:text-muted/40"
             />
           </div>
-          <p className="text-[11px] text-muted">
-            e.g. <code className="font-mono text-accent/70">patient_record</code>, <code className="font-mono text-accent/70">drug_database</code>, <code className="font-mono text-accent/70">agency_config</code>
-          </p>
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => { setIsAdding(false); setNewName(''); }}
-              className="text-[10px] uppercase font-bold text-muted hover:text-ink transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleAdd}
-              className="text-[10px] uppercase font-bold text-accent hover:text-accent-hover transition-colors"
-            >
-              Create
-            </button>
-          </div>
-        </div>
+        </InlineCreateForm>
       )}
 
       {/* Empty state */}

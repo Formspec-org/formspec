@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { getGroupedTokens } from '@formspec-org/studio-core';
 import { useTheme } from '../../state/useTheme';
 import { useProject } from '../../state/useProject';
+import { InlineCreateForm } from '../../components/shared/InlineCreateForm';
 
 function isHexColor(v: string): boolean {
   return /^#([0-9a-fA-F]{3}){1,2}$/.test(v);
@@ -50,7 +51,10 @@ export function AllTokens() {
       </div>
 
       {isAdding && (
-        <div className="border border-accent/30 rounded-lg bg-accent/5 p-3 space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+        <InlineCreateForm
+          onCancel={() => setIsAdding(false)}
+          onCreate={handleAdd}
+        >
           <div className="flex gap-2">
             <input
               autoFocus
@@ -76,21 +80,7 @@ export function AllTokens() {
               className="flex-1 bg-transparent border-b border-border outline-none text-sm font-mono text-ink placeholder:text-muted/40"
             />
           </div>
-          <div className="flex justify-end gap-2">
-            <button
-              onClick={() => setIsAdding(false)}
-              className="text-[10px] uppercase font-bold text-muted hover:text-ink transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleAdd}
-              className="text-[10px] uppercase font-bold text-accent hover:text-accent-hover transition-colors"
-            >
-              Create
-            </button>
-          </div>
-        </div>
+        </InlineCreateForm>
       )}
 
       {Array.from(groups.entries()).map(([prefix, items]) => (

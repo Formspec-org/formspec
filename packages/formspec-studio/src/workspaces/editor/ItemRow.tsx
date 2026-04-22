@@ -19,6 +19,12 @@ import {
   type ExpandedSummaryCategory,
 } from './ItemRowCategoryPanel';
 import { OptionsModal } from '../../components/ui/OptionsModal';
+import { useInlineIdentityEdit } from './useInlineIdentityEdit';
+import {
+  summaryInputValue as summaryInputValueFromMap,
+  summaryUpdatePayload,
+  isDebouncedSummaryLabel,
+} from './summary-label-map';
 
 interface ItemRowProps {
   itemKey: string;
@@ -77,15 +83,11 @@ export function ItemRow({
       : rawPrefix;
 
   const dt = dataType ? dataTypeInfo(dataType) : null;
-  const [activeIdentityField, setActiveIdentityField] = useState<
-    'label' | 'key' | null
-  >(null);
+  const itemLabel = label || itemKey;
+  const labelForDescription =
+    isField && label?.trim() && label.trim() !== itemKey ? label.trim() : null;
   const [expandedCategory, setExpandedCategory] =
     useState<ExpandedSummaryCategory | null>(null);
-  const [draftKey, setDraftKey] = useState(itemKey);
-  const [draftLabel, setDraftLabel] = useState(() =>
-    label?.trim() ? label.trim() : '',
-  );
   const [activeInlineSummary, setActiveInlineSummary] = useState<string | null>(
     null,
   );
@@ -97,28 +99,37 @@ export function ItemRow({
   const categoryPanelRef = useRef<HTMLDivElement>(null);
   const prevShowCategoryPanelRef = useRef(false);
 
-  // IE-2: External prop changes (itemKey/label) sync drafts only when not actively editing.
-  // Ordering assumption: parent must not change itemKey/label while activeIdentityField is set.
-  useEffect(() => {
-    if (!activeIdentityField) {
-      setDraftKey(itemKey);
-      setDraftLabel(label?.trim() ? label.trim() : '');
-    }
-  }, [itemKey, label, activeIdentityField]);
+  const selectButtonRef = useRef<HTMLButtonElement>(null);
+
+  const {
+    activeIdentityField,
+    draftKey,
+    draftLabel,
+    setActiveIdentityField,
+    setDraftKey,
+    setDraftLabel,
+    openIdentityField,
+    commitIdentityField,
+    cancelIdentityField,
+  } = useInlineIdentityEdit({
+    itemKey,
+    label,
+    selected,
+    onRenameIdentity,
+    selectButtonRef,
+    isField,
+    resolvedLabel: itemLabel,
+  });
 
   // SM-5: OptionsModal is portaled to document.body — it manages its own close lifecycle.
   useEffect(() => {
     if (!selected) {
-      setActiveIdentityField(null);
       setExpandedCategory(null);
       setActiveInlineSummary(null);
       setJustCreatedBind(null);
     }
   }, [selected]);
 
-  const itemLabel = label || itemKey;
-  const labelForDescription =
-    isField && label?.trim() && label.trim() !== itemKey ? label.trim() : null;
   const isChoiceField =
     item?.type === 'field' &&
     ['choice', 'multiChoice', 'select', 'select1'].includes(
@@ -134,8 +145,6 @@ export function ItemRow({
   // SM-4: Guard rAF callback against unmounted component.
   const mountedRef = useRef(true);
   useEffect(() => () => { mountedRef.current = false; }, []);
-
-  const selectButtonRef = useRef<HTMLButtonElement>(null);
 
   // KN-3: Coupled to testId naming convention — select buttons must end with "-select"
   // and the tree surface must have data-testid="definition-tree-surface".
@@ -186,16 +195,8 @@ export function ItemRow({
     : allContentEntries.filter((entry) => entry.value.trim().length > 0);
 
   const resetEditors = () => {
-    setActiveIdentityField(null);
     setExpandedCategory(null);
     setActiveInlineSummary(null);
-  };
-
-  const openIdentityField = (field: 'label' | 'key') => {
-    resetEditors();
-    if (field === 'key') setDraftKey(itemKey);
-    if (field === 'label') setDraftLabel(label?.trim() ? label.trim() : '');
-    setActiveIdentityField(field);
   };
 
   const openEditorForSummary = (label: string) => {
@@ -277,45 +278,6 @@ export function ItemRow({
     setActiveInlineSummary(label);
   };
 
-  const commitIdentityField = (field: 'label' | 'key') => {
-    if (!onRenameIdentity) {
-      setActiveIdentityField(null);
-      // IE-5: Return focus to the select button after commit.
-      queueMicrotask(() => selectButtonRef.current?.focus());
-      return;
-    }
-    // IE-1: If trimmed value is empty, cancel instead of silently reverting.
-    if (field === 'key' && !draftKey.trim()) {
-      cancelIdentityField();
-      return;
-    }
-    if (field === 'label' && !draftLabel.trim()) {
-      // IE-4: Display items allow empty labels (they render as blank content).
-      if (isField) {
-        cancelIdentityField();
-        return;
-      }
-    }
-    const nextKey = field === 'key' ? draftKey.trim() || itemKey : itemKey;
-    // IE-4: Display items keep empty labels as-is; fields fall back to itemKey.
-    const nextLabel =
-      field === 'label'
-        ? (isField ? (draftLabel.trim() || itemKey) : draftLabel.trim())
-        : itemLabel;
-    onRenameIdentity(nextKey, nextLabel);
-    setActiveIdentityField(null);
-    // IE-5: Return focus to the select button after commit.
-    queueMicrotask(() => selectButtonRef.current?.focus());
-  };
-
-  const cancelIdentityField = () => {
-    setDraftKey(itemKey);
-    setDraftLabel(label?.trim() ? label.trim() : '');
-    setActiveIdentityField(null);
-    // IE-5: Return focus to the select button after cancel.
-    queueMicrotask(() => selectButtonRef.current?.focus());
-  };
-
   const closeInlineSummary = () => {
     setActiveInlineSummary(null);
   };
@@ -348,104 +310,21 @@ export function ItemRow({
     }
   }, [showCategoryPanel, expandedCategory, selected]);
 
-  const summaryInputValue = (label: string): string => {
-    switch (label) {
-      case 'Description':
-        return descriptionValue;
-      case 'Hint':
-        return hintValue;
-      case 'Initial':
-        return item?.initialValue != null ? String(item.initialValue) : '';
-      case 'Currency':
-        return typeof item?.currency === 'string' ? item.currency : '';
-      case 'Precision':
-        return typeof item?.precision === 'number'
-          ? String(item.precision)
-          : '';
-      case 'Prefix':
-        return typeof item?.prefix === 'string' ? item.prefix : '';
-      case 'Suffix':
-        return typeof item?.suffix === 'string' ? item.suffix : '';
-      case 'Semantic':
-        return typeof item?.semanticType === 'string' ? item.semanticType : '';
-      case 'Calculate':
-        return binds.calculate ?? '';
-      case 'Relevant':
-        return binds.relevant ?? '';
-      case 'Readonly':
-        return binds.readonly ?? '';
-      case 'Required':
-        return binds.required ?? '';
-      case 'Constraint':
-        return binds.constraint ?? '';
-      case 'Message':
-        return binds.constraintMessage ?? '';
-      default:
-        return '';
-    }
-  };
+  const summaryInputValue = (lbl: string): string =>
+    summaryInputValueFromMap(lbl, item, binds);
 
   // SI-5: Debounce Description/Hint writes to reduce intermediate undo states.
   const summaryWriteTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(summaryWriteTimerRef.current), []);
 
-  const updateSummaryValue = (label: string, rawValue: string) => {
-    // DI-2 contract: onUpdateItem accepts flat bind property names
-    // (calculate, relevant, readonly, required, constraint, constraintMessage) as top-level keys.
-    const dispatch = (changes: Record<string, unknown>) => {
-      clearTimeout(summaryWriteTimerRef.current);
-      // SI-5: Debounce non-FEL inline text fields.
-      if (label === 'Description' || label === 'Hint') {
-        summaryWriteTimerRef.current = setTimeout(() => onUpdateItem?.(changes), 300);
-      } else {
-        onUpdateItem?.(changes);
-      }
-    };
-    switch (label) {
-      case 'Description':
-        dispatch({ description: rawValue || null });
-        return;
-      case 'Hint':
-        dispatch({ hint: rawValue || null });
-        return;
-      case 'Initial':
-        dispatch({ initialValue: rawValue || null });
-        return;
-      case 'Currency':
-        dispatch({ currency: rawValue || null });
-        return;
-      case 'Precision':
-        dispatch({
-          precision: rawValue === '' ? null : Number(rawValue),
-        });
-        return;
-      case 'Prefix':
-        dispatch({ prefix: rawValue || null });
-        return;
-      case 'Suffix':
-        dispatch({ suffix: rawValue || null });
-        return;
-      case 'Semantic':
-        dispatch({ semanticType: rawValue || null });
-        return;
-      case 'Calculate':
-        dispatch({ calculate: rawValue || null });
-        return;
-      case 'Relevant':
-        dispatch({ relevant: rawValue || null });
-        return;
-      case 'Readonly':
-        dispatch({ readonly: rawValue || null });
-        return;
-      case 'Required':
-        dispatch({ required: rawValue || null });
-        return;
-      case 'Constraint':
-        dispatch({ constraint: rawValue || null });
-        return;
-      case 'Message':
-        dispatch({ constraintMessage: rawValue || null });
-        return;
+  const updateSummaryValue = (lbl: string, rawValue: string) => {
+    const payload = summaryUpdatePayload(lbl, rawValue);
+    if (!payload) return;
+    clearTimeout(summaryWriteTimerRef.current);
+    if (isDebouncedSummaryLabel(lbl)) {
+      summaryWriteTimerRef.current = setTimeout(() => onUpdateItem?.(payload), 300);
+    } else {
+      onUpdateItem?.(payload);
     }
   };
 

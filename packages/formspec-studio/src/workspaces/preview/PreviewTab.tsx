@@ -1,11 +1,11 @@
 /** @filedesc Preview workspace tab toggling live form render, behavior lab, and JSON documents view. */
-import { useState } from 'react';
 import type { ResolvedTheme } from '../../hooks/useColorScheme';
 import { useDefinition } from '../../state/useDefinition';
 import { ViewportSwitcher, type Viewport } from './ViewportSwitcher';
 import { JsonDocumentsView } from './JsonDocumentsView';
 import { FormspecPreviewHost } from './FormspecPreviewHost';
 import { BehaviorPreview } from '../../features/behavior-preview/BehaviorPreview';
+import { useControllableState } from '../../hooks/useControllableState';
 
 const viewportWidths: Record<Viewport, string> = {
   desktop: '100%',
@@ -40,12 +40,8 @@ export function PreviewTab({
   appearance,
 }: PreviewTabProps = {}) {
   const definition = useDefinition();
-  const [internalViewport, setInternalViewport] = useState<Viewport>('desktop');
-  const [internalMode, setInternalMode] = useState<PreviewMode>('form');
-  const activeViewport = viewport ?? internalViewport;
-  const setViewport = onViewportChange ?? setInternalViewport;
-  const activeMode = mode ?? internalMode;
-  const setMode = onModeChange ?? setInternalMode;
+  const [activeViewport, setViewport] = useControllableState(viewport, onViewportChange, 'desktop' as Viewport);
+  const [activeMode, setMode] = useControllableState(mode, onModeChange, 'form' as PreviewMode);
 
   const items = definition?.items ?? [];
 

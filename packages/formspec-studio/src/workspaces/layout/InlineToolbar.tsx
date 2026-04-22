@@ -121,6 +121,36 @@ function WhenWarningBadge() {
   );
 }
 
+function OverflowButton({
+  overflowButtonRef,
+  hasPopoverContent,
+  onOpenPopover,
+}: {
+  overflowButtonRef?: React.RefObject<HTMLButtonElement | null>;
+  hasPopoverContent: boolean;
+  onOpenPopover: () => void;
+}) {
+  return (
+    <button
+      ref={overflowButtonRef}
+      type="button"
+      data-testid="toolbar-overflow"
+      aria-label="More properties"
+      onClick={(e) => { e.stopPropagation(); onOpenPopover(); }}
+      className="relative ml-auto inline-flex h-7 w-6 flex-shrink-0 items-center justify-center rounded border border-border bg-surface text-[12px] text-muted hover:border-accent/40 hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/70"
+    >
+      ...
+      {hasPopoverContent && (
+        <span
+          data-testid="toolbar-overflow-dot"
+          className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-accent"
+          aria-hidden="true"
+        />
+      )}
+    </button>
+  );
+}
+
 function Stepper({
   decTestId,
   incTestId,
@@ -490,23 +520,7 @@ export function InlineToolbar(props: InlineToolbarProps) {
           <span className="inline-flex h-7 px-1.5 items-center justify-center rounded border border-border bg-subtle text-[10px] font-mono font-bold text-ink flex-shrink-0">
             {componentBadge}
           </span>
-          <button
-            ref={overflowButtonRef}
-            type="button"
-            data-testid="toolbar-overflow"
-            aria-label="More properties"
-            onClick={(e) => { e.stopPropagation(); onOpenPopover(); }}
-            className="relative ml-auto inline-flex h-7 w-6 flex-shrink-0 items-center justify-center rounded border border-border bg-surface text-[12px] text-muted hover:border-accent/40 hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/70"
-          >
-            ...
-            {hasPopoverContent && (
-              <span
-                data-testid="toolbar-overflow-dot"
-                className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-accent"
-                aria-hidden="true"
-              />
-            )}
-          </button>
+          <OverflowButton overflowButtonRef={overflowButtonRef} hasPopoverContent={hasPopoverContent} onOpenPopover={onOpenPopover} />
         </>
       ) : isCompact ? (
         <>
@@ -552,23 +566,7 @@ export function InlineToolbar(props: InlineToolbarProps) {
             </button>
           )}
 
-          <button
-            ref={overflowButtonRef}
-            type="button"
-            data-testid="toolbar-overflow"
-            aria-label="More properties"
-            onClick={(e) => { e.stopPropagation(); onOpenPopover(); }}
-            className="relative ml-auto inline-flex h-7 w-6 flex-shrink-0 items-center justify-center rounded border border-border bg-surface text-[12px] text-muted hover:border-accent/40 hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/70"
-          >
-            ...
-            {hasPopoverContent && (
-              <span
-                data-testid="toolbar-overflow-dot"
-                className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-accent"
-                aria-hidden="true"
-              />
-            )}
-          </button>
+          <OverflowButton overflowButtonRef={overflowButtonRef} hasPopoverContent={hasPopoverContent} onOpenPopover={onOpenPopover} />
         </>
       ) : (
         <>
@@ -611,23 +609,7 @@ export function InlineToolbar(props: InlineToolbarProps) {
             {componentWhen && <WhenWarningBadge />}
           </span>
 
-          <button
-            ref={overflowButtonRef}
-            type="button"
-            data-testid="toolbar-overflow"
-            aria-label="More properties"
-            onClick={(e) => { e.stopPropagation(); onOpenPopover(); }}
-            className="relative ml-auto inline-flex h-7 w-6 flex-shrink-0 items-center justify-center rounded border border-border bg-surface text-[12px] text-muted hover:border-accent/40 hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/70"
-          >
-            ...
-            {hasPopoverContent && (
-              <span
-                data-testid="toolbar-overflow-dot"
-                className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-accent"
-                aria-hidden="true"
-              />
-            )}
-          </button>
+          <OverflowButton overflowButtonRef={overflowButtonRef} hasPopoverContent={hasPopoverContent} onOpenPopover={onOpenPopover} />
         </>
       )}
     </div>

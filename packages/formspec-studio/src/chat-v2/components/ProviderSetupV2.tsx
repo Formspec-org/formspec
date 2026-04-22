@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useId } from 'react';
 import type { ProviderConfig, ProviderType } from '@formspec-org/chat';
 import { validateProviderConfig } from '@formspec-org/chat';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface ProviderSetupProps {
   open: boolean;
@@ -25,14 +26,7 @@ export function ProviderSetupV2({ open, onClose, onSave, initialConfig, onClear,
     setErrors([]);
   }, [open, initialConfig]);
 
-  useEffect(() => {
-    if (!open) return;
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { e.preventDefault(); onClose(); }
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [open, onClose]);
+  useEscapeKey(onClose, open);
 
   if (!open) return null;
 

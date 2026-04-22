@@ -1,7 +1,7 @@
 /** @filedesc Registers a Pragmatic `dropTarget` for layout `container-drop` zones (empty container, collapsible header). */
 import { useEffect } from 'react';
 import { dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
-import { LAYOUT_PDND_KIND } from './layout-pdnd-kind';
+import { LAYOUT_PDND_KIND } from './layout-pdnd';
 import { isRecord } from '../shared/runtime-guards';
 
 export function useLayoutPragmaticContainerDrop(args: {

@@ -111,20 +111,22 @@ export function InlineExpression({ value, onSave, placeholder, className, autoEd
 
   if (!value && placeholder) {
     return (
-      <span
+      <button
+        type="button"
         onClick={enterEdit}
         className={`inline-flex items-center gap-1 font-mono text-[11px] text-muted/50 italic cursor-pointer hover:text-muted transition-colors group/ie ${className ?? ''}`}
       >
         {placeholder}
         <EditPencilIcon className="opacity-30 group-hover/ie:opacity-60" />
-      </span>
+      </button>
     );
   }
 
   return (
-    <span
+    <button
+      type="button"
       onClick={enterEdit}
-      className={`inline-flex items-center gap-1 font-mono text-[11px] bg-subtle border border-border/60 px-1.5 py-0.5 rounded-[2px] cursor-pointer hover:bg-subtle/80 transition-colors group/ie ${className ?? ''}`}
+      className={`inline-flex items-center gap-1 font-mono text-[11px] bg-subtle border border-border/60 px-1.5 py-0.5 rounded-[2px] cursor-pointer hover:bg-subtle/80 transition-colors group/ie text-left ${className ?? ''}`}
       title={value}
     >
       <span className="max-w-[120px] overflow-hidden text-ellipsis">
@@ -136,6 +138,6 @@ export function InlineExpression({ value, onSave, placeholder, className, autoEd
         </span>
       )}
       <EditPencilIcon className="opacity-30 group-hover/ie:opacity-60" />
-    </span>
+    </button>
   );
 }

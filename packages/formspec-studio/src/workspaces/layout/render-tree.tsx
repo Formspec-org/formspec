@@ -78,11 +78,6 @@ const ROOT_CONTEXT: ParentLayoutContext = {
  * so a Stack/Accordion shell wraps its children in the DOM and would otherwise **beat** inner
  * `FieldBlock` / `DisplayBlock` rows (same rect stack) — breaking in-container reorder and cross-parent drags.
  */
-const LAYOUT_LEAF_COLLISION_BOOST = 100;
-
-function leafRowCollisionPriority(containerDepth: number): number {
-  return containerDepth * 10 + LAYOUT_LEAF_COLLISION_BOOST;
-}
 
 function resolveDefPathMaps(
   key: string,
@@ -266,7 +261,6 @@ function renderContainer(
   ctx: LayoutRenderContext,
   children: React.ReactNode,
   layoutProps: ContainerLayoutProps,
-  collisionPriority: number,
   pageSectionActive: boolean,
   sortableGroupId: string,
   sortableIndex: number,
@@ -296,7 +290,6 @@ function renderContainer(
       onUnwrap={ctx.onUnwrapNode ? () => ctx.onUnwrapNode!(selectionKey) : undefined}
       onRemove={ctx.onRemoveNode ? () => ctx.onRemoveNode!(selectionKey) : undefined}
       onStyleRemove={ctx.onStyleRemove ? (k) => ctx.onStyleRemove!(selectionKey, k) : undefined}
-      collisionPriority={collisionPriority}
       pageSectionActive={pageSectionActive}
       sortableGroup={sortableGroupId}
       sortableIndex={sortableIndex}
@@ -385,7 +378,6 @@ export function renderLayoutTree(
           onResizeRowSpan={ctx.onResizeRowSpan ? (n) => ctx.onResizeRowSpan!(nodeSelKey, n) : undefined}
           sortableGroup={sortableGroupId}
           sortableIndex={siblingSortIndex++}
-          collisionPriority={leafRowCollisionPriority(containerDepth)}
           treeDragNodeRef={{ nodeId: node.nodeId! }}
         />,
       );
@@ -421,7 +413,6 @@ export function renderLayoutTree(
           ctx,
           children,
           buildContainerLayoutProps(node),
-          containerDepth * 10,
           pageSectionActive,
           sortableGroupId,
           siblingSortIndex++,
@@ -466,7 +457,6 @@ export function renderLayoutTree(
             ctx,
             children,
             buildContainerLayoutProps(node),
-            containerDepth * 10,
             pageSectionActive,
             sortableGroupId,
             siblingSortIndex++,
@@ -529,7 +519,6 @@ export function renderLayoutTree(
           onStyleRemove={ctx.onStyleRemove ? (k) => ctx.onStyleRemove!(defPath, k) : undefined}
           sortableGroup={sortableGroupId}
           sortableIndex={siblingSortIndex++}
-          collisionPriority={leafRowCollisionPriority(containerDepth)}
         />,
       );
       continue;
@@ -593,7 +582,6 @@ export function renderLayoutTree(
           }
           sortableGroup={sortableGroupId}
           sortableIndex={siblingSortIndex++}
-          collisionPriority={leafRowCollisionPriority(containerDepth)}
           treeDragNodeRef={{ nodeId: node.nodeId }}
         />,
       );

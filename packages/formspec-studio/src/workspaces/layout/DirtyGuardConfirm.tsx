@@ -1,5 +1,5 @@
 /** @filedesc Reusable confirm dialog for discarding unsaved popover changes. */
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 
 export interface DirtyGuardConfirmProps {
   onDiscard: () => void;
@@ -40,13 +40,13 @@ export function useDirtyGuard() {
   const [dirtyFields, setDirtyFields] = useState<Record<string, boolean>>({});
   const isDirty = Object.values(dirtyFields).some(Boolean);
 
-  const markDirty = (fieldId: string, isDirty: boolean) => {
-    setDirtyFields((prev) => ({ ...prev, [fieldId]: isDirty }));
-  };
+  const markDirty = useCallback((fieldId: string, value: boolean) => {
+    setDirtyFields((prev) => ({ ...prev, [fieldId]: value }));
+  }, []);
 
-  const reset = () => {
+  const reset = useCallback(() => {
     setDirtyFields({});
-  };
+  }, []);
 
   return { isDirty, markDirty, reset, dirtyFields };
 }

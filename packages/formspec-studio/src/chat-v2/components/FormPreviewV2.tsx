@@ -3,23 +3,22 @@ import React, { useMemo, useState, useCallback } from 'react';
 import { useChatState, useChatSession } from '../state/ChatContext.js';
 import type { SourceTrace, DefinitionDiff } from '@formspec-org/chat';
 import { planDefinitionFallback } from '@formspec-org/layout';
-import type { LayoutNode } from '@formspec-org/layout';
+import type { LayoutNode, PresentationBlock } from '@formspec-org/layout';
+import type { FormItem } from '@formspec-org/types';
 
 interface OptionLike {
   value: string;
   label: string;
 }
 
-interface ItemLike {
+interface FieldMockupItem {
   key: string;
-  type: 'field' | 'group' | 'display';
   label: string;
-  description?: string;
   hint?: string;
   dataType?: string;
   options?: OptionLike[];
   optionSet?: string;
-  presentation?: any;
+  presentation?: PresentationBlock;
 }
 
 type PreviewMode = 'visual' | 'json';
@@ -58,9 +57,9 @@ export function FormPreviewV2() {
     if (!def) return null;
     const findItem = (key: string) => {
       const segments = key.split('.');
-      let current: any[] = def.items;
+      let current: FormItem[] = def.items;
       for (let i = 0; i < segments.length; i++) {
-        const found = current.find((it: any) => it.key === segments[i]);
+        const found = current.find((it) => it.key === segments[i]);
         if (!found) return null;
         if (i === segments.length - 1) return found;
         current = found.children || [];
@@ -119,6 +118,7 @@ export function FormPreviewV2() {
             <button
               key={m}
               type="button"
+              aria-pressed={mode === m}
               className={`v2-tab px-3.5 py-1.5 text-xs font-medium rounded-md capitalize transition-all duration-150 ${
                 mode === m ? 'v2-tab-active' : ''
               }`}
@@ -168,39 +168,6 @@ export function FormPreviewV2() {
             </div>
 
             {diff && <DiffSummary diff={diff} />}
-
-            {/* Screener section — reads from chat state's screener if available */}
-            {(state as any).screener && (
-              <div className="space-y-4 pt-2 pb-6 border-b v2-border">
-                <div className="flex items-center gap-2">
-                  <div className="w-1.5 h-5 v2-accent-bar rounded-full" />
-                  <h3 className="v2-section-label text-xs font-bold uppercase tracking-[0.15em]">Screener</h3>
-                </div>
-                <div className="space-y-2.5">
-                  {((state as any).screener.items ?? []).map((item: ItemLike) => (
-                    <ItemPreview key={item.key} item={item} tracesByPath={tracesByPath} diffKeys={diffKeys} />
-                  ))}
-                </div>
-                {((state as any).screener.evaluation ?? []).map((phase: any) => (
-                  <div key={phase.id} className="v2-routes-box rounded-lg p-3.5">
-                    <div className="v2-text-tertiary text-[10px] font-bold uppercase tracking-wider mb-2">
-                      {phase.label || phase.id} ({phase.strategy})
-                    </div>
-                    <div className="space-y-2">
-                      {(phase.routes ?? []).map((route: any, i: number) => (
-                        <div key={i} className="flex items-start gap-2 text-xs">
-                          <span className="v2-text-accent mt-0.5">&#8594;</span>
-                          <div>
-                            <div className="font-medium v2-text-primary">{route.label || 'Unnamed Route'}</div>
-                            <div className="font-mono text-[10px] v2-text-tertiary mt-0.5">{route.condition || route.score || ''}</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
 
             {/* Items via layout plan */}
             <div className="space-y-5">
@@ -302,7 +269,7 @@ function LayoutNodePreview({ node, tracesByPath, diffKeys }: {
             {diffStatus && <DiffBadge status={diffStatus} />}
           </div>
         </div>
-        <FieldMockup item={{ ...item, presentation } as any} />
+        <FieldMockup item={{ ...item, presentation }} />
         {traces.map((t, i) => <TraceTag key={i} trace={t} />)}
         {node.children.length > 0 && (
           <div className="v2-dependent-fields mt-3 pt-3 space-y-3 -mx-4 px-4 pb-2 rounded-b-xl">
@@ -463,54 +430,6 @@ function diffBorderClass(status: 'added' | 'modified' | null): string {
   return '';
 }
 
-function ItemPreview({ item, tracesByPath, diffKeys }: {
-  item: ItemLike;
-  tracesByPath: Map<string, SourceTrace[]>;
-  diffKeys: DiffKeySet | null;
-}) {
-  const itemTraces = tracesByPath.get(item.key) ?? [];
-  const diffStatus = getDiffStatus(item.key, diffKeys);
-
-  if (item.type === 'group') {
-    return (
-      <div>
-        <div className="flex items-center gap-2 mb-1.5">
-          <h3 className="v2-section-label text-[11px] font-bold uppercase tracking-wider">{item.label}</h3>
-          {diffStatus && <DiffBadge status={diffStatus} />}
-        </div>
-        {item.description && <p className="text-xs v2-text-secondary mb-2 leading-relaxed">{item.description}</p>}
-        {itemTraces.map((t, i) => <TraceTag key={i} trace={t} />)}
-      </div>
-    );
-  }
-
-  if (item.type === 'display') {
-    return (
-      <div className="py-1">
-        <div className="text-xs italic v2-text-tertiary leading-relaxed">{item.label}</div>
-        {itemTraces.map((t, i) => <TraceTag key={i} trace={t} />)}
-      </div>
-    );
-  }
-
-  return (
-    <div className={`v2-field-card rounded-xl px-4 py-3.5 space-y-2.5 ${diffBorderClass(diffStatus)}`}>
-      <div className="flex items-start justify-between gap-2">
-        <div className="space-y-0.5">
-          <span className="text-sm font-medium v2-text-primary leading-snug">{item.label}</span>
-          {item.description && <p className="text-xs v2-text-secondary leading-relaxed">{item.description}</p>}
-        </div>
-        <div className="flex items-center gap-1.5 shrink-0">
-          {item.dataType && <TypeBadge>{item.dataType}</TypeBadge>}
-          {diffStatus && <DiffBadge status={diffStatus} />}
-        </div>
-      </div>
-      <FieldMockup item={item} />
-      {itemTraces.map((t, i) => <TraceTag key={i} trace={t} />)}
-    </div>
-  );
-}
-
 function TypeBadge({ children }: { children: React.ReactNode }) {
   return <span className="v2-type-badge text-[10px] px-1.5 py-0.5 rounded-md font-mono font-medium">{children}</span>;
 }
@@ -534,9 +453,9 @@ function TraceTag({ trace }: { trace: SourceTrace }) {
 
 // ── Field Mockups ────────────────────────────────────────────────────
 
-function FieldMockup({ item }: { item: ItemLike }) {
+function FieldMockup({ item }: { item: FieldMockupItem }) {
   const dt = item.dataType;
-  const hint = item.presentation?.widgetHint?.toLowerCase();
+  const hint = item.presentation?.widget?.toLowerCase();
   const mockBase = 'v2-mock-input w-full rounded-lg px-3 py-2 text-xs pointer-events-none';
 
   if (dt === 'boolean') {

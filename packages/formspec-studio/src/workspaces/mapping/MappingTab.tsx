@@ -1,57 +1,13 @@
 /** @filedesc Mapping workspace tab composing Blueprint, Rules, Adapter, and Preview sections with a FilterBar. */
-import { useState } from 'react';
 import { MappingConfig } from './MappingConfig';
 import { RuleEditor } from './RuleEditor';
 import { AdapterConfig } from './AdapterConfig';
 import { MappingPreview } from './MappingPreview';
 import { MappingSelector } from './MappingSelector';
 import { WorkspacePage, WorkspacePageSection } from '../../components/ui/WorkspacePage';
-import { HelpTip } from '../../components/ui/HelpTip';
-
-/**
- * Visual wrapper for a Mapping Pillar (Blueprint, Rules, Adapter, Preview).
- */
-function MappingPillar({
-  title,
-  subtitle,
-  helpText,
-  children,
-  accentColor = "bg-accent",
-  hidden = false,
-  'data-testid': testId
-}: {
-  title: string;
-  subtitle: string;
-  helpText: string;
-  children: React.ReactNode;
-  accentColor?: string;
-  hidden?: boolean;
-  'data-testid'?: string;
-}) {
-  return (
-    <div 
-      data-testid={testId}
-      className={`mb-12 last:mb-0 group animate-in fade-in slide-in-from-bottom-2 duration-500 ${hidden ? 'hidden' : ''}`}
-    >
-      <header className="mb-6">
-        <div className="flex items-center gap-3 mb-1">
-          <div className={`w-1 h-5 rounded-full ${accentColor}`} />
-          <h3 className="font-mono text-[13px] font-bold tracking-[0.2em] uppercase text-ink">
-            {title}
-          </h3>
-        </div>
-        <div className="flex items-center gap-2 pl-4">
-          <HelpTip text={helpText}>
-            <span className="text-[12px] text-muted italic tracking-tight">{subtitle}</span>
-          </HelpTip>
-        </div>
-      </header>
-      <div className="pl-6 border-l border-border/60 ml-0.5 mt-4">
-        {children}
-      </div>
-    </div>
-  );
-}
+import { Pillar } from '../shared/Pillar';
+import { SectionFilterBar } from '../shared/SectionFilterBar';
+import { useControllableState } from '../../hooks/useControllableState';
 
 const sectionTabs = [
   { id: 'all', label: 'All' },
@@ -76,13 +32,7 @@ export function MappingTab({
   configOpen,
   onConfigOpenChange,
 }: MappingTabProps = {}) {
-  const [internalTab, setInternalTab] = useState<MappingTabId>('all');
-  const activeTab = controlledTab ?? internalTab;
-
-  const setActiveTab = (tab: MappingTabId) => {
-    setInternalTab(tab);
-    onActiveTabChange?.(tab);
-  };
+  const [activeTab, setActiveTab] = useControllableState(controlledTab, onActiveTabChange, 'all' as MappingTabId);
 
   const showBlueprint = activeTab === 'all' || activeTab === 'config';
   const showRules = activeTab === 'all' || activeTab === 'rules';
@@ -101,32 +51,17 @@ export function MappingTab({
           <MappingSelector />
         </div>
         {/* Section filter tabs */}
-        <div
-          role="tablist"
-          aria-label="Mapping section filter"
-          className="flex items-center gap-1.5 p-1 bg-subtle/50 rounded-[8px] border border-border/50 w-fit"
-        >
-          {sectionTabs.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              role="tab"
-              aria-selected={activeTab === tab.id}
-              data-testid={`mapping-filter-tab-${tab.id}`}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-3 py-1.5 text-[12px] font-bold uppercase tracking-wider rounded-[6px] transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 ${activeTab === tab.id
-                ? 'bg-accent text-white shadow-sm'
-                : 'text-muted hover:text-ink hover:bg-subtle'
-                }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+        <SectionFilterBar
+          tabs={sectionTabs}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          ariaLabel="Mapping section filter"
+          testIdPrefix="mapping-filter-tab"
+        />
       </WorkspacePageSection>
 
       <WorkspacePageSection padding="px-7" className="flex-1 py-10 min-h-0">
-        <MappingPillar
+        <Pillar
           data-testid="mapping-pillar-config"
           title="Mapping Blueprint"
           subtitle="Target schema and base configuration"
@@ -135,9 +70,9 @@ export function MappingTab({
           hidden={!showBlueprint}
         >
           <MappingConfig open={configOpen} onOpenChange={onConfigOpenChange} />
-        </MappingPillar>
+        </Pillar>
 
-        <MappingPillar
+        <Pillar
           data-testid="mapping-pillar-rules"
           title="Transformation Rules"
           subtitle="Individual field and path mappings"
@@ -146,9 +81,9 @@ export function MappingTab({
           hidden={!showRules}
         >
           <RuleEditor />
-        </MappingPillar>
+        </Pillar>
 
-        <MappingPillar
+        <Pillar
           data-testid="mapping-pillar-adapter"
           title="Adapter Settings"
           subtitle="Format specific output options"
@@ -157,9 +92,9 @@ export function MappingTab({
           hidden={!showAdapter}
         >
           <AdapterConfig />
-        </MappingPillar>
+        </Pillar>
 
-        <MappingPillar
+        <Pillar
           data-testid="mapping-pillar-preview"
           title="Output Preview"
           subtitle="Real-time transformation result"
@@ -168,7 +103,7 @@ export function MappingTab({
           hidden={!showPreview}
         >
           <MappingPreview />
-        </MappingPillar>
+        </Pillar>
       </WorkspacePageSection>
     </WorkspacePage>
   );

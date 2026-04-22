@@ -7,7 +7,7 @@ import {
   type EditableThemeProperty,
 } from '@formspec-org/studio-core';
 import type { Project } from '@formspec-org/studio-core';
-import { DirtyGuardConfirm } from './DirtyGuardConfirm';
+import { DirtyGuardConfirm, useDirtyGuard } from './DirtyGuardConfirm';
 import { useOptionalLayoutMode } from './LayoutModeContext';
 
 export interface ThemeOverridePopoverProps {
@@ -135,38 +135,30 @@ export function ThemeOverridePopover({
   onSetOverride,
   onClearOverride,
 }: ThemeOverridePopoverProps) {
-  const [dirtyInputs, setDirtyInputs] = useState<Set<string>>(new Set());
+  const { isDirty, markDirty: trackDirty, reset: resetDirty } = useDirtyGuard();
   const [showDirtyGuard, setShowDirtyGuard] = useState(false);
   const layoutMode = useOptionalLayoutMode();
 
   useEffect(() => {
     if (!open) {
-      setDirtyInputs(new Set());
+      resetDirty();
       setShowDirtyGuard(false);
     }
-  }, [open]);
+  }, [open, resetDirty]);
 
   useEffect(() => {
     if (!layoutMode) return;
     const popoverId = 'theme-override-popover';
-    if (open && dirtyInputs.size > 0) {
+    if (open && isDirty) {
       layoutMode.registerDirtyPopover(popoverId);
     } else {
       layoutMode.clearDirtyPopover(popoverId);
     }
     return () => layoutMode.clearDirtyPopover(popoverId);
-  }, [layoutMode, open, dirtyInputs.size]);
-
-  function trackDirty(id: string, isDirty: boolean) {
-    setDirtyInputs((prev) => {
-      const next = new Set(prev);
-      if (isDirty) next.add(id); else next.delete(id);
-      return next;
-    });
-  }
+  }, [layoutMode, open, isDirty]);
 
   function requestClose() {
-    if (dirtyInputs.size > 0) {
+    if (isDirty) {
       setShowDirtyGuard(true);
     } else {
       onClose();

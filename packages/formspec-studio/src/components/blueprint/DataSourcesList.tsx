@@ -1,5 +1,6 @@
 /** @filedesc Blueprint section listing named data source instances defined on the form. */
 import { useDefinition } from '../../state/useDefinition';
+import { EmptyBlueprintState } from '../shared/EmptyBlueprintState';
 
 interface InstanceEntry {
   name: string;
@@ -19,11 +20,7 @@ export function DataSourcesList() {
     : [];
 
   if (entries.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-5 border border-dashed border-border/70 rounded-[6px] bg-subtle/30 text-muted mx-1">
-        <span className="text-[12px] font-medium font-ui tracking-tight">No data sources defined</span>
-      </div>
-    );
+    return <EmptyBlueprintState message="No data sources defined" />;
   }
 
   return (

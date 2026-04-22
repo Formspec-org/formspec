@@ -7,6 +7,7 @@ import {
   saveProviderConfig,
   clearProviderConfig,
 } from '../lib/provider-config-storage.js';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 interface AppSettingsDialogProps {
   open: boolean;
@@ -35,14 +36,7 @@ export function AppSettingsDialog({ open, onClose }: AppSettingsDialogProps) {
     setSaved_(false);
   }, [open]);
 
-  useEffect(() => {
-    if (!open) return;
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { e.preventDefault(); onClose(); }
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [open, onClose]);
+  useEscapeKey(onClose, open);
 
   if (!open) return null;
 

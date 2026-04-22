@@ -1,23 +1,12 @@
 /** @filedesc Pill-based filter bar for narrowing the logic tab view to a specific bind type. */
 import { Pill } from '../../components/ui/Pill';
-
-interface BindEntry {
-  required?: string;
-  relevant?: string;
-  calculate?: string;
-  constraint?: string;
-  readonly?: string;
-  'pre-populate'?: any;
-  [key: string]: any;
-}
+import { type BindEntry, bindTypes } from './bind-types';
 
 interface FilterBarProps {
   binds: Record<string, BindEntry>;
   activeFilter?: (typeof bindTypes)[number] | null;
   onFilterSelect?: (filter: (typeof bindTypes)[number] | null) => void;
 }
-
-const bindTypes = ['required', 'relevant', 'calculate', 'constraint', 'readonly', 'pre-populate'] as const;
 
 const pillColors: Record<string, 'accent' | 'logic' | 'green' | 'error' | 'amber' | 'indigo'> = {
   required: 'accent',

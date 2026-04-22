@@ -53,8 +53,6 @@ export interface LayoutContainerProps {
   onRemove?: () => void;
   /** Called when style is removed from the PropertyPopover. */
   onStyleRemove?: (styleKey: string) => void;
-  /** Collision priority for nested drop targets (higher wins). */
-  collisionPriority?: number;
   /**
    * When true, unselected Stack containers use a solid frame on the active layout page so the
    * interior does not read as a throwaway sketch (wizard / single-page canvas).
@@ -158,11 +156,8 @@ export function LayoutContainer(props: LayoutContainerProps) {
     onUnwrap,
     onRemove,
     onStyleRemove,
-    collisionPriority: _collisionPriority = 0,
     pageSectionActive = false,
   } = props;
-
-  void _collisionPriority;
 
   const resolvedLayoutProps = layoutProps ?? {};
   const [open, setOpen] = useState(resolvedLayoutProps.defaultOpen ?? true);

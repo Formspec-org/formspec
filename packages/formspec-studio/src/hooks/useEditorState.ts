@@ -1,6 +1,8 @@
 /** @filedesc Manages editor-specific state: manage count, right panel visibility, and health sheet. */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useProject } from '../state/useProject';
+import { useProjectState } from '../state/useProjectState';
+import { useEscapeKey } from './useEscapeKey';
 
 export interface EditorState {
   manageCount: number;
@@ -14,32 +16,25 @@ export function useEditorState(
   activeTab: string,
   compactLayout: boolean,
 ): EditorState {
-  const project = useProject();
   const [showRightPanel, setShowRightPanel] = useState(true);
   const [showHealthSheet, setShowHealthSheet] = useState(false);
 
-  const manageCount = (() => {
-    const def = project.definition;
-    return (def.binds?.length ?? 0) +
-      (Array.isArray(def.shapes) ? def.shapes.length : 0) +
-      (def.variables?.length ?? 0) +
-      Object.keys(def.optionSets ?? {}).length +
-      Object.keys(def.instances ?? {}).length;
-  })();
+  const definition = useProjectState().definition;
+
+  const manageCount = useMemo(() => {
+    return (definition.binds?.length ?? 0) +
+      (Array.isArray(definition.shapes) ? definition.shapes.length : 0) +
+      (definition.variables?.length ?? 0) +
+      Object.keys(definition.optionSets ?? {}).length +
+      Object.keys(definition.instances ?? {}).length;
+  }, [definition]);
 
   useEffect(() => {
     if (!compactLayout || activeTab !== 'Editor') return;
     setShowHealthSheet(false);
   }, [compactLayout, activeTab]);
 
-  useEffect(() => {
-    if (!showHealthSheet) return;
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setShowHealthSheet(false);
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [showHealthSheet]);
+  useEscapeKey(() => setShowHealthSheet(false), showHealthSheet);
 
   return {
     manageCount,

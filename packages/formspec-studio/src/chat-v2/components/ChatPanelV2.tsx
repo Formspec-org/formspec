@@ -2,11 +2,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useChatSession, useChatState } from '../state/ChatContext.js';
 import { IconArrowUp } from '../../components/icons/index.js';
-
-// ── Icons ────────────────────────────────────────────────────────────
-// IconSparkle here has a richer two-path design for chat-v2 surfaces — it is
-// intentionally distinct from the shared icon in ../../components/icons and
-// stays local. IconArrowUp is shared.
+import { ChatMessageListV2 } from './ChatMessageListV2.js';
 
 function IconPaperclip() {
   return (
@@ -21,43 +17,6 @@ function IconSparkle() {
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
       <path d="M8 1l1.5 4.5L14 7l-4.5 1.5L8 13l-1.5-4.5L2 7l4.5-1.5L8 1z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" fill="currentColor" fillOpacity="0.15" />
       <path d="M12.5 10.5l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7.7-2z" stroke="currentColor" strokeWidth="1" strokeLinejoin="round" fill="currentColor" fillOpacity="0.15" />
-    </svg>
-  );
-}
-
-function IconPencil() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M2 11l-.5.5h2l5.5-5.5-1.5-1.5L2 10v1z" />
-      <path d="M7.5 4.5l1.5 1.5" />
-      <path d="M9 3l1.5-1.5 1.5 1.5L10.5 4.5" />
-    </svg>
-  );
-}
-
-function IconRotate() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M1.5 6.5a5 5 0 019-2.5l.5.5" />
-      <path d="M11 1v3H8" />
-      <path d="M11.5 6.5a5 5 0 01-9 2.5l-.5-.5" />
-      <path d="M2 12V9h3" />
-    </svg>
-  );
-}
-
-function IconCheck() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M10.5 3.5L5 9.5 2.5 7" />
-    </svg>
-  );
-}
-
-function IconX() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M10 3L3 10M3 3l7 7" />
     </svg>
   );
 }
@@ -157,28 +116,14 @@ export function ChatPanelV2({ onUpload }: ChatPanelProps) {
     <div className="v2-chat-panel flex flex-col h-full">
       {/* Messages area */}
       <div ref={scrollContainerRef} className="flex-1 overflow-y-auto scrollbar-none">
-        {showEmptyState ? (
-          <EmptyState />
-        ) : (
-          <div className="px-4 sm:px-6 lg:px-10 py-6 space-y-1 max-w-[760px] mx-auto w-full">
-            {pendingText && state.messages.length === 0 && (
-              <MessageBubble id="pending" role="user" content={pendingText} />
-            )}
-            {state.messages.map((msg) => (
-              <MessageBubble
-                key={msg.id}
-                id={msg.id}
-                role={msg.role}
-                content={msg.content}
-                onResend={handleResend}
-                onEdit={handleEdit}
-                disabled={sending}
-              />
-            ))}
-            {sending && <TypingIndicator />}
-            <div ref={messagesEndRef} />
-          </div>
-        )}
+        <ChatMessageListV2
+          messages={state.messages}
+          sending={sending}
+          pendingText={pendingText}
+          messagesEndRef={messagesEndRef}
+          onEdit={handleEdit}
+          onResend={handleResend}
+        />
       </div>
 
       {/* Input bar */}

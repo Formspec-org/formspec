@@ -288,14 +288,7 @@ function OptionRow({
       <KeywordsRow
         index={index}
         option={option}
-        onUpdate={(patch) => {
-          // Keywords deletion sends a full replacement object — detect by absence of keywords key
-          if ('value' in patch && !('keywords' in patch)) {
-            onUpdate(patch);
-          } else {
-            onUpdate(patch);
-          }
-        }}
+        onUpdate={onUpdate}
       />
     </div>
   );

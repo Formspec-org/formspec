@@ -165,7 +165,6 @@ export function MappingConfig({ open: controlledOpen, onOpenChange }: MappingCon
                 onBlur={(e) => project.setMappingTargetSchema('url', e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
-                    project.setMappingTargetSchema('url', (e.target as HTMLInputElement).value);
                     (e.target as HTMLInputElement).blur();
                   }
                 }}

@@ -137,14 +137,18 @@ describe('OptionSets', () => {
 
   it('delete calls project.deleteOptionSet', async () => {
     const { deleteOptionSetSpy } = renderOS();
-    vi.spyOn(window, 'confirm').mockReturnValueOnce(true);
     const card = screen.getByTestId('option-set-colors');
     await act(async () => {
       fireEvent.click(within(card).getByText('colors'));
     });
 
     await act(async () => {
-      screen.getByRole('button', { name: /delete/i }).click();
+      screen.getByRole('button', { name: /delete table/i }).click();
+    });
+
+    const dialog = screen.getByRole('dialog');
+    await act(async () => {
+      within(dialog).getByRole('button', { name: /delete/i }).click();
     });
 
     expect(deleteOptionSetSpy).toHaveBeenCalledWith('colors');

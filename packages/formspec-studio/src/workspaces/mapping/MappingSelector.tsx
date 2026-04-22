@@ -164,11 +164,7 @@ export function MappingSelector() {
                   type="button"
                   data-testid={`mapping-delete-btn-${id}`}
                   title={`Delete mapping '${id}'`}
-                  className={`leading-none transition-opacity ${
-                    isActive
-                      ? 'opacity-0 group-hover:opacity-40 hover:!opacity-100 text-muted hover:text-error'
-                      : 'opacity-0 group-hover:opacity-40 hover:!opacity-100 text-muted hover:text-error'
-                  }`}
+                  className={`leading-none transition-opacity opacity-0 group-hover:opacity-40 hover:!opacity-100 text-muted hover:text-error`}
                   onClick={(e) => handleDelete(id, e)}
                 >
                   <svg width="8" height="8" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">

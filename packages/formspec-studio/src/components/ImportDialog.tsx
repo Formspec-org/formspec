@@ -1,6 +1,7 @@
 /** @filedesc Modal dialog for pasting and importing JSON artifacts (definition, component, theme, mapping). */
 import { useEffect, useId, useMemo, useState } from 'react';
 import { useProject } from '../state/useProject';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 interface ImportDialogProps {
   open: boolean;
@@ -20,21 +21,12 @@ export function ImportDialog({ open, onClose }: ImportDialogProps) {
 
   useEffect(() => {
     if (!open) return;
-
     setSelectedType(ARTIFACT_TYPES[0]);
     setJsonText('');
     setParseError(null);
+  }, [open]);
 
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        onClose();
-      }
-    };
-
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [open, onClose]);
+  useEscapeKey(onClose, open);
 
   const canLoad = useMemo(() => {
     if (!jsonText.trim()) return false;

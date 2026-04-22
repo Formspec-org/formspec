@@ -8,6 +8,7 @@ import {
 import { AdvisoryCallout } from '../../components/ui/AdvisoryCallout';
 import { BindCard } from '../../components/ui/BindCard';
 import { InlineExpression } from '../../components/ui/InlineExpression';
+import { GuidedBindEditor } from '../../components/ui/GuidedBindEditor';
 import { AddBehaviorMenu } from '../../components/ui/AddBehaviorMenu';
 import { PrePopulateCard } from '../../components/ui/PrePopulateCard';
 import {
@@ -18,6 +19,7 @@ import {
   type AdvisoryActionKey,
 } from '@formspec-org/studio-core';
 import type { FormItem } from '@formspec-org/types';
+import { useDefinition } from '../../state/useDefinition';
 import { fieldDetailOrphanHeading } from './item-row-field-detail';
 import {
   EDITOR_DASH_BUTTON,
@@ -116,6 +118,7 @@ export const ItemRowCategoryPanel = forwardRef<
   },
   ref,
 ) {
+  const definition = useDefinition();
   const hasRelevant = binds.relevant != null;
   const hasRequired = binds.required != null;
   const hasConstraint = binds.constraint != null;
@@ -198,14 +201,15 @@ export const ItemRowCategoryPanel = forwardRef<
               humanized={humanizeFEL(binds.relevant).text}
               onRemove={() => onUpdateItem?.({ relevant: null })}
             >
-              <InlineExpression
+              <GuidedBindEditor
+                bindType='relevant'
                 value={binds.relevant}
                 autoEdit={justCreatedBind === 'relevant'}
                 onSave={(value) => {
                   onClearJustCreatedBind?.();
                   onUpdateItem?.({ relevant: value || null });
                 }}
-                placeholder='Click to add expression'
+                definition={definition}
               />
             </BindCard>
           )}
@@ -286,14 +290,15 @@ export const ItemRowCategoryPanel = forwardRef<
                 humanized={humanizeFEL(binds.relevant).text}
                 onRemove={() => onUpdateItem?.({ relevant: null })}
               >
-                <InlineExpression
+                <GuidedBindEditor
+                  bindType='relevant'
                   value={binds.relevant}
                   autoEdit={justCreatedBind === 'relevant'}
                   onSave={(value) => {
                     onClearJustCreatedBind?.();
                     onUpdateItem?.({ relevant: value || null });
                   }}
-                  placeholder='Click to add expression'
+                  definition={definition}
                 />
               </BindCard>
             )}
@@ -324,14 +329,15 @@ export const ItemRowCategoryPanel = forwardRef<
                 humanized={humanizeFEL(binds.required).text}
                 onRemove={() => onUpdateItem?.({ required: null })}
               >
-                <InlineExpression
+                <GuidedBindEditor
+                  bindType='required'
                   value={binds.required}
                   autoEdit={justCreatedBind === 'required'}
                   onSave={(value) => {
                     onClearJustCreatedBind?.();
                     onUpdateItem?.({ required: value || null });
                   }}
-                  placeholder='Click to add expression'
+                  definition={definition}
                 />
               </BindCard>
             )}
@@ -343,14 +349,15 @@ export const ItemRowCategoryPanel = forwardRef<
                 message={binds.constraintMessage}
                 onRemove={() => onUpdateItem?.({ constraint: null })}
               >
-                <InlineExpression
+                <GuidedBindEditor
+                  bindType='constraint'
                   value={binds.constraint}
                   autoEdit={justCreatedBind === 'constraint'}
                   onSave={(value) => {
                     onClearJustCreatedBind?.();
                     onUpdateItem?.({ constraint: value || null });
                   }}
-                  placeholder='Click to add expression'
+                  definition={definition}
                 />
               </BindCard>
             )}
@@ -424,14 +431,15 @@ export const ItemRowCategoryPanel = forwardRef<
                 humanized={humanizeFEL(binds.readonly).text}
                 onRemove={() => onUpdateItem?.({ readonly: null })}
               >
-                <InlineExpression
+                <GuidedBindEditor
+                  bindType='readonly'
                   value={binds.readonly}
                   autoEdit={justCreatedBind === 'readonly'}
                   onSave={(value) => {
                     onClearJustCreatedBind?.();
                     onUpdateItem?.({ readonly: value || null });
                   }}
-                  placeholder='Click to add expression'
+                  definition={definition}
                 />
               </BindCard>
             )}

@@ -9,6 +9,9 @@ import {
 import { useDefinition } from '../../state/useDefinition';
 import { useProject } from '../../state/useProject';
 import { InlineExpression } from '../../components/ui/InlineExpression';
+import { ExpandableCard } from '../../components/shared/ExpandableCard';
+import { InlineCreateForm } from '../../components/shared/InlineCreateForm';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 
 interface OptionEntry {
   value: string;
@@ -31,6 +34,7 @@ export function OptionSets() {
   const [expandedName, setExpandedName] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [newName, setNewName] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const handleAdd = () => {
     const trimmed = newName.trim();
@@ -46,9 +50,14 @@ export function OptionSets() {
   };
 
   const handleDelete = (name: string) => {
-    if (window.confirm(`Delete "${name}"? Its options will be inlined into referencing fields.`)) {
-      project.deleteOptionSet(name);
-      if (expandedName === name) setExpandedName(null);
+    setDeleteTarget(name);
+  };
+
+  const confirmDelete = () => {
+    if (deleteTarget) {
+      project.deleteOptionSet(deleteTarget);
+      if (expandedName === deleteTarget) setExpandedName(null);
+      setDeleteTarget(null);
     }
   };
 
@@ -66,6 +75,14 @@ export function OptionSets() {
 
   return (
     <div className="space-y-4">
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Delete option set"
+        description={`Delete "${deleteTarget ?? ''}"? Its options will be inlined into referencing fields.`}
+        confirmLabel="Delete"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
       <div className="flex justify-between items-center mb-1">
         <h4 className="text-[12px] font-bold text-muted uppercase tracking-wider">Active Tables</h4>
         {!isAdding && (
@@ -81,7 +98,11 @@ export function OptionSets() {
 
       {/* Inline add form */}
       {isAdding && (
-        <div className="border border-accent/30 rounded-xl bg-accent/5 p-4 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
+        <InlineCreateForm
+          onCancel={() => { setIsAdding(false); setNewName(''); }}
+          onCreate={handleAdd}
+          example={<span>e.g. <code className="font-mono text-accent/70">state_codes</code>, <code className="font-mono text-accent/70">severity_levels</code>, <code className="font-mono text-accent/70">departments</code></span>}
+        >
           <div className="flex items-center gap-2">
             <input
               autoFocus
@@ -96,26 +117,7 @@ export function OptionSets() {
               className="flex-1 bg-transparent border-none outline-none text-sm font-mono text-ink placeholder:text-muted/40"
             />
           </div>
-          <p className="text-[11px] text-muted">
-            e.g. <code className="font-mono text-accent/70">state_codes</code>, <code className="font-mono text-accent/70">severity_levels</code>, <code className="font-mono text-accent/70">departments</code>
-          </p>
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => { setIsAdding(false); setNewName(''); }}
-              className="text-[10px] uppercase font-bold text-muted hover:text-ink transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleAdd}
-              className="text-[10px] uppercase font-bold text-accent hover:text-accent-hover transition-colors"
-            >
-              Create
-            </button>
-          </div>
-        </div>
+        </InlineCreateForm>
       )}
 
       {/* Empty state */}
@@ -137,37 +139,31 @@ export function OptionSets() {
         const refs = usageCounts[name] || 0;
 
         return (
-          <div
+          <ExpandableCard
             key={name}
             data-testid={`option-set-${name}`}
-            className={`rounded-xl border transition-all ${isExpanded ? 'border-accent shadow-md ring-1 ring-accent/10 bg-surface' : 'border-border bg-surface/50 hover:border-muted hover:bg-surface'}`}
-          >
-            {/* Header */}
-            <div
-              className="flex items-center justify-between p-4 cursor-pointer"
-              onClick={() => setExpandedName(isExpanded ? null : name)}
-            >
-              <div>
-                <div className="font-bold text-[14px] text-ink">{name}</div>
-                {!isExpanded && (
-                  <div className="text-[11px] text-muted truncate max-w-[400px] mt-1">
-                    {isRemote ? `Remote: ${os.source}` : `${optionCount} options`}
-                  </div>
-                )}
-              </div>
-              <div className="flex items-center gap-6">
-                <div className="text-[10px] text-muted font-mono uppercase tracking-wider text-right">
-                  {refs} Ref{refs !== 1 ? 's' : ''}
+            expanded={isExpanded}
+            onToggle={() => setExpandedName(isExpanded ? null : name)}
+            header={
+              <>
+                <div>
+                  <div className="font-bold text-[14px] text-ink">{name}</div>
+                  {!isExpanded && (
+                    <div className="text-[11px] text-muted truncate max-w-[400px] mt-1">
+                      {isRemote ? `Remote: ${os.source}` : `${optionCount} options`}
+                    </div>
+                  )}
                 </div>
-                <div className={`text-[12px] text-muted transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>▼</div>
-              </div>
-            </div>
-
-            {/* Expanded editor */}
-            {isExpanded && (
-              <div className="p-6 pt-0 border-t border-border animate-in fade-in slide-in-from-top-1 duration-200">
-                <div className="space-y-6 mt-4">
-                  {/* Usage hint */}
+                <div className="flex items-center gap-6">
+                  <div className="text-[10px] text-muted font-mono uppercase tracking-wider text-right">
+                    {refs} Ref{refs !== 1 ? 's' : ''}
+                  </div>
+                </div>
+              </>
+            }
+          >
+            <div className="space-y-6 mt-4">
+                   {/* Usage hint */}
                   <div className="flex items-center gap-2 px-3 py-2 bg-accent/5 rounded-lg border border-accent/10">
                     <span className="text-[11px] text-muted">Reference on a field:</span>
                     <code className="text-[12px] font-mono font-bold text-accent">"optionSet": "{name}"</code>
@@ -289,9 +285,7 @@ export function OptionSets() {
                     </button>
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
+          </ExpandableCard>
         );
       })}
     </div>

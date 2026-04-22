@@ -1,6 +1,7 @@
 /** @filedesc Blueprint section rendering the UI component tree with color-coded layout/input/display nodes. */
 import type { CompNode } from '@formspec-org/studio-core';
 import { useComponent } from '../../state/useComponent';
+import { EmptyBlueprintState } from '../shared/EmptyBlueprintState';
 
 const CATEGORY_COLORS: Record<string, string> = {
   layout: 'text-accent',
@@ -63,11 +64,7 @@ export function ComponentTree() {
   const tree = component.tree as CompNode | undefined;
 
   if (!tree) {
-    return (
-      <div className="flex flex-col items-center justify-center py-5 border border-dashed border-border/70 rounded-[6px] bg-subtle/30 text-muted mx-1">
-        <span className="text-[12px] font-medium font-ui tracking-tight">No component tree</span>
-      </div>
-    );
+    return <EmptyBlueprintState message="No component tree" />;
   }
 
   return (

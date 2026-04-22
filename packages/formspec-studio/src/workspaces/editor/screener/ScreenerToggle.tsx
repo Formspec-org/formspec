@@ -1,6 +1,8 @@
 /** @filedesc Presence toggle for the screener — empty state or active summary with remove action. */
+import { useState } from 'react';
 import { useProject } from '../../../state/useProject';
 import { Pill } from '../../../components/ui/Pill';
+import { ConfirmDialog } from '../../../components/ConfirmDialog';
 
 interface ScreenerToggleProps {
   isActive: boolean;
@@ -11,15 +13,19 @@ interface ScreenerToggleProps {
 
 export function ScreenerToggle({ isActive, questionCount, routeCount, phaseCount }: ScreenerToggleProps) {
   const project = useProject();
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
 
   const handleSetup = () => {
     project.createScreenerDocument();
   };
 
   const handleRemove = () => {
-    if (window.confirm('This will remove the screener document and all screening questions, phases, and routing rules.')) {
-      project.deleteScreenerDocument();
-    }
+    setShowRemoveConfirm(true);
+  };
+
+  const confirmRemove = () => {
+    project.deleteScreenerDocument();
+    setShowRemoveConfirm(false);
   };
 
   if (!isActive) {
@@ -58,6 +64,14 @@ export function ScreenerToggle({ isActive, questionCount, routeCount, phaseCount
       >
         Remove
       </button>
+      <ConfirmDialog
+        open={showRemoveConfirm}
+        title="Remove screener"
+        description="This will remove the screener document and all screening questions, phases, and routing rules."
+        confirmLabel="Remove"
+        onConfirm={confirmRemove}
+        onCancel={() => setShowRemoveConfirm(false)}
+      />
     </div>
   );
 }

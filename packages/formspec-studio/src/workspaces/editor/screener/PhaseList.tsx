@@ -4,6 +4,7 @@ import { useScreener } from '../../../state/useScreener';
 import { useProject } from '../../../state/useProject';
 import { PhaseCard } from './PhaseCard';
 import type { Phase } from '@formspec-org/types';
+import { InlineCreateForm } from '../../../components/shared/InlineCreateForm';
 
 const STRATEGY_OPTIONS = [
   { value: 'first-match', label: 'First Match' },
@@ -56,7 +57,11 @@ export function PhaseList() {
 
       {/* Inline add form */}
       {isAdding && (
-        <div className="border border-accent/30 rounded-xl bg-accent/5 p-4 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
+        <InlineCreateForm
+          onCancel={() => { setIsAdding(false); setNewId(''); }}
+          onCreate={handleAddPhase}
+          createLabel="Add"
+        >
           <div className="flex items-center gap-2">
             <select
               value={newStrategy}
@@ -77,23 +82,7 @@ export function PhaseList() {
               className="flex-1 bg-transparent border-none outline-none text-sm text-ink placeholder:text-muted/40"
             />
           </div>
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => { setIsAdding(false); setNewId(''); }}
-              className="text-[10px] uppercase font-bold text-muted hover:text-ink transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleAddPhase}
-              className="text-[10px] uppercase font-bold text-accent hover:text-accent-hover transition-colors"
-            >
-              Add
-            </button>
-          </div>
-        </div>
+        </InlineCreateForm>
       )}
 
       {/* Empty state */}

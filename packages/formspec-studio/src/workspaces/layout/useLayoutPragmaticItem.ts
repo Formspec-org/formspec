@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { combine } from '@atlaskit/pragmatic-drag-and-drop/combine';
 import { draggable, dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
 import { attachClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge';
-import { LAYOUT_PDND_KIND } from './layout-pdnd-kind';
+import { LAYOUT_PDND_KIND } from './layout-pdnd';
 import type { LayoutPdndSourceData } from './layout-pdnd';
 import { isRecord } from '../shared/runtime-guards';
 

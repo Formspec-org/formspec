@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useProject } from '../../../state/useProject';
 import { RouteCard } from './RouteCard';
 import { FallbackRoute } from './FallbackRoute';
+import { ConfirmDialog } from '../../../components/ConfirmDialog';
 import type { Phase, Route } from '@formspec-org/types';
 
 const STRATEGY_LABELS: Record<string, string> = {
@@ -23,6 +24,7 @@ export function PhaseCard({ phase, isExpanded, onToggle, isFirst, isLast }: Phas
   const project = useProject();
   const routes = phase.routes ?? [];
   const [expandedRouteIdx, setExpandedRouteIdx] = useState<number | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const strategyLabel = STRATEGY_LABELS[phase.strategy] ?? phase.strategy;
   const routeCount = routes.length;
@@ -46,36 +48,50 @@ export function PhaseCard({ phase, isExpanded, onToggle, isFirst, isLast }: Phas
   };
 
   const handleRemovePhase = () => {
-    if (window.confirm(`Remove phase "${phase.id}" and all its routes?`)) {
-      project.removeEvaluationPhase(phase.id);
-    }
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = () => {
+    project.removeEvaluationPhase(phase.id);
+    setShowDeleteConfirm(false);
   };
 
   // Collapsed view
   if (!isExpanded) {
     return (
-      <button
-        type="button"
-        onClick={onToggle}
-        className="w-full text-left rounded-xl border border-border/60 px-4 py-3 hover:border-accent/40 transition-colors"
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-accent bg-accent/10 px-2 py-0.5 rounded">
-              {strategyLabel}
+      <>
+        <button
+          type="button"
+          onClick={onToggle}
+          className="w-full text-left rounded-xl border border-border/60 px-4 py-3 hover:border-accent/40 transition-colors"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-accent bg-accent/10 px-2 py-0.5 rounded">
+                {strategyLabel}
+              </span>
+              <span className="text-sm font-medium text-ink">{phase.label || phase.id}</span>
+            </div>
+            <span className="text-[11px] text-muted">
+              {routeCount} route{routeCount !== 1 ? 's' : ''}
             </span>
-            <span className="text-sm font-medium text-ink">{phase.label || phase.id}</span>
           </div>
-          <span className="text-[11px] text-muted">
-            {routeCount} route{routeCount !== 1 ? 's' : ''}
-          </span>
-        </div>
-      </button>
+        </button>
+        <ConfirmDialog
+          open={showDeleteConfirm}
+          title="Remove phase"
+          description={`Remove phase "${phase.id}" and all its routes?`}
+          confirmLabel="Remove"
+          onConfirm={confirmDelete}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
+      </>
     );
   }
 
   // Expanded view
   return (
+    <>
     <div className="rounded-xl border border-accent shadow-md ring-1 ring-accent/10 bg-surface">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border/30">
@@ -144,5 +160,14 @@ export function PhaseCard({ phase, isExpanded, onToggle, isFirst, isLast }: Phas
         </button>
       </div>
     </div>
+    <ConfirmDialog
+      open={showDeleteConfirm}
+      title="Remove phase"
+      description={`Remove phase "${phase.id}" and all its routes?`}
+      confirmLabel="Remove"
+      onConfirm={confirmDelete}
+      onCancel={() => setShowDeleteConfirm(false)}
+    />
+    </>
   );
 }

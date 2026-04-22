@@ -162,14 +162,18 @@ describe('DataSources', () => {
 
   it('delete calls project.removeInstance', async () => {
     const { removeInstanceSpy } = renderDS();
-    vi.spyOn(window, 'confirm').mockReturnValueOnce(true);
     const card = screen.getByTestId('instance-counties');
     await act(async () => {
       fireEvent.click(within(card).getByText('counties'));
     });
 
     await act(async () => {
-      screen.getByRole('button', { name: /delete/i }).click();
+      screen.getByRole('button', { name: /delete data source/i }).click();
+    });
+
+    const dialog = screen.getByRole('dialog');
+    await act(async () => {
+      within(dialog).getByRole('button', { name: /delete/i }).click();
     });
 
     expect(removeInstanceSpy).toHaveBeenCalledWith('counties');

@@ -1,5 +1,5 @@
 /** @filedesc Small reusable confirmation dialog for destructive actions. */
-import { useEffect } from 'react';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -20,17 +20,7 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
-  useEffect(() => {
-    if (!open) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        onCancel();
-      }
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [open, onCancel]);
+  useEscapeKey(onCancel, open);
 
   if (!open) return null;
 

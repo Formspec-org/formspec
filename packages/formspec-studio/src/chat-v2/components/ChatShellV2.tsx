@@ -1,9 +1,9 @@
 /** @filedesc Top-level v2 chat shell — manages sessions, file uploads, panel layout with modern design. */
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import JSZip from 'jszip';
 import { ChatSession, GeminiAdapter, MockAdapter, SessionStore, validateProviderConfig, extractRegistryHints } from '@formspec-org/chat';
 import type { AIAdapter, Attachment, ProviderConfig, StorageBackend } from '@formspec-org/chat';
 import { buildBundleFromDefinition } from '@formspec-org/studio-core';
+import { exportProjectZip } from '../../lib/export-zip';
 import commonRegistry from '../../../../../registries/formspec-common.registry.json';
 import { ChatProvider, useChatState, useChatSession } from '../state/ChatContext.js';
 import { EntryScreenV2 } from './EntryScreenV2.js';
@@ -179,34 +179,7 @@ function ActiveSessionV2({ onBack, onUpload, onOpenSettings }: { onBack: () => v
   const [mobileView, setMobileView] = useState<'chat' | 'preview'>('chat');
   const [showSidebar, setShowSidebar] = useState(false);
 
-  const handleExport = useCallback(async () => {
-    const bundle = session.exportBundle();
-    const { definition } = bundle;
-    const baseName = definition.title?.trim()
-      ? definition.title.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-      : 'formspec-project';
-
-    const zip = new JSZip();
-    zip.file('definition.json', JSON.stringify(bundle.definition, null, 2));
-    zip.file('component.json', JSON.stringify(bundle.component, null, 2));
-    zip.file('theme.json', JSON.stringify(bundle.theme, null, 2));
-    if (bundle.mappings && Object.keys(bundle.mappings).length > 0) {
-      const mappingsFolder = zip.folder('mappings');
-      if (mappingsFolder) {
-        for (const [key, mapping] of Object.entries(bundle.mappings)) {
-          mappingsFolder.file(`${key}.json`, JSON.stringify(mapping, null, 2));
-        }
-      }
-    }
-
-    const content = await zip.generateAsync({ type: 'blob' });
-    const url = URL.createObjectURL(content);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${baseName}.zip`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [session]);
+  const handleExport = useCallback(() => exportProjectZip(session.exportBundle()), [session]);
 
   const handleOpenInStudio = useCallback(() => {
     const bundle = session.exportBundle();
@@ -228,7 +201,7 @@ function ActiveSessionV2({ onBack, onUpload, onOpenSettings }: { onBack: () => v
       {/* Header */}
       <header className="v2-session-header flex items-center justify-between px-4 sm:px-5 py-2.5 shrink-0">
         <div className="flex items-center gap-3">
-          <button onClick={onBack} className="v2-icon-btn flex items-center gap-1.5 text-xs font-medium px-2 py-1.5 rounded-lg transition-all duration-150" title="Back to start">
+          <button type="button" onClick={onBack} className="v2-icon-btn flex items-center gap-1.5 text-xs font-medium px-2 py-1.5 rounded-lg transition-all duration-150" aria-label="Back to start" title="Back to start">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 3L5 7l4 4" /></svg>
             <span className="hidden sm:inline">New</span>
           </button>
@@ -236,9 +209,11 @@ function ActiveSessionV2({ onBack, onUpload, onOpenSettings }: { onBack: () => v
           <span className="v2-wordmark text-[10px] font-semibold tracking-[0.2em] uppercase select-none">formspec</span>
           {state.openIssueCount > 0 && (
             <button
+              type="button"
               onClick={() => setShowSidebar(!showSidebar)}
               data-testid="issue-count"
               className="v2-issue-badge inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded-full cursor-pointer"
+              aria-label={"Issues: " + state.openIssueCount}
             >
               <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M5.5 1.5L10 9.5H1L5.5 1.5z" /><line x1="5.5" y1="4.5" x2="5.5" y2="6.5" /><circle cx="5.5" cy="8" r="0.4" fill="currentColor" stroke="none" />
@@ -267,14 +242,14 @@ function ActiveSessionV2({ onBack, onUpload, onOpenSettings }: { onBack: () => v
                 >Preview</button>
               </div>
 
-              <button onClick={handleOpenInStudio} className="v2-header-action flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-lg font-medium transition-all duration-150" title="Open in Studio">
+              <button type="button" onClick={handleOpenInStudio} className="v2-header-action flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-lg font-medium transition-all duration-150" aria-label="Open in Studio" title="Open in Studio">
                 <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M9 2.5h2v2M7 6l4-4M5 2H3a1 1 0 00-1 1v7a1 1 0 001 1h7a1 1 0 001-1V8" />
                 </svg>
                 <span className="hidden sm:inline">Studio</span>
               </button>
 
-              <button onClick={handleExport} className="v2-header-action flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-lg font-medium transition-all duration-150" title="Export">
+              <button type="button" onClick={handleExport} className="v2-header-action flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-lg font-medium transition-all duration-150" aria-label="Export" title="Export">
                 <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M6.5 2v6.5M4 6L6.5 8.5 9 6" /><path d="M2 9.5v1.5a1 1 0 001 1h7a1 1 0 001-1V9.5" />
                 </svg>
@@ -282,7 +257,7 @@ function ActiveSessionV2({ onBack, onUpload, onOpenSettings }: { onBack: () => v
               </button>
             </>
           )}
-          <button onClick={onOpenSettings} className="v2-icon-btn p-2 rounded-lg transition-all duration-150" aria-label="Settings">
+          <button type="button" onClick={onOpenSettings} className="v2-icon-btn p-2 rounded-lg transition-all duration-150" aria-label="Settings">
             <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <circle cx="7.5" cy="7.5" r="2" /><path d="M12.5 7.5a5 5 0 01-.3 1.6l1.2.9-1.3 2.2-1.4-.6a5 5 0 01-1.3.8l-.3 1.5H6.9l-.3-1.5a5 5 0 01-1.3-.8l-1.4.6L2.6 10l1.2-.9a5 5 0 01-.3-1.6 5 5 0 01.3-1.6l-1.2-.9L3.9 3l1.4.6a5 5 0 011.3-.8L6.9 1.3h2.2l.3 1.5a5 5 0 011.3.8l1.4-.6 1.3 2.2-1.2.9a5 5 0 01.3 1.6z" />
             </svg>
@@ -300,6 +275,7 @@ function ActiveSessionV2({ onBack, onUpload, onOpenSettings }: { onBack: () => v
                 Issues ({state.openIssueCount})
               </span>
               <button
+                type="button"
                 onClick={() => setShowSidebar(false)}
                 className="v2-icon-btn p-1 rounded-md"
                 aria-label="Close sidebar"

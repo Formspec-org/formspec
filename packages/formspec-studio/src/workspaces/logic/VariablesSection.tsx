@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useProject } from '../../state/useProject';
 import { InlineExpression } from '../../components/ui/InlineExpression';
+import { InlineCreateForm } from '../../components/shared/InlineCreateForm';
 
 interface Variable {
   name: string;
@@ -56,7 +57,10 @@ export function VariablesSection({ variables }: VariablesSectionProps) {
       </div>
 
       {isAdding && (
-        <div className="border border-accent/30 rounded-lg bg-accent/5 p-3 space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+        <InlineCreateForm
+          onCancel={() => setIsAdding(false)}
+          onCreate={handleAdd}
+        >
           <div className="flex items-center gap-2">
             <span className="text-accent font-mono text-sm leading-none pt-0.5">@</span>
             <input
@@ -72,21 +76,7 @@ export function VariablesSection({ variables }: VariablesSectionProps) {
               className="flex-1 bg-transparent border-none outline-none text-sm font-mono text-ink placeholder:text-muted/40"
             />
           </div>
-          <div className="flex justify-end gap-2">
-            <button
-              onClick={() => setIsAdding(false)}
-              className="text-[10px] uppercase font-bold text-muted hover:text-ink transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleAdd}
-              className="text-[10px] uppercase font-bold text-accent hover:text-accent-hover transition-colors"
-            >
-              Create
-            </button>
-          </div>
-        </div>
+        </InlineCreateForm>
       )}
 
       {variables.length === 0 && !isAdding && (
