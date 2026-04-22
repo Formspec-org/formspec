@@ -9,7 +9,7 @@
 import type { ValidationResult as FormspecValidationResult } from './validation-result.js';
 export type { FormspecValidationResult };
 /**
- * A Formspec Response document — a completed or in-progress Instance pinned to a specific Definition version (§2.1.6). A Response is the unit of data capture: the filled-in form. It references exactly one Definition by the immutable tuple (definitionUrl, definitionVersion). A conformant processor MUST reject a Response whose definitionVersion does not match any known Definition at the given definitionUrl. Responses are always validated against their pinned Definition version, even if a newer version exists (Response Pinning Rule VP-01). The tuple (definitionUrl, definitionVersion) combined with the Response 'id' uniquely identifies a single form submission across all systems.
+ * A Formspec Response document — a completed or in-progress Instance pinned to a specific Definition version (§2.1.6). A Response is the unit of data capture: the filled-in form. It references exactly one Definition by the immutable tuple (definitionUrl, definitionVersion). A conformant processor MUST reject a Response whose definitionVersion does not match any known Definition at the given definitionUrl. Responses are always validated against their pinned Definition version, even if a newer version exists (Response Pinning Rule VP-01). The tuple (definitionUrl, definitionVersion) combined with the Response 'id' uniquely identifies a single form submission across all systems. A Response MAY also carry authored signature evidence records that bind one or more signer/document acts to the canonical response envelope.
  */
 export interface FormResponse {
   /**
@@ -39,7 +39,7 @@ export interface FormResponse {
    */
   authored: string;
   /**
-   * A globally unique identifier for this Response (e.g., UUID v4). While optional in the schema, implementations SHOULD generate an id for every Response to support cross-system correlation, audit trails, amendment chains, and deduplication.
+   * A globally unique identifier for this Response (e.g., UUID v4). While optional in the schema, implementations SHOULD generate an id for every Response to support cross-system correlation, audit trails, amendment chains, and deduplication. When authoredSignatures are present, id becomes REQUIRED so each authored signature can bind to a stable responseId.
    */
   id?: string;
   /**
@@ -73,7 +73,110 @@ export interface FormResponse {
    */
   validationResults?: FormspecValidationResult[];
   /**
+   * Canonical authored-signature evidence records attached to this Response. Each entry binds one signer/document act to the Response envelope. These records are distinct from respondent-ledger attestations: they are authored evidence produced at signing time, not later audit-history observations.
+   *
+   * @minItems 1
+   */
+  authoredSignatures?: [AuthoredSignature, ...AuthoredSignature[]];
+  /**
    * Implementor-specific extension data. All keys MUST be prefixed with 'x-'. Processors MUST ignore unrecognized extensions and MUST preserve them during round-tripping. Extensions MUST NOT alter core semantics (validation, calculation, relevance, required state).
    */
   extensions?: {};
+}
+/**
+ * Canonical authored-signature evidence attached to a Response. Each record binds one signer/document act to the Response envelope. The signature value may be a drawn-image reference, a typed-signature token, a detached cryptographic signature blob, or a provider-managed ceremony reference, but a signature value alone is not sufficient signing intent.
+ *
+ * This interface was referenced by `FormResponse`'s JSON-Schema
+ * via the `definition` "AuthoredSignature".
+ */
+export interface AuthoredSignature {
+  /**
+   * Identifier of the document or signing surface this authored signature affirms.
+   */
+  documentId: string;
+  /**
+   * Opaque signature evidence value or reference. This may be a data URL from a drawn-signature control, an attachment reference, a detached signature blob, or a provider-managed ceremony reference. A signatureValue alone MUST NOT be treated as sufficient signing intent.
+   */
+  signatureValue: string;
+  /**
+   * How the signature evidence was captured.
+   */
+  signatureMethod: string;
+  /**
+   * Stable signer identifier when the host system can provide one. When absent, processors may correlate through the Response author or workflow actor binding.
+   */
+  signerId?: string;
+  /**
+   * Human-readable signer name captured at authoring time.
+   */
+  signerName: string;
+  /**
+   * RFC 3339 timestamp when the signer completed the authored signing act.
+   */
+  signedAt: string;
+  /**
+   * Whether the signer explicitly accepted the declared consent text as part of the signing act.
+   */
+  consentAccepted: boolean;
+  /**
+   * URI reference to the consent text the signer accepted. This keeps signing intent bound to declared text rather than to the signature image alone.
+   */
+  consentTextRef: string;
+  /**
+   * Version of the consent text accepted by the signer.
+   */
+  consentVersion: string;
+  /**
+   * Affirmation text shown to and accepted by the signer at authoring time.
+   */
+  affirmationText: string;
+  /**
+   * Digest of the document bytes, rendered view, or canonical signing payload that the signer affirmed. This binds the signing act to content stronger than a drawn image alone.
+   */
+  documentHash: string;
+  /**
+   * Digest algorithm used to compute documentHash.
+   */
+  documentHashAlgorithm: string;
+  /**
+   * Identifier of the Response this authored signature binds to. It MUST match the top-level Response id when the envelope is persisted.
+   */
+  responseId: string;
+  /**
+   * URI reference to the identity-proofing artifact or proof bundle associated with this signing act, when one exists.
+   */
+  identityProofRef?: string;
+  identityBinding?: AuthoredSignatureIdentityBinding;
+  /**
+   * Provider or adapter that supplied the signing ceremony evidence.
+   */
+  signatureProvider: string;
+  /**
+   * Identifier for the signing ceremony or provider session that produced this authored signature evidence.
+   */
+  ceremonyId: string;
+}
+/**
+ * Provider-neutral identity-binding evidence attached to an authored signature. This records how the signer identity was bound to the signing act without baking one provider or ceremony vendor into the Response contract.
+ *
+ * This interface was referenced by `FormResponse`'s JSON-Schema
+ * via the `definition` "AuthoredSignatureIdentityBinding".
+ */
+export interface AuthoredSignatureIdentityBinding {
+  /**
+   * Authentication method used to bind the signer identity to the authored signing act.
+   */
+  method: string;
+  /**
+   * Assurance strength reached by the identity-binding evidence.
+   */
+  assuranceLevel: 'none' | 'low' | 'standard' | 'high' | 'very-high';
+  /**
+   * URI reference to the identity or signature provider used for this identity binding, when one exists.
+   */
+  providerRef?: string;
+  /**
+   * URI reference to an external identity attestation that supports this signature evidence, when one exists.
+   */
+  externalAttestationRef?: string;
 }

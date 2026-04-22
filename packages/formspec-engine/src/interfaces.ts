@@ -209,6 +209,33 @@ export interface FormProgress {
     complete: boolean;
 }
 
+export interface AuthoredSignatureIdentityBinding {
+    method: string;
+    assuranceLevel: 'none' | 'low' | 'standard' | 'high' | 'very-high';
+    providerRef?: string;
+    externalAttestationRef?: string;
+}
+
+export interface AuthoredSignatureInput {
+    documentId: string;
+    signatureValue: string;
+    signatureMethod: string;
+    signerId?: string;
+    signerName?: string;
+    signedAt: string;
+    consentAccepted: boolean;
+    consentTextRef: string;
+    consentVersion: string;
+    affirmationText: string;
+    documentHash: string;
+    documentHashAlgorithm: string;
+    responseId?: string;
+    identityProofRef?: string;
+    identityBinding?: AuthoredSignatureIdentityBinding;
+    signatureProvider: string;
+    ceremonyId: string;
+}
+
 export interface FormEngineDiagnosticsSnapshot {
     definition: { url: string; version: string; title: string };
     timestamp: string;
@@ -292,6 +319,7 @@ export interface IFormEngine {
         id?: string;
         author?: { id: string; name?: string };
         subject?: { id: string; type?: string };
+        authoredSignatures?: AuthoredSignatureInput[];
         mode?: 'continuous' | 'submit';
     }): any;
 

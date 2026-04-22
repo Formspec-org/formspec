@@ -12,6 +12,7 @@ import type {
 import { diffEvalResults, type EvalResult, type EvalValidation } from '../diff.js';
 import { interpolateMessage } from '../interpolate-message.js';
 import type {
+    AuthoredSignatureInput,
     EngineReplayApplyResult,
     EngineReplayEvent,
     EngineReplayResult,
@@ -502,6 +503,7 @@ export class FormEngine implements IFormEngine {
         id?: string;
         author?: { id: string; name?: string };
         subject?: { id: string; type?: string };
+        authoredSignatures?: AuthoredSignatureInput[];
         mode?: 'continuous' | 'submit';
     }): any {
         const data: Record<string, any> = {};

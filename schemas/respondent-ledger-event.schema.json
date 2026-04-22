@@ -78,6 +78,13 @@
     "identityAttestation": {
       "$ref": "#/$defs/IdentityAttestation"
     },
+    "attachmentBinding": {
+      "$ref": "#/$defs/EvidenceAttachmentBinding"
+    },
+    "priorAttachmentBindingHash": {
+      "$ref": "#/$defs/HashString",
+      "description": "Prior attachment-binding event hash referenced by an attachment.removed event."
+    },
     "sessionRef": {
       "type": "string",
       "minLength": 1,
@@ -89,7 +96,11 @@
       "description": "Identifier for the amendment cycle this event belongs to, when applicable."
     },
     "priorEventHash": {
-      "$ref": "#/$defs/HashString"
+      "oneOf": [
+        { "$ref": "#/$defs/HashString" },
+        { "type": "null" }
+      ],
+      "description": "Previous event hash in the respondent-ledger chain, or null for the first event in a Trellis-wrapped chain."
     },
     "eventHash": {
       "$ref": "#/$defs/HashString"
@@ -98,6 +109,53 @@
       "$ref": "#/$defs/Extensions"
     }
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "eventType": { "const": "attachment.added" } },
+        "required": ["eventType"]
+      },
+      "then": {
+        "required": ["changes", "attachmentBinding"],
+        "not": { "required": ["priorAttachmentBindingHash"] },
+        "properties": {
+          "attachmentBinding": {
+            "properties": {
+              "prior_binding_hash": { "type": "null" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "eventType": { "const": "attachment.replaced" } },
+        "required": ["eventType"]
+      },
+      "then": {
+        "required": ["changes", "attachmentBinding"],
+        "not": { "required": ["priorAttachmentBindingHash"] },
+        "properties": {
+          "attachmentBinding": {
+            "properties": {
+              "prior_binding_hash": { "$ref": "#/$defs/HashString" }
+            },
+            "required": ["prior_binding_hash"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "eventType": { "const": "attachment.removed" } },
+        "required": ["eventType"]
+      },
+      "then": {
+        "required": ["changes", "priorAttachmentBindingHash"],
+        "not": { "required": ["attachmentBinding"] }
+      }
+    }
+  ],
   "$defs": {
     "EventType": {
       "type": "string",
@@ -317,6 +375,61 @@
         },
         "extensions": {
           "$ref": "#/$defs/Extensions"
+        }
+      }
+    },
+    "EvidenceAttachmentBinding": {
+      "type": "object",
+      "required": [
+        "attachment_id",
+        "slot_path",
+        "media_type",
+        "byte_length",
+        "attachment_sha256",
+        "payload_content_hash",
+        "filename",
+        "prior_binding_hash"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "attachment_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Stable logical attachment identifier within the current response and origin-layer scope."
+        },
+        "slot_path": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Formspec response path or evidence slot where the attachment is bound."
+        },
+        "media_type": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9!#$&^_.+-]+/[A-Za-z0-9!#$&^_.+-]+$",
+          "description": "RFC 6838 media type of the attachment bytes."
+        },
+        "byte_length": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Exact attachment byte length before Trellis envelope encryption."
+        },
+        "attachment_sha256": {
+          "$ref": "#/$defs/HashString",
+          "description": "SHA-256 over the exact attachment bytes before Trellis envelope encryption."
+        },
+        "payload_content_hash": {
+          "$ref": "#/$defs/HashString",
+          "description": "Trellis ciphertext hash; equals EventPayload.content_hash and PayloadExternal.content_hash when Trellis-wrapped."
+        },
+        "filename": {
+          "type": ["string", "null"],
+          "description": "Display-only filename; not attachment identity."
+        },
+        "prior_binding_hash": {
+          "oneOf": [
+            { "$ref": "#/$defs/HashString" },
+            { "type": "null" }
+          ],
+          "description": "Prior attachment-binding event hash for replacement, or null for first bind."
         }
       }
     },

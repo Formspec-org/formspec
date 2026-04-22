@@ -45,6 +45,32 @@ def _minimal_response() -> dict:
     }
 
 
+def _minimal_authored_signature() -> dict:
+    return {
+        "documentId": "benefitsApplication",
+        "signatureValue": "urn:agency.gov:signature:artifacts:ceremony-2026-0001:primary",
+        "signatureMethod": "provider-managed",
+        "signerId": "applicant",
+        "signerName": "Ada Lovelace",
+        "signedAt": "2026-04-22T12:00:00Z",
+        "consentAccepted": True,
+        "consentTextRef": "urn:agency.gov:consent:esign-benefits:v1",
+        "consentVersion": "1.0.0",
+        "affirmationText": "I certify under penalty of perjury that this submission is true and complete.",
+        "documentHash": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "documentHashAlgorithm": "sha-256",
+        "responseId": "resp-2026-0001",
+        "identityProofRef": "urn:agency.gov:identity-proof:case-2026-0042",
+        "identityBinding": {
+            "method": "email-otp",
+            "assuranceLevel": "standard",
+            "providerRef": "urn:agency.gov:identity:providers:email-otp",
+        },
+        "signatureProvider": "urn:agency.gov:signature:providers:formspec",
+        "ceremonyId": "ceremony-2026-0001",
+    }
+
+
 def _minimal_validation_result() -> dict:
     return {
         "$formspecValidationResult": "1.0",
@@ -83,6 +109,12 @@ class TestResponseMinimalValid:
         doc["subject"] = {"id": "subj-1", "type": "Patient"}
         doc["validationResults"] = [_minimal_validation_result()]
         doc["extensions"] = {"x-custom": "value"}
+        _validate_response(doc)
+
+    def test_response_with_authored_signatures(self):
+        doc = _minimal_response()
+        doc["id"] = "resp-2026-0001"
+        doc["authoredSignatures"] = [_minimal_authored_signature()]
         _validate_response(doc)
 
 
@@ -235,6 +267,59 @@ class TestResponseValidation:
         doc = _minimal_response()
         doc["validationResults"] = [result]
         with pytest.raises(ValidationError, match="Additional properties are not allowed"):
+            _validate_response(doc)
+
+
+class TestResponseAuthoredSignatures:
+    """Authored signature envelope validation."""
+
+    def test_authored_signatures_require_response_id(self):
+        doc = _minimal_response()
+        doc["authoredSignatures"] = [_minimal_authored_signature()]
+        with pytest.raises(ValidationError, match="'id'"):
+            _validate_response(doc)
+
+    @pytest.mark.parametrize("field", [
+        "documentId",
+        "signatureValue",
+        "signatureMethod",
+        "signerName",
+        "signedAt",
+        "consentAccepted",
+        "consentTextRef",
+        "consentVersion",
+        "affirmationText",
+        "documentHash",
+        "documentHashAlgorithm",
+        "responseId",
+        "signatureProvider",
+        "ceremonyId",
+    ])
+    def test_authored_signature_missing_required_field(self, field):
+        signature = _minimal_authored_signature()
+        del signature[field]
+        doc = _minimal_response()
+        doc["id"] = "resp-2026-0001"
+        doc["authoredSignatures"] = [signature]
+        with pytest.raises(ValidationError, match=f"'{field}' is a required property"):
+            _validate_response(doc)
+
+    def test_invalid_signature_method_rejected(self):
+        signature = _minimal_authored_signature()
+        signature["signatureMethod"] = "faxed"
+        doc = _minimal_response()
+        doc["id"] = "resp-2026-0001"
+        doc["authoredSignatures"] = [signature]
+        with pytest.raises(ValidationError):
+            _validate_response(doc)
+
+    def test_invalid_identity_binding_assurance_rejected(self):
+        signature = _minimal_authored_signature()
+        signature["identityBinding"]["assuranceLevel"] = "critical"
+        doc = _minimal_response()
+        doc["id"] = "resp-2026-0001"
+        doc["authoredSignatures"] = [signature]
+        with pytest.raises(ValidationError):
             _validate_response(doc)
 
 

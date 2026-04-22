@@ -329,6 +329,10 @@ export interface TextInput {
    * Static text rendered after the input (e.g. '.com').
    */
   suffix?: string;
+  /**
+   * Content-type variant. `plain` (default) accepts unstyled text. `richtext` accepts formatted text with runtime-defined serialization. `markdown` accepts Markdown source — portable, diffable, degrades gracefully. `latex` accepts LaTeX source — authoritative for math and scientific documents; degrades to raw source. All formatted variants (`richtext`, `markdown`, `latex`) MUST bind to a field whose `dataType` is `string` or `text`.
+   */
+  variant?: 'plain' | 'richtext' | 'markdown' | 'latex';
 }
 /**
  * Numeric input with optional step controls. Suitable for integers, decimals, and monetary values (when paired with prefix/suffix).

@@ -13,7 +13,7 @@ export type { SelectorMatch, ThemeDocument, PresentationBlock, Selector, PageLay
 export type { TargetSchema, FieldRule, InnerRule, MappingDocument, Coerce, ValueMap, ReverseOverride, ArrayDescriptor, JsonAdapter, XmlAdapter, CsvAdapter } from './mapping.js';
 export type { RegistryEntry, RegistryDocument, Publisher, ConceptEquivalent, VocabularyFilter } from './registry.js';
 export type { ValidationResult } from './validation-result.js';
-export type { FormResponse, FormspecValidationResult } from './response.js';
+export type { FormResponse, AuthoredSignature, AuthoredSignatureIdentityBinding, FormspecValidationResult } from './response.js';
 export type { ValidationReport } from './validation-report.js';
 export type { FELType, FELFunctionCatalog, FunctionEntry, Parameter } from './fel-functions.js';
 export type { ScreenerDocument, Availability, Phase, Route } from './screener.js';

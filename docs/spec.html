@@ -1008,6 +1008,18 @@ for conflict detection, audit trails, and ordering Responses
 chronologically.</td>
 </tr>
 <tr>
+<td><code>#/properties/authoredSignatures</code></td>
+<td><code>authoredSignatures</code></td>
+<td><code>array</code></td>
+<td>no</td>
+<td>—</td>
+<td>Canonical authored-signature evidence records attached to this
+Response. Each entry binds one signer/document act to the Response
+envelope. These records are distinct from respondent-ledger
+attestations: they are authored evidence produced at signing time, not
+later audit-history observations.</td>
+</tr>
+<tr>
 <td><code>#/properties/data</code></td>
 <td><code>data</code></td>
 <td><code>object</code></td>
@@ -1067,7 +1079,9 @@ them during round-tripping. Extensions MUST NOT alter core semantics
 <td>A globally unique identifier for this Response (e.g., UUID v4).
 While optional in the schema, implementations SHOULD generate an id for
 every Response to support cross-system correlation, audit trails,
-amendment chains, and deduplication.</td>
+amendment chains, and deduplication. When authoredSignatures are
+present, id becomes REQUIRED so each authored signature can bind to a
+stable responseId.</td>
 </tr>
 <tr>
 <td><code>#/properties/status</code></td>

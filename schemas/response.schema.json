@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://formspec.org/schemas/response/1.0",
   "title": "Formspec Response",
-  "description": "A Formspec Response document — a completed or in-progress Instance pinned to a specific Definition version (§2.1.6). A Response is the unit of data capture: the filled-in form. It references exactly one Definition by the immutable tuple (definitionUrl, definitionVersion). A conformant processor MUST reject a Response whose definitionVersion does not match any known Definition at the given definitionUrl. Responses are always validated against their pinned Definition version, even if a newer version exists (Response Pinning Rule VP-01). The tuple (definitionUrl, definitionVersion) combined with the Response 'id' uniquely identifies a single form submission across all systems.",
+  "description": "A Formspec Response document — a completed or in-progress Instance pinned to a specific Definition version (§2.1.6). A Response is the unit of data capture: the filled-in form. It references exactly one Definition by the immutable tuple (definitionUrl, definitionVersion). A conformant processor MUST reject a Response whose definitionVersion does not match any known Definition at the given definitionUrl. Responses are always validated against their pinned Definition version, even if a newer version exists (Response Pinning Rule VP-01). The tuple (definitionUrl, definitionVersion) combined with the Response 'id' uniquely identifies a single form submission across all systems. A Response MAY also carry authored signature evidence records that bind one or more signer/document acts to the canonical response envelope.",
   "type": "object",
   "required": [
     "$formspecResponse",
@@ -13,6 +13,166 @@
     "authored"
   ],
   "additionalProperties": false,
+  "dependentRequired": {
+    "authoredSignatures": ["id"]
+  },
+  "$defs": {
+    "AuthoredSignatureIdentityBinding": {
+      "type": "object",
+      "description": "Provider-neutral identity-binding evidence attached to an authored signature. This records how the signer identity was bound to the signing act without baking one provider or ceremony vendor into the Response contract.",
+      "required": ["method", "assuranceLevel"],
+      "additionalProperties": false,
+      "properties": {
+        "method": {
+          "type": "string",
+          "pattern": "^(none|email-otp|sms-otp|knowledge-based|oidc|webauthn|credential|in-person|notary|x-[a-z0-9][a-z0-9-]*)$",
+          "description": "Authentication method used to bind the signer identity to the authored signing act.",
+          "examples": ["email-otp", "credential", "notary"]
+        },
+        "assuranceLevel": {
+          "type": "string",
+          "enum": ["none", "low", "standard", "high", "very-high"],
+          "description": "Assurance strength reached by the identity-binding evidence.",
+          "examples": ["standard", "high"]
+        },
+        "providerRef": {
+          "type": "string",
+          "format": "uri",
+          "description": "URI reference to the identity or signature provider used for this identity binding, when one exists.",
+          "examples": ["urn:agency.gov:identity:providers:email-otp"]
+        },
+        "externalAttestationRef": {
+          "type": "string",
+          "format": "uri",
+          "description": "URI reference to an external identity attestation that supports this signature evidence, when one exists.",
+          "examples": ["urn:agency.gov:identity:attestations:notary:case-2026-0042"]
+        }
+      }
+    },
+    "AuthoredSignature": {
+      "type": "object",
+      "description": "Canonical authored-signature evidence attached to a Response. Each record binds one signer/document act to the Response envelope. The signature value may be a drawn-image reference, a typed-signature token, a detached cryptographic signature blob, or a provider-managed ceremony reference, but a signature value alone is not sufficient signing intent.",
+      "required": [
+        "documentId",
+        "signatureValue",
+        "signatureMethod",
+        "signerName",
+        "signedAt",
+        "consentAccepted",
+        "consentTextRef",
+        "consentVersion",
+        "affirmationText",
+        "documentHash",
+        "documentHashAlgorithm",
+        "responseId",
+        "signatureProvider",
+        "ceremonyId"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "documentId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z][a-zA-Z0-9_-]*$",
+          "description": "Identifier of the document or signing surface this authored signature affirms.",
+          "examples": ["benefitsApplication", "grantCertification"]
+        },
+        "signatureValue": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Opaque signature evidence value or reference. This may be a data URL from a drawn-signature control, an attachment reference, a detached signature blob, or a provider-managed ceremony reference. A signatureValue alone MUST NOT be treated as sufficient signing intent.",
+          "examples": [
+            "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...",
+            "urn:agency.gov:signature-artifacts:ceremony-2026-0001:primary"
+          ]
+        },
+        "signatureMethod": {
+          "type": "string",
+          "pattern": "^(drawn|typed|cryptographic|provider-managed|x-[a-z0-9][a-z0-9-]*)$",
+          "description": "How the signature evidence was captured.",
+          "examples": ["drawn", "provider-managed"]
+        },
+        "signerId": {
+          "type": "string",
+          "description": "Stable signer identifier when the host system can provide one. When absent, processors may correlate through the Response author or workflow actor binding.",
+          "examples": ["applicant", "user-42"]
+        },
+        "signerName": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Human-readable signer name captured at authoring time.",
+          "examples": ["Ada Lovelace"]
+        },
+        "signedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "RFC 3339 timestamp when the signer completed the authored signing act.",
+          "examples": ["2026-04-22T12:00:00Z"]
+        },
+        "consentAccepted": {
+          "type": "boolean",
+          "description": "Whether the signer explicitly accepted the declared consent text as part of the signing act.",
+          "examples": [true]
+        },
+        "consentTextRef": {
+          "type": "string",
+          "format": "uri",
+          "description": "URI reference to the consent text the signer accepted. This keeps signing intent bound to declared text rather than to the signature image alone.",
+          "examples": ["urn:agency.gov:consent:esign-benefits:v1"]
+        },
+        "consentVersion": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Version of the consent text accepted by the signer.",
+          "examples": ["1.0.0"]
+        },
+        "affirmationText": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Affirmation text shown to and accepted by the signer at authoring time.",
+          "examples": ["I certify under penalty of perjury that this submission is true and complete."]
+        },
+        "documentHash": {
+          "type": "string",
+          "pattern": "^[A-Fa-f0-9]{64,128}$",
+          "description": "Digest of the document bytes, rendered view, or canonical signing payload that the signer affirmed. This binds the signing act to content stronger than a drawn image alone.",
+          "examples": ["0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"]
+        },
+        "documentHashAlgorithm": {
+          "type": "string",
+          "pattern": "^(sha-256|sha-384|sha-512|x-[a-z0-9][a-z0-9-]*)$",
+          "description": "Digest algorithm used to compute documentHash.",
+          "examples": ["sha-256"]
+        },
+        "responseId": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Identifier of the Response this authored signature binds to. It MUST match the top-level Response id when the envelope is persisted.",
+          "examples": ["resp-2026-0001"]
+        },
+        "identityProofRef": {
+          "type": "string",
+          "format": "uri",
+          "description": "URI reference to the identity-proofing artifact or proof bundle associated with this signing act, when one exists.",
+          "examples": ["urn:agency.gov:identity-proof:case-2026-0042"]
+        },
+        "identityBinding": {
+          "$ref": "#/$defs/AuthoredSignatureIdentityBinding"
+        },
+        "signatureProvider": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Provider or adapter that supplied the signing ceremony evidence.",
+          "examples": ["urn:agency.gov:signature:providers:formspec"]
+        },
+        "ceremonyId": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Identifier for the signing ceremony or provider session that produced this authored signature evidence.",
+          "examples": ["ceremony-2026-0001"]
+        }
+      }
+    }
+  },
   "properties": {
     "$formspecResponse": {
       "type": "string",
@@ -108,7 +268,7 @@
     },
     "id": {
       "type": "string",
-      "description": "A globally unique identifier for this Response (e.g., UUID v4). While optional in the schema, implementations SHOULD generate an id for every Response to support cross-system correlation, audit trails, amendment chains, and deduplication.",
+      "description": "A globally unique identifier for this Response (e.g., UUID v4). While optional in the schema, implementations SHOULD generate an id for every Response to support cross-system correlation, audit trails, amendment chains, and deduplication. When authoredSignatures are present, id becomes REQUIRED so each authored signature can bind to a stable responseId.",
       "examples": [
         "550e8400-e29b-41d4-a716-446655440000",
         "resp-2025-00042"
@@ -195,6 +355,41 @@
             "source": "shape",
             "shapeId": "yoy-variance-warning",
             "value": 280000.00
+          }
+        ]
+      ]
+    },
+    "authoredSignatures": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Canonical authored-signature evidence records attached to this Response. Each entry binds one signer/document act to the Response envelope. These records are distinct from respondent-ledger attestations: they are authored evidence produced at signing time, not later audit-history observations.",
+      "items": {
+        "$ref": "#/$defs/AuthoredSignature"
+      },
+      "examples": [
+        [
+          {
+            "documentId": "benefitsApplication",
+            "signatureValue": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...",
+            "signatureMethod": "drawn",
+            "signerId": "applicant",
+            "signerName": "Ada Lovelace",
+            "signedAt": "2026-04-22T12:00:00Z",
+            "consentAccepted": true,
+            "consentTextRef": "urn:agency.gov:consent:esign-benefits:v1",
+            "consentVersion": "1.0.0",
+            "affirmationText": "I certify under penalty of perjury that this submission is true and complete.",
+            "documentHash": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            "documentHashAlgorithm": "sha-256",
+            "responseId": "resp-2026-0001",
+            "identityProofRef": "urn:agency.gov:identity-proof:case-2026-0042",
+            "identityBinding": {
+              "method": "email-otp",
+              "assuranceLevel": "standard",
+              "providerRef": "urn:agency.gov:identity:providers:email-otp"
+            },
+            "signatureProvider": "urn:agency.gov:signature:providers:formspec",
+            "ceremonyId": "ceremony-2026-0001"
           }
         ]
       ]
