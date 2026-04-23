@@ -1,6 +1,6 @@
 /** @filedesc Unit tests for generic delegate dispatch executor. */
 import { describe, expect, it, vi } from 'vitest';
-import { exec } from '../src/lib/dispatch-helpers.js';
+import { exec, execBatch } from '../src/lib/dispatch-helpers.js';
 import type { ProjectInternals } from '../src/project-internals.js';
 
 function stubProject(): { project: ProjectInternals; dispatch: ReturnType<typeof vi.fn> } {
@@ -62,5 +62,34 @@ describe('exec', () => {
     expect(result.createdId).toBe('3');
     expect(result.warnings).toEqual([{ code: 'W1', message: 'note' }]);
     expect(dispatch).toHaveBeenCalled();
+  });
+});
+
+describe('execBatch', () => {
+  it('dispatches command array and uses summary(project, params)', () => {
+    const { project, dispatch } = stubProject();
+    const result = execBatch(project, 'unmapField', { sourcePath: '/a' }, {
+      buildCommands: () => [
+        { type: 'mapping.deleteRule', payload: { index: 1 } },
+        { type: 'mapping.deleteRule', payload: { index: 0 } },
+      ],
+      summary: (_proj, p) => `Unmapped ${p.sourcePath} (2)`,
+      affectedPaths: (p) => [p.sourcePath],
+    });
+    expect(dispatch).toHaveBeenCalledWith([
+      { type: 'mapping.deleteRule', payload: { index: 1 } },
+      { type: 'mapping.deleteRule', payload: { index: 0 } },
+    ]);
+    expect(result.summary).toBe('Unmapped /a (2)');
+    expect(result.affectedPaths).toEqual(['/a']);
+  });
+
+  it('skips dispatch when buildCommands returns empty', () => {
+    const { project, dispatch } = stubProject();
+    execBatch(project, 'noop', { x: 1 }, {
+      buildCommands: () => [],
+      summary: () => 'no-op',
+    });
+    expect(dispatch).not.toHaveBeenCalled();
   });
 });

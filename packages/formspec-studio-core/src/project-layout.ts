@@ -1,11 +1,12 @@
+/** @filedesc Layout authoring helpers for Formspec Studio. */
 import type { AnyCommand } from '@formspec-org/core';
 import type { HelperResult, FlowProps, PlacementOptions, LayoutArrangement, LayoutAddItemSpec, HelperWarning } from './helper-types.js';
 import { HelperError } from './helper-types.js';
 import type { ProjectInternals } from './project-internals.js';
-import { pageChildren, findParentRefOfNodeRef, findComponentNodeById, findComponentNodeByRef, refForCompNode } from './tree-utils.js';
-import { componentTargetRef } from './lib/component-target-ref.js';
+import { findComponentNodeByRef, refForCompNode } from './tree-utils.js';
 import type { CompNode } from './layout-helpers.js';
 import type { FormItem } from './types.js';
+import * as definitionOps from './project-definition.js';
 
 const _LAYOUT_ENTRIES = {
   'columns-2': { component: 'Grid', props: { columns: 2 } },
@@ -24,69 +25,74 @@ const _STYLE_ROUTING_PRESENTATION_KEYS = new Set([
   'trueLabel', 'falseLabel',
 ]);
 
+/** Internal: Resolve a definition item path to the NodeRef used in the component tree. */
+export function _nodeRefForItem(project: ProjectInternals, target: string): { bind: string } | { nodeId: string } {
+  const leafKey = target.split('.').pop()!;
+  const item = project.core.itemAt(target);
+  if (item?.type === 'display') {
+    return { nodeId: leafKey };
+  }
+  return { bind: leafKey };
+}
+
+/** Internal: Rebuild bound nodes from definition if missing. */
+export function _ensureComponentNodeExistsForMove(project: ProjectInternals, sourceRef: { bind?: string; nodeId?: string }): void {
+  const tree = project.core.state.component?.tree as CompNode | undefined;
+  if (findComponentNodeByRef(tree, sourceRef)) return;
+  project.core.dispatch({
+    type: 'component.reconcileFromDefinition',
+    payload: {},
+  });
+}
+
+/** Internal: Find a bound child's index by item key on a page. */
+export function _regionIndexOf(project: ProjectInternals, pageId: string, itemKey: string): number {
+  const page = definitionOps._findPageNode(project, pageId);
+  const boundChildren = definitionOps._pageBoundChildren(project, page);
+  const index = boundChildren.findIndex(n => n.bind === itemKey);
+  if (index === -1) throw new HelperError('ITEM_NOT_ON_PAGE', `Item '${itemKey}' is not on page '${pageId}'`, { pageId, itemKey });
+  return index;
+}
+
 export function addPage(project: ProjectInternals, title: string, description?: string, id?: string): HelperResult {
   if (id !== undefined) {
     if (!/^[a-zA-Z][a-zA-Z0-9_\-]*$/.test(id)) {
       throw new HelperError('INVALID_PAGE_ID', `Page ID "${id}" is invalid. Must start with a letter and contain only letters, digits, underscores, or hyphens.`, { id });
     }
-    const existing = project._getPageNodes().find((n: CompNode) => n.nodeId === id);
+    const existing = definitionOps._getPageNodes(project).find((n: CompNode) => n.nodeId === id);
     if (existing) {
-      throw new HelperError('DUPLICATE_KEY', `A page with ID "${id}" already exists`, { id });
+      throw new HelperError('DUPLICATE_PAGE_ID', `Page ID "${id}" is already in use.`, { id });
     }
   }
 
-  const pageId = id ?? `page-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  const pageProps: Record<string, unknown> = { nodeId: pageId, title };
-  if (description) pageProps.description = description;
-
-  const pageModeCommand: AnyCommand | null =
-    !project.definition.formPresentation?.pageMode || project.definition.formPresentation.pageMode === 'single'
-      ? {
-          type: 'definition.setFormPresentation',
-          payload: { property: 'pageMode', value: 'wizard' },
-        }
-      : null;
-
-  const addPageCommand: AnyCommand = {
+  const result = project.core.dispatch({
     type: 'component.addNode',
     payload: {
       parent: { nodeId: 'root' },
       component: 'Page',
-      props: pageProps,
+      title,
+      description,
+      ...(id !== undefined ? { nodeId: id } : {}),
     },
-  };
+  });
 
-  if (pageModeCommand) {
-    project.core.dispatch([pageModeCommand, addPageCommand]);
-  } else {
-    project.core.dispatch(addPageCommand);
-  }
-
+  const nodeId = result?.nodeRef?.nodeId;
   return {
-    summary: `Added page '${title}'`,
-    action: { helper: 'addPage', params: { title, description } },
-    affectedPaths: [pageId],
-    createdId: pageId,
+    summary: `Added page "${title}"`,
+    action: { helper: 'addPage', params: { title, description, id } },
+    affectedPaths: nodeId ? [nodeId] : [],
+    createdId: nodeId,
   };
 }
 
 export function removePage(project: ProjectInternals, pageId: string): HelperResult {
-  const page = project._findPageNode(pageId);
-  const commands: AnyCommand[] = pageChildren(page).map((child) => ({
-    type: 'component.moveNode',
-    payload: {
-      source: refForCompNode(child),
-      targetParent: { nodeId: 'root' },
-    },
-  }));
-  commands.push({
+  definitionOps._findPageNode(project, pageId);
+  project.core.dispatch({
     type: 'component.deleteNode',
     payload: { node: { nodeId: pageId } },
   });
-  project.core.batch(commands);
-
   return {
-    summary: `Removed page '${pageId}'`,
+    summary: `Removed page "${pageId}"`,
     action: { helper: 'removePage', params: { pageId } },
     affectedPaths: [pageId],
   };
@@ -98,90 +104,97 @@ export function reorderPage(project: ProjectInternals, pageId: string, direction
     payload: { node: { nodeId: pageId }, direction },
   });
   return {
-    summary: `Reordered page '${pageId}' ${direction}`,
+    summary: `Reordered page "${pageId}" ${direction}`,
     action: { helper: 'reorderPage', params: { pageId, direction } },
     affectedPaths: [pageId],
   };
 }
 
 export function movePageToIndex(project: ProjectInternals, pageId: string, targetIndex: number): HelperResult {
-  const insertIndex = project._pageInsertIndex(targetIndex, pageId);
+  const insertIndex = definitionOps._pageInsertIndex(project, targetIndex, pageId);
   project.core.dispatch({
     type: 'component.moveNode',
-    payload: {
-      source: { nodeId: pageId },
-      targetParent: { nodeId: 'root' },
-      targetIndex: insertIndex,
-    },
+    payload: { source: { nodeId: pageId }, targetParent: { nodeId: 'root' }, targetIndex: insertIndex },
   });
   return {
-    summary: `Moved page '${pageId}' to index ${targetIndex}`,
+    summary: `Moved page "${pageId}" to index ${targetIndex}`,
     action: { helper: 'movePageToIndex', params: { pageId, targetIndex } },
     affectedPaths: [pageId],
   };
 }
 
 export function listPages(project: ProjectInternals): Array<{ id: string; title: string; description?: string; groupPath?: string }> {
-  return project._getPageNodes().map((n: CompNode) => {
-    const boundChildren = project._pageBoundChildren(n);
-    const groupPath = boundChildren[0]?.bind;
+  return definitionOps._getPageNodes(project).map((n: CompNode) => {
+    const boundChildren = definitionOps._pageBoundChildren(project, n);
     return {
       id: n.nodeId!,
-      title: n.title ?? 'Untitled',
-      ...(n.description ? { description: n.description } : {}),
-      ...(groupPath ? { groupPath } : {}),
+      title: n.title ?? n.nodeId!,
+      description: n.description,
+      groupPath: boundChildren.length > 0 ? (boundChildren[0].bind as string) : undefined,
     };
   });
 }
 
 export function updatePage(project: ProjectInternals, pageId: string, changes: { title?: string; description?: string }): HelperResult {
+  definitionOps._findPageNode(project, pageId);
   const commands: AnyCommand[] = [];
-  for (const [prop, val] of Object.entries(changes)) {
-    if (val !== undefined) {
-      commands.push({
-        type: 'component.setNodeProperty',
-        payload: { node: { nodeId: pageId }, property: prop, value: val },
-      });
-    }
+  if (changes.title !== undefined) {
+    commands.push({
+      type: 'component.setNodeProperty',
+      payload: { node: { nodeId: pageId }, property: 'title', value: changes.title },
+    });
   }
-  if (commands.length > 0) project.core.dispatch(commands);
-
+  if (changes.description !== undefined) {
+    commands.push({
+      type: 'component.setNodeProperty',
+      payload: { node: { nodeId: pageId }, property: 'description', value: changes.description },
+    });
+  }
+  project.core.batch(commands);
   return {
-    summary: `Updated page '${pageId}'`,
-    action: { helper: 'updatePage', params: { pageId, ...changes } },
+    summary: `Updated page "${pageId}"`,
+    action: { helper: 'updatePage', params: { pageId, changes } },
+    affectedPaths: [pageId],
+  };
+}
+
+export function renamePage(project: ProjectInternals, pageId: string, newTitle: string): HelperResult {
+  definitionOps._findPageNode(project, pageId);
+  project.core.dispatch({
+    type: 'component.setNodeProperty',
+    payload: { node: { nodeId: pageId }, property: 'title', value: newTitle },
+  });
+  return {
+    summary: `Renamed page "${pageId}" to "${newTitle}"`,
+    action: { helper: 'renamePage', params: { pageId, newTitle } },
     affectedPaths: [pageId],
   };
 }
 
 export function placeOnPage(project: ProjectInternals, target: string, pageId: string, options?: PlacementOptions): HelperResult {
-  const sourceRef = project._nodeRefForItem(target);
-  project._ensureComponentNodeExistsForMove(sourceRef);
-  const commands: AnyCommand[] = [{
+  const sourceRef = _nodeRefForItem(project, target);
+  _ensureComponentNodeExistsForMove(project, sourceRef);
+
+  project.core.dispatch({
     type: 'component.moveNode',
     payload: {
       source: sourceRef,
       targetParent: { nodeId: pageId },
+      ...(options?.insertIndex !== undefined ? { targetIndex: options.insertIndex } : {}),
     },
-  }];
-  if (options?.span !== undefined) {
-    commands.push({
-      type: 'component.setNodeProperty',
-      payload: { node: sourceRef, property: 'span', value: options.span },
-    });
-  }
-
-  project.core.dispatch(commands);
+  });
 
   return {
-    summary: `Placed '${target}' on page '${pageId}'`,
-    action: { helper: 'placeOnPage', params: { target, pageId } },
-    affectedPaths: [target],
+    summary: `Placed "${target}" on page "${pageId}"`,
+    action: { helper: 'placeOnPage', params: { target, pageId, options } },
+    affectedPaths: [pageId, target],
   };
 }
 
 export function unplaceFromPage(project: ProjectInternals, target: string, pageId: string): HelperResult {
-  const sourceRef = project._nodeRefForItem(target);
-  project._ensureComponentNodeExistsForMove(sourceRef);
+  const sourceRef = _nodeRefForItem(project, target);
+  _ensureComponentNodeExistsForMove(project, sourceRef);
+
   project.core.dispatch({
     type: 'component.moveNode',
     payload: {
@@ -191,36 +204,108 @@ export function unplaceFromPage(project: ProjectInternals, target: string, pageI
   });
 
   return {
-    summary: `Removed '${target}' from page '${pageId}'`,
+    summary: `Removed "${target}" from page "${pageId}"`,
     action: { helper: 'unplaceFromPage', params: { target, pageId } },
-    affectedPaths: [target],
+    affectedPaths: [pageId, target],
+  };
+}
+
+export function reorderItemOnPage(project: ProjectInternals, pageId: string, itemKey: string, direction: 'up' | 'down'): HelperResult {
+  const currentIndex = _regionIndexOf(project, pageId, itemKey);
+  const targetIndex = Math.max(0, direction === 'up' ? currentIndex - 1 : currentIndex + 1);
+  project.core.dispatch({
+    type: 'component.moveNode',
+    payload: {
+      source: { bind: itemKey },
+      targetParent: { nodeId: pageId },
+      targetIndex,
+    },
+  });
+
+  return {
+    summary: `Reordered "${itemKey}" ${direction} on page "${pageId}"`,
+    action: { helper: 'reorderItemOnPage', params: { pageId, itemKey, direction } },
+    affectedPaths: [pageId, itemKey],
+  };
+}
+
+export function moveItemOnPageToIndex(project: ProjectInternals, pageId: string, itemKey: string, targetIndex: number): HelperResult {
+  _regionIndexOf(project, pageId, itemKey);
+  project.core.dispatch({
+    type: 'component.moveNode',
+    payload: {
+      source: { bind: itemKey },
+      targetParent: { nodeId: pageId },
+      targetIndex,
+    },
+  });
+
+  return {
+    summary: `Moved "${itemKey}" to index ${targetIndex} on page "${pageId}"`,
+    action: { helper: 'moveItemOnPageToIndex', params: { pageId, itemKey, targetIndex } },
+    affectedPaths: [pageId, itemKey],
+  };
+}
+
+export function moveItemToPage(project: ProjectInternals, sourcePageId: string, itemKey: string, targetPageId: string, options?: PlacementOptions | number): HelperResult {
+  _regionIndexOf(project, sourcePageId, itemKey);
+
+  const targetIndex = typeof options === 'number' ? options : options?.insertIndex;
+
+  project.core.dispatch({
+    type: 'component.moveNode',
+    payload: {
+      source: { bind: itemKey },
+      targetParent: { nodeId: targetPageId },
+      targetIndex,
+    },
+  });
+
+  return {
+    summary: `Moved "${itemKey}" from page "${sourcePageId}" to "${targetPageId}"`,
+    action: { helper: 'moveItemToPage', params: { sourcePageId, itemKey, targetPageId, options } },
+    affectedPaths: [sourcePageId, targetPageId, itemKey],
+  };
+}
+
+export function removeItemFromPage(project: ProjectInternals, pageId: string, itemKey: string): HelperResult {
+  _regionIndexOf(project, pageId, itemKey);
+
+  project.core.dispatch({
+    type: 'component.moveNode',
+    payload: {
+      source: { bind: itemKey },
+      targetParent: { nodeId: 'root' },
+    },
+  });
+
+  return {
+    summary: `Removed "${itemKey}" from page "${pageId}"`,
+    action: { helper: 'removeItemFromPage', params: { pageId, itemKey } },
+    affectedPaths: [pageId, itemKey],
   };
 }
 
 export function setFlow(project: ProjectInternals, mode: 'single' | 'wizard' | 'tabs', props?: FlowProps): HelperResult {
   const commands: AnyCommand[] = [
-    { type: 'definition.setFormPresentation', payload: { property: 'pageMode', value: mode } },
+    { type: 'component.setNodeProperty', payload: { node: { nodeId: 'root' }, property: 'flowMode', value: mode } },
   ];
 
-  if (props?.showProgress !== undefined) {
-    commands.push({
-      type: 'definition.setFormPresentation',
-      payload: { property: 'showProgress', value: props.showProgress },
-    });
-  }
-  if (props?.allowSkip !== undefined) {
-    commands.push({
-      type: 'definition.setFormPresentation',
-      payload: { property: 'allowSkip', value: props.allowSkip },
-    });
+  if (props?.pageTitles) {
+    for (const [pageId, title] of Object.entries(props.pageTitles)) {
+      commands.push({
+        type: 'component.setNodeProperty',
+        payload: { node: { nodeId: pageId }, property: 'title', value: title },
+      });
+    }
   }
 
-  project.core.dispatch(commands);
+  project.core.batch(commands);
 
   return {
-    summary: `Set flow mode to '${mode}'`,
-    action: { helper: 'setFlow', params: { mode, ...props } },
-    affectedPaths: [],
+    summary: `Set flow mode to ${mode}`,
+    action: { helper: 'setFlow', params: { mode, props } },
+    affectedPaths: ['root'],
   };
 }
 
@@ -228,7 +313,7 @@ export function setGroupRef(project: ProjectInternals, path: string, ref: string
   project.core.dispatch({
     type: 'definition.setGroupRef',
     payload: { path, ref, ...(keyPrefix !== undefined ? { keyPrefix } : {}) },
-  } as AnyCommand);
+  });
   return {
     summary: ref === null
       ? `Cleared group ref on '${path}'`
@@ -238,226 +323,116 @@ export function setGroupRef(project: ProjectInternals, path: string, ref: string
   };
 }
 
-export function setComponentWhen(project: ProjectInternals, target: string, when: string | null): HelperResult {
-  project.core.dispatch({
-    type: 'component.setNodeProperty',
-    payload: {
-      node: componentTargetRef(target),
-      property: 'when',
-      value: when && when.trim() ? when.trim() : null,
-    },
-  });
+export function addItemToLayout(project: ProjectInternals, spec: LayoutAddItemSpec, pageId?: string): HelperResult {
+  const pageGroupPath = pageId ? definitionOps._resolvePageGroup(project, pageId) : undefined;
+  const parentPath = spec.parentPath ?? pageGroupPath;
+  const key = definitionOps._uniqueLayoutItemKey(project, spec.label, parentPath, spec.key);
 
-  return {
-    summary: when && when.trim()
-      ? `Set visual condition on '${target}'`
-      : `Cleared visual condition on '${target}'`,
-    action: { helper: 'setComponentWhen', params: { target, when } },
-    affectedPaths: [target],
-  };
+  const result = definitionOps.addField(
+    project,
+    parentPath ? `${parentPath}.${key}` : key,
+    spec.label,
+    spec.dataType ?? 'string',
+    spec.props,
+  );
+
+  if (pageId && result.createdId) {
+    placeOnPage(project, result.createdId, pageId);
+  }
+
+  return result;
 }
 
-export function setComponentAccessibility(project: ProjectInternals, target: string, property: string, value: unknown): HelperResult {
-  project.core.dispatch({
-    type: 'component.setNodeAccessibility',
-    payload: {
-      node: componentTargetRef(target),
-      property,
-      value: value === '' ? null : value,
-    },
-  });
+export function setItemWidth(project: ProjectInternals, pageId: string, itemKey: string, width: number): HelperResult {
+  const page = definitionOps._findPageNode(project, pageId);
+  const child = definitionOps._pageBoundChildren(project, page)[_regionIndexOf(project, pageId, itemKey)];
 
-  return {
-    summary: value === '' || value === null
-      ? `Cleared accessibility '${property}' on '${target}'`
-      : `Set accessibility '${property}' on '${target}'`,
-    action: { helper: 'setComponentAccessibility', params: { target, property, value } },
-    affectedPaths: [target],
-  };
-}
-
-export function setLayoutNodeProp(project: ProjectInternals, target: string, property: string, value: unknown): HelperResult {
-  project.core.dispatch({
-    type: 'component.setNodeProperty',
-    payload: {
-      node: componentTargetRef(target),
-      property,
-      value: value === '' ? null : value,
-    },
-  });
-  return {
-    summary: `Set '${property}' on '${target}'`,
-    action: { helper: 'setLayoutNodeProp', params: { target, property, value } },
-    affectedPaths: [target],
-  };
-}
-
-export function setNodeStyleProperty(project: ProjectInternals, ref: { nodeId?: string; bind?: string }, property: string, value: string): void {
   project.core.dispatch({
     type: 'component.setNodeStyle',
-    payload: { node: ref, property, value },
+    payload: { node: refForCompNode(child), property: 'gridSpan', value: width },
   });
-}
-
-export function addItemToLayout(project: ProjectInternals, spec: LayoutAddItemSpec, pageId?: string): HelperResult {
-  if (spec.itemType === 'layout') {
-    const parentNodeId = pageId ?? 'root';
-    return project.addLayoutNode(parentNodeId, spec.component ?? 'Card');
-  }
-
-  const pageGroupPath = pageId ? project._resolvePageGroup(pageId) : undefined;
-  const parentPath = pageGroupPath;
-  const key = project._uniqueLayoutItemKey(spec.label, parentPath, spec.key);
-  const fullPath = parentPath ? `${parentPath}.${key}` : key;
-
-  if (spec.itemType === 'field') {
-    const typeArg = spec.registryDataType ?? spec.dataType ?? 'string';
-    const addResult = project.addField(key, spec.label, typeArg, {
-      ...(parentPath ? { parentPath } : {}),
-    });
-    const leafKey = addResult.affectedPaths[0] ?? fullPath;
-    if (pageId && !pageGroupPath) {
-      project.placeOnPage(leafKey, pageId);
-    }
-    return {
-      summary: addResult.summary,
-      action: { helper: 'addItemToLayout', params: { spec, pageId } },
-      affectedPaths: addResult.affectedPaths,
-      createdId: leafKey,
-    };
-  }
-
-  if (spec.itemType === 'group') {
-    const phase1: AnyCommand[] = [
-      {
-        type: 'definition.addItem',
-        payload: {
-          type: 'group',
-          key,
-          label: spec.label,
-          ...(parentPath ? { parentPath } : {}),
-          ...(spec.repeatable ? { repeatable: true } : {}),
-        },
-      },
-    ];
-    const phase2: AnyCommand[] = pageId
-      ? [{
-          type: 'component.moveNode',
-          payload: {
-            source: { bind: key },
-            targetParent: { nodeId: pageId },
-          },
-        }]
-      : [];
-
-    if (phase2.length > 0) project.core.batchWithRebuild(phase1, phase2);
-    else project.core.dispatch(phase1[0]);
-
-    return {
-      summary: `Added group '${spec.label}' to layout`,
-      action: { helper: 'addItemToLayout', params: { spec, pageId } },
-      affectedPaths: [fullPath],
-      createdId: fullPath,
-    };
-  }
-
-  const LAYOUT_DISPLAY_COMPONENTS = new Set(['Heading', 'Divider']);
-  if (spec.component && LAYOUT_DISPLAY_COMPONENTS.has(spec.component)) {
-    const parentNodeId = pageId ?? 'root';
-    const props: Record<string, unknown> = spec.component === 'Heading'
-      ? { text: spec.label, level: 2 }
-      : { label: spec.label }; 
-    const result = project.core.dispatch({
-      type: 'component.addNode',
-      payload: { parent: { nodeId: parentNodeId }, component: spec.component, props },
-    } as AnyCommand);
-    const nodeId = result?.nodeRef?.nodeId;
-    return {
-      summary: `Added ${spec.component} '${spec.label}' to layout`,
-      action: { helper: 'addItemToLayout', params: { spec, pageId } },
-      affectedPaths: nodeId ? [nodeId] : [],
-      createdId: nodeId,
-    };
-  }
-
-  const payload: Record<string, unknown> = {
-    type: 'display',
-    key,
-    label: spec.label,
-  };
-  if (parentPath) payload.parentPath = parentPath;
-  if (spec.presentation) payload.presentation = spec.presentation;
-  project.core.dispatch({ type: 'definition.addItem', payload });
-
-  if (pageId && !pageGroupPath) {
-    project.placeOnPage(key, pageId);
-  }
 
   return {
-    summary: `Added display item '${spec.label}' to layout`,
-    action: { helper: 'addItemToLayout', params: { spec, pageId } },
-    affectedPaths: [fullPath],
-    createdId: fullPath,
+    summary: `Set width of "${itemKey}" to ${width}`,
+    action: { helper: 'setItemWidth', params: { pageId, itemKey, width } },
+    affectedPaths: [pageId, itemKey],
+  };
+}
+
+export function setItemOffset(project: ProjectInternals, pageId: string, itemKey: string, offset: number | undefined): HelperResult {
+  const page = definitionOps._findPageNode(project, pageId);
+  const child = definitionOps._pageBoundChildren(project, page)[_regionIndexOf(project, pageId, itemKey)];
+
+  project.core.dispatch({
+    type: 'component.setNodeStyle',
+    payload: { node: refForCompNode(child), property: 'gridOffset', value: offset ?? null },
+  });
+
+  return {
+    summary: `Set offset of "${itemKey}" to ${offset ?? 'auto'}`,
+    action: { helper: 'setItemOffset', params: { pageId, itemKey, offset } },
+    affectedPaths: [pageId, itemKey],
+  };
+}
+
+export function setItemResponsive(
+  project: ProjectInternals,
+  pageId: string,
+  itemKey: string,
+  breakpoint: string,
+  overrides: { width?: number; offset?: number; hidden?: boolean } | undefined,
+): HelperResult {
+  const page = definitionOps._findPageNode(project, pageId);
+  const boundChildren = definitionOps._pageBoundChildren(project, page);
+  const node = boundChildren.find((n: CompNode) => n.bind === itemKey);
+  if (!node) throw new HelperError('ITEM_NOT_ON_PAGE', `Item '${itemKey}' is not on page '${pageId}'`, { pageId, itemKey });
+
+  const responsive: Record<string, unknown> = { ...(node.responsive ?? {}) };
+
+  if (overrides === undefined) {
+    delete responsive[breakpoint];
+  } else {
+    const entry: Record<string, unknown> = {};
+    if (overrides.width !== undefined) entry.span = overrides.width;
+    if (overrides.offset !== undefined) entry.start = overrides.offset;
+    if (overrides.hidden !== undefined) entry.hidden = overrides.hidden;
+    responsive[breakpoint] = entry;
+  }
+
+  project.core.dispatch({
+    type: 'component.setNodeProperty',
+    payload: {
+      node: refForCompNode(node),
+      property: 'responsive',
+      value: Object.keys(responsive).length > 0 ? responsive : null,
+    },
+  });
+  return {
+    summary: `Set responsive '${breakpoint}' for '${itemKey}' on page '${pageId}'`,
+    action: { helper: 'setItemResponsive', params: { pageId, itemKey, breakpoint, overrides } },
+    affectedPaths: [pageId, itemKey],
   };
 }
 
 export function applyLayout(project: ProjectInternals, targets: string | string[], arrangement: LayoutArrangement): HelperResult {
-  const targetArray = Array.isArray(targets) ? targets : [targets];
-  const layout = _LAYOUT_MAP[arrangement];
+  const targetPaths = Array.isArray(targets) ? targets : [targets];
+  const config = _LAYOUT_MAP[arrangement];
+  if (!config) throw new HelperError('INVALID_ARRANGEMENT', `Invalid layout arrangement: ${arrangement}`, { arrangement });
 
-  const tree = project.core.state.component?.tree as CompNode | undefined;
-  let parentRef: { nodeId: string } | { bind: string } = { nodeId: 'root' };
-  if (tree) {
-    const targetRefs = targetArray.map(t => ({ bind: t.split('.').pop()! }));
-    const parentRefs = targetRefs
-      .map(ref => findParentRefOfNodeRef(tree, ref))
-      .filter((r): r is NonNullable<typeof r> => r !== null);
-    if (parentRefs.length > 0 && parentRefs.every(r => JSON.stringify(r) === JSON.stringify(parentRefs[0]))) {
-      parentRef = parentRefs[0];
-    }
-  }
-
-  const addPayload: Record<string, unknown> = {
-    parent: parentRef,
-    component: layout.component,
-  };
-  if (layout.props) addPayload.props = layout.props;
-
-  project.core.dispatch({ type: 'component.addNode', payload: addPayload });
-
-  const updatedTree = project.core.state.component?.tree as CompNode | undefined;
-  const parentNode = 'nodeId' in parentRef
-    ? findComponentNodeById(updatedTree, parentRef.nodeId)
-    : findComponentNodeByRef(updatedTree, parentRef);
-  const parentChildren = parentNode?.children ?? [];
-  const lastChild = parentChildren[parentChildren.length - 1];
-  const containerRef = lastChild?.nodeId
-    ? { nodeId: lastChild.nodeId }
-    : lastChild?.bind
-      ? { bind: lastChild.bind }
-      : { nodeId: 'root' };
-
-  const moveCommands: AnyCommand[] = targetArray.map((t, i) => ({
-    type: 'component.moveNode' as const,
+  const result = project.core.dispatch({
+    type: 'component.wrapSiblingNodes',
     payload: {
-      source: { bind: t.split('.').pop()! },
-      targetParent: containerRef,
-      targetIndex: i,
+      nodes: targetPaths.map(p => _nodeRefForItem(project, p)),
+      wrapper: { component: config.component, props: config.props },
     },
-  }));
+  });
 
-  if (moveCommands.length > 0) {
-    project.core.dispatch(moveCommands);
-  }
-
-  const pathList = targetArray.length <= 3
-    ? targetArray.join(', ')
-    : `${targetArray.slice(0, 3).join(', ')} and ${targetArray.length - 3} more`;
-
+  const nodeId = result?.nodeRef?.nodeId;
   return {
-    summary: `Applied ${arrangement} layout to ${pathList} (${targetArray.length} item${targetArray.length !== 1 ? 's' : ''})`,
-    action: { helper: 'applyLayout', params: { targets: targetArray, arrangement } },
-    affectedPaths: targetArray,
+    summary: `Applied ${arrangement} layout to ${targetPaths.length} item(s)`,
+    action: { helper: 'applyLayout', params: { targets, arrangement } },
+    affectedPaths: nodeId ? [nodeId, ...targetPaths] : targetPaths,
+    createdId: nodeId,
   };
 }
 
@@ -581,7 +556,7 @@ export function addRegion(project: ProjectInternals, pageId: string, span?: numb
       bind: key,
       props: span !== undefined ? { span } : undefined,
     },
-  } as AnyCommand);
+  });
   return {
     summary: `Added region to page '${pageId}'`,
     action: { helper: 'addRegion', params: { pageId, span } },
@@ -590,8 +565,8 @@ export function addRegion(project: ProjectInternals, pageId: string, span?: numb
 }
 
 export function updateRegion(project: ProjectInternals, pageId: string, regionIndex: number, property: string, value: unknown): HelperResult {
-  const page = project._findPageNode(pageId);
-  const child = project._pageBoundChildren(page)[regionIndex];
+  const page = definitionOps._findPageNode(project, pageId);
+  const child = definitionOps._pageBoundChildren(project, page)[regionIndex];
   if (!child) throw new HelperError('ROUTE_OUT_OF_BOUNDS', `Region not found at index ${regionIndex} on page '${pageId}'`);
   project.core.dispatch({
     type: 'component.setNodeProperty',
@@ -605,8 +580,8 @@ export function updateRegion(project: ProjectInternals, pageId: string, regionIn
 }
 
 export function deleteRegion(project: ProjectInternals, pageId: string, regionIndex: number): HelperResult {
-  const page = project._findPageNode(pageId);
-  const child = project._pageBoundChildren(page)[regionIndex];
+  const page = definitionOps._findPageNode(project, pageId);
+  const child = definitionOps._pageBoundChildren(project, page)[regionIndex];
   if (!child) throw new HelperError('ROUTE_OUT_OF_BOUNDS', `Region not found at index ${regionIndex} on page '${pageId}'`);
   project.core.dispatch({
     type: 'component.moveNode',
@@ -623,8 +598,8 @@ export function deleteRegion(project: ProjectInternals, pageId: string, regionIn
 }
 
 export function reorderRegion(project: ProjectInternals, pageId: string, regionIndex: number, direction: 'up' | 'down'): HelperResult {
-  const page = project._findPageNode(pageId);
-  const child = project._pageBoundChildren(page)[regionIndex];
+  const page = definitionOps._findPageNode(project, pageId);
+  const child = definitionOps._pageBoundChildren(project, page)[regionIndex];
   if (!child) throw new HelperError('ROUTE_OUT_OF_BOUNDS', `Region not found at index ${regionIndex} on page '${pageId}'`);
   const targetIndex = Math.max(0, direction === 'up' ? regionIndex - 1 : regionIndex + 1);
   project.core.dispatch({
@@ -643,8 +618,8 @@ export function reorderRegion(project: ProjectInternals, pageId: string, regionI
 }
 
 export function setRegionKey(project: ProjectInternals, pageId: string, regionIndex: number, newKey: string): HelperResult {
-  const page = project._findPageNode(pageId);
-  const boundChildren = project._pageBoundChildren(page);
+  const page = definitionOps._findPageNode(project, pageId);
+  const boundChildren = definitionOps._pageBoundChildren(project, page);
   const child = boundChildren[regionIndex];
   if (!child) throw new HelperError('ROUTE_OUT_OF_BOUNDS', `Region not found at index ${regionIndex} on page '${pageId}'`);
   const oldNodeRef = refForCompNode(child);
@@ -679,161 +654,53 @@ export function setRegionKey(project: ProjectInternals, pageId: string, regionIn
   };
 }
 
-export function renamePage(project: ProjectInternals, pageId: string, newTitle: string): HelperResult {
-  project.core.dispatch({
-    type: 'component.setNodeProperty',
-    payload: { node: { nodeId: pageId }, property: 'title', value: newTitle },
-  });
-  return {
-    summary: `Renamed page '${pageId}' to '${newTitle}'`,
-    action: { helper: 'renamePage', params: { pageId, newTitle } },
-    affectedPaths: [pageId],
-  };
-}
-
-export function setItemWidth(project: ProjectInternals, pageId: string, itemKey: string, width: number): HelperResult {
-  const page = project._findPageNode(pageId);
-  const node = project._pageBoundChildren(page).find((n: CompNode) => n.bind === itemKey);
-  if (!node) throw new HelperError('ITEM_NOT_ON_PAGE', `Item '${itemKey}' is not on page '${pageId}'`, { pageId, itemKey });
-  project.core.dispatch({
-    type: 'component.setNodeProperty',
-    payload: { node: refForCompNode(node), property: 'span', value: width },
-  });
-  return {
-    summary: `Set width of '${itemKey}' on page '${pageId}' to ${width}`,
-    action: { helper: 'setItemWidth', params: { pageId, itemKey, width } },
-    affectedPaths: [pageId],
-  };
-}
-
-export function setItemOffset(project: ProjectInternals, pageId: string, itemKey: string, offset: number | undefined): HelperResult {
-  const page = project._findPageNode(pageId);
-  const node = project._pageBoundChildren(page).find((n: CompNode) => n.bind === itemKey);
-  if (!node) throw new HelperError('ITEM_NOT_ON_PAGE', `Item '${itemKey}' is not on page '${pageId}'`, { pageId, itemKey });
-  project.core.dispatch({
-    type: 'component.setNodeProperty',
-    payload: { node: refForCompNode(node), property: 'start', value: offset ?? null },
-  });
-  return {
-    summary: `Set offset of '${itemKey}' on page '${pageId}' to ${offset ?? 'auto'}`,
-    action: { helper: 'setItemOffset', params: { pageId, itemKey, offset } },
-    affectedPaths: [pageId],
-  };
-}
-
-export function setItemResponsive(
-  project: ProjectInternals,
-  pageId: string,
-  itemKey: string,
-  breakpoint: string,
-  overrides: { width?: number; offset?: number; hidden?: boolean } | undefined,
-): HelperResult {
-  project._regionIndexOf(pageId, itemKey);
-  const page = project._findPageNode(pageId);
-  const boundChildren = project._pageBoundChildren(page);
-  const node = boundChildren.find((n: CompNode) => n.bind === itemKey)!;
-
-  const responsive: Record<string, unknown> = { ...(node.responsive ?? {}) };
-
-  if (overrides === undefined) {
-    delete responsive[breakpoint];
-  } else {
-    const entry: Record<string, unknown> = {};
-    if (overrides.width !== undefined) entry.span = overrides.width;
-    if (overrides.offset !== undefined) entry.start = overrides.offset;
-    if (overrides.hidden !== undefined) entry.hidden = overrides.hidden;
-    responsive[breakpoint] = entry;
-  }
+export function setComponentWhen(project: ProjectInternals, target: string, when: string | null): HelperResult {
+  const ref = _nodeRefForItem(project, target);
+  if (when) definitionOps._validateFEL(project, when);
 
   project.core.dispatch({
     type: 'component.setNodeProperty',
-    payload: {
-      node: refForCompNode(node),
-      property: 'responsive',
-      value: Object.keys(responsive).length > 0 ? responsive : null,
-    },
+    payload: { node: ref, property: 'when', value: when },
   });
+
   return {
-    summary: `Set responsive '${breakpoint}' for '${itemKey}' on page '${pageId}'`,
-    action: { helper: 'setItemResponsive', params: { pageId, itemKey, breakpoint, overrides } },
-    affectedPaths: [pageId],
+    summary: when ? `Set visibility condition for "${target}"` : `Cleared visibility condition for "${target}"`,
+    action: { helper: 'setComponentWhen', params: { target, when } },
+    affectedPaths: [target],
   };
 }
 
-export function removeItemFromPage(project: ProjectInternals, pageId: string, itemKey: string): HelperResult {
-  project._regionIndexOf(pageId, itemKey);
+export function setComponentAccessibility(project: ProjectInternals, target: string, property: string, value: unknown): HelperResult {
+  const ref = _nodeRefForItem(project, target);
   project.core.dispatch({
-    type: 'component.moveNode',
-    payload: {
-      source: { bind: itemKey },
-      targetParent: { nodeId: 'root' },
-    },
+    type: 'component.setNodeProperty',
+    payload: { node: ref, property, value },
   });
+
   return {
-    summary: `Removed '${itemKey}' from page '${pageId}'`,
-    action: { helper: 'removeItemFromPage', params: { pageId, itemKey } },
-    affectedPaths: [pageId],
+    summary: `Updated accessibility property "${property}" for "${target}"`,
+    action: { helper: 'setComponentAccessibility', params: { target, property, value } },
+    affectedPaths: [target],
   };
 }
 
-export function moveItemToPage(project: ProjectInternals, sourcePageId: string, itemKey: string, targetPageId: string, opts?: PlacementOptions): HelperResult {
-  project._regionIndexOf(sourcePageId, itemKey);
-  const leafKey = itemKey.split('.').pop()!;
-  const commands: AnyCommand[] = [{
-    type: 'component.moveNode',
-    payload: {
-      source: { bind: leafKey },
-      targetParent: { nodeId: targetPageId },
-    },
-  }];
-  if (opts?.span !== undefined) {
-    commands.push({
-      type: 'component.setNodeProperty',
-      payload: { node: { bind: leafKey }, property: 'span', value: opts.span },
-    });
-  }
-  project.core.batch(commands);
-  return {
-    summary: `Moved '${itemKey}' from page '${sourcePageId}' to page '${targetPageId}'`,
-    action: { helper: 'moveItemToPage', params: { sourcePageId, itemKey, targetPageId } },
-    affectedPaths: [sourcePageId, targetPageId],
-  };
-}
-
-export function reorderItemOnPage(project: ProjectInternals, pageId: string, itemKey: string, direction: 'up' | 'down'): HelperResult {
-  const currentIndex = project._regionIndexOf(pageId, itemKey);
-  const targetIndex = Math.max(0, direction === 'up' ? currentIndex - 1 : currentIndex + 1);
+export function setLayoutNodeProp(project: ProjectInternals, target: string, property: string, value: unknown): HelperResult {
+  const ref = _nodeRefForItem(project, target);
   project.core.dispatch({
-    type: 'component.moveNode',
-    payload: {
-      source: { bind: itemKey },
-      targetParent: { nodeId: pageId },
-      targetIndex,
-    },
+    type: 'component.setNodeProperty',
+    payload: { node: ref, property, value },
   });
+
   return {
-    summary: `Reordered '${itemKey}' ${direction} on page '${pageId}'`,
-    action: { helper: 'reorderItemOnPage', params: { pageId, itemKey, direction } },
-    affectedPaths: [pageId],
+    summary: `Updated layout property "${property}" for "${target}"`,
+    action: { helper: 'setLayoutNodeProp', params: { target, property, value } },
+    affectedPaths: [target],
   };
 }
 
-export function moveItemOnPageToIndex(project: ProjectInternals, pageId: string, itemKey: string, targetIndex: number): HelperResult {
-  if (targetIndex < 0) {
-    throw new HelperError('ROUTE_OUT_OF_BOUNDS', `targetIndex must be non-negative, got ${targetIndex}`);
-  }
-  project._regionIndexOf(pageId, itemKey);
+export function setNodeStyleProperty(project: ProjectInternals, ref: { nodeId?: string; bind?: string }, property: string, value: string): void {
   project.core.dispatch({
-    type: 'component.moveNode',
-    payload: {
-      source: { bind: itemKey },
-      targetParent: { nodeId: pageId },
-      targetIndex,
-    },
+    type: 'component.setNodeStyle',
+    payload: { node: ref, property, value },
   });
-  return {
-    summary: `Moved '${itemKey}' to index ${targetIndex} on page '${pageId}'`,
-    action: { helper: 'moveItemOnPageToIndex', params: { pageId, itemKey, targetIndex } },
-    affectedPaths: [pageId],
-  };
 }

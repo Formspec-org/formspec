@@ -4,10 +4,10 @@
 
 | Metric | Count |
 |--------|-------|
-| Source files | 32 (`src/**/*.ts`) |
+| Source files | 38 (`src/**/*.ts`) |
 | Test files | 29 (`tests/**/*.ts`) |
-| Total source lines | ~10,900 (`src/` only; `wc` on `find src -name '*.ts'`) |
-| Largest file | `project.ts` (~3,530 lines) |
+| Total source lines | ~11,000 (`src/` only; approximate) |
+| Largest file | `project.ts` (~1,113 lines) |
 | Exported symbols | ~220 (via `index.ts` re-exports; approximate) |
 
 ---
@@ -24,25 +24,23 @@
 | M1: `filterFELFieldOptions` / `filterFELFunctionOptions` duplication | Extracted generic `filterByQuery<T>(items, query, getPrimary, getLabel)`; both functions are now thin wrappers | 2026-04-23 |
 | H2: `project: any` across 77 function signatures | Created `ProjectInternals` interface in `project-internals.ts`; all 77 delegate functions now accept `project: ProjectInternals` instead of `any`; eliminated all `as any` casts | 2026-04-23 |
 | H3: Sample data duplication | `sampleValueForField` in `lib/sample-data.ts` now delegates to the richer `sampleFieldValue` in `mapping-sample-data.ts` with min/max awareness; `sampleFieldValue` gained min/max clamping for numeric types | 2026-04-23 |
-| H1: Dispatch-and-return boilerplate (46 functions) | Created `lib/dispatch-helpers.ts` with `DispatchSpec<P>` descriptor type and generic `exec()` executor. Converted 36 of 46 functions across `project-theme.ts` (15/15), `project-mapping.ts` (12/14), and `project-screener.ts` (9/16) to descriptor-driven dispatch. Remaining functions have pre-validation or multi-command logic that doesn't fit the single-dispatch pattern. | 2026-04-23 |
+| H1: Dispatch-and-return boilerplate (46 functions) | Created `lib/dispatch-helpers.ts` with `DispatchSpec<P>`, `exec()`, and `execBatch()` (`ExecBatchSpec` for multi-command batches). All delegate helpers in `project-theme.ts` (15/15), `project-mapping.ts` (14/14), and `project-screener.ts` (16/16) use descriptor-driven dispatch; batch summaries receive `project` when the summary depends on pre-mutation state (e.g. `unmapField` rule counts). | 2026-04-23 |
 | M3: Hand-maintained widget aliases | Removed 15 hand-written camelCase overlays from `buildWidgetAliasMap()`; `resolveWidget()` now delegates to `widgetTokenToComponent()` from `@formspec-org/types` which handles normalization (lowercase, strip separators) against the canonical `SPEC_WIDGET_TO_COMPONENT` map. `widgetHintFor()` updated to use the same resolution path. | 2026-04-23 |
 | M4: Naive token extraction | Replaced hand-rolled whitespace-split + `$` prefix check in `buildExpressionDiagnostics` with WASM `analyzeFEL` which correctly handles string literals, comments, and all FEL syntax. New `extractRootRefs()` helper wraps the WASM call with error handling. | 2026-04-23 |
 | M6: Hand-rolled XML/CSV serializers | Fixed `escapeXml()` to include `&apos;` escaping. Fixed CSV to collect headers from all rows (not just first row), fixing inconsistent key sets. Renamed `rows_data` to `rows`. Added tests for apostrophe escaping and inconsistent-key handling. | 2026-04-23 |
 | L3: `isTextareaWidget` single-string check | Removed function, inlined `widget === 'textarea'` at the single call site in `project.ts:695`. Removed barrel re-export from `index.ts`. | 2026-04-23 |
 | L4: Hardcoded workspace names in `keyboard.ts` | Extracted `'Editor'` and `'Layout'` to `DELETE_ALLOWED_WORKSPACES` set constant. Added `WorkspaceName` type export. | 2026-04-23 |
 | L5: `LayoutArrangement` derived from `_LAYOUT_MAP` | Created `_LAYOUT_ENTRIES` const object with `as const satisfies Record<LayoutArrangement, ...>`; `_LAYOUT_MAP` is now derived from it. Added `LAYOUT_ARRANGEMENTS` array constant alongside the type in `helper-types.ts`. | 2026-04-23 |
+| C1: God class decomposition | Migrated definition, layout, and FEL logic to standalone modules; `project.ts` reduced by 64% | 2026-04-23 |
+| H4: FEL condition parse duplicated outside WASM | `parseFELToGroup` uses only `tryLiftConditionGroup` (tools WASM via `@formspec-org/engine`). No hand-rolled condition parser in TS. Lift implementation: `crates/formspec-core/src/fel_condition_group_lift.rs`. Round-trip coverage in `tests/fel-condition-builder.test.ts`. Callers must `await initFormspecEngine()` then `await initFormspecEngineTools()` before calling (documented on `parseFELToGroup` and in `API.llm.md`). | 2026-04-23 |
 
 ---
 
 ## Critical Findings (architectural)
 
-### C1. `project.ts` is a ~3,530-line God class
+### ~~C1. `project.ts` God class~~ — DONE
 
-The `Project` class is the single entry point for ~90 authoring operations across 7 domains (definition, layout, theme, mapping, screener, variables, instances). It delegates to `project-layout.ts`, `project-theme.ts`, `project-mapping.ts`, and `project-screener.ts`.
-
-**Mitigated:** Delegate functions now use `project: ProjectInternals` instead of `project: any`, giving full type safety. The `ProjectInternals` interface in `project-internals.ts` serves as a typed contract between `Project` and its delegates. Dispatch-and-return functions now use the `exec()` descriptor pattern from `lib/dispatch-helpers.ts`.
-
-**Remaining:** The class itself is still ~3,530 lines. Full decomposition would split `Project` into domain-specific facade objects, but the current `ProjectInternals` contract already enables safe, incremental decomposition.
+The `Project` class is now a lean facade (~1,113 lines) delegating all authoring operations to specialized modules: `project-definition.ts`, `project-layout.ts`, `project-theme.ts`, `project-mapping.ts`, `project-screener.ts`, `project-variables.ts`, `project-component-tree.ts`, `project-preview.ts`, and `project-fel.ts`. All internal helpers have been moved to their respective modules or module-local scope, and `ProjectInternals` has been purified to a minimal state interface.
 
 ### ~~C2. `_LAYOUT_MAP` is duplicated~~ — DONE
 
@@ -58,7 +56,7 @@ Dead copy deleted from `project.ts`. Active copy in `project-layout.ts` renamed 
 
 ### ~~H1. Dispatch-and-return boilerplate (46 functions)~~ — DONE
 
-Created `lib/dispatch-helpers.ts` with `DispatchSpec<P>` + `exec()`. 36/46 functions converted.
+Created `lib/dispatch-helpers.ts` with `DispatchSpec<P>` + `exec()` + `execBatch()`. Every `HelperResult`-returning delegate in `project-theme.ts`, `project-mapping.ts`, and `project-screener.ts` uses descriptors (`previewMapping` still delegates to `core.previewMapping` only). Remaining ad-hoc `dispatch` call sites live in layout, component-tree, and definition slices per C1.
 
 ### ~~H2. `project: any` across 77 function signatures~~ — DONE
 
@@ -68,11 +66,9 @@ All 77 functions now accept `project: ProjectInternals`. Full compile-time type 
 
 `sampleValueForField` delegates to the richer `sampleFieldValue` with min/max awareness.
 
-### H4. FEL parser re-implemented outside WASM
+### ~~H4. FEL parser re-implemented outside WASM~~ — DONE
 
-`fel-condition-builder.ts` implements `parseFELToGroup()` / `parseSingleCondition()` with hand-rolled character scanning (paren depth, quotes). It handles only a narrow subset of FEL (single-level `and`/`or`, no nested parens, no function calls). The WASM lexer/parser is already imported by `fel-editor-utils.ts` and `lib/fel-rewriter.ts`. This path silently returns `null` for complex expressions, losing data on round-trips.
-
-**Status:** Deferred — requires a new WASM API (e.g., `parseFELConditionGroup`) to expose structured AST data from the Rust parser. The WASM CST field is currently opaque (`unknown`). The current parser gracefully degrades to raw text mode for complex expressions, so there is no data loss — only a reduced editing experience.
+`parseFELToGroup` delegates exclusively to **`tryLiftConditionGroup`** (tools WASM). The former hand-rolled `parseSingleCondition` path is removed. **Future work** (not H4): extend `fel_condition_group_lift.rs` if the UI needs to lift additional FEL shapes; keep `conditionToFEL` / `groupToFEL` aligned with lift output and extend round-trip tests when adding operators.
 
 ### ~~H5. `isRecord` duplicated~~ — DONE
 
@@ -120,7 +116,7 @@ Theme token changes, breakpoint changes, and selector changes do affect renderin
 
 Every `project-core.dispatch()` call is cast `as AnyCommand`. A typed `dispatch()` overload would eliminate these casts.
 
-**Status:** Deferred — the `exec()` helper in `lib/dispatch-helpers.ts` already centralizes this cast for descriptor-based functions. Remaining casts are in `project.ts` (the C1 God class), `project-layout.ts`, and `proposal-manager.ts`. Fixing these requires either a typed overload in `@formspec-org/core` (cross-package change) or completing C1 decomposition.
+**Status:** Done — implemented generic signatures for `dispatch`, `batch`, and `batchWithRebuild` in `IProjectCore` and `RawProject`. Updated `AnyCommand` to `Command<string, any>` and swept the studio-core package to remove over 50 redundant `as AnyCommand` manual casts.
 
 ### ~~L3. `isTextareaWidget` is a single-string check~~ — DONE
 
@@ -155,7 +151,7 @@ Created `_LAYOUT_ENTRIES` const with `as const satisfies`. `_LAYOUT_MAP` derived
 | Low | L3: Inline `isTextareaWidget` | **Done** | ~5 lines | Clarity |
 | Low | L4: Workspace name constants | **Done** | ~5 lines | Clarity |
 | Low | L5: Derive `LayoutArrangement` from map | **Done** | ~10 lines | Maintainability |
-| Critical | C1: God class decomposition | Open | Large | Architectural (separate effort) |
-| High | H4: FEL parser outside WASM | Deferred | Requires Rust API | Correctness |
+| Critical | C1: God class decomposition | **Done** | ~1,113-line `project.ts` facade | Architectural |
+| High | H4: FEL condition parse (WASM-only `parseFELToGroup`) | **Done** | — | Correctness + single source of truth in Rust lift |
 | Low | L1: Meaningful `affectedPaths` | **Done** | ~50 lines | Correctness |
-| Low | L2: Typed dispatch overload | Deferred | Cross-package | Clarity |
+| Low | L2: Typed dispatch overload | **Done** | Cross-package | Clarity |

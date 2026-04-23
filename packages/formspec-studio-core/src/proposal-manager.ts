@@ -255,7 +255,7 @@ export class ProposalManager {
     if (this._changeset.status !== 'open' && this._changeset.status !== 'pending') return;
 
     const affectedPaths = extractAffectedPaths(results);
-    const clonedCommands = structuredClone(commands as AnyCommand[][]);
+    const clonedCommands = structuredClone(commands) as AnyCommand[][];
 
     if (actor === 'ai' && this._pendingAiEntry) {
       // Accumulate into the bracket's pending entry
@@ -537,7 +537,7 @@ export class ProposalManager {
       try {
         for (const phase of entries[i].commands) {
           if (phase.length > 0) {
-            this.core.batch(phase as AnyCommand[]);
+            this.core.batch(phase);
           }
         }
       } catch (err) {

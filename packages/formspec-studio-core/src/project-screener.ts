@@ -1,7 +1,34 @@
 import type { AnyCommand } from '@formspec-org/core';
 import type { HelperResult, FieldProps } from './helper-types.js';
-import { exec, type DispatchSpec } from './lib/dispatch-helpers.js';
+import { HelperError } from './helper-types.js';
+import { exec, execBatch, type DispatchSpec, type ExecBatchSpec } from './lib/dispatch-helpers.js';
+import * as definitionOps from './project-definition.js';
 import type { ProjectInternals } from './project-internals.js';
+import type { ScreenerDocument } from './types.js';
+
+function getScreenerOrThrow(project: ProjectInternals): ScreenerDocument {
+  const screener = project.core.state.screener;
+  if (!screener) throw new HelperError('SCREENER_NOT_FOUND', 'No screener document loaded', {});
+  return screener;
+}
+
+function validateScreenerItemKey(project: ProjectInternals, key: string): number {
+  const items = getScreenerOrThrow(project).items;
+  const idx = items.findIndex(it => it.key === key);
+  if (idx === -1) throw new HelperError('SCREENER_ITEM_NOT_FOUND', `Screener item not found: ${key}`, { key });
+  return idx;
+}
+
+function validatePhaseRoute(project: ProjectInternals, phaseId: string, routeIndex: number): void {
+  const screener = getScreenerOrThrow(project);
+  const phase = screener.evaluation.find(p => p.id === phaseId);
+  if (!phase) throw new HelperError('PHASE_NOT_FOUND', `Phase not found: ${phaseId}`, { phaseId });
+  if (routeIndex < 0 || routeIndex >= phase.routes.length) {
+    throw new HelperError('ROUTE_OUT_OF_BOUNDS', `Route index ${routeIndex} out of bounds in phase ${phaseId}`, {
+      phaseId, routeIndex, routeCount: phase.routes.length,
+    });
+  }
+}
 
 const S = {
   deleteScreenerDocument: {
@@ -27,10 +54,12 @@ const S = {
   },
   addEvaluationPhase: {
     command: 'screener.addPhase',
+    payload: (p: { id: string; strategy: string; label?: string }) =>
+      ({ id: p.id, strategy: p.strategy, ...(p.label !== undefined ? { label: p.label } : {}) }),
     summary: (p: { id: string; strategy: string }) =>
       `Added evaluation phase '${p.id}' (${p.strategy ?? '(unspecified)'})`,
     affectedPaths: (p: { id: string }) => [p.id],
-    beforeDispatch: (project: ProjectInternals) => { project._getScreener(); },
+    beforeDispatch: (project: ProjectInternals) => { getScreenerOrThrow(project); },
   },
   removeScreenRoute: {
     command: 'screener.deleteRoute',
@@ -40,7 +69,7 @@ const S = {
       `Removed route ${p.routeIndex} from phase '${p.phaseId}'`,
     affectedPaths: (p: { phaseId: string }) => [p.phaseId],
     beforeDispatch: (project: ProjectInternals, p: { phaseId: string; routeIndex: number }) => {
-      project._validatePhaseRoute(p.phaseId, p.routeIndex);
+      validatePhaseRoute(project, p.phaseId, p.routeIndex);
     },
   },
   reorderScreenRoute: {
@@ -51,39 +80,188 @@ const S = {
       `Reordered route ${p.routeIndex} in phase '${p.phaseId}' ${p.direction}`,
     affectedPaths: (p: { phaseId: string }) => [p.phaseId],
     beforeDispatch: (project: ProjectInternals, p: { phaseId: string; routeIndex: number }) => {
-      project._validatePhaseRoute(p.phaseId, p.routeIndex);
+      validatePhaseRoute(project, p.phaseId, p.routeIndex);
     },
   },
   setScreenerAvailability: {
     command: 'screener.setAvailability',
     summary: () => 'Updated screener availability',
     affectedPaths: () => ['screener.availability'],
-    beforeDispatch: (project: ProjectInternals) => { project._getScreener(); },
+    beforeDispatch: (project: ProjectInternals) => { getScreenerOrThrow(project); },
   },
   setScreenerResultValidity: {
     command: 'screener.setResultValidity',
     summary: (p: { duration: string | null }) =>
       p.duration ? `Set result validity to ${p.duration}` : 'Cleared result validity',
     affectedPaths: () => ['screener.validity'],
-    beforeDispatch: (project: ProjectInternals) => { project._getScreener(); },
+    beforeDispatch: (project: ProjectInternals) => { getScreenerOrThrow(project); },
+  },
+  createScreenerDocument: {
+    command: 'screener.setDocument',
+    payload: (p: { url?: string; title?: string }) => ({
+      $formspecScreener: '1.0' as const,
+      url: p.url ?? '',
+      version: '1.0.0',
+      title: p.title ?? 'Screener',
+      items: [],
+      evaluation: [{ id: 'default', strategy: 'first-match', routes: [] }],
+    }),
+    summary: () => 'Created screener document',
+    affectedPaths: () => ['screener'],
+  },
+  reorderScreenField: {
+    command: 'screener.reorderItem',
+    payload: (p: { index: number; direction: 'up' | 'down' }) => ({ index: p.index, direction: p.direction }),
+    summary: (p: { key: string; direction: 'up' | 'down' }) =>
+      `Reordered screener field '${p.key}' ${p.direction}`,
+    affectedPaths: (p: { key: string }) => [p.key],
+  },
+  addScreenRoute: {
+    command: 'screener.addRoute',
+    payload: (p: {
+      phaseId: string;
+      route: { condition?: string; target: string; label?: string; message?: string; score?: string; threshold?: number };
+      insertIndex?: number;
+    }) => ({ phaseId: p.phaseId, route: p.route, insertIndex: p.insertIndex }),
+    summary: (p: {
+      phaseId: string;
+      route: { condition?: string; target: string; label?: string; message?: string; score?: string; threshold?: number };
+    }) => `Added route to '${p.route.target ?? '(unspecified)'}' in phase '${p.phaseId}'`,
+    affectedPaths: (p: { phaseId: string }) => [p.phaseId],
+    beforeDispatch: (project, p) => {
+      getScreenerOrThrow(project);
+      if (p.route.condition) definitionOps._validateFEL(project, p.route.condition);
+      if (p.route.score) definitionOps._validateFEL(project, p.route.score);
+    },
   },
 } satisfies Record<string, DispatchSpec<any>>;
 
+const B = {
+  addScreenField: {
+    buildCommands: (proj, p: { key: string; label: string; type: string; props?: FieldProps }) => {
+      const { resolved, extensionName, combinedConstraintExpr } = definitionOps._resolveAuthoringFieldType(proj, p.type);
+      const payload: Record<string, unknown> = {
+        type: 'field',
+        key: p.key,
+        label: p.label,
+        dataType: resolved.dataType,
+      };
+      if (extensionName) payload.extensions = { [extensionName]: true };
+      const cmds: AnyCommand[] = [{ type: 'screener.addItem', payload }];
+      if (combinedConstraintExpr) {
+        cmds.push({
+          type: 'screener.setBind',
+          payload: { path: p.key, properties: { constraint: combinedConstraintExpr } },
+        });
+      }
+      return cmds;
+    },
+    summary: (_proj, p: { key: string }) => `Added screener field '${p.key}'`,
+    affectedPaths: (p: { key: string }) => [p.key],
+    beforeDispatch: (proj) => {
+      getScreenerOrThrow(proj);
+    },
+  } satisfies ExecBatchSpec<{ key: string; label: string; type: string; props?: FieldProps }>,
+  updateScreenField: {
+    buildCommands: (proj, p: { key: string; changes: { label?: string; helpText?: string; required?: boolean | string } }) => {
+      const commands: AnyCommand[] = [];
+      for (const prop of ['label', 'helpText'] as const) {
+        if (prop in p.changes) {
+          commands.push({
+            type: 'screener.setItemProperty',
+            payload: { key: p.key, property: prop, value: p.changes[prop as keyof typeof p.changes] },
+          });
+        }
+      }
+      if ('required' in p.changes) {
+        const val = p.changes.required;
+        let bindValue: unknown;
+        if (val === true) bindValue = 'true';
+        else if (val === false) bindValue = null;
+        else bindValue = val;
+        commands.push({
+          type: 'screener.setBind',
+          payload: { path: p.key, properties: { required: bindValue } },
+        });
+      }
+      return commands;
+    },
+    summary: (_proj, p: { key: string }) => `Updated screener field '${p.key}'`,
+    affectedPaths: (p: { key: string }) => [p.key],
+    beforeDispatch: (proj, p) => {
+      validateScreenerItemKey(proj, p.key);
+    },
+  } satisfies ExecBatchSpec<{
+    key: string;
+    changes: { label?: string; helpText?: string; required?: boolean | string };
+  }>,
+  setPhaseStrategy: {
+    buildCommands: (_proj, p: { phaseId: string; strategy: string; config?: Record<string, unknown> }) => {
+      const commands: AnyCommand[] = [
+        { type: 'screener.setPhaseProperty', payload: { phaseId: p.phaseId, property: 'strategy', value: p.strategy } },
+      ];
+      if (p.config !== undefined) {
+        commands.push({
+          type: 'screener.setPhaseProperty',
+          payload: { phaseId: p.phaseId, property: 'config', value: p.config },
+        });
+      }
+      return commands;
+    },
+    summary: (_proj, p: { phaseId: string; strategy: string }) => `Set phase '${p.phaseId}' strategy to '${p.strategy}'`,
+    affectedPaths: (p: { phaseId: string }) => [p.phaseId],
+  } satisfies ExecBatchSpec<{ phaseId: string; strategy: string; config?: Record<string, unknown> }>,
+  updateScreenRoute: {
+    buildCommands: (proj, p: {
+      phaseId: string;
+      routeIndex: number;
+      changes: {
+        condition?: string;
+        target?: string;
+        label?: string;
+        message?: string;
+        score?: string;
+        threshold?: number;
+        override?: boolean;
+        terminal?: boolean;
+      };
+    }) => {
+      if (p.changes.condition) definitionOps._validateFEL(proj, p.changes.condition);
+      if (p.changes.score) definitionOps._validateFEL(proj, p.changes.score);
+      const commands: AnyCommand[] = [];
+      for (const [prop, val] of Object.entries(p.changes)) {
+        if (val !== undefined) {
+          commands.push({
+            type: 'screener.setRouteProperty',
+            payload: { phaseId: p.phaseId, index: p.routeIndex, property: prop, value: val },
+          });
+        }
+      }
+      return commands;
+    },
+    summary: (_proj, p: { phaseId: string; routeIndex: number }) => `Updated route ${p.routeIndex} in phase '${p.phaseId}'`,
+    affectedPaths: (p: { phaseId: string }) => [p.phaseId],
+    beforeDispatch: (proj, p) => {
+      validatePhaseRoute(proj, p.phaseId, p.routeIndex);
+    },
+  } satisfies ExecBatchSpec<{
+    phaseId: string;
+    routeIndex: number;
+    changes: {
+      condition?: string;
+      target?: string;
+      label?: string;
+      message?: string;
+      score?: string;
+      threshold?: number;
+      override?: boolean;
+      terminal?: boolean;
+    };
+  }>,
+};
+
 export function createScreenerDocument(project: ProjectInternals, options?: { url?: string; title?: string }): HelperResult {
-  const doc = {
-    $formspecScreener: '1.0' as const,
-    url: options?.url ?? '',
-    version: '1.0.0',
-    title: options?.title ?? 'Screener',
-    items: [],
-    evaluation: [{ id: 'default', strategy: 'first-match', routes: [] }],
-  };
-  project.core.dispatch({ type: 'screener.setDocument', payload: doc });
-  return {
-    summary: 'Created screener document',
-    action: { helper: 'createScreenerDocument', params: options ?? {} },
-    affectedPaths: ['screener'],
-  };
+  return exec(project, 'createScreenerDocument', options ?? {}, S.createScreenerDocument);
 }
 
 export function deleteScreenerDocument(project: ProjectInternals): HelperResult {
@@ -91,27 +269,7 @@ export function deleteScreenerDocument(project: ProjectInternals): HelperResult 
 }
 
 export function addScreenField(project: ProjectInternals, key: string, label: string, type: string, props?: FieldProps): HelperResult {
-  project._getScreener();
-  const { resolved, extensionName, combinedConstraintExpr } = project._resolveAuthoringFieldType(type);
-  const payload: Record<string, unknown> = {
-    type: 'field',
-    key,
-    label,
-    dataType: resolved.dataType,
-  };
-  if (extensionName) payload.extensions = { [extensionName]: true };
-  project.core.dispatch({ type: 'screener.addItem', payload });
-  if (combinedConstraintExpr) {
-    project.core.dispatch({
-      type: 'screener.setBind',
-      payload: { path: key, properties: { constraint: combinedConstraintExpr } },
-    });
-  }
-  return {
-    summary: `Added screener field '${key}'`,
-    action: { helper: 'addScreenField', params: { key, label, type } },
-    affectedPaths: [key],
-  };
+  return execBatch(project, 'addScreenField', { key, label, type, props }, B.addScreenField);
 }
 
 export function removeScreenField(project: ProjectInternals, key: string): HelperResult {
@@ -119,46 +277,12 @@ export function removeScreenField(project: ProjectInternals, key: string): Helpe
 }
 
 export function updateScreenField(project: ProjectInternals, key: string, changes: { label?: string; helpText?: string; required?: boolean | string }): HelperResult {
-  project._validateScreenerItemKey(key);
-  const commands: AnyCommand[] = [];
-
-  for (const prop of ['label', 'helpText'] as const) {
-    if (prop in changes) {
-      commands.push({
-        type: 'screener.setItemProperty',
-        payload: { key, property: prop, value: changes[prop as keyof typeof changes] },
-      });
-    }
-  }
-
-  if ('required' in changes) {
-    const val = changes.required;
-    let bindValue: unknown;
-    if (val === true) bindValue = 'true';
-    else if (val === false) bindValue = null;
-    else bindValue = val;
-    commands.push({
-      type: 'screener.setBind',
-      payload: { path: key, properties: { required: bindValue } },
-    });
-  }
-
-  if (commands.length > 0) project.core.dispatch(commands);
-  return {
-    summary: `Updated screener field '${key}'`,
-    action: { helper: 'updateScreenField', params: { key, ...changes } },
-    affectedPaths: [key],
-  };
+  return execBatch(project, 'updateScreenField', { key, changes }, B.updateScreenField);
 }
 
 export function reorderScreenField(project: ProjectInternals, key: string, direction: 'up' | 'down'): HelperResult {
-  const index = project._validateScreenerItemKey(key);
-  project.core.dispatch({ type: 'screener.reorderItem', payload: { index, direction } });
-  return {
-    summary: `Reordered screener field '${key}' ${direction}`,
-    action: { helper: 'reorderScreenField', params: { key, direction } },
-    affectedPaths: [key],
-  };
+  const index = validateScreenerItemKey(project, key);
+  return exec(project, 'reorderScreenField', { index, direction, key }, S.reorderScreenField);
 }
 
 export function addEvaluationPhase(project: ProjectInternals, id: string, strategy: string, label?: string): HelperResult {
@@ -174,30 +298,11 @@ export function reorderPhase(project: ProjectInternals, phaseId: string, directi
 }
 
 export function setPhaseStrategy(project: ProjectInternals, phaseId: string, strategy: string, config?: Record<string, unknown>): HelperResult {
-  const commands: AnyCommand[] = [
-    { type: 'screener.setPhaseProperty', payload: { phaseId, property: 'strategy', value: strategy } },
-  ];
-  if (config !== undefined) {
-    commands.push({ type: 'screener.setPhaseProperty', payload: { phaseId, property: 'config', value: config } });
-  }
-  project.core.dispatch(commands);
-  return {
-    summary: `Set phase '${phaseId}' strategy to '${strategy}'`,
-    action: { helper: 'setPhaseStrategy', params: { phaseId, strategy, config } },
-    affectedPaths: [phaseId],
-  };
+  return execBatch(project, 'setPhaseStrategy', { phaseId, strategy, config }, B.setPhaseStrategy);
 }
 
 export function addScreenRoute(project: ProjectInternals, phaseId: string, route: { condition?: string; target: string; label?: string; message?: string; score?: string; threshold?: number }, insertIndex?: number): HelperResult {
-  project._getScreener();
-  if (route.condition) project._validateFEL(route.condition);
-  if (route.score) project._validateFEL(route.score);
-  project.core.dispatch({ type: 'screener.addRoute', payload: { phaseId, route, insertIndex } });
-  return {
-    summary: `Added route to '${route.target ?? '(unspecified)'}' in phase '${phaseId}'`,
-    action: { helper: 'addScreenRoute', params: { phaseId, ...route } },
-    affectedPaths: [phaseId],
-  };
+  return exec(project, 'addScreenRoute', { phaseId, route, insertIndex }, S.addScreenRoute);
 }
 
 export function updateScreenRoute(
@@ -206,25 +311,7 @@ export function updateScreenRoute(
   routeIndex: number,
   changes: { condition?: string; target?: string; label?: string; message?: string; score?: string; threshold?: number; override?: boolean; terminal?: boolean },
 ): HelperResult {
-  project._validatePhaseRoute(phaseId, routeIndex);
-  if (changes.condition) project._validateFEL(changes.condition);
-  if (changes.score) project._validateFEL(changes.score);
-
-  const commands: AnyCommand[] = [];
-  for (const [prop, val] of Object.entries(changes)) {
-    if (val !== undefined) {
-      commands.push({
-        type: 'screener.setRouteProperty',
-        payload: { phaseId, index: routeIndex, property: prop, value: val },
-      });
-    }
-  }
-  if (commands.length > 0) project.core.dispatch(commands);
-  return {
-    summary: `Updated route ${routeIndex} in phase '${phaseId}'`,
-    action: { helper: 'updateScreenRoute', params: { phaseId, routeIndex, ...changes } },
-    affectedPaths: [phaseId],
-  };
+  return execBatch(project, 'updateScreenRoute', { phaseId, routeIndex, changes }, B.updateScreenRoute);
 }
 
 export function reorderScreenRoute(project: ProjectInternals, phaseId: string, routeIndex: number, direction: 'up' | 'down'): HelperResult {

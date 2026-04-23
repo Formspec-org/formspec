@@ -1,6 +1,8 @@
-import { exec, type DispatchSpec } from './lib/dispatch-helpers.js';
+import type { AnyCommand } from '@formspec-org/core';
+import { exec, execBatch, type DispatchSpec, type ExecBatchSpec } from './lib/dispatch-helpers.js';
 import type { HelperResult } from './helper-types.js';
 import { HelperError } from './helper-types.js';
+import { requireItemPath } from './project-path-helpers.js';
 import type { ProjectInternals } from './project-internals.js';
 
 const S = {
@@ -80,7 +82,73 @@ const S = {
     summary: (p: { id: string }) => `Selected mapping '${p.id}'`,
     affectedPaths: (p: { id: string }) => [p.id],
   },
+  deleteMapping: {
+    command: 'mapping.delete',
+    payload: (p: { id: string }) => ({ id: p.id }),
+    summary: (p: { id: string }) => `Deleted mapping '${p.id}'`,
+    affectedPaths: (p: { id: string }) => [p.id],
+    beforeDispatch: (project, p) => {
+      const ids = Object.keys(project.core.mappings);
+      if (ids.length <= 1) {
+        throw new HelperError('MAPPING_MIN_COUNT', 'Cannot delete the last mapping document', { id: p.id });
+      }
+      if (!project.core.mappings[p.id]) {
+        throw new HelperError('MAPPING_NOT_FOUND', `Mapping '${p.id}' does not exist`, { id: p.id });
+      }
+    },
+  },
+  renameMapping: {
+    command: 'mapping.rename',
+    payload: (p: { oldId: string; newId: string }) => ({ oldId: p.oldId, newId: p.newId }),
+    summary: (p: { oldId: string; newId: string }) => `Renamed mapping '${p.oldId}' to '${p.newId}'`,
+    affectedPaths: (p: { oldId: string }) => [p.oldId],
+    beforeDispatch: (project, p) => {
+      if (!project.core.mappings[p.oldId]) {
+        throw new HelperError('MAPPING_NOT_FOUND', `Mapping '${p.oldId}' does not exist`, { oldId: p.oldId });
+      }
+      if (project.core.mappings[p.newId]) {
+        throw new HelperError('MAPPING_DUPLICATE_ID', `Mapping '${p.newId}' already exists`, { newId: p.newId });
+      }
+    },
+  },
+  mapField: {
+    command: 'mapping.addRule',
+    payload: (p: { sourcePath: string; targetPath: string; mappingId?: string }) => ({
+      sourcePath: p.sourcePath,
+      targetPath: p.targetPath,
+      ...(p.mappingId !== undefined ? { mappingId: p.mappingId } : {}),
+    }),
+    summary: (p: { sourcePath: string; targetPath: string }) => `Mapped "${p.sourcePath}" → "${p.targetPath}"`,
+    affectedPaths: (p: { sourcePath: string }) => [p.sourcePath],
+    beforeDispatch: (project, p) => {
+      requireItemPath(project.core, p.sourcePath);
+    },
+  },
 } satisfies Record<string, DispatchSpec<any>>;
+
+const M = {
+  unmapField: {
+    buildCommands: (project, p: { sourcePath: string; mappingId?: string }) => {
+      const mappingRules = project.core.mapping.rules ?? [];
+      const indices = mappingRules
+        .map((r, i) => (r.sourcePath === p.sourcePath ? i : -1))
+        .filter((i) => i >= 0)
+        .reverse();
+      return indices.map(
+        (idx) =>
+          ({
+            type: 'mapping.deleteRule',
+            payload: { index: idx, ...(p.mappingId !== undefined ? { mappingId: p.mappingId } : {}) },
+          }),
+      );
+    },
+    summary: (project, p: { sourcePath: string }) => {
+      const n = (project.core.mapping.rules ?? []).filter((r) => r.sourcePath === p.sourcePath).length;
+      return `Unmapped "${p.sourcePath}" (${n} rule(s))`;
+    },
+    affectedPaths: (p: { sourcePath: string }) => [p.sourcePath],
+  } satisfies ExecBatchSpec<{ sourcePath: string; mappingId?: string }>,
+};
 
 export function setMappingProperty(project: ProjectInternals, property: string, value: unknown, mappingId?: string): HelperResult {
   return exec(project, 'setMappingProperty', { property, value, mappingId }, S.setMappingProperty);
@@ -142,42 +210,28 @@ export function createMapping(project: ProjectInternals, id: string, options: { 
 }
 
 export function deleteMapping(project: ProjectInternals, id: string): HelperResult {
-  const ids = Object.keys(project.core.mappings);
-  if (ids.length <= 1) {
-    throw new HelperError('MAPPING_MIN_COUNT', 'Cannot delete the last mapping document', { id });
-  }
-  if (!project.core.mappings[id]) {
-    throw new HelperError('MAPPING_NOT_FOUND', `Mapping '${id}' does not exist`, { id });
-  }
-  project.core.dispatch({
-    type: 'mapping.delete',
-    payload: { id },
-  } as import('@formspec-org/core').AnyCommand);
-  return {
-    summary: `Deleted mapping '${id}'`,
-    action: { helper: 'deleteMapping', params: { id } },
-    affectedPaths: [id],
-  };
+  return exec(project, 'deleteMapping', { id }, S.deleteMapping);
 }
 
 export function renameMapping(project: ProjectInternals, oldId: string, newId: string): HelperResult {
-  if (!project.core.mappings[oldId]) {
-    throw new HelperError('MAPPING_NOT_FOUND', `Mapping '${oldId}' does not exist`, { oldId });
-  }
-  if (project.core.mappings[newId]) {
-    throw new HelperError('MAPPING_DUPLICATE_ID', `Mapping '${newId}' already exists`, { newId });
-  }
-  project.core.dispatch({
-    type: 'mapping.rename',
-    payload: { oldId, newId },
-  } as import('@formspec-org/core').AnyCommand);
-  return {
-    summary: `Renamed mapping '${oldId}' to '${newId}'`,
-    action: { helper: 'renameMapping', params: { oldId, newId } },
-    affectedPaths: [oldId],
-  };
+  return exec(project, 'renameMapping', { oldId, newId }, S.renameMapping);
 }
 
 export function selectMapping(project: ProjectInternals, id: string): HelperResult {
   return exec(project, 'selectMapping', { id }, S.selectMapping);
+}
+
+/** Add a mapping rule from a form field to an output target. */
+export function mapField(
+  project: ProjectInternals,
+  sourcePath: string,
+  targetPath: string,
+  mappingId?: string,
+): HelperResult {
+  return exec(project, 'mapField', { sourcePath, targetPath, mappingId }, S.mapField);
+}
+
+/** Remove all mapping rules for a given source path. */
+export function unmapField(project: ProjectInternals, sourcePath: string, mappingId?: string): HelperResult {
+  return execBatch(project, 'unmapField', { sourcePath, mappingId }, M.unmapField);
 }

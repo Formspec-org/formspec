@@ -1,4 +1,8 @@
-/** @filedesc FEL condition builder: generate FEL from structured conditions and parse simple FEL back. */
+/**
+ * @filedesc FEL condition builder: generate FEL from structured conditions; parse supported FEL back via WASM only
+ * (`tryLiftConditionGroup` → `crates/formspec-core/src/fel_condition_group_lift.rs`).
+ */
+import { tryLiftConditionGroup, type FELConditionGroupLifted } from '@formspec-org/engine';
 import type { FELEditorFieldOption } from './fel-editor-utils';
 
 export type ComparisonOperator = 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte';
@@ -111,196 +115,44 @@ export function groupToFEL(group: ConditionGroup): string {
   return group.conditions.map((c) => conditionToFEL(c)).join(` ${group.logic} `);
 }
 
+function isOperatorName(s: string): s is Operator {
+  return Object.prototype.hasOwnProperty.call(OPERATOR_INFO, s);
+}
+
+function conditionGroupFromLift(lift: FELConditionGroupLifted): ConditionGroup | null {
+  const conditions: Condition[] = [];
+  for (const row of lift.conditions) {
+    if (!isOperatorName(row.operator)) return null;
+    conditions.push({
+      field: row.field,
+      operator: row.operator,
+      value: row.value,
+    });
+  }
+  return { logic: lift.logic, conditions };
+}
+
+/**
+ * Parse supported FEL into a structured group via Rust/WASM only (`tryLiftConditionGroup`).
+ * There is no JavaScript fallback parser; behavior matches `fel_condition_group_lift` in
+ * `formspec-core`.
+ *
+ * **Requires** `await initFormspecEngine()` then `await initFormspecEngineTools()` before calling
+ * (same as Studio startup; `packages/formspec-studio-core/tests/setup.ts` for tests). If tools
+ * WASM is not loaded, throws like other engine tools APIs.
+ *
+ * Returns `null` for blank input, expressions the lift cannot structure (`unlifted`), or if the
+ * lifted operator string is not in the Studio {@link Operator} set (`conditionGroupFromLift`).
+ */
 export function parseFELToGroup(fel: string): ConditionGroup | null {
   const trimmed = fel.trim();
   if (!trimmed) return null;
 
-  if (trimmed === 'true') {
-    return { logic: 'and', conditions: [{ field: '', operator: 'is_true', value: '' }] };
+  const lift = tryLiftConditionGroup(trimmed);
+  if (lift.status === 'lifted') {
+    return conditionGroupFromLift(lift);
   }
-  if (trimmed === 'false') {
-    return { logic: 'and', conditions: [{ field: '', operator: 'is_false', value: '' }] };
-  }
-
-  const connector = detectConnector(trimmed);
-  if (!connector) return null;
-
-  const parts = splitByConnector(trimmed, connector);
-  if (!parts) return null;
-
-  const conditions: Condition[] = [];
-  for (const part of parts) {
-    const cond = parseSingleCondition(part.trim());
-    if (!cond) return null;
-    conditions.push(cond);
-  }
-
-  if (conditions.length === 0) return null;
-  return { logic: connector, conditions };
-}
-
-function detectConnector(fel: string): 'and' | 'or' | null {
-  const hasAnd = containsTopLevel(fel, ' and ');
-  const hasOr = containsTopLevel(fel, ' or ');
-
-  if (hasAnd && hasOr) return null;
-  if (hasOr) return 'or';
-  return 'and';
-}
-
-function walkTopLevel(fel: string, onSegment: (offset: number) => void): void {
-  let depth = 0;
-  let inSingle = false;
-  let inDouble = false;
-
-  for (let i = 0; i < fel.length; i++) {
-    const ch = fel[i];
-    if (ch === "'" && !inDouble) inSingle = !inSingle;
-    else if (ch === '"' && !inSingle) inDouble = !inDouble;
-    else if (!inSingle && !inDouble) {
-      if (ch === '(') depth++;
-      else if (ch === ')') depth--;
-    }
-
-    if (depth === 0 && !inSingle && !inDouble) {
-      onSegment(i);
-    }
-  }
-}
-
-function containsTopLevel(fel: string, token: string): boolean {
-  let found = false;
-  walkTopLevel(fel, (i) => {
-    if (fel.slice(i, i + token.length) === token) found = true;
-  });
-  return found;
-}
-
-function splitByConnector(fel: string, connector: 'and' | 'or'): string[] | null {
-  const token = ` ${connector} `;
-  const parts: string[] = [];
-  let lastSplit = 0;
-
-  walkTopLevel(fel, (i) => {
-    if (fel.slice(i, i + token.length) === token) {
-      parts.push(fel.slice(lastSplit, i));
-      lastSplit = i + token.length;
-    }
-  });
-
-  if (lastSplit < fel.length) {
-    parts.push(fel.slice(lastSplit));
-  }
-
-  return parts.length > 0 ? parts : null;
-}
-
-function parseSingleCondition(expr: string): Condition | null {
-  const moneyMatch = expr.match(/^moneyAmount\((\$\w[\w.]*)\)\s*(>=|<=|!=|=|>|<)\s*(.+)$/);
-  if (moneyMatch) {
-    const field = moneyMatch[1].slice(1);
-    const op = moneyMatch[2];
-    const value = moneyMatch[3].trim();
-    return { field, operator: moneyOpToFEL(op), value };
-  }
-
-  const notIsNullMatch = expr.match(/^not\s+isNull\((\$\w[\w.]*)\)$/);
-  if (notIsNullMatch) {
-    return { field: notIsNullMatch[1].slice(1), operator: 'is_not_null', value: '' };
-  }
-
-  const isNullMatch = expr.match(/^isNull\((\$\w[\w.]*)\)$/);
-  if (isNullMatch) {
-    return { field: isNullMatch[1].slice(1), operator: 'is_null', value: '' };
-  }
-
-  const emptyMatch = expr.match(/^empty\((\$\w[\w.]*)\)$/);
-  if (emptyMatch) {
-    return { field: emptyMatch[1].slice(1), operator: 'is_empty', value: '' };
-  }
-
-  const presentMatch = expr.match(/^present\((\$\w[\w.]*)\)$/);
-  if (presentMatch) {
-    return { field: presentMatch[1].slice(1), operator: 'is_present', value: '' };
-  }
-
-  const containsMatch = expr.match(/^contains\((\$\w[\w.]*),\s*(.+)\)$/);
-  if (containsMatch) {
-    return {
-      field: containsMatch[1].slice(1),
-      operator: 'contains',
-      value: normalizeStringValue(containsMatch[2].trim()),
-    };
-  }
-
-  const startsWithMatch = expr.match(/^startsWith\((\$\w[\w.]*),\s*(.+)\)$/);
-  if (startsWithMatch) {
-    return {
-      field: startsWithMatch[1].slice(1),
-      operator: 'starts_with',
-      value: normalizeStringValue(startsWithMatch[2].trim()),
-    };
-  }
-
-  const comparisonMatch = expr.match(/^(\$[\w$.]*)\s*(>=|<=|!=|=|>|<)\s*(.+)$/);
-  if (comparisonMatch) {
-    const field = comparisonMatch[1] === '$' ? '$' : comparisonMatch[1].slice(1);
-    const op = comparisonMatch[2];
-    const rawValue = comparisonMatch[3].trim();
-
-    if (!isValidValue(rawValue)) return null;
-
-    if (rawValue === 'true') {
-      return { field, operator: 'is_true', value: '' };
-    }
-    if (rawValue === 'false') {
-      return { field, operator: 'is_false', value: '' };
-    }
-
-    return { field, operator: comparisonOpToFEL(op), value: normalizeStringValue(rawValue) };
-  }
-
   return null;
-}
-
-function comparisonOpToFEL(op: string): ComparisonOperator {
-  switch (op) {
-    case '=': return 'eq';
-    case '!=': return 'neq';
-    case '>': return 'gt';
-    case '>=': return 'gte';
-    case '<': return 'lt';
-    case '<=': return 'lte';
-    default: return 'eq';
-  }
-}
-
-function moneyOpToFEL(op: string): MoneyOperator {
-  switch (op) {
-    case '=': return 'money_eq';
-    case '!=': return 'money_neq';
-    case '>': return 'money_gt';
-    case '>=': return 'money_gte';
-    case '<': return 'money_lt';
-    case '<=': return 'money_lte';
-    default: return 'money_eq';
-  }
-}
-
-function isValidValue(value: string): boolean {
-  if (/[:?]/.test(value)) return false;
-  if (/[+\-*/%]/.test(value) && !/^@/.test(value)) {
-    const cleaned = value.replace(/[-]/g, '');
-    if (/[*+/%]/.test(cleaned)) return false;
-  }
-  return true;
-}
-
-function normalizeStringValue(value: string): string {
-  if (value.startsWith('"') && value.endsWith('"')) {
-    return `'${value.slice(1, -1)}'`;
-  }
-  return value;
 }
 
 export function getOperatorsForDataType(dataType: string): OperatorInfo[] {

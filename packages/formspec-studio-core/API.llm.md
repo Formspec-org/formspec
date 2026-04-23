@@ -56,6 +56,7 @@ Map loaded registry `dataType` extensions into palette rows.
 ## `nodeIdFromLayoutId(id: string): string`
 
 ## `nodeRefFor(entry: Pick<FlatEntry, 'bind' | 'nodeId'>): {
+
     bind: string;
 } | {
     nodeId: string;
@@ -64,6 +65,7 @@ Map loaded registry `dataType` extensions into palette rows.
 ## `flattenComponentTree(root: CompNode, defLookup: Map<string, DefLookupEntry>, bindKeyMap?: Map<string, string>): FlatEntry[]`
 
 ## `resolveLayoutSelectionNodeRef(tree: CompNode | undefined, selectionKey: string): {
+
     nodeId: string;
 } | {
     bind: string;
@@ -73,6 +75,7 @@ Map a layout-canvas selection key (def path, short bind, `__node:id`, or raw dis
 `NodeRef` that `component.setNodeStyle` and related commands resolve via `findNode`.
 
 ## `isCircularComponentMove(root: CompNode | undefined, sourceRef: {
+
     bind?: string;
     nodeId?: string;
 }, targetParentRef: {
@@ -87,6 +90,7 @@ Used by Layout DnD before calling move helpers.
 ## `buildBatchMoveCommands(paths: Set<string>, targetGroupPath: string): MoveCommand[]`
 
 ## `humanizeFEL(expression: string): {
+
     text: string;
     supported: boolean;
 }`
@@ -260,6 +264,7 @@ type AdvisorySeverity = 'warning' | 'info';
 ```
 
 ## `previewForm(project: Project, scenario?: Record<string, unknown>, options?: {
+
     validationMode?: 'continuous' | 'submit' | 'none';
 }): {
     visibleFields: string[];
@@ -302,6 +307,8 @@ Returns a ValidationReport from formspec-engine.
 ## `groupToFEL(group: ConditionGroup): string`
 
 ## `parseFELToGroup(fel: string): ConditionGroup | null`
+
+Parses a narrow subset of FEL into `{ logic: 'and' | 'or', conditions: [...] }` via **`tryLiftConditionGroup`** (Rust/WASM). **Requires** `await initFormspecEngine()` then **`await initFormspecEngineTools()`** before use; throws if tools WASM is not loaded. Returns `null` for blank input or when the lift reports `unlifted` (unsupported shape / parse failure per WASM payload).
 
 ## `getOperatorsForDataType(dataType: string): OperatorInfo[]`
 
@@ -426,6 +433,7 @@ type Operator = ComparisonOperator | BooleanOperator | StringOperator | NullChec
 ## `isTextareaWidget(widget: string): boolean`
 
 ## `FIELD_TYPE_MAP: Record<string, {
+
     dataType: string;
     defaultWidget: string;
     defaultWidgetHint?: string;
@@ -746,6 +754,7 @@ Returns per-property provenance showing which tier produced the effective value.
 
 Returns type-aware theme properties that can be overridden for a given item.
 Properties returned vary by component type:
+
 - Display components: no labelPosition, widget, or fallback
 - Group components: no labelPosition or fallback
 - Input components: all properties available
@@ -981,6 +990,7 @@ type TokenRegistryMap = Map<string, TokenRegistryCategory>;
 ```
 
 ## `componentTargetRef(target: string): {
+
     bind: string;
 } | {
     nodeId: string;
@@ -993,6 +1003,7 @@ Resolve a layout selection target or path to a component node ref.
 Throw CIRCULAR_REFERENCE if the expression references the variable being defined.
 
 ## `buildRepeatScopeRewriter(authoredTarget: string, _normalizedTarget: string): {
+
     rewriteExpression: (expr: string) => string;
     rewriteMessage: (msg: string) => string;
 }`
@@ -1005,6 +1016,7 @@ paths to row-scoped paths after normalizeShapeTarget inserts [*].
 Levenshtein distance for fuzzy path matching.
 
 ## `resolvePath(path: string, parentPath?: string): {
+
     key: string;
     parentPath?: string;
     fullPath: string;
@@ -1035,6 +1047,7 @@ show_when/relevant condition evaluates to false.
 Recursively prune null values, empty arrays, and empty objects from a value.
 
 ## `sampleFieldValue(key: string, dataType: string | undefined, options?: {
+
     firstOptionValue?: string;
     secondOptionValue?: string;
 }): unknown`
@@ -1177,6 +1190,7 @@ Reset the dirty flag (call after saving/publishing).
 ##### `instanceNames(): string[]`
 
 ##### `statistics(): ProjectStatistics & {
+
         isDirty: boolean;
     }`
 
@@ -1219,6 +1233,7 @@ Validate a FEL expression and return detailed diagnostics.
 Return autocomplete suggestions for a partial FEL expression.
 
 ##### `humanizeFELExpression(expression: string): {
+
         text: string;
         supported: boolean;
     }`
@@ -1250,6 +1265,7 @@ Returns raw registry documents for passing to rendering consumers (e.g. <formspe
 Move a component tree node to a new parent/position.
 
 ##### `moveItems(moves: Array<{
+
         sourcePath: string;
         targetParentPath?: string;
         targetIndex: number;
@@ -1324,6 +1340,7 @@ and removes any shapes targeting that path.
 Tries both lookups so MCP callers don't need to know which mechanism was used.
 
 ##### `updateValidation(shapeId: string, changes: {
+
         rule?: string;
         message?: string;
         timing?: 'continuous' | 'submit' | 'demand';
@@ -1433,6 +1450,7 @@ Reorder a page.
 Move a page to an arbitrary zero-based index in one atomic undo step.
 
 ##### `listPages(): Array<{
+
         id: string;
         title: string;
         description?: string;
@@ -1442,6 +1460,7 @@ Move a page to an arbitrary zero-based index in one atomic undo step.
 List all pages with their id, title, description, and primary group path.
 
 ##### `updatePage(pageId: string, changes: {
+
         title?: string;
         description?: string;
     }): HelperResult`
@@ -1477,6 +1496,7 @@ Set a component accessibility override on a bound item or layout node.
 Set an arbitrary property on a component tree node (identified by `__node:<id>` or bind key).
 
 ##### `setNodeStyleProperty(ref: {
+
         nodeId?: string;
         bind?: string;
     }, property: string, value: string): void`
@@ -1498,6 +1518,7 @@ Apply spatial layout to targets.
 Apply style overrides to a specific field.
 
 ##### `applyStyleAll(target: 'form' | {
+
         type: 'group' | 'field' | 'display';
     } | {
         dataType: string;
@@ -1534,6 +1555,7 @@ Update a locale metadata property such as name, title, or description.
 Add a theme selector rule.
 
 ##### `updateThemeSelector(index: number, changes: {
+
         match?: Record<string, unknown>;
         apply?: Record<string, unknown>;
     }): HelperResult`
@@ -1553,6 +1575,7 @@ Reorder a theme selector rule.
 Ensure a migration descriptor exists for a source version.
 
 ##### `addMigrationRule(params: {
+
         fromVersion: string;
         source: string;
         target: string | null;
@@ -1608,6 +1631,7 @@ Set the width (grid span) of an item on a page.
 Set the offset (grid start) of an item on a page.
 
 ##### `setItemResponsive(pageId: string, itemKey: string, breakpoint: string, overrides: {
+
         width?: number;
         offset?: number;
         hidden?: boolean;
@@ -1633,6 +1657,7 @@ Reorder an item within a page (by key, not index).
 Move an item to an arbitrary position on a page by target index.
 
 ##### `addComponentNode(parent: {
+
         bind?: string;
         nodeId?: string;
     }, component: string, options?: {
@@ -1661,6 +1686,7 @@ Unwrap a layout container, promoting its children.
 Delete a layout node from the component tree.
 
 ##### `wrapComponentNode(ref: {
+
         bind: string;
     } | {
         nodeId: string;
@@ -1669,6 +1695,7 @@ Delete a layout node from the component tree.
 Wrap a component node (by bind or nodeId ref) in any layout component.
 
 ##### `wrapSiblingComponentNodes(refs: Array<{
+
         bind: string;
     } | {
         nodeId: string;
@@ -1677,6 +1704,7 @@ Wrap a component node (by bind or nodeId ref) in any layout component.
 Wrap multiple sibling nodes in one layout container (same parent, visual order preserved).
 
 ##### `reorderComponentNode(ref: {
+
         bind?: string;
         nodeId?: string;
     }, direction: 'up' | 'down'): HelperResult`
@@ -1684,6 +1712,7 @@ Wrap multiple sibling nodes in one layout container (same parent, visual order p
 Reorder a component node (by bind or nodeId ref) up or down.
 
 ##### `moveComponentNodeToContainer(ref: {
+
         bind?: string;
         nodeId?: string;
     }, targetParent: {
@@ -1694,6 +1723,7 @@ Reorder a component node (by bind or nodeId ref) up or down.
 Move a component node (by bind or nodeId ref) as the last child of a target container.
 
 ##### `moveComponentNodeToIndex(ref: {
+
         bind?: string;
         nodeId?: string;
     }, targetParent: {
@@ -1704,6 +1734,7 @@ Move a component node (by bind or nodeId ref) as the last child of a target cont
 Move a component node (by bind or nodeId ref) to a specific index within a target container.
 
 ##### `deleteComponentNode(ref: {
+
         bind?: string;
         nodeId?: string;
     }): HelperResult`
@@ -1727,6 +1758,7 @@ Set a mapping document root property (e.g. version, direction, autoMap).
 Set a property on the mapping's target structure descriptor.
 
 ##### `addMappingRule(params: {
+
         sourcePath?: string;
         targetPath?: string;
         transform?: string;
@@ -1761,6 +1793,7 @@ Set configuration for a specific wire-format adapter (JSON, XML, CSV).
 Update the top-level mapping defaults.
 
 ##### `autoGenerateMappingRules(params?: {
+
         mappingId?: string;
         scopePath?: string;
         priority?: number;
@@ -1774,6 +1807,7 @@ Auto-generate mapping rules for every field in the form.
 Run a mapping preview and return the projected output.
 
 ##### `createMapping(id: string, options?: {
+
         targetSchema?: Record<string, unknown>;
     }): HelperResult`
 
@@ -1829,6 +1863,7 @@ Rename an instance — rewrites FEL references.
 Remove an instance.
 
 ##### `createScreenerDocument(options?: {
+
         url?: string;
         title?: string;
     }): HelperResult`
@@ -1848,6 +1883,7 @@ Add a screener question.
 Remove a screener question.
 
 ##### `updateScreenField(key: string, changes: {
+
         label?: string;
         helpText?: string;
         required?: boolean | string;
@@ -1876,6 +1912,7 @@ Reorder an evaluation phase.
 Set strategy and config on a phase.
 
 ##### `addScreenRoute(phaseId: string, route: {
+
         condition?: string;
         target: string;
         label?: string;
@@ -1887,6 +1924,7 @@ Set strategy and config on a phase.
 Add a route to a phase.
 
 ##### `updateScreenRoute(phaseId: string, routeIndex: number, changes: {
+
         condition?: string;
         target?: string;
         label?: string;
@@ -2081,6 +2119,7 @@ The platform token registry, parsed once at module load.
 Direct children of a Page node in the component tree.
 
 ## `refForCompNode(node: CompNode): {
+
     bind: string;
 } | {
     nodeId: string;
@@ -2111,11 +2150,13 @@ True if any node in the subtree (including the root) matches `ref` by bind or no
 Find the parent node of the node matching `ref`.
 
 Tri-state return distinguishes three meaningful cases:
+
 - A `CompNode` — the parent containing the match.
 - `null` — the match IS the root (no parent exists).
 - `undefined` — nothing matched.
 
 ## `findParentRefOfNodeRef(tree: CompNode | undefined, ref: NodeRef): {
+
     nodeId: string;
 } | {
     bind: string;
@@ -2195,4 +2236,3 @@ type ChangeListener = () => void;
 - **key**: `string`
 - **type**: `'number' | 'date'`
 - **label**: `string`
-

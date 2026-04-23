@@ -95,6 +95,7 @@ export const LAYOUT_ARRANGEMENTS = ['columns-2', 'columns-3', 'columns-4', 'card
 /** Placement options for placeOnPage */
 export interface PlacementOptions {
   span?: number;
+  insertIndex?: number;
 }
 
 /** Layout-side add-item request */
@@ -109,12 +110,15 @@ export interface LayoutAddItemSpec {
   component?: string;
   repeatable?: boolean;
   presentation?: Record<string, unknown>;
+  parentPath?: string;
+  props?: Record<string, unknown>;
 }
 
 /** Flow configuration */
 export interface FlowProps {
   showProgress?: boolean;
   allowSkip?: boolean;
+  pageTitles?: Record<string, string>;
 }
 
 /** Validation options for addValidation */

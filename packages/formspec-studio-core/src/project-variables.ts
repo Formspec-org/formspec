@@ -7,6 +7,7 @@ import {
   type InstanceProps,
 } from './helper-types.js';
 import type { ProjectInternals } from './project-internals.js';
+import * as definitionOps from './project-definition.js';
 
 function validateInstanceExists(project: ProjectInternals, name: string): void {
   if (!project.core.instanceNames().includes(name)) {
@@ -24,7 +25,7 @@ export function addVariable(
   expression: string,
   scope?: string,
 ): HelperResult {
-  project._validateFEL(expression);
+  definitionOps._validateFEL(project, expression);
   checkVariableSelfReference(name, expression);
   const payload: Record<string, unknown> = { name, expression };
   if (scope) payload.scope = scope;
@@ -46,7 +47,7 @@ export function updateVariable(project: ProjectInternals, name: string, expressi
       validVariables: project.core.variableNames(),
     });
   }
-  project._validateFEL(expression);
+  definitionOps._validateFEL(project, expression);
   checkVariableSelfReference(name, expression);
   project.core.dispatch({
     type: 'definition.setVariable',

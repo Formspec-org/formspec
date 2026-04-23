@@ -520,6 +520,25 @@ describe('fel-condition-builder', () => {
       const parsed = parseFELToGroup(fel);
       expect(parsed).toEqual(group);
     });
+
+    it('roundtrips comparison and string operators not covered above', () => {
+      const groups: ConditionGroup[] = [
+        { logic: 'and', conditions: [{ field: 'x', operator: 'neq', value: "'a'" }] },
+        { logic: 'and', conditions: [{ field: 'n', operator: 'gt', value: '0' }] },
+        { logic: 'and', conditions: [{ field: 'n', operator: 'lt', value: '100' }] },
+        { logic: 'and', conditions: [{ field: 'n', operator: 'lte', value: '10' }] },
+        { logic: 'and', conditions: [{ field: 'code', operator: 'starts_with', value: "'AB'" }] },
+        { logic: 'and', conditions: [{ field: 'notes', operator: 'is_empty', value: '' }] },
+        { logic: 'and', conditions: [{ field: 'email', operator: 'is_present', value: '' }] },
+        {
+          logic: 'and',
+          conditions: [{ field: 'amt', operator: 'money_eq', value: '100' }],
+        },
+      ];
+      for (const group of groups) {
+        expect(parseFELToGroup(groupToFEL(group))).toEqual(group);
+      }
+    });
   });
 
   describe('getOperatorsForDataType', () => {
