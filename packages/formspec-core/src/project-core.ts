@@ -11,6 +11,7 @@ import type {
   ProjectStatistics,
   ProjectBundle,
   BuiltinCommandType,
+  ProjectCommandMap,
   ItemFilter,
   ItemSearchResult,
   DataTypeInfo,
@@ -47,10 +48,10 @@ export interface IProjectCore {
   readonly locales: Readonly<Record<string, LocaleState>>;
 
   // ── Command dispatch ─────────────────────────────────────────
-  dispatch<T extends BuiltinCommandType = BuiltinCommandType, P = unknown>(command: Command<T, P>): CommandResult;
-  dispatch<T extends BuiltinCommandType = BuiltinCommandType, P = unknown>(command: Command<T, P>[]): CommandResult[];
-  batch<T extends BuiltinCommandType = BuiltinCommandType, P = unknown>(commands: Command<T, P>[]): CommandResult[];
-  batchWithRebuild<T extends BuiltinCommandType = BuiltinCommandType, P = unknown>(phase1: Command<T, P>[], phase2: Command<T, P>[]): CommandResult[];
+  dispatch<T extends BuiltinCommandType = BuiltinCommandType>(command: Command<T, ProjectCommandMap[T]>): CommandResult;
+  dispatch<T extends BuiltinCommandType = BuiltinCommandType>(command: Command<T, ProjectCommandMap[T]>[]): CommandResult[];
+  batch<T extends BuiltinCommandType = BuiltinCommandType>(commands: Command<T, ProjectCommandMap[T]>[]): CommandResult[];
+  batchWithRebuild<T extends BuiltinCommandType = BuiltinCommandType>(phase1: Command<T, ProjectCommandMap[T]>[], phase2: Command<T, ProjectCommandMap[T]>[]): CommandResult[];
 
   // ── History ──────────────────────────────────────────────────
   undo(): boolean;

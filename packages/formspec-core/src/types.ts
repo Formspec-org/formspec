@@ -205,11 +205,23 @@ export interface Command<T extends string = string, P = unknown> {
   id?: string;
 }
 
-import { builtinHandlers } from './handlers/index.js';
-export type BuiltinCommandType = keyof typeof builtinHandlers;
+import type { ProjectCommandMap } from './project-commands.js';
+export type BuiltinCommandType = keyof ProjectCommandMap;
+
+export type { ProjectCommandMap };
 
 /** A command with any type and payload -- used when the specific command type is not known statically. */
-export type AnyCommand = Command<BuiltinCommandType, unknown>;
+export type AnyCommand = {
+  [K in BuiltinCommandType]: Command<K, ProjectCommandMap[K]>;
+}[BuiltinCommandType];
+
+/**
+ * Synthetic lifecycle labels emitted by the project for history/notification
+ * purposes only. These are never dispatched through command handlers and
+ * therefore do not belong in ProjectCommandMap.
+ */
+export type InternalCommandType = 'undo' | 'redo' | 'restoreState' | 'batch' | 'batchWithRebuild';
+export type InternalCommand = Command<InternalCommandType, Record<string, unknown>>;
 
 /**
  * Result returned by every command handler after mutating state.
@@ -252,8 +264,8 @@ export type CommandHandler = (
  * on a fresh project to reconstruct state.
  */
 export interface LogEntry {
-  /** The command that was dispatched. */
-  command: AnyCommand;
+  /** The command that was dispatched (or an internal lifecycle label for batch/undo/redo). */
+  command: AnyCommand | InternalCommand;
   /** Epoch milliseconds when the command was dispatched. */
   timestamp: number;
 }
@@ -315,8 +327,8 @@ export type ChangeListener = (
  * Describes a state change that just occurred. Passed to {@link ChangeListener} callbacks.
  */
 export interface ChangeEvent {
-  /** The command that triggered this change. */
-  command: AnyCommand;
+  /** The command that triggered this change, or an internal lifecycle label for undo/redo/batch. */
+  command: AnyCommand | InternalCommand;
   /** The result returned by the command handler. */
   result: CommandResult;
   /** How the change originated: `'dispatch'`, `'undo'`, `'redo'`, or `'batch'`. */

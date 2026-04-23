@@ -12,7 +12,9 @@ import type {
   LoadedRegistry,
   Command,
   AnyCommand,
+  InternalCommand,
   BuiltinCommandType,
+  ProjectCommandMap,
   CommandResult,
   ChangeListener,
   LogEntry,
@@ -583,7 +585,7 @@ export class RawProject implements IProjectCore {
       deepFreeze(this._state);
     }
     this._notify(
-      { type: 'restoreState', payload: {} },
+      { type: 'restoreState', payload: {} } as InternalCommand,
       { rebuildComponentTree: true },
       'restore',
     );
@@ -593,7 +595,7 @@ export class RawProject implements IProjectCore {
     const prev = this._history.popUndo(this._state);
     if (!prev) return false;
     this._state = prev;
-    this._notify({ type: 'undo', payload: {} }, { rebuildComponentTree: false }, 'undo');
+    this._notify({ type: 'undo', payload: {} } as InternalCommand, { rebuildComponentTree: false }, 'undo');
     return true;
   }
 
@@ -601,7 +603,7 @@ export class RawProject implements IProjectCore {
     const next = this._history.popRedo(this._state);
     if (!next) return false;
     this._state = next;
-    this._notify({ type: 'redo', payload: {} }, { rebuildComponentTree: false }, 'redo');
+    this._notify({ type: 'redo', payload: {} } as InternalCommand, { rebuildComponentTree: false }, 'redo');
     return true;
   }
 
@@ -612,7 +614,7 @@ export class RawProject implements IProjectCore {
     return () => { this._listeners.delete(listener); };
   }
 
-  private _notify(command: AnyCommand, result: CommandResult, source: string): void {
+  private _notify(command: AnyCommand | InternalCommand, result: CommandResult, source: string): void {
     for (const listener of this._listeners) {
       listener(this._state, { command, result, source });
     }
@@ -620,15 +622,15 @@ export class RawProject implements IProjectCore {
 
   // ── Dispatching commands ─────────────────────────────────────────
 
-  dispatch<T extends BuiltinCommandType = BuiltinCommandType, P = unknown>(command: Command<T, P>): CommandResult;
-  dispatch<T extends BuiltinCommandType = BuiltinCommandType, P = unknown>(command: Command<T, P>[]): CommandResult[];
-  dispatch<T extends BuiltinCommandType = BuiltinCommandType, P = unknown>(command: Command<T, P> | Command<T, P>[]): CommandResult | CommandResult[] {
+  dispatch<T extends BuiltinCommandType = BuiltinCommandType>(command: Command<T, ProjectCommandMap[T]>): CommandResult;
+  dispatch<T extends BuiltinCommandType = BuiltinCommandType>(command: Command<T, ProjectCommandMap[T]>[]): CommandResult[];
+  dispatch<T extends BuiltinCommandType = BuiltinCommandType>(command: Command<T, ProjectCommandMap[T]> | Command<T, ProjectCommandMap[T]>[]): CommandResult | CommandResult[] {
     const commands = (Array.isArray(command) ? command : [command]) as AnyCommand[];
     const results = this._execute([commands]);
     return Array.isArray(command) ? results : results[0];
   }
 
-  batchWithRebuild<T extends BuiltinCommandType = BuiltinCommandType, P = unknown>(phase1: Command<T, P>[], phase2: Command<T, P>[]): CommandResult[] {
+  batchWithRebuild<T extends BuiltinCommandType = BuiltinCommandType>(phase1: Command<T, ProjectCommandMap[T]>[], phase2: Command<T, ProjectCommandMap[T]>[]): CommandResult[] {
     return this._execute([phase1 as AnyCommand[], phase2 as AnyCommand[]]);
   }
 
@@ -636,7 +638,7 @@ export class RawProject implements IProjectCore {
     this._history.clearRedo();
   }
 
-  batch<T extends BuiltinCommandType = BuiltinCommandType, P = unknown>(commands: Command<T, P>[]): CommandResult[] {
+  batch<T extends BuiltinCommandType = BuiltinCommandType>(commands: Command<T, ProjectCommandMap[T]>[]): CommandResult[] {
     return this._execute([commands as AnyCommand[]]);
   }
 
@@ -667,11 +669,11 @@ export class RawProject implements IProjectCore {
     }
 
     const allCommands = phases.flat();
-    const logCommand: AnyCommand = allCommands.length === 1
+    const logCommand: AnyCommand | InternalCommand = allCommands.length === 1
       ? allCommands[0]
       : phases.length > 1
-        ? { type: 'batchWithRebuild', payload: { phases } }
-        : { type: 'batch', payload: { commands: allCommands } };
+        ? { type: 'batchWithRebuild', payload: { phases } } as InternalCommand
+        : { type: 'batch', payload: { commands: allCommands } } as InternalCommand;
     this._history.appendLog({ command: logCommand, timestamp: Date.now() });
 
     const source = allCommands.length === 1 ? 'dispatch' : 'batch';

@@ -1,5 +1,6 @@
 /** @filedesc Aggregates all built-in command handlers into a single registry. */
 import type { CommandHandler } from '../types.js';
+import type { ProjectCommandMap } from '../project-commands.js';
 
 import { definitionMetadataHandlers } from './definition-metadata.js';
 import { definitionItemsHandlers } from './definition-items.js';
@@ -20,7 +21,7 @@ import { projectHandlers } from './project.js';
 
 export type { CommandHandler };
 
-export const builtinHandlers: Readonly<Record<string, CommandHandler>> = Object.freeze({
+export const builtinHandlers = Object.freeze({
   ...definitionMetadataHandlers,
   ...definitionItemsHandlers,
   ...definitionBindsHandlers,
@@ -38,3 +39,17 @@ export const builtinHandlers: Readonly<Record<string, CommandHandler>> = Object.
   ...localeHandlers,
   ...projectHandlers,
 });
+
+// ── Compile-time sync proof ─────────────────────────────────────────
+// Ensures builtinHandlers keys and ProjectCommandMap keys are identical.
+// If a handler is added/removed without updating project-commands.ts
+// (or vice versa), this block produces a compile error.
+type _HandlerKeys = keyof typeof builtinHandlers;
+type _MapKeys = keyof ProjectCommandMap;
+type _MissingFromMap = Exclude<_HandlerKeys, _MapKeys>;
+type _MissingFromHandlers = Exclude<_MapKeys, _HandlerKeys>;
+type _AssertSync = [_MissingFromMap, _MissingFromHandlers] extends [never, never]
+  ? true
+  : 'ERROR: ProjectCommandMap and builtinHandlers are out of sync';
+const _syncProof: _AssertSync = true;
+void _syncProof;
