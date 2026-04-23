@@ -11,6 +11,13 @@ import {
   normalizeDefinitionDoc,
   normalizeThemeDoc,
 } from '@formspec-org/studio-core';
+import type {
+  FormDefinition,
+  ComponentDocument,
+  ThemeDocument,
+  RegistryDocument,
+  FormItem,
+} from '@formspec-org/types';
 
 const DEBOUNCE_MS = 300;
 
@@ -76,10 +83,10 @@ interface FormspecPreviewHostProps {
 }
 
 type FormspecRenderElement = HTMLElement & {
-  registryDocuments: unknown | unknown[];
-  definition: unknown;
-  componentDocument: unknown;
-  themeDocument: unknown;
+  registryDocuments: RegistryDocument | RegistryDocument[];
+  definition: FormDefinition;
+  componentDocument: ComponentDocument;
+  themeDocument: ThemeDocument;
   goToWizardStep?: (index: number) => boolean;
   getEngine?: () => IFormEngine | null;
 };
@@ -99,7 +106,7 @@ function applyScenarioToLiveElement(
   const engine = typeof el.getEngine === 'function' ? el.getEngine() : null;
   if (!engine) return;
   try {
-    applyResponseDataToEngine(engine, scenario as Record<string, any>);
+    applyResponseDataToEngine(engine, scenario as Record<string, unknown>);
   } catch (err) {
     console.error('[FormspecPreviewHost] applyResponseDataToEngine failed', err);
   }
@@ -180,8 +187,8 @@ export function FormspecPreviewHost({
       const s = stateRef.current;
       const p = projectRef.current;
 
-      const registryDocs = p.registryDocuments();
-      el.registryDocuments = registryDocs.length > 0 ? plain(registryDocs) : (undefined as unknown);
+      const registryDocs = p.registryDocuments() as unknown as RegistryDocument[];
+      el.registryDocuments = registryDocs.length > 0 ? plain(registryDocs) : (undefined as unknown as RegistryDocument[]);
 
       el.definition = plain(normalizeDefinitionDoc(s.definition));
       el.componentDocument = plain(normalizeComponentDoc(p.component, s.definition));

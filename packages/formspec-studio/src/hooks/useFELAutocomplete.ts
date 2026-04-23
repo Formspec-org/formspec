@@ -1,4 +1,5 @@
 import { useMemo, useState, useCallback } from 'react';
+import type { FormDefinition } from '@formspec-org/types';
 import {
   filterFELFieldOptions,
   filterFELFunctionOptions,
@@ -18,7 +19,7 @@ export type AutocompleteOption =
   | { kind: 'path'; path: string; label: string; dataType?: string }
   | { kind: 'function'; name: string; label: string; signature?: string; description?: string; category?: string };
 
-export function useFELAutocomplete(definition: any) {
+export function useFELAutocomplete(definition: FormDefinition | null | undefined) {
   const [activeOptionIndex, setActiveOptionIndex] = useState(0);
   const [autocomplete, setAutocomplete] = useState<FELAutocompleteTrigger | null>(null);
   const [autocompleteKind, setAutocompleteKind] = useState<'path' | 'function' | 'instanceName' | null>(null);

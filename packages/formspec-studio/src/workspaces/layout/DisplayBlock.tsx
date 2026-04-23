@@ -2,7 +2,7 @@
 import { useEffect, useState, type MouseEvent, type KeyboardEvent } from 'react';
 import { EditMark } from '../shared/item-row-shared';
 import { LayoutLeafBlock } from './LayoutLeafBlock';
-import type { LayoutContext } from './FieldBlock';
+import { type LayoutContext } from './FieldBlock';
 
 /** Matches editor ItemRow display glyph semantics (component names are often TitleCase). */
 function layoutDisplayGlyph(widgetHint?: string): string {
@@ -114,10 +114,11 @@ export function DisplayBlock(props: DisplayBlockProps) {
           <button
             type="button"
             data-layout-stop-select
+            data-testid={`layout-display-${itemKey}-label-edit`}
             onClick={openLabelEditor}
             className="opacity-0 group-hover/id:opacity-100 p-0.5 rounded hover:bg-accent/10 text-accent transition-all"
           >
-            <EditMark size={10} />
+            <EditMark />
           </button>
         )}
       </div>
@@ -126,6 +127,7 @@ export function DisplayBlock(props: DisplayBlockProps) {
         <textarea
           autoFocus
           data-layout-stop-select
+          data-testid="layout-display-body-editor"
           value={draftLabel}
           onChange={(e) => setDraftLabel(e.target.value)}
           onBlur={commitIdentityField}

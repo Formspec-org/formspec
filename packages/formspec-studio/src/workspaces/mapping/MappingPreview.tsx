@@ -46,8 +46,8 @@ export function MappingPreview() {
         setPreviewOutput(serialized);
       }
       setError(null);
-    } catch (err: any) {
-      setError(err.message ?? 'Mapping error');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Mapping error');
       setPreviewOutput('');
     }
   }, [sampleInput, previewDirection, mapping, project, showRaw]);

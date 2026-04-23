@@ -2,12 +2,13 @@
 import { Section } from '../../../components/ui/Section';
 import { PropertyRow } from '../../../components/ui/PropertyRow';
 import type { Project } from '@formspec-org/studio-core';
+import type { FormDefinition } from '@formspec-org/types';
 
 export function DefinitionProperties({
   definition,
   project,
 }: {
-  definition: any;
+  definition: FormDefinition;
   project: Project;
 }) {
   return (

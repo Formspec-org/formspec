@@ -9,7 +9,7 @@ import { InlineCreateForm } from '../../components/shared/InlineCreateForm';
 interface Shape {
   id?: string;
   name: string;
-  severity: string;
+  severity?: string;
   constraint?: string;
   target?: string;
   and?: string[];

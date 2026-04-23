@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { mockGeminiResponses } from './mocks/gemini-mock';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -17,6 +18,7 @@ async function seedProvider(page: Page) {
       apiKey,
     }));
   }, GEMINI_API_KEY);
+  await mockGeminiResponses(page);
 }
 
 // Wait for the chat entry screen to be fully loaded

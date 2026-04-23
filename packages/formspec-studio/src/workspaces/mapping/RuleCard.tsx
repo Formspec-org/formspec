@@ -39,7 +39,7 @@ export function RuleCard({ index, source, target, transform = 'preserve', rule }
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const listboxId = useId();
 
-  const updateRule = (property: string, value: any) => {
+  const updateRule = (property: string, value: unknown) => {
     project.updateMappingRule(index, property, value);
   };
 
@@ -199,7 +199,7 @@ export function RuleCard({ index, source, target, transform = 'preserve', rule }
 
 interface AdvancedSectionProps {
   index: number;
-  rule: Record<string, unknown>;
+  rule: MappingRule;
   transform: string;
   updateRule: (property: string, value: unknown) => void;
 }
@@ -232,7 +232,7 @@ function AdvancedSection({ index, rule, transform, updateRule }: AdvancedSection
   };
 
   const commitReverseExpression = (raw: string) => {
-    const existing = (rule.reverse ?? {}) as Record<string, unknown>;
+    const existing = rule.reverse ?? {};
     if (raw.trim() === '') {
       const { expression: _, ...rest } = existing;
       updateRule('reverse', Object.keys(rest).length > 0 ? rest : null);

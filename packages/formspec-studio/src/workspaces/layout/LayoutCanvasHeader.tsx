@@ -1,19 +1,19 @@
 import React from 'react';
 import { ModeSelector } from './ModeSelector';
-import { LayoutStepNav } from './LayoutStepNav';
+import { LayoutStepNav, type LayoutStepNavPage } from './LayoutStepNav';
 
 interface LayoutCanvasHeaderProps {
-  mode: string;
-  onSetMode: (mode: any) => void;
+  mode: 'single' | 'wizard' | 'tabs';
+  onSetMode: (mode: 'single' | 'wizard' | 'tabs') => void;
   isMultiPage: boolean;
   showAddPageButton: boolean;
   onAddPage: () => void;
-  pageNavItems: any[];
+  pageNavItems: LayoutStepNavPage[];
   activePageId: string | null;
   onSelectPage: (id: string) => void;
-  onRenamePage: (...args: any[]) => void;
-  onReorderPage: (...args: any[]) => void;
-  onMovePageToIndex: (...args: any[]) => void;
+  onRenamePage: (pageId: string, title: string, groupPath?: string, componentPageId?: string) => void;
+  onReorderPage: (navPageId: string, direction: 'up' | 'down') => void;
+  onMovePageToIndex: (navPageId: string, targetIndex: number) => void;
   onRequestRemovePage: (id: string) => void;
 }
 

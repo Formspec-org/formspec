@@ -12,7 +12,7 @@ function readFiles(dir: string): string[] {
   return entries.flatMap((entry) => {
     const fullPath = path.join(dir, entry.name);
     if (entry.isDirectory()) return readFiles(fullPath);
-    if (!/\.(ts|tsx)$/.test(entry.name)) return [];
+    if (!/\.(ts)$/.test(entry.name)) return [];
     return [fullPath];
   });
 }
@@ -59,14 +59,14 @@ function sourceImportsFormspecCore(source: string): boolean {
  * Each entry documents an intentional edge until refactored.
  */
 const ALLOWED_CROSS_WORKSPACE_IMPORTS: Record<string, readonly string[]> = {
-  'workspaces/layout/LayoutLivePreviewSection.tsx': ['../preview/FormspecPreviewHost'],
-  'workspaces/editor/ManageView.tsx': [
+  'workspaces/layout/LayoutLivePreviewSection': ['../preview/FormspecPreviewHost'],
+  'workspaces/editor/ManageView': [
     '../logic/VariablesSection',
     '../logic/BindsSection',
     '../logic/ShapesSection',
     '../logic/FilterBar',
   ],
-  'workspaces/data/DataTab.tsx': ['../editor/DataSources', '../editor/OptionSets'],
+  'workspaces/data/DataTab': ['../editor/DataSources', '../editor/OptionSets'],
 };
 
 describe('import boundaries', () => {

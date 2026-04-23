@@ -3,7 +3,7 @@ import { BuildManageToggle, type EditorView } from '../../workspaces/editor/Buil
 import { DefinitionTreeEditor } from '../../workspaces/editor/DefinitionTreeEditor';
 import { ScreenerWorkspace } from '../../workspaces/editor/ScreenerWorkspace';
 import { ManageView } from '../../workspaces/editor/ManageView';
-import { MappingTab } from '../../workspaces/mapping/MappingTab';
+import { MappingTab, type MappingTabId } from '../../workspaces/mapping/MappingTab';
 import { PreviewTab } from '../../workspaces/preview/PreviewTab';
 import { WORKSPACES } from './ShellConstants';
 import type { Viewport } from '../../workspaces/preview/ViewportSwitcher';
@@ -15,8 +15,8 @@ interface WorkspaceContentProps {
   setActiveEditorView: (view: EditorView) => void;
   manageCount: number;
   hasScreener: boolean;
-  activeMappingTab: string;
-  setActiveMappingTab: (tab: any) => void;
+  activeMappingTab: MappingTabId;
+  setActiveMappingTab: (tab: MappingTabId) => void;
   mappingConfigOpen: boolean;
   setMappingConfigOpen: (open: boolean) => void;
   previewViewport: Viewport;
@@ -46,7 +46,7 @@ export function WorkspaceContent({
     return (
       <div className="flex-1 overflow-y-auto flex flex-col">
         <div className="px-3 pt-3 md:px-6 md:pt-4 xl:px-8">
-          <BuildManageToggle activeView={activeEditorView} onViewChange={setActiveEditorView} manageCount={manageCount} showScreener={hasScreener} />
+          <BuildManageToggle activeView={activeEditorView || 'build'} onViewChange={setActiveEditorView} manageCount={manageCount} showScreener={hasScreener} />
         </div>
         <div key={activeEditorView} className="flex-1 animate-in fade-in duration-150">
           {activeEditorView === 'build'

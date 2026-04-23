@@ -1,6 +1,6 @@
 /** @filedesc Bootstraps a Studio project and wires context providers around the Shell. */
 import { useState, type ReactElement } from 'react';
-import { createProject, type CreateProjectOptions, type Project, type FormDefinition } from '@formspec-org/studio-core';
+import { createProject, type CreateProjectOptions, type Project, type FormDefinition, type ProjectBundle } from '@formspec-org/studio-core';
 import commonRegistry from '../../../../registries/formspec-common.registry.json';
 
 const COMMON_REGISTRY_URL = 'https://formspec.org/registries/formspec-common.registry.json';
@@ -14,7 +14,7 @@ import { useColorScheme } from '../hooks/useColorScheme';
 /**
  * Check for a handoff bundle in localStorage (from Chat or Inquest).
  */
-function getHandoffBundle(): any | null {
+function getHandoffBundle(): ProjectBundle | null {
   if (typeof window === 'undefined') return null;
   const params = new URLSearchParams(window.location.search);
   const handoffId = params.get('h');

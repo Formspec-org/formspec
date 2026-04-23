@@ -3,6 +3,7 @@ import { useMemo, useState, useCallback, useRef, createRef, type RefObject } fro
 import { normalizeBindsView, buildDefLookup } from '@formspec-org/studio-core';
 import { useDefinition } from '../../state/useDefinition';
 import { useSelection } from '../../state/useSelection';
+import type { FormShape } from '@formspec-org/types';
 import { VariablesSection } from '../logic/VariablesSection';
 import { BindsSection } from '../logic/BindsSection';
 import { ShapesSection } from '../logic/ShapesSection';
@@ -122,7 +123,7 @@ export function ManageView() {
 
   const binds = normalizeBindsView(definition?.binds, definition?.items ?? []);
   const shapes = Array.isArray(definition?.shapes)
-    ? definition.shapes.map((s: any) => ({ name: s.id, ...s }))
+    ? definition.shapes.map((s: FormShape) => ({ name: s.id, ...s }))
     : [];
   const variables = Array.isArray(definition?.variables) ? definition.variables : [];
 

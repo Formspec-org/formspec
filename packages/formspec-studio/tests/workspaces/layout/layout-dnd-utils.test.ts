@@ -5,8 +5,8 @@ import {
   indexOfComponentChild,
   sortGroupToParentRef,
   type DragEndEvent,
-} from '../../../src/workspaces/layout/layout-dnd-utils';
-import { LAYOUT_PDND_KIND } from '../../../src/workspaces/layout/layout-pdnd-kind';
+} from '../../../src/workspaces/layout/dnd/layout-dnd-utils';
+import { LAYOUT_PDND_KIND } from '../../../src/workspaces/layout/dnd/layout-pdnd';
 import type { Project, CompNode } from '@formspec-org/studio-core';
 
 function mockProject(componentTree?: CompNode) {

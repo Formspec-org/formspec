@@ -1,5 +1,5 @@
 import React from 'react';
-import { FloatingPortal } from '@floating-ui/react';
+import { FloatingPortal, type UseFloatingReturn } from '@floating-ui/react';
 import { dataTypeInfo } from '@formspec-org/studio-core';
 import type { AutocompleteOption } from '../../hooks/useFELAutocomplete';
 
@@ -8,7 +8,7 @@ interface FELAutocompleteMenuProps {
   activeIndex: number;
   onSelect: (option: AutocompleteOption) => void;
   onHover: (index: number) => void;
-  refs: any;
+  refs: UseFloatingReturn['refs'];
   floatingStyles: React.CSSProperties;
   isPositioned: boolean;
 }

@@ -4,7 +4,7 @@ import { propertyHelp } from '@formspec-org/studio-core';
 
 interface PrePopulateCardProps {
   value: { instance: string; path: string; editable?: boolean };
-  onChange: (value: any) => void;
+  onChange: (value: PrePopulateCardProps['value']) => void;
   onRemove: () => void;
   /** DI-5: Unique prefix for DOM IDs (prevents collisions when multiple cards exist). */
   itemKey?: string;

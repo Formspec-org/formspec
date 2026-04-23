@@ -46,8 +46,8 @@ export function MappingSelector() {
     if (id === selectedId) return;
     try {
       project.selectMapping(id);
-    } catch (e: any) {
-      setError(e.message ?? String(e));
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : String(e));
     }
   }
 
@@ -58,8 +58,8 @@ export function MappingSelector() {
       project.createMapping(id);
       setCreating(false);
       setNewId('');
-    } catch (e: any) {
-      setError(e.message ?? String(e));
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : String(e));
     }
   }
 
@@ -72,8 +72,8 @@ export function MappingSelector() {
     e.stopPropagation();
     try {
       project.deleteMapping(id);
-    } catch (e: any) {
-      setError(e.message ?? String(e));
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : String(e));
     }
   }
 
@@ -89,8 +89,8 @@ export function MappingSelector() {
     try {
       project.renameMapping(renamingId!, trimmed);
       setRenamingId(null);
-    } catch (e: any) {
-      setError(e.message ?? String(e));
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : String(e));
       setRenamingId(null);
     }
   }

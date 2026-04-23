@@ -1,10 +1,11 @@
 import { isPlainObject } from '../shared/runtime-guards';
 import type { CompNode, ContainerLayoutProps, DefLookupEntry } from '@formspec-org/studio-core';
+import type { FormDefinition } from '@formspec-org/types';
 
 /**
  * Wraps top-level groups in synthetic Page nodes when in 'wizard' or 'tabs' mode.
  */
-export function synthesizePagedLayoutTree(nodes: CompNode[], definition: any): CompNode[] {
+export function synthesizePagedLayoutTree(nodes: CompNode[], definition: FormDefinition | null | undefined): CompNode[] {
   const formPresentation = isPlainObject(definition?.formPresentation) ? definition.formPresentation : undefined;
   const pageMode = formPresentation?.pageMode;
   if (pageMode !== 'wizard' && pageMode !== 'tabs') return nodes;

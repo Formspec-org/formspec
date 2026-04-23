@@ -3,7 +3,7 @@ import { useEffect, useState, useRef, type KeyboardEvent, type ReactNode } from 
 import { Pill } from '../../components/ui/Pill';
 import { DragHandle } from '../../components/ui/DragHandle';
 import type { FormItem } from '@formspec-org/types';
-import type { StatusPill } from '../shared/item-row-shared';
+import type { StatusPill, MissingAction } from '../shared/item-row-shared';
 import { useSelection } from '../../state/useSelection';
 import { useInlineIdentityEdit } from './useInlineIdentityEdit';
 
@@ -40,14 +40,14 @@ interface GroupNodeProps {
   minRepeat?: number;
   maxRepeat?: number;
   statusPills?: StatusPill[];
-  missingActions?: Array<{ key: string; label: string; ariaLabel: string }>;
+  missingActions?: MissingAction[];
   depth: number;
   children: ReactNode;
   selected?: boolean;
   isDragSource?: boolean;
   dragHandleRef?: (element: Element | null) => void;
   item?: FormItem;
-  binds?: Record<string, string>;
+  binds?: Record<string, string | undefined>;
   onUpdateItem?: (changes: Record<string, unknown>) => void;
   onRenameIdentity?: (nextKey: string, nextLabel: string) => void;
   onUpdateRepeatSettings?: (changes: { repeatable?: boolean; minRepeat?: number | null; maxRepeat?: number | null }) => void;

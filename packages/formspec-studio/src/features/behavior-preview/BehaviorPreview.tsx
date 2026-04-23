@@ -48,9 +48,9 @@ function parseScenarioText(text: string): ParsedScenario {
 /** Headless engine run using the same hydration path as `<formspec-render>` + {@link applyResponseDataToEngine}. */
 function buildSimulation(definition: unknown, scenarioData: Record<string, unknown>): SimulationResult {
   try {
-    const normalizedDefinition = normalizeDefinitionDoc(definition) as FormDefinition;
+    const normalizedDefinition = normalizeDefinitionDoc(definition);
     const engine = createFormEngine(normalizedDefinition);
-    applyResponseDataToEngine(engine, scenarioData as Record<string, any>);
+    applyResponseDataToEngine(engine, scenarioData as Record<string, unknown>);
     return {
       snapshot: engine.getDiagnosticsSnapshot({ mode: 'continuous' }),
       response: engine.getResponse({ mode: 'continuous' }),
@@ -73,7 +73,7 @@ export function BehaviorPreview({ viewport = 'desktop', appearance }: BehaviorPr
   const scenarioUserEditedRef = useRef(false);
 
   const defNormalized = useMemo(
-    () => normalizeDefinitionDoc(state.definition) as FormDefinition,
+    () => normalizeDefinitionDoc(state.definition),
     [state.definition],
   );
 

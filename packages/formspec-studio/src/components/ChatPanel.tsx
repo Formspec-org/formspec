@@ -1,7 +1,7 @@
 /** @filedesc Integrated studio chat panel — shares the studio Project, routes AI through MCP, shows changeset review. */
 import { useState, useRef, useEffect, useCallback, useMemo, useSyncExternalStore } from 'react';
 import { ChatSession, GeminiAdapter, type ChatMessage, type ToolContext } from '@formspec-org/chat';
-import { type Project, type Changeset, type MergeResult, type ProposalManager } from '@formspec-org/studio-core';
+import { type Project, type Changeset, type MergeResult, type ProposalManager, type Diagnostic, type Diagnostics } from '@formspec-org/studio-core';
 import { ProjectRegistry } from '@formspec-org/mcp/registry';
 import { createToolDispatch } from '@formspec-org/mcp/dispatch';
 import { ChangesetReview, type ChangesetReviewData } from './ChangesetReview.js';
@@ -274,9 +274,14 @@ export function ChatPanel({ project, onClose, initialPrompt }: ChatPanelProps) {
     // Changeset state updates flow through useSyncExternalStore subscription.
   }
 
-  function extractDiagnostics(diagnostics: unknown): DiagnosticEntry[] {
-    if (!Array.isArray(diagnostics)) return [];
-    return diagnostics.map((d: any) => ({
+  function extractDiagnostics(diagnostics: Diagnostics): DiagnosticEntry[] {
+    const all = [
+      ...(diagnostics.structural || []),
+      ...(diagnostics.expressions || []),
+      ...(diagnostics.extensions || []),
+      ...(diagnostics.consistency || []),
+    ];
+    return all.map((d: Diagnostic) => ({
       severity: d.severity === 'warning' ? 'warning' as const : 'error' as const,
       message: d.message ?? String(d),
       path: d.path,

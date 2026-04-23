@@ -111,6 +111,7 @@ export function ItemRow({
     openIdentityField,
     commitIdentityField,
     cancelIdentityField,
+    handleIdentityKeyDown,
   } = useInlineIdentityEdit({
     itemKey,
     label,
@@ -172,15 +173,10 @@ export function ItemRow({
       ? item.prePopulate
       : null;
 
-  const choiceOptions = Array.isArray(
-    item?.options ?? (item as Record<string, unknown>)?.choices,
-  )
-    ? ((item?.options ?? (item as Record<string, unknown>)?.choices) as Array<{
-        value: string;
-        label: string;
-        keywords?: string[];
-      }>)
-    : [];
+  const choiceOptions = ((): Array<{ value: string; label: string; keywords?: string[] }> => {
+    const rawOptions = item?.options;
+    return Array.isArray(rawOptions) ? (rawOptions as Array<{ value: string; label: string; keywords?: string[] }>) : [];
+  })();
 
   const descriptionValue =
     typeof item?.description === 'string' ? item.description : '';

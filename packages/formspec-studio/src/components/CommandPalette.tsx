@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { normalizeBindEntries, flatItems } from '@formspec-org/studio-core';
 import { useDefinition } from '../state/useDefinition';
 import { useSelection } from '../state/useSelection';
+import type { FormShape, FormVariable } from '@formspec-org/types';
 
 interface CommandPaletteProps {
   open: boolean;
@@ -42,7 +43,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
   const items = definition.items ? flatItems(definition.items) : [];
   const variables = definition.variables ?? [];
   const binds = normalizeBindEntries(definition.binds);
-  const shapes = (definition.shapes ?? []) as Array<Record<string, any>>;
+  const shapes = (definition.shapes ?? []) as FormShape[];
 
   const results = useMemo<PaletteResult[]>(() => {
     const itemResults = items.map((fi) => ({
@@ -58,7 +59,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
       actionable: true,
     }));
 
-    const variableResults = variables.map((variable: any) => ({
+    const variableResults = variables.map((variable: FormVariable) => ({
       id: `variable:${variable.name}`,
       section: 'Variables' as const,
       title: variable.name,
@@ -90,11 +91,11 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
     });
 
     const shapeResults = shapes.map((shape, index) => ({
-      id: `shape:${shape.name ?? index}`,
+      id: `shape:${shape.id ?? index}`,
       section: 'Shapes' as const,
-      title: shape.name || `Shape ${index + 1}`,
+      title: shape.id || `Shape ${index + 1}`,
       subtitle: shape.constraint || undefined,
-      keywords: ['rule', 'shape', shape.name ?? '', shape.constraint ?? '', shape.severity ?? ''],
+      keywords: ['rule', 'shape', shape.id ?? '', shape.constraint ?? '', shape.severity ?? ''],
       onSelect: () => onClose(),
       actionable: true,
     }));

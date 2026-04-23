@@ -4,7 +4,12 @@ import { dataTypeInfo } from '@formspec-org/studio-core';
 import { FieldIcon } from '../../components/ui/FieldIcon';
 import { EditMark } from '../shared/item-row-shared';
 import { LayoutLeafBlock } from './LayoutLeafBlock';
-import type { LayoutContext } from './FieldBlock';
+export interface LayoutContext {
+  parentContainerType: string;
+  parentGridColumns: number;
+  currentColSpan: number;
+  currentRowSpan?: number;
+}
 
 interface FieldBlockProps {
   itemKey: string;
@@ -109,10 +114,11 @@ export function FieldBlock(props: FieldBlockProps) {
           <button
             type="button"
             data-layout-stop-select
+            data-testid={`layout-field-${itemKey}-label-edit`}
             onClick={openLabelEditor}
             className="opacity-0 group-hover/id:opacity-100 p-0.5 rounded hover:bg-accent/10 text-accent transition-all"
           >
-            <EditMark size={10} />
+            <EditMark />
           </button>
         )}
       </div>
@@ -156,4 +162,3 @@ export function FieldBlock(props: FieldBlockProps) {
   );
 }
 
-export type { LayoutContext };

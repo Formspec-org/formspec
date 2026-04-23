@@ -28,6 +28,7 @@ export interface InlineIdentityEditActions {
   commitIdentityField: (field: 'label' | 'key') => void;
   cancelIdentityField: () => void;
   resetIdentityEditors: () => void;
+  handleIdentityKeyDown: (field: 'label' | 'key') => (event: React.KeyboardEvent<HTMLInputElement>) => void;
 }
 
 export function useInlineIdentityEdit({

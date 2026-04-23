@@ -21,14 +21,14 @@ import { LayoutCanvas as LayoutWorkspace } from '../../workspaces/layout/LayoutC
 import { MappingTab } from '../../workspaces/mapping/MappingTab';
 import { PreviewTab } from '../../workspaces/preview/PreviewTab';
 
-export const WORKSPACES: Record<string, React.FC<any>> = {
+export const WORKSPACES: Record<string, React.ComponentType> = {
   Layout: LayoutWorkspace,
   Theme: ThemeTab,
   Mapping: MappingTab,
   Preview: PreviewTab,
 };
 
-export const SIDEBAR_COMPONENTS: Record<string, React.FC<any>> = {
+export const SIDEBAR_COMPONENTS: Record<string, React.ComponentType> = {
   'Structure': StructureTree,
   'Component Tree': ComponentTree,
   'Screener': ScreenerSummary,

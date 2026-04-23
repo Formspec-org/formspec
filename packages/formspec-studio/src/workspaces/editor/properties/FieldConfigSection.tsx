@@ -20,7 +20,7 @@ export function FieldConfigSection({
   path: string;
   item: FormItem;
   project: Project;
-  binds: Record<string, any>;
+  binds: Record<string, string>;
   existingBehaviorTypes: string[];
   isDecimalLike: boolean;
   isMoney: boolean;

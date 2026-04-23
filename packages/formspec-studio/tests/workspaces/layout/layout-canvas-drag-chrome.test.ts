@@ -4,7 +4,7 @@ import {
   layoutCanvasDragOverlayPositionStyle,
   layoutCanvasDropNodeRefMatches,
   LAYOUT_CANVAS_DRAG_OVERLAY_POINTER_OFFSET_PX,
-} from '../../../src/workspaces/layout/layout-canvas-drag-chrome';
+} from '../../../src/workspaces/layout/dnd/layout-dnd-styles';
 
 describe('layoutCanvasDropNodeRefMatches', () => {
   it('matches by nodeId when both set', () => {

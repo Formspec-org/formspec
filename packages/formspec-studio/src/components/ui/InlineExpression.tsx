@@ -102,6 +102,7 @@ export function InlineExpression({
     <button
       type="button"
       onClick={enterEdit}
+      title={value}
       className={`inline-flex items-center gap-1.5 font-mono text-[12px] bg-subtle/40 border border-border/40 rounded px-2 py-1 text-ink group/ie hover:border-accent/40 transition-all ${className ?? ''}`}
     >
       <span className="max-w-[120px] overflow-hidden text-ellipsis">

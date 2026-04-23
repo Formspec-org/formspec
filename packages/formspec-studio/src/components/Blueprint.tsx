@@ -3,6 +3,8 @@ import { useProjectState } from '../state/useProjectState';
 import { useProject } from '../state/useProject';
 import { Pill } from './ui/Pill';
 import type { EditorView } from '../workspaces/editor/BuildManageToggle';
+import type { FormScreenerPhase, ThemeDocument } from '@formspec-org/types';
+import type { CompNode } from '@formspec-org/studio-core';
 
 interface BlueprintProps {
   activeSection: string;
@@ -36,7 +38,7 @@ const SECTIONS: SectionDef[] = [
   { name: 'Screener', countFn: (s) => {
     const scr = s.screener;
     if (!scr) return 0;
-    const routes = scr.evaluation?.reduce((sum: number, p: any) => sum + (p.routes?.length ?? 0), 0) ?? 0;
+    const routes = scr.evaluation?.reduce((sum: number, p: FormScreenerPhase) => sum + (p.routes?.length ?? 0), 0) ?? 0;
     return (scr.items?.length ?? 0) + routes;
   }, help: 'Pre-qualification gate before the main form', link: { tab: 'Editor', view: 'screener' } },
   { name: 'Variables', countFn: (s) => s.definition.variables?.length ?? 0, help: 'Named computed values reusable across expressions', link: { tab: 'Editor', view: 'manage' } },
@@ -49,7 +51,7 @@ const SECTIONS: SectionDef[] = [
   { name: 'Typography', countFn: null, help: 'Typography and spacing tokens' },
   { name: 'Field Defaults', countFn: null, help: 'Default label position, widget, and CSS class for all fields' },
   { name: 'Field Rules', countFn: (s) => ((s.theme.selectors ?? []) as unknown[]).length, help: 'Selector rules for field-type-specific presentation' },
-  { name: 'Breakpoints', countFn: (s) => Object.keys((s.theme as any).breakpoints ?? {}).length, help: 'Responsive breakpoint definitions' },
+  { name: 'Breakpoints', countFn: (s) => Object.keys((s.theme as ThemeDocument).breakpoints ?? {}).length, help: 'Responsive breakpoint definitions' },
   { name: 'All Tokens', countFn: null, help: 'Full token reference for the active theme' },
 ];
 
@@ -60,7 +62,7 @@ const SECTIONS: SectionDef[] = [
 export function Blueprint({ activeSection, onSectionChange, sections, activeEditorView, activeTab }: BlueprintProps) {
   const state = useProjectState();
   const project = useProject();
-  const componentTreeCount = countComponentNodes((project.component as any)?.tree);
+  const componentTreeCount = countComponentNodes(project.component.tree as CompNode | undefined);
   const visibleSections = sections ? new Set(sections) : null;
 
   return (

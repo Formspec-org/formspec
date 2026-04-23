@@ -170,10 +170,10 @@ describe('cross-surface unification', () => {
     const here = dirname(fileURLToPath(import.meta.url));
     const srcRoot = resolve(here, '../../src');
     const files = [
-      resolve(srcRoot, 'components/AppSettingsDialog.tsx'),
-      resolve(srcRoot, 'chat-v2/components/ChatShellV2.tsx'),
-      resolve(srcRoot, 'main-chat.tsx'),
-      resolve(srcRoot, 'main.tsx'),
+      resolve(srcRoot, 'components/AppSettingsDialog'),
+      resolve(srcRoot, 'chat-v2/components/ChatShellV2'),
+      resolve(srcRoot, 'main-chat'),
+      resolve(srcRoot, 'main'),
     ];
 
     for (const file of files) {

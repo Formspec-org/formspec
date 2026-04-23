@@ -33,7 +33,7 @@ export function BindsSection({ binds, activeFilter = null, allPaths = [], onSele
 
   if (entries.length === 0 && pathsWithoutBinds.length === 0) return null;
 
-  const handleSave = (path: string, type: string, newValue: any) => {
+  const handleSave = (path: string, type: string, newValue: unknown) => {
     if (type === 'pre-populate') {
       project.updateItem(path, { prePopulate: newValue ?? null });
     } else {
@@ -74,7 +74,7 @@ export function BindsSection({ binds, activeFilter = null, allPaths = [], onSele
                 return (
                   <PrePopulateCard
                     key={type}
-                    value={expression}
+                    value={expression as { instance: string; path: string; editable?: boolean }}
                     onChange={(val) => handleSave(path, type, val)}
                     onRemove={() => handleSave(path, type, null)}
                     itemKey={path.split('.').pop()}
@@ -86,11 +86,11 @@ export function BindsSection({ binds, activeFilter = null, allPaths = [], onSele
                 <BindCard
                   key={type}
                   bindType={type}
-                  expression={expression}
+                  expression={expression as string}
                   onRemove={() => handleSave(path, type, null)}
                 >
                   <InlineExpression
-                    value={expression}
+                    value={expression as string}
                     onSave={(val) => handleSave(path, type, val)}
                     placeholder="Click to add expression"
                   />

@@ -1,5 +1,5 @@
 /** @filedesc Smoke test: examples/uswds-grant renders a field via formspec-render + USWDS adapter. */
-import { describe, it, expect, beforeAll, afterEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterEach, vi } from 'vitest';
 import definition from '../../../../examples/uswds-grant/grant.definition.json';
 import theme from '../../../../examples/uswds-grant/grant.theme.json';
 import { initFormspecEngine } from '@formspec-org/engine/init-formspec-engine';
@@ -26,8 +26,13 @@ describe('examples/uswds-grant + USWDS adapter', () => {
         document.body.appendChild(el);
         el.themeDocument = theme as any;
         el.definition = definition as any;
-        await Promise.resolve();
-        await Promise.resolve();
+        // Field controls are finalized inside @preact/signals-core effects; wait for DOM.
+        await vi.waitFor(
+            () => {
+                expect(el.querySelector('#field-applicant_section-org_name')).toBeTruthy();
+            },
+            { timeout: 5000 },
+        );
         // Render target lives in light DOM; shadow root is only a default <slot>.
         const input = el.querySelector('#field-applicant_section-org_name');
         expect(input).toBeTruthy();

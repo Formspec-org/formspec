@@ -1,7 +1,7 @@
 /** @filedesc Unit tests for {@link pragmaticMonitorDropToDragEnd} — Pragmatic payload → {@link DragEndEvent} mapping. */
 import { describe, expect, it } from 'vitest';
 import { attachClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge';
-import { pragmaticMonitorDropToDragEnd, LAYOUT_PDND_KIND } from '../../../src/workspaces/layout/layout-pdnd';
+import { pragmaticMonitorDropToDragEnd, LAYOUT_PDND_KIND } from '../../../src/workspaces/layout/dnd/layout-pdnd';
 import { postRemovalIndexForFinalIndex } from '../../../src/workspaces/shared/reorder-insert-index';
 import type { CompNode, Project } from '@formspec-org/studio-core';
 
@@ -78,7 +78,7 @@ describe('pragmaticMonitorDropToDragEnd', () => {
           label: 'Email',
           itemType: 'field',
         },
-      } as Parameters<typeof pragmaticMonitorDropToDragEnd>[1]['source'],
+      } as unknown as Parameters<typeof pragmaticMonitorDropToDragEnd>[1]['source'],
       location: { current: { dropTargets: [] } },
     });
     expect(ev).not.toBeNull();
@@ -98,7 +98,7 @@ describe('pragmaticMonitorDropToDragEnd', () => {
           label: 'Email',
           itemType: 'field',
         },
-      } as Parameters<typeof pragmaticMonitorDropToDragEnd>[1]['source'],
+      } as unknown as Parameters<typeof pragmaticMonitorDropToDragEnd>[1]['source'],
       location: {
         current: {
           dropTargets: [{ element: document.createElement('div'), data: null as unknown as Record<string, unknown> }],

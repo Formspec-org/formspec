@@ -9,7 +9,7 @@ vi.mock('@formspec-org/studio-core', async (importOriginal) => {
   };
 });
 
-import { handleDragEnd } from '../../../src/workspaces/layout/layout-dnd-utils';
+import { handleDragEnd } from '../../../src/workspaces/layout/dnd/layout-dnd-utils';
 import * as studioCore from '@formspec-org/studio-core';
 import type { Project } from '@formspec-org/studio-core';
 

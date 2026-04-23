@@ -1,5 +1,5 @@
 /** @filedesc Properties panel shown when multiple items are selected; provides batch delete and duplicate. */
-import { pruneDescendants, sortForBatchDelete } from '@formspec-org/studio-core';
+import { pruneDescendants, sortForBatchDelete, type Project } from '@formspec-org/studio-core';
 
 export function MultiSelectSummary({
   selectionCount,
@@ -9,7 +9,7 @@ export function MultiSelectSummary({
 }: {
   selectionCount: number;
   selectedKeys: Set<string>;
-  project: any;
+  project: Project;
   deselect: () => void;
 }) {
   const handleBatchDelete = () => {

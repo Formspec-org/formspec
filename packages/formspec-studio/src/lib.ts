@@ -14,8 +14,13 @@ export { initFormspecEngine, initFormspecEngineTools } from '@formspec-org/engin
 // Re-export types consumers need
 export type { ProjectSnapshot, CreateProjectOptions } from '@formspec-org/studio-core';
 
-// Export a helper to register the formspec-render custom element
-// (needed for the Preview tab to work)
+/**
+ * Register the <formspec-render> custom element.
+ *
+ * (needed for the Preview tab to work)
+ *
+ * @experimental This is an experimental internal embed API.
+ */
 export function registerFormspecRender() {
   // Dynamic import to avoid pulling in the webcomponent unless needed
   return import('@formspec-org/webcomponent').then(({ FormspecRender }) => {

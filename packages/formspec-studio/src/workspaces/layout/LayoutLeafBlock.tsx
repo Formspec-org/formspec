@@ -18,7 +18,7 @@ function targetStopsSelect(target: EventTarget | null): boolean {
 interface LayoutLeafBlockProps {
   itemKey: string;
   selectionKey: string;
-  selected: boolean;
+  selected?: boolean;
   itemType: 'field' | 'group' | 'display';
   bindPath?: string;
   label?: string;
@@ -44,14 +44,14 @@ interface LayoutLeafBlockProps {
 export function LayoutLeafBlock({
   itemKey,
   selectionKey,
-  selected,
+  selected = false,
   itemType,
   bindPath,
   label,
   icon,
   identity,
-  sortableGroup,
-  sortableIndex,
+  sortableGroup = '',
+  sortableIndex = 0,
   layoutContext,
   nodeProps,
   onSelect,
@@ -72,8 +72,8 @@ export function LayoutLeafBlock({
     selected,
     itemType,
     bindPath,
-    sortableGroup,
-    sortableIndex,
+    sortableGroup: sortableGroup || '',
+    sortableIndex: sortableIndex || 0,
     nodeProps,
     layoutContext,
     onResizeColSpan,
@@ -138,8 +138,8 @@ export function LayoutLeafBlock({
             <DefinitionCopyReadonlyPanel
               definitionPath={bindPath || itemKey}
               kind={itemType === 'display' ? 'display' : 'field'}
-              description={description}
-              hint={hint}
+              description={description || null}
+              hint={hint || null}
               selected={state.effectiveSelected}
               showToolbar={state.showToolbar}
               testIdPrefix={`layout-${itemType}-${itemKey}`}

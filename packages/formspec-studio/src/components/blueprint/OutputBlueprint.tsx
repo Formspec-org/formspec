@@ -1,15 +1,15 @@
 /** @filedesc Output Blueprint panel — live response document with editable data, type tags, and inline validation. */
 import { useState, useCallback, useMemo } from 'react';
-import { createFormEngine, type FormspecItem } from '@formspec-org/engine';
+import { createFormEngine } from '@formspec-org/engine';
 import { sampleFieldValue } from '@formspec-org/studio-core';
 import { useDefinition } from '../../state/useDefinition';
 import { useOptionalSelection } from '../../state/useSelection';
+import type { FormItem, FormDefinition, ValidationResult } from '@formspec-org/types';
 
 type ValueMap = Record<string, string>;
-interface VResult { path: string; severity: 'error' | 'warning' | 'info'; message: string; constraintKind: string; code?: string }
-type ValidationMap = Record<string, VResult[]>;
+type ValidationMap = Record<string, ValidationResult[]>;
 
-function initialValues(items: any[], prefix = ''): ValueMap {
+function initialValues(items: FormItem[], prefix = ''): ValueMap {
   const map: ValueMap = {};
   for (const item of items) {
     if (item.type === 'display') continue;
@@ -30,7 +30,7 @@ function initialValues(items: any[], prefix = ''): ValueMap {
   return map;
 }
 
-function addRepeatInstances(engine: ReturnType<typeof createFormEngine>, items: any[], prefix = '') {
+function addRepeatInstances(engine: ReturnType<typeof createFormEngine>, items: FormItem[], prefix = '') {
   for (const item of items) {
     if (item.type === 'display') continue;
     const path = prefix ? `${prefix}.${item.key}` : item.key;
@@ -58,7 +58,7 @@ function valueKeysMatchingReportPath(valueKeys: string[], normalizedReportPath: 
   );
 }
 
-function runValidation(definition: any, values: ValueMap): { map: ValidationMap; results: VResult[] } {
+function runValidation(definition: FormDefinition, values: ValueMap): { map: ValidationMap; results: ValidationResult[] } {
   try {
     const engine = createFormEngine({ ...definition });
     addRepeatInstances(engine, definition.items ?? []);
@@ -71,19 +71,22 @@ function runValidation(definition: any, values: ValueMap): { map: ValidationMap;
     }
     const report = engine.getValidationReport();
     const map: ValidationMap = {};
-    const results: VResult[] = [];
+    const results: ValidationResult[] = [];
     const valueKeys = Object.keys(values);
     for (const r of report.results ?? []) {
       const normalized = validationReportPathToDataPath(r.path);
       const keysForMap = valueKeysMatchingReportPath(valueKeys, normalized);
       const storeUnder = keysForMap.length > 0 ? keysForMap : [normalized];
       const primaryPath = keysForMap[0] ?? normalized;
-      const v: VResult = {
+      const v: ValidationResult = {
+        $formspecValidationResult: '1.0',
         path: primaryPath,
         severity: r.severity,
         message: r.message,
         constraintKind: r.constraintKind,
         code: r.code,
+        source: r.source,
+        sourceId: r.sourceId,
       };
       for (const path of storeUnder) {
         (map[path] ??= []).push(v);
@@ -96,7 +99,7 @@ function runValidation(definition: any, values: ValueMap): { map: ValidationMap;
   }
 }
 
-function typeTag(item: any): string {
+function typeTag(item: FormItem): string {
   if (item.type === 'group') return item.repeatable ? 'array' : 'object';
   return item.dataType ?? 'string';
 }
@@ -133,7 +136,7 @@ function StaticField({ name, value, isString, isLast, muted }: { name: string; v
 // --- Data field node ---
 
 interface DataNodeProps {
-  item: any;
+  item: FormItem;
   path: string;
   isSelected: boolean;
   onSelect: (path: string, type: string) => void;
@@ -207,7 +210,7 @@ function DataNode({ item, path, isSelected, onSelect, isLast, values, validation
       {isGroup && item.children && (
         <>
           <div className="ml-3 pl-2 border-l border-border/40 space-y-0">
-            {item.children.filter((c: any) => c.type !== 'display').map((child: any, i: number, arr: any[]) => {
+            {item.children.filter((c: FormItem) => c.type !== 'display').map((child: FormItem, i: number, arr: FormItem[]) => {
               const childPrefix = item.repeatable ? `${path}[0]` : path;
               return (
                 <DataNode
@@ -237,7 +240,7 @@ function DataNode({ item, path, isSelected, onSelect, isLast, values, validation
 
 // --- Validation result node ---
 
-function ValidationResultNode({ result, isLast }: { result: VResult; isLast: boolean }) {
+function ValidationResultNode({ result, isLast }: { result: ValidationResult; isLast: boolean }) {
   const severityColor = result.severity === 'error'
     ? 'text-error'
     : result.severity === 'warning'
@@ -273,7 +276,7 @@ export function OutputBlueprint() {
   const selection = useOptionalSelection();
   const [localSelected, setLocalSelected] = useState<string | null>(null);
   const items = useMemo(
-    () => (definition?.items ?? []).filter((i: any) => i.type !== 'display'),
+    () => (definition?.items ?? []).filter((i: FormItem) => i.type !== 'display'),
     [definition?.items],
   );
   const [values, setValues] = useState<ValueMap>(() => initialValues(definition?.items ?? []));
@@ -347,7 +350,7 @@ export function OutputBlueprint() {
               {items.length === 0 ? (
                 <div className="text-muted/40 italic text-[10px]">// No fields defined yet</div>
               ) : (
-                items.map((item: any, i: number) => (
+                items.map((item: FormItem, i: number) => (
                   <DataNode
                     key={item.key}
                     item={item}

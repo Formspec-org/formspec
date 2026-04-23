@@ -1,6 +1,6 @@
 /** @filedesc Reproduction test for Nested-to-Root move crash/failure using REAL project logic. */
 import { describe, it, expect, vi } from 'vitest';
-import { handleDragEnd } from '../../../src/workspaces/layout/layout-dnd-utils';
+import { handleDragEnd } from '../../../src/workspaces/layout/dnd/layout-dnd-utils';
 import { createProject } from '@formspec-org/studio-core';
 
 describe('REAL LOGIC REGRESSION: Move from nested container to root', () => {

@@ -8,12 +8,11 @@ import {
 import { AdvisoryCallout } from '../../components/ui/AdvisoryCallout';
 import { BindCard } from '../../components/ui/BindCard';
 import { InlineExpression } from '../../components/ui/InlineExpression';
-import { GuidedBindEditor } from '../../components/ui/GuidedBindEditor';
+import { RenderableBindCard } from './RenderableBindCard';
 import { AddBehaviorMenu } from '../../components/ui/AddBehaviorMenu';
 import { PrePopulateCard } from '../../components/ui/PrePopulateCard';
 import {
   buildAdvisories,
-  humanizeFEL,
   type Advisory,
   type AdvisoryAction,
   type AdvisoryActionKey,
@@ -195,23 +194,15 @@ export const ItemRowCategoryPanel = forwardRef<
             </p>
           </div>
           {hasRelevant && (
-            <BindCard
+            <RenderableBindCard
               bindType='relevant'
-              expression={binds.relevant}
-              humanized={humanizeFEL(binds.relevant).text}
+              value={binds.relevant}
               onRemove={() => onUpdateItem?.({ relevant: null })}
-            >
-              <GuidedBindEditor
-                bindType='relevant'
-                value={binds.relevant}
-                autoEdit={justCreatedBind === 'relevant'}
-                onSave={(value) => {
-                  onClearJustCreatedBind?.();
-                  onUpdateItem?.({ relevant: value || null });
-                }}
-                definition={definition}
-              />
-            </BindCard>
+              onSave={(value) => onUpdateItem?.({ relevant: value || null })}
+              justCreatedBind={justCreatedBind}
+              onClearJustCreatedBind={onClearJustCreatedBind}
+              definition={definition}
+            />
           )}
           {!hasRelevant && (
             <AddBehaviorMenu
@@ -284,23 +275,15 @@ export const ItemRowCategoryPanel = forwardRef<
         {expandedCategory === 'Visibility' && (
           <div className='space-y-3'>
             {hasRelevant && (
-              <BindCard
+              <RenderableBindCard
                 bindType='relevant'
-                expression={binds.relevant}
-                humanized={humanizeFEL(binds.relevant).text}
+                value={binds.relevant}
                 onRemove={() => onUpdateItem?.({ relevant: null })}
-              >
-                <GuidedBindEditor
-                  bindType='relevant'
-                  value={binds.relevant}
-                  autoEdit={justCreatedBind === 'relevant'}
-                  onSave={(value) => {
-                    onClearJustCreatedBind?.();
-                    onUpdateItem?.({ relevant: value || null });
-                  }}
-                  definition={definition}
-                />
-              </BindCard>
+                onSave={(value) => onUpdateItem?.({ relevant: value || null })}
+                justCreatedBind={justCreatedBind}
+                onClearJustCreatedBind={onClearJustCreatedBind}
+                definition={definition}
+              />
             )}
             {!hasRelevant && (
               <AddBehaviorMenu
@@ -323,43 +306,27 @@ export const ItemRowCategoryPanel = forwardRef<
         {expandedCategory === 'Validation' && (
           <div className='space-y-3'>
             {hasRequired && (
-              <BindCard
+              <RenderableBindCard
                 bindType='required'
-                expression={binds.required}
-                humanized={humanizeFEL(binds.required).text}
+                value={binds.required}
                 onRemove={() => onUpdateItem?.({ required: null })}
-              >
-                <GuidedBindEditor
-                  bindType='required'
-                  value={binds.required}
-                  autoEdit={justCreatedBind === 'required'}
-                  onSave={(value) => {
-                    onClearJustCreatedBind?.();
-                    onUpdateItem?.({ required: value || null });
-                  }}
-                  definition={definition}
-                />
-              </BindCard>
+                onSave={(value) => onUpdateItem?.({ required: value || null })}
+                justCreatedBind={justCreatedBind}
+                onClearJustCreatedBind={onClearJustCreatedBind}
+                definition={definition}
+              />
             )}
             {hasConstraint && (
-              <BindCard
+              <RenderableBindCard
                 bindType='constraint'
-                expression={binds.constraint}
-                humanized={humanizeFEL(binds.constraint).text}
-                message={binds.constraintMessage}
+                value={binds.constraint}
                 onRemove={() => onUpdateItem?.({ constraint: null })}
-              >
-                <GuidedBindEditor
-                  bindType='constraint'
-                  value={binds.constraint}
-                  autoEdit={justCreatedBind === 'constraint'}
-                  onSave={(value) => {
-                    onClearJustCreatedBind?.();
-                    onUpdateItem?.({ constraint: value || null });
-                  }}
-                  definition={definition}
-                />
-              </BindCard>
+                onSave={(value) => onUpdateItem?.({ constraint: value || null })}
+                justCreatedBind={justCreatedBind}
+                onClearJustCreatedBind={onClearJustCreatedBind}
+                definition={definition}
+                constraintMessage={binds.constraintMessage}
+              />
             )}
             <AddBehaviorMenu
               label='Add validation rule'
@@ -382,22 +349,16 @@ export const ItemRowCategoryPanel = forwardRef<
         {expandedCategory === 'Value' && (
           <div className='space-y-3'>
             {hasCalculate && (
-              <BindCard
+              <RenderableBindCard
                 bindType='calculate'
-                expression={binds.calculate}
-                humanized={humanizeFEL(binds.calculate).text}
+                value={binds.calculate}
                 onRemove={() => onUpdateItem?.({ calculate: null })}
-              >
-                <InlineExpression
-                  value={binds.calculate}
-                  autoEdit={justCreatedBind === 'calculate'}
-                  onSave={(value) => {
-                    onClearJustCreatedBind?.();
-                    onUpdateItem?.({ calculate: value || null });
-                  }}
-                  placeholder='Click to add expression'
-                />
-              </BindCard>
+                onSave={(value) => onUpdateItem?.({ calculate: value || null })}
+                justCreatedBind={justCreatedBind}
+                onClearJustCreatedBind={onClearJustCreatedBind}
+                definition={definition}
+                placeholder='Click to add expression'
+              />
             )}
 
             {item?.initialValue != null && (
@@ -425,23 +386,15 @@ export const ItemRowCategoryPanel = forwardRef<
             )}
 
             {hasReadonly && (
-              <BindCard
+              <RenderableBindCard
                 bindType='readonly'
-                expression={binds.readonly}
-                humanized={humanizeFEL(binds.readonly).text}
+                value={binds.readonly}
                 onRemove={() => onUpdateItem?.({ readonly: null })}
-              >
-                <GuidedBindEditor
-                  bindType='readonly'
-                  value={binds.readonly}
-                  autoEdit={justCreatedBind === 'readonly'}
-                  onSave={(value) => {
-                    onClearJustCreatedBind?.();
-                    onUpdateItem?.({ readonly: value || null });
-                  }}
-                  definition={definition}
-                />
-              </BindCard>
+                onSave={(value) => onUpdateItem?.({ readonly: value || null })}
+                justCreatedBind={justCreatedBind}
+                onClearJustCreatedBind={onClearJustCreatedBind}
+                definition={definition}
+              />
             )}
 
             <AddBehaviorMenu

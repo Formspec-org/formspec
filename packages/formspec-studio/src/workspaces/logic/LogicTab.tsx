@@ -3,6 +3,7 @@ import { useState, useMemo } from 'react';
 import { normalizeBindsView, buildDefLookup } from '@formspec-org/studio-core';
 import { useDefinition } from '../../state/useDefinition';
 import { useSelection } from '../../state/useSelection';
+import type { FormShape } from '@formspec-org/types';
 import { FilterBar } from './FilterBar';
 import { Pillar } from '../shared/Pillar';
 import { SectionFilterBar } from '../shared/SectionFilterBar';
@@ -17,7 +18,7 @@ export function LogicTab() {
   const [activeFilter, setActiveFilter] = useState<'required' | 'relevant' | 'calculate' | 'constraint' | 'readonly' | 'pre-populate' | null>(null);
 
   const binds = normalizeBindsView(definition?.binds, definition?.items ?? []);
-  const shapes = Array.isArray(definition?.shapes) ? definition.shapes.map((s: any) => ({ name: s.id, ...s })) : [];
+  const shapes = Array.isArray(definition?.shapes) ? definition.shapes.map((s: FormShape) => ({ name: s.id, ...s })) : [];
   const variables = Array.isArray(definition?.variables) ? definition.variables : [];
 
   const memoizedFieldPaths = useMemo(() => {

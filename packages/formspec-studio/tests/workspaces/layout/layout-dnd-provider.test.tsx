@@ -6,8 +6,8 @@ import {
   handleContainerDrop,
   handleDragEnd,
   sortGroupToParentRef,
-} from '../../../src/workspaces/layout/layout-dnd-utils';
-import { LAYOUT_PDND_KIND } from '../../../src/workspaces/layout/layout-pdnd-kind';
+} from '../../../src/workspaces/layout/dnd/layout-dnd-utils';
+import { LAYOUT_PDND_KIND } from '../../../src/workspaces/layout/dnd/layout-pdnd';
 import { createProject, findParentOfNodeRef, type Project } from '@formspec-org/studio-core';
 
 function makeProject() {
