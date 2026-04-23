@@ -1115,9 +1115,10 @@ export function updateItem(project: ProjectInternals, path: string, changes: Ite
 
       // dataType routing
       if (key === 'dataType') {
+        type FieldDataType = NonNullable<import('@formspec-org/types').FormItem['dataType']>;
         commands.push({
           type: 'definition.setFieldDataType',
-          payload: { path, dataType: value },
+          payload: { path, dataType: value as FieldDataType },
         });
         continue;
       }

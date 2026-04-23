@@ -30,8 +30,8 @@ export function moveItems(
   project: ProjectInternals,
   moves: Array<{ sourcePath: string; targetParentPath?: string; targetIndex: number }>,
 ): HelperResult {
-  const commands = moves.map(m => ({
-    type: 'definition.moveItem',
+  const commands: Array<{ type: 'definition.moveItem'; payload: { sourcePath: string; targetParentPath?: string; targetIndex: number } }> = moves.map(m => ({
+    type: 'definition.moveItem' as const,
     payload: {
       sourcePath: m.sourcePath,
       ...(m.targetParentPath != null ? { targetParentPath: m.targetParentPath } : {}),

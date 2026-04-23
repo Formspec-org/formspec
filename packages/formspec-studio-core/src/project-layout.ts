@@ -70,9 +70,11 @@ export function addPage(project: ProjectInternals, title: string, description?: 
     payload: {
       parent: { nodeId: 'root' },
       component: 'Page',
-      title,
-      description,
-      ...(id !== undefined ? { nodeId: id } : {}),
+      props: {
+        title,
+        description,
+        ...(id !== undefined ? { nodeId: id } : {}),
+      },
     },
   });
 
