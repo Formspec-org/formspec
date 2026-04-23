@@ -127,6 +127,7 @@ Every Formspec document type has a document type marker property that begins wit
 | Ontology | `$formspecOntology` | `"1.0"` |
 | References | `$formspecReferences` | `"1.0"` |
 | Response | `$formspecResponse` | `"1.0"` |
+| Intake Handoff | `$formspecIntakeHandoff` | `"1.0"` |
 | Changelog | `$formspecChangelog` | `"1.0"` |
 | Validation Result | `$formspecValidationResult` | `"1.0"` |
 | Validation Report | `$formspecValidationReport` | `"1.0"` |
@@ -177,6 +178,7 @@ Every schema MUST declare a `required` array listing the minimum set of properti
 | Ontology | `$formspecOntology`, `version`, `targetDefinition` |
 | References | `$formspecReferences`, `version`, `targetDefinition`, `references` |
 | Response | `$formspecResponse`, `definitionUrl`, `definitionVersion`, `status`, `data`, `authored` |
+| Intake Handoff | `$formspecIntakeHandoff`, `handoffId`, `initiationMode`, `definitionRef`, `responseRef`, `responseHash`, `validationReportRef`, `intakeSessionId`, `ledgerHeadRef`, `occurredAt` |
 | Respondent Ledger | `$formspecRespondentLedger`, `ledgerId`, `responseId`, `definitionUrl`, `definitionVersion`, `status`, `createdAt`, `lastEventAt`, `eventCount` |
 
 ### 4.2 Identity Pattern

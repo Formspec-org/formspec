@@ -75,6 +75,13 @@ class ResponseArtifact(ArtifactFile):
 
 
 @dataclass
+class IntakeHandoffArtifact(ArtifactFile):
+    handoff_id: str = ""
+    initiation_mode: str = ""
+    case_ref: str | None = None
+
+
+@dataclass
 class ChangelogArtifact(ArtifactFile):
     definition_url: str = ""
 
@@ -88,6 +95,7 @@ class DiscoveredArtifacts:
     themes: list[ThemeArtifact] = field(default_factory=list)
     mappings: list[MappingArtifact] = field(default_factory=list)
     responses: list[ResponseArtifact] = field(default_factory=list)
+    intake_handoffs: list[IntakeHandoffArtifact] = field(default_factory=list)
     changelogs: list[ChangelogArtifact] = field(default_factory=list)
     registries: list[ArtifactFile] = field(default_factory=list)
     changelog_pairs: list[tuple[DefinitionArtifact, DefinitionArtifact]] = field(
@@ -213,6 +221,17 @@ def discover_artifacts(
                     definition_url=doc.get("definitionUrl", ""),
                     definition_version=doc.get("definitionVersion", ""),
                     status=doc.get("status", ""),
+                )
+            )
+        elif doc_type == "intake_handoff":
+            case_ref = doc.get("caseRef")
+            arts.intake_handoffs.append(
+                IntakeHandoffArtifact(
+                    path=path,
+                    doc=doc,
+                    handoff_id=doc.get("handoffId", ""),
+                    initiation_mode=doc.get("initiationMode", ""),
+                    case_ref=case_ref if isinstance(case_ref, str) else None,
                 )
             )
         elif doc_type == "changelog":
@@ -371,6 +390,26 @@ def _pass_response_schema(arts: DiscoveredArtifacts) -> PassResult:
         pr.items.append(
             PassItemResult(
                 label=resp.path.name,
+                error_count=len(errors),
+                warning_count=len(warnings),
+                diagnostics=diags,
+            )
+        )
+    return pr
+
+
+def _pass_intake_handoff_schema(arts: DiscoveredArtifacts) -> PassResult:
+    if not arts.intake_handoffs:
+        return PassResult(title="Intake handoff schema validation", empty=True)
+
+    pr = PassResult(title="Intake handoff schema validation")
+    for handoff in arts.intake_handoffs:
+        diags = lint(handoff.doc)
+        errors = [d for d in diags if d.severity == "error"]
+        warnings = [d for d in diags if d.severity == "warning"]
+        pr.items.append(
+            PassItemResult(
+                label=handoff.path.name,
                 error_count=len(errors),
                 warning_count=len(warnings),
                 diagnostics=diags,
@@ -799,7 +838,7 @@ def _location_bind_path(location: str) -> str | None:
 
 
 def validate_all(artifacts: DiscoveredArtifacts) -> ValidationReport:
-    """Run all 10 validation passes and return a structured report."""
+    """Run all validation passes and return a structured report."""
     return ValidationReport(
         passes=[
             _pass_definition_linting(artifacts),
@@ -807,6 +846,7 @@ def validate_all(artifacts: DiscoveredArtifacts) -> ValidationReport:
             _pass_theme_linting(artifacts),
             _pass_component_linting(artifacts),
             _pass_response_schema(artifacts),
+            _pass_intake_handoff_schema(artifacts),
             _pass_runtime_evaluation(artifacts),
             _pass_mapping_forward(artifacts),
             _pass_changelog_generation(artifacts),

@@ -58,6 +58,26 @@
     },
     {
       "spec": "specs/core/spec.md",
+      "schema": "schemas/intake-handoff.schema.json",
+      "bluf": "specs/core/intake-handoff-spec.bluf.md",
+      "llm": "specs/core/intake-handoff-spec.llm.md",
+      "semanticCapsule": "specs/core/intake-handoff-spec.semantic.md",
+      "behaviorEssentials": [
+        "Treat an Intake Handoff as the response-to-workflow boundary object, not as a Formspec-owned case lifecycle event.",
+        "Require workflowInitiated handoffs to include an existing caseRef and require publicIntake handoffs to omit or null caseRef.",
+        "For workflowInitiated attach acceptance, compare the handoff caseRef string to the accepted attach disposition (or host-defined equivalence); do not require only a canonical case id that never appeared on the handoff.",
+        "Preserve the pinned definitionRef tuple when accepting a handoff; do not substitute a newer Definition version.",
+        "Verify responseHash against the canonical Response envelope before using the handoff to create or update governed case state."
+      ],
+      "conformanceEssentials": [
+        "A conforming Intake Handoff document must include $formspecIntakeHandoff=1.0 and the required response, validation, ledger, definition, mode, and timestamp fields.",
+        "Processors must reject publicIntake handoffs that carry a non-null caseRef and workflowInitiated handoffs without a caseRef.",
+        "Workflow or case hosts own governed case identity and case-created semantics; Formspec processors only produce intake evidence.",
+        "Hosts must not rewrite the emitted handoff JSON to substitute a canonical governed-case id for workflowInitiated caseRef."
+      ]
+    },
+    {
+      "spec": "specs/core/spec.md",
       "schema": "schemas/validation-report.schema.json",
       "bluf": "specs/core/validation-report-spec.bluf.md",
       "llm": "specs/core/validation-report-spec.llm.md",

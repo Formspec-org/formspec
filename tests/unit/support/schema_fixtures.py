@@ -53,6 +53,11 @@ def validation_report_schema() -> dict:
 
 
 @pytest.fixture(scope="session")
+def intake_handoff_schema() -> dict:
+    return load_schema("intake-handoff.schema.json")
+
+
+@pytest.fixture(scope="session")
 def mapping_schema() -> dict:
     return load_schema("mapping.schema.json")
 
@@ -96,6 +101,7 @@ def locale_schema() -> dict:
 def schema_registry(
     definition_schema: dict,
     response_schema: dict,
+    intake_handoff_schema: dict,
     validation_report_schema: dict,
     validation_result_schema: dict,
     mapping_schema: dict,
@@ -109,6 +115,7 @@ def schema_registry(
     return build_schema_registry(
         definition_schema,
         response_schema,
+        intake_handoff_schema,
         validation_report_schema,
         validation_result_schema,
         mapping_schema,

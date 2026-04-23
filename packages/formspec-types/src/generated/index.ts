@@ -14,6 +14,7 @@ export type { TargetSchema, FieldRule, InnerRule, MappingDocument, Coerce, Value
 export type { RegistryEntry, RegistryDocument, Publisher, ConceptEquivalent, VocabularyFilter } from './registry.js';
 export type { ValidationResult } from './validation-result.js';
 export type { FormResponse, AuthoredSignature, AuthoredSignatureIdentityBinding, FormspecValidationResult } from './response.js';
+export type { IntakeHandoff, Ref, HashString, DefinitionRef, Extensions } from './intake-handoff.js';
 export type { ValidationReport } from './validation-report.js';
 export type { FELType, FELFunctionCatalog, FunctionEntry, Parameter } from './fel-functions.js';
 export type { ScreenerDocument, Availability, Phase, Route } from './screener.js';

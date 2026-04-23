@@ -155,8 +155,8 @@ class LintDiagnostic(msgspec.Struct, frozen=True):
 
 ### Pipeline Passes
 
-1. **Schema validation** (always) — `jsonschema` `Draft202012Validator` against the appropriate schema. 10 supported document types: `definition`, `response`, `validation_report`, `validation_result`, `mapping`, `registry`, `theme`, `component`, `changelog`, `fel_functions`.
-2. **Document type detection** — sentinel keys: `$formspec` → definition, `$formspecTheme` → theme, `$formspecComponent` → component, `$formspecRegistry` → registry; structural key sets detect `validation_result` (`path`, `severity`, `constraintKind`, `message`) and `fel_functions` (`version`, `functions`).
+1. **Schema validation** (always) — `jsonschema` `Draft202012Validator` against the appropriate schema. The Python validator currently auto-discovers and validates 11 artifact kinds: `definition`, `response`, `intake_handoff`, `validation_report`, `validation_result`, `mapping`, `registry`, `theme`, `component`, `changelog`, `fel_functions`.
+2. **Document type detection** — sentinel keys: `$formspec` → definition, `$formspecResponse` → response, `$formspecIntakeHandoff` → intake_handoff, `$formspecTheme` → theme, `$formspecComponent` → component, `$formspecRegistry` → registry, `$formspecValidationReport` → validation_report, `$formspecValidationResult` → validation_result, `$formspecChangelog` → changelog, `$formspecFelFunctions` → fel_functions.
 3. **Structural error gate** — structural schema errors halt further passes.
 4. **For `definition` documents:**
    - Tree indexing (item key/path index, duplicate detection)

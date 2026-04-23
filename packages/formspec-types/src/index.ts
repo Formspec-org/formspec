@@ -26,6 +26,7 @@ export type { Shape as FormShape } from './generated/definition.js';
 export type { Variable as FormVariable } from './generated/definition.js';
 export type { Instance as FormInstance } from './generated/definition.js';
 export type { OptionEntry as FormOption } from './generated/definition.js';
+export type { Phase as FormScreenerPhase } from './generated/screener.js';
 
 // ─── Augmented Bind type ─────────────────────────────────────────────
 // The generated Bind.default is typed as { [k: string]: unknown } because
@@ -41,9 +42,13 @@ import type {
   FormDefinition as GeneratedFormDefinition,
 } from './generated/definition.js';
 
-export type FormBind = Omit<Bind, 'default'> & {
+export type FormBind = Omit<Bind, 'default' | 'required'> & {
   default?: unknown;
+  required?: string | boolean;
 };
+
+/** Bind scoped to a screener item. */
+export type ScreenerBind = FormBind;
 
 // ─── Augmented Item type ─────────────────────────────────────────────
 // The generated Item type only includes base properties (key, type, label).

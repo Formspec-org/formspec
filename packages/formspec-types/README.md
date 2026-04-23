@@ -13,7 +13,7 @@ npm install formspec-types
 ## Usage
 
 ```ts
-import type { FormDefinition, FormItem, ValidationReport } from 'formspec-types';
+import type { FormDefinition, FormItem, IntakeHandoff, ValidationReport } from 'formspec-types';
 ```
 
 Packages that depend on `formspec-core` or `formspec-studio-core` receive these types as re-exports. Import directly from `formspec-types` only when you need the schema types without pulling in runtime code.
@@ -46,6 +46,10 @@ The augmented types above (`FormItem`, `FormBind`, `FormDefinition`, `FormScreen
 ### Response (`schemas/response.schema.json`)
 
 `FormResponse` — a completed or in-progress form submission, pinned to a specific definition version.
+
+### Intake Handoff (`schemas/intake-handoff.schema.json`)
+
+`IntakeHandoff` — a validated intake-session handoff to a workflow or case host. `workflowInitiated` handoffs require `caseRef`; `publicIntake` handoffs omit it until WOS accepts and creates a governed case.
 
 ### Validation (`schemas/validation-report.schema.json`, `schemas/validation-result.schema.json`)
 

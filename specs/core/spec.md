@@ -122,6 +122,8 @@ This specification defines:
 
 - The JSON schema for Definition documents (form definitions).
 - The JSON schema for Response documents (form responses).
+- The JSON schema for Intake Handoff documents (response-to-workflow
+  boundary records).
 - The Formspec Expression Language (FEL) grammar, type system, and built-in
   function library.
 - The processing model (rebuild, recalculate, revalidate, notify).
@@ -576,6 +578,137 @@ document-binding evidence above.
 >       "ceremonyId": "ceremony-2026-0001"
 >     }
 >   ]
+> }
+> ```
+
+#### 2.1.6.1 Intake Handoff
+
+An **Intake Handoff** is the boundary record emitted when a Formspec intake
+session is ready to be accepted by a workflow, case-management, or orchestration
+system. It binds the validated, canonical Response to its ValidationReport and
+respondent-ledger head, but it does not create, own, or advance a governed case.
+Any host-created intake record or case-acknowledgment record is outside
+Formspec.
+
+The canonical structural contract for Intake Handoff properties is generated
+from `schemas/intake-handoff.schema.json`:
+
+<!-- schema-ref:start id=core-intake-handoff-top-level schema=schemas/intake-handoff.schema.json pointers=# -->
+<!-- generated:schema-ref id=core-intake-handoff-top-level -->
+| Pointer | Field | Type | Required | Notes | Description |
+|---|---|---|---|---|---|
+| `#/properties/$formspecIntakeHandoff` | `$formspecIntakeHandoff` | <code>string</code> | yes | const: <code>"1.0"</code>; critical | Intake Handoff specification version. MUST be '1.0'. |
+| `#/properties/actorRef` | `actorRef` | <code>composite</code> | no | — | Optional reference to the actor who submitted or caused the handoff. |
+| `#/properties/caseRef` | `caseRef` | <code>composite</code> | no | critical | Reference to the governed case identity when one already exists, as emitted on the handoff. Required for workflowInitiated handoffs and absent or null for publicIntake handoffs. The host MAY map this value to a canonical governed-case id for storage; adapter finalization that compares the handoff to an accepted attach disposition MUST use this handoff string (or host-defined equivalence), not only a post-resolution canonical id absent from the handoff. |
+| `#/properties/definitionRef` | `definitionRef` | <code>&#36;ref</code> | yes | <code>&#36;ref</code>: <code>#/&#36;defs/DefinitionRef</code>; critical | Pinned Formspec Definition identity used to interpret responseRef. This carries the same pinning semantics as Response.definitionUrl plus Response.definitionVersion, but as a nested object. |
+| `#/properties/extensions` | `extensions` | <code>&#36;ref</code> | no | <code>&#36;ref</code>: <code>#/&#36;defs/Extensions</code> | — |
+| `#/properties/handoffId` | `handoffId` | <code>string</code> | yes | critical | Stable identifier for this handoff object. It should be idempotent for the same submitted intake session. |
+| `#/properties/initiationMode` | `initiationMode` | <code>string</code> | yes | enum: <code>"workflowInitiated"</code>, <code>"publicIntake"</code>; critical | Case initiation topology. 'workflowInitiated' means an existing workflow task or case requested this intake and caseRef is required; binding checks that tie acceptance to this handoff MUST use the same caseRef string as carried in the document (unless a host profile defines explicit equivalence). 'publicIntake' means a respondent began from an open form and no governed caseRef exists on the handoff; governed case identity after acceptance is host-owned outside this document. |
+| `#/properties/intakeSessionId` | `intakeSessionId` | <code>string</code> | yes | critical | Identifier for the intake session that produced the response and ledger evidence. |
+| `#/properties/ledgerHeadRef` | `ledgerHeadRef` | <code>&#36;ref</code> | yes | <code>&#36;ref</code>: <code>#/&#36;defs/Ref</code>; critical | Reference to the respondent-ledger head event or checkpoint at handoff time. |
+| `#/properties/occurredAt` | `occurredAt` | <code>string</code> | yes | critical | RFC 3339 timestamp when the handoff was produced. |
+| `#/properties/responseHash` | `responseHash` | <code>&#36;ref</code> | yes | <code>&#36;ref</code>: <code>#/&#36;defs/HashString</code>; critical | Digest of the canonical Response envelope referenced by responseRef. |
+| `#/properties/responseRef` | `responseRef` | <code>&#36;ref</code> | yes | <code>&#36;ref</code>: <code>#/&#36;defs/Ref</code>; critical | Reference to the persisted canonical Formspec Response produced by the intake session. |
+| `#/properties/subjectRef` | `subjectRef` | <code>composite</code> | no | — | Optional reference to the person, organization, asset, or matter that the intake concerns. |
+| `#/properties/validationReportRef` | `validationReportRef` | <code>&#36;ref</code> | yes | <code>&#36;ref</code>: <code>#/&#36;defs/Ref</code>; critical | Reference to the immutable ValidationReport snapshot evaluated before handoff. |
+<!-- schema-ref:end -->
+
+The generated table above defines required and optional properties. Prose
+requirements in this section describe semantics that the schema alone cannot
+express.
+
+An Intake Handoff has two first-class initiation modes:
+
+- `workflowInitiated` means a workflow task, governed case, or host process
+  requested the intake. The handoff MUST include `caseRef`.
+- `publicIntake` means a respondent began from an open intake surface. The
+  handoff MUST NOT include a non-null `caseRef`; the accepting workflow host MAY
+  create a governed case after accepting the handoff.
+
+**Handoff `caseRef` string vs host canonical case id (normative).** For
+`workflowInitiated`, the handoff's `caseRef` is the authoritative
+handoff-carried governed-case handle as emitted with the document. A conforming
+host or adapter that finalizes acceptance against this handoff MUST compare an
+accepted attach disposition to that same `caseRef` string (after any
+Unicode-whitespace normalization defined solely by the host profile), unless the
+host profile defines explicit string-equivalence rules (for example alias tables).
+The host MAY resolve `caseRef` to exactly one governed case and then use a
+canonical minted identifier for durable records, provenance outputs, and queue
+routing; those identifiers MUST NOT be substituted into the handoff JSON in
+place of the emitted `caseRef`. For `publicIntake`, governed case identity after
+acceptance is entirely outside the handoff; it is established by host policy
+and bounded acceptance metadata, not by `caseRef` on this object.
+
+Formspec owns the intake session, canonical Response, ValidationReport
+snapshot, and respondent-ledger evidence. The workflow host owns governed case
+identity, case lifecycle policy, task assignment, and the `case.created` event
+or equivalent domain event.
+
+The `definitionRef` tuple pins the Definition used to interpret `responseRef`.
+A conforming acceptor MUST NOT replace that tuple with a newer Definition
+version while accepting the handoff. This is the same version-pinning rule used
+for Response processing (Core S6.4, VP-01), but Intake Handoff carries the
+tuple as `definitionRef.url` and `definitionRef.version` instead of top-level
+`definitionUrl` and `definitionVersion`.
+
+The `responseHash` binds the handoff to the canonical Response envelope. A
+conforming acceptor SHOULD verify the hash before creating or updating any
+governed case state.
+
+The `ledgerHeadRef` identifies the respondent-side material history available
+at handoff time. Systems such as Trellis MAY anchor this evidence, but they
+MUST treat the handoff as evidence about intake completion, not as the case
+creation authority.
+
+`intakeSessionId` identifies the intake run that produced `responseRef`,
+`validationReportRef`, and `ledgerHeadRef`. `occurredAt` records the RFC 3339
+time when that validated evidence crossed the boundary into workflow-host
+acceptance.
+
+Reference resolution policy, stale-ledger policy, and host-specific acceptance
+checks beyond Formspec structural validity are out of scope for Formspec Core
+unless a host profile defines stricter rules.
+
+> **Example.** A public intake handoff with no governed case identity yet:
+>
+> ```json
+> {
+>   "$formspecIntakeHandoff": "1.0",
+>   "handoffId": "handoff-public-2026-0001",
+>   "initiationMode": "publicIntake",
+>   "definitionRef": {
+>     "url": "https://example.gov/forms/benefits-intake",
+>     "version": "1.0.0"
+>   },
+>   "responseRef": "urn:formspec:response:resp-2026-0001",
+>   "responseHash": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+>   "validationReportRef": "urn:formspec:validation-report:vr-2026-0001",
+>   "intakeSessionId": "session-2026-0001",
+>   "ledgerHeadRef": "urn:formspec:respondent-ledger-event:evt-2026-0003",
+>   "occurredAt": "2026-04-22T17:15:00Z"
+> }
+> ```
+
+> **Example.** A workflow-initiated handoff tied to an existing case:
+>
+> ```json
+> {
+>   "$formspecIntakeHandoff": "1.0",
+>   "handoffId": "handoff-workflow-2026-0001",
+>   "initiationMode": "workflowInitiated",
+>   "caseRef": "urn:wos:case:case-2026-0042",
+>   "definitionRef": {
+>     "url": "https://example.gov/forms/benefits-intake",
+>     "version": "1.0.0"
+>   },
+>   "responseRef": "urn:formspec:response:resp-2026-0001",
+>   "responseHash": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+>   "validationReportRef": "urn:formspec:validation-report:vr-2026-0001",
+>   "intakeSessionId": "session-2026-0001",
+>   "actorRef": "urn:iam:actor:user-123",
+>   "subjectRef": "urn:party:person:applicant-456",
+>   "ledgerHeadRef": "urn:formspec:respondent-ledger-event:evt-2026-0003",
+>   "occurredAt": "2026-04-22T17:15:00Z"
 > }
 > ```
 

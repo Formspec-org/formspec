@@ -26,8 +26,8 @@ const OUT_DIR = resolve(__dirname, '../src/generated');
  */
 const URI_TO_LOCAL = {};
 for (const f of ['definition', 'component', 'theme', 'mapping', 'registry',
-  'response', 'validation-report', 'validation-result', 'fel-functions',
-  'screener', 'determination', 'token-registry']) {
+  'response', 'intake-handoff', 'validation-report', 'validation-result',
+  'fel-functions', 'screener', 'determination', 'token-registry']) {
   const filePath = resolve(SCHEMAS_DIR, `${f}.schema.json`);
   if (existsSync(filePath)) {
     const s = JSON.parse(readFileSync(filePath, 'utf-8'));
@@ -63,6 +63,7 @@ const SCHEMA_SOURCES = [
   { file: 'registry.schema.json', title: 'RegistryDocument' },
   { file: 'validation-result.schema.json', title: 'ValidationResult' },
   { file: 'response.schema.json', title: 'FormResponse' },
+  { file: 'intake-handoff.schema.json', title: 'IntakeHandoff' },
   { file: 'validation-report.schema.json', title: 'ValidationReport' },
   { file: 'fel-functions.schema.json', title: 'FELFunctionCatalog' },
   { file: 'screener.schema.json', title: 'ScreenerDocument' },

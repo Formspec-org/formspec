@@ -1,0 +1,13 @@
+- Intake Handoff is a boundary artifact: it transfers validated intake evidence to a workflow or case host without assigning case lifecycle authority to Formspec.
+- `initiationMode` is normative: `workflowInitiated` requires an existing `caseRef`; `publicIntake` starts without a governed `caseRef`.
+- Core S2.1.6.1 is the structural anchor for Intake Handoff semantics; `schemas/intake-handoff.schema.json` is the co-authoritative structural contract.
+- The pinned `definitionRef` tuple must be preserved when accepting the handoff; downstream systems must not reinterpret the Response against a newer Definition version (Core S6.4, VP-01).
+- `definitionRef.{url, version}` carries the same pinning semantics as Response `definitionUrl` plus `definitionVersion`, but uses a nested object shape because the handoff is a boundary sidecar rather than the Response envelope itself.
+- `responseRef`, `responseHash`, and `validationReportRef` bind the handoff to a canonical response and immutable validation snapshot.
+- `intakeSessionId` identifies the intake run that produced the response and respondent-ledger evidence; `occurredAt` timestamps the moment that evidence crossed the boundary.
+- `ledgerHeadRef` connects the handoff to respondent-side material history; ledger anchoring is evidence about intake completion, not proof that a case was created.
+- Workflow hosts own governed case identity, task assignment, case-created semantics, and policy decisions about accepting or rejecting the handoff.
+- For `workflowInitiated`, `caseRef` is the handoff-carried governed-case handle string. Binding or adapter steps that assert consistency between this handoff and an accepted attach disposition MUST compare using that same string (unless a host profile defines explicit equivalence rules). The host MAY resolve legacy aliases or mint canonical governed-case identifiers for durable storage, provenance, and routing; the handoff document itself remains the evidence-boundary record and MUST NOT be silently rewritten to substitute a canonical id for `caseRef`.
+- For `publicIntake`, no governed `caseRef` appears on the handoff. Governed case identity after acceptance is host-owned and communicated outside this boundary object (for example host acceptance metadata, policy output, or subsequent domain events).
+- Reference resolution policy, stale-ledger policy, and host-specific acceptance checks beyond Formspec structural validity remain out of scope for Formspec unless a host profile tightens them.
+- Extension handling remains namespaced and must not override initiation mode, case reference, response integrity, or definition pinning semantics.

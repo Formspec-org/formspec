@@ -1,0 +1,7 @@
+- This section defines the Intake Handoff boundary document emitted after a validated intake session.
+- A valid handoff requires `$formspecIntakeHandoff`, `handoffId`, `initiationMode`, pinned `definitionRef`, `responseRef`, `responseHash`, `validationReportRef`, `intakeSessionId`, `ledgerHeadRef`, and `occurredAt`.
+- `workflowInitiated` handoffs require `caseRef`; `publicIntake` handoffs must not carry a non-null `caseRef`.
+- Formspec owns intake evidence; the workflow host owns governed case identity and case-created semantics.
+- `workflowInitiated` `caseRef` is the handoff string used for attach binding checks; the host may still persist canonical case ids. `publicIntake` has no governed `caseRef` on the handoff; post-acceptance case identity is host-owned outside the document.
+- Definition pinning follows the same version-pinning semantics as Response pinning (Core S6.4, VP-01), but the handoff carries the tuple as `definitionRef.{url, version}` instead of top-level `definitionUrl` and `definitionVersion`.
+- This BLUF is governed by `schemas/intake-handoff.schema.json` and Core S2.1.6.1; generated references are the structural contract.

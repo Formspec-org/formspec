@@ -1,0 +1,249 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://formspec.org/schemas/intake-handoff/1.0",
+  "title": "Formspec Intake Handoff",
+  "description": "A Formspec Intake Handoff records the boundary object emitted when a validated intake session is handed to a workflow or case system. It carries the canonical response reference, validation snapshot reference, respondent-ledger head reference, and initiation mode without assigning case lifecycle authority to Formspec. WOS or another workflow host owns governed case identity and the case-created event. For workflowInitiated handoffs, caseRef is the handoff-carried governed-case handle string; the host MAY resolve aliases or mint canonical identifiers for durable records and provenance without mutating the handoff document.",
+  "type": "object",
+  "required": [
+    "$formspecIntakeHandoff",
+    "handoffId",
+    "initiationMode",
+    "definitionRef",
+    "responseRef",
+    "responseHash",
+    "validationReportRef",
+    "intakeSessionId",
+    "ledgerHeadRef",
+    "occurredAt"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "initiationMode": {
+            "const": "publicIntake"
+          }
+        },
+        "required": ["initiationMode"]
+      },
+      "then": {
+        "properties": {
+          "caseRef": {
+            "type": "null",
+            "description": "Public intake starts without a governed case identity. A workflow host may create one after accepting the handoff."
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "initiationMode": {
+            "const": "workflowInitiated"
+          }
+        },
+        "required": ["initiationMode"]
+      },
+      "then": {
+        "required": ["caseRef"],
+        "properties": {
+          "caseRef": {
+            "$ref": "#/$defs/Ref"
+          }
+        }
+      }
+    }
+  ],
+  "properties": {
+    "$formspecIntakeHandoff": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Intake Handoff specification version. MUST be '1.0'.",
+      "examples": ["1.0"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Version pin for intake handoff compatibility."
+      }
+    },
+    "handoffId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable identifier for this handoff object. It should be idempotent for the same submitted intake session.",
+      "examples": ["handoff-public-2026-0001", "handoff-workflow-2026-0001"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Idempotency and trace handle for the intake-to-case boundary."
+      }
+    },
+    "initiationMode": {
+      "type": "string",
+      "enum": ["workflowInitiated", "publicIntake"],
+      "description": "Case initiation topology. 'workflowInitiated' means an existing workflow task or case requested this intake and caseRef is required; binding checks that tie acceptance to this handoff MUST use the same caseRef string as carried in the document (unless a host profile defines explicit equivalence). 'publicIntake' means a respondent began from an open form and no governed caseRef exists on the handoff; governed case identity after acceptance is host-owned outside this document.",
+      "examples": ["workflowInitiated", "publicIntake"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Determines whether case identity already exists or must be minted by the workflow host."
+      }
+    },
+    "caseRef": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/Ref"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Reference to the governed case identity when one already exists, as emitted on the handoff. Required for workflowInitiated handoffs and absent or null for publicIntake handoffs. The host MAY map this value to a canonical governed-case id for storage; adapter finalization that compares the handoff to an accepted attach disposition MUST use this handoff string (or host-defined equivalence), not only a post-resolution canonical id absent from the handoff.",
+      "examples": ["urn:wos:case:case-2026-0042", null],
+      "x-lm": {
+        "critical": true,
+        "intent": "Connects an intake handoff to an existing case without letting Formspec create the case."
+      }
+    },
+    "definitionRef": {
+      "$ref": "#/$defs/DefinitionRef",
+      "description": "Pinned Formspec Definition identity used to interpret responseRef. This carries the same pinning semantics as Response.definitionUrl plus Response.definitionVersion, but as a nested object.",
+      "examples": [
+        {
+          "url": "https://example.gov/forms/benefits-intake",
+          "version": "1.0.0"
+        }
+      ],
+      "x-lm": {
+        "critical": true,
+        "intent": "Preserves the exact Definition identity that governed response capture and validation."
+      }
+    },
+    "responseRef": {
+      "$ref": "#/$defs/Ref",
+      "description": "Reference to the persisted canonical Formspec Response produced by the intake session.",
+      "examples": ["urn:formspec:response:resp-2026-0001"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Stable pointer to the canonical captured data payload."
+      }
+    },
+    "responseHash": {
+      "$ref": "#/$defs/HashString",
+      "description": "Digest of the canonical Response envelope referenced by responseRef.",
+      "examples": [
+        "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+      ],
+      "x-lm": {
+        "critical": true,
+        "intent": "Integrity binding for the response bytes used by downstream acceptance."
+      }
+    },
+    "validationReportRef": {
+      "$ref": "#/$defs/Ref",
+      "description": "Reference to the immutable ValidationReport snapshot evaluated before handoff.",
+      "examples": ["urn:formspec:validation-report:vr-2026-0001"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Carries validation evidence without reinterpreting case policy in Formspec."
+      }
+    },
+    "intakeSessionId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Identifier for the intake session that produced the response and ledger evidence.",
+      "examples": ["session-2026-0001"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Stable session handle that binds the handoff to the intake run that produced its evidence."
+      }
+    },
+    "actorRef": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/Ref"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Optional reference to the actor who submitted or caused the handoff.",
+      "examples": ["urn:iam:actor:user-123", null]
+    },
+    "subjectRef": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/Ref"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Optional reference to the person, organization, asset, or matter that the intake concerns.",
+      "examples": ["urn:party:person:applicant-456", null]
+    },
+    "ledgerHeadRef": {
+      "$ref": "#/$defs/Ref",
+      "description": "Reference to the respondent-ledger head event or checkpoint at handoff time.",
+      "examples": ["urn:formspec:respondent-ledger-event:evt-2026-0003"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Connects downstream case creation to respondent-side material history."
+      }
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "RFC 3339 timestamp when the handoff was produced.",
+      "examples": ["2026-04-22T17:15:00Z"],
+      "x-lm": {
+        "critical": true,
+        "intent": "Boundary timestamp for when the validated intake evidence became eligible for host acceptance."
+      }
+    },
+    "extensions": {
+      "$ref": "#/$defs/Extensions"
+    }
+  },
+  "$defs": {
+    "DefinitionRef": {
+      "type": "object",
+      "required": ["url", "version"],
+      "additionalProperties": false,
+      "description": "Pinned Formspec Definition identity used to interpret and validate the Response.",
+      "properties": {
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Canonical Definition URL.",
+          "examples": ["https://example.gov/forms/benefits-intake"]
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Exact pinned Definition version.",
+          "examples": ["1.0.0"]
+        }
+      }
+    },
+    "Ref": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Opaque non-empty reference string owned by the producing system.",
+      "examples": ["urn:wos:case:case-2026-0042"]
+    },
+    "HashString": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._:+-]+:.+$",
+      "description": "Algorithm-prefixed digest or integrity token, such as 'sha256:...'.",
+      "examples": [
+        "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+      ]
+    },
+    "Extensions": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^x-"
+      },
+      "additionalProperties": true,
+      "description": "Implementation-specific extension data. Keys must be namespaced with an 'x-' prefix."
+    }
+  }
+}

@@ -18,6 +18,7 @@ pub enum DocumentType {
     Mapping,
     Component,
     Response,
+    IntakeHandoff,
     ValidationReport,
     ValidationResult,
     Registry,
@@ -36,6 +37,7 @@ impl DocumentType {
             DocumentType::Mapping => "mapping",
             DocumentType::Component => "component",
             DocumentType::Response => "response",
+            DocumentType::IntakeHandoff => "intake_handoff",
             DocumentType::ValidationReport => "validation_report",
             DocumentType::ValidationResult => "validation_result",
             DocumentType::Registry => "registry",
@@ -54,6 +56,9 @@ impl DocumentType {
             "mapping" => Some(DocumentType::Mapping),
             "component" => Some(DocumentType::Component),
             "response" => Some(DocumentType::Response),
+            "intake_handoff" | "intakeHandoff" | "intake-handoff" => {
+                Some(DocumentType::IntakeHandoff)
+            }
             "validation_report" | "validationReport" => Some(DocumentType::ValidationReport),
             "validation_result" | "validationResult" => Some(DocumentType::ValidationResult),
             "registry" => Some(DocumentType::Registry),
@@ -124,6 +129,7 @@ pub struct SchemaValidationPlan {
 ///   - References:        `$formspecReferences`
 ///   - Mapping:           `$formspecMapping`
 ///   - Response:          `$formspecResponse`
+///   - IntakeHandoff:     `$formspecIntakeHandoff`
 ///   - ValidationReport:  `$formspecValidationReport`
 ///   - ValidationResult:  `$formspecValidationResult`
 ///   - Changelog:         `$formspecChangelog`
@@ -135,6 +141,7 @@ const MARKER_FIELDS: &[(&str, DocumentType)] = &[
     ("$formspecRegistry", DocumentType::Registry),
     ("$formspecMapping", DocumentType::Mapping),
     ("$formspecResponse", DocumentType::Response),
+    ("$formspecIntakeHandoff", DocumentType::IntakeHandoff),
     ("$formspecValidationReport", DocumentType::ValidationReport),
     ("$formspecValidationResult", DocumentType::ValidationResult),
     ("$formspecChangelog", DocumentType::Changelog),
@@ -335,6 +342,29 @@ mod tests {
     }
 
     #[test]
+    fn test_detect_intake_handoff() {
+        let doc = json!({
+            "$formspecIntakeHandoff": "1.0",
+            "handoffId": "handoff-1",
+            "initiationMode": "publicIntake",
+            "definitionRef": {
+                "url": "https://example.org/forms/x",
+                "version": "1.0.0"
+            },
+            "responseRef": "urn:formspec:response:resp-1",
+            "responseHash": "sha256:abc",
+            "validationReportRef": "urn:formspec:validation-report:vr-1",
+            "intakeSessionId": "session-1",
+            "ledgerHeadRef": "urn:formspec:respondent-ledger-event:evt-1",
+            "occurredAt": "2026-04-22T17:15:00Z"
+        });
+        assert_eq!(
+            detect_document_type(&doc),
+            Some(DocumentType::IntakeHandoff)
+        );
+    }
+
+    #[test]
     fn test_detect_validation_report() {
         let doc = json!({
             "$formspecValidationReport": "1.0",
@@ -489,6 +519,7 @@ mod tests {
         assert_eq!(DocumentType::Mapping.schema_key(), "mapping");
         assert_eq!(DocumentType::Component.schema_key(), "component");
         assert_eq!(DocumentType::Response.schema_key(), "response");
+        assert_eq!(DocumentType::IntakeHandoff.schema_key(), "intake_handoff");
         assert_eq!(
             DocumentType::ValidationReport.schema_key(),
             "validation_report"
@@ -511,6 +542,18 @@ mod tests {
         assert_eq!(
             DocumentType::from_schema_key("validation_result"),
             Some(DocumentType::ValidationResult)
+        );
+        assert_eq!(
+            DocumentType::from_schema_key("intake_handoff"),
+            Some(DocumentType::IntakeHandoff)
+        );
+        assert_eq!(
+            DocumentType::from_schema_key("intake-handoff"),
+            Some(DocumentType::IntakeHandoff)
+        );
+        assert_eq!(
+            DocumentType::from_schema_key("intakeHandoff"),
+            Some(DocumentType::IntakeHandoff)
         );
         assert_eq!(
             DocumentType::from_schema_key("fel_functions"),

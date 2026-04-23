@@ -23,6 +23,7 @@ const DEFINITION_SCHEMA: &str = include_str!("../schemas/definition.schema.json"
 const COMPONENT_SCHEMA: &str = include_str!("../schemas/component.schema.json");
 const THEME_SCHEMA: &str = include_str!("../schemas/theme.schema.json");
 const RESPONSE_SCHEMA: &str = include_str!("../schemas/response.schema.json");
+const INTAKE_HANDOFF_SCHEMA: &str = include_str!("../schemas/intake-handoff.schema.json");
 const MAPPING_SCHEMA: &str = include_str!("../schemas/mapping.schema.json");
 const CHANGELOG_SCHEMA: &str = include_str!("../schemas/changelog.schema.json");
 const REGISTRY_SCHEMA: &str = include_str!("../schemas/registry.schema.json");
@@ -62,6 +63,7 @@ struct SchemaSet {
     envelope_component: Validator,
     theme: Validator,
     response: Validator,
+    intake_handoff: Validator,
     mapping: Validator,
     changelog: Validator,
     registry: Validator,
@@ -78,6 +80,7 @@ fn schema_set() -> &'static SchemaSet {
         envelope_component: build_validator(COMPONENT_SCHEMA),
         theme: build_validator(THEME_SCHEMA),
         response: build_validator(RESPONSE_SCHEMA),
+        intake_handoff: build_validator(INTAKE_HANDOFF_SCHEMA),
         mapping: build_validator(MAPPING_SCHEMA),
         changelog: build_validator(CHANGELOG_SCHEMA),
         registry: build_validator(REGISTRY_SCHEMA),
@@ -199,6 +202,7 @@ pub fn validate_schema(doc: &Value, doc_type: DocumentType) -> Vec<LintDiagnosti
         DocumentType::Component => unreachable!(),
         DocumentType::Theme => &set.theme,
         DocumentType::Response => &set.response,
+        DocumentType::IntakeHandoff => &set.intake_handoff,
         DocumentType::Mapping => &set.mapping,
         DocumentType::Changelog => &set.changelog,
         DocumentType::Registry => &set.registry,
@@ -478,6 +482,75 @@ mod tests {
             diags
                 .iter()
                 .map(|d| (&d.code, &d.message))
+                .collect::<Vec<_>>()
+        );
+    }
+
+    fn valid_public_intake_handoff() -> Value {
+        json!({
+            "$formspecIntakeHandoff": "1.0",
+            "handoffId": "handoff-public-2026-0001",
+            "initiationMode": "publicIntake",
+            "definitionRef": {
+                "url": "https://example.gov/forms/benefits-intake",
+                "version": "1.0.0"
+            },
+            "responseRef": "urn:formspec:response:resp-2026-0001",
+            "responseHash": "sha256:0123456789abcdef",
+            "validationReportRef": "urn:formspec:validation-report:vr-2026-0001",
+            "intakeSessionId": "session-2026-0001",
+            "ledgerHeadRef": "urn:formspec:respondent-ledger-event:evt-2026-0003",
+            "occurredAt": "2026-04-22T17:15:00Z"
+        })
+    }
+
+    #[test]
+    fn valid_intake_handoff_produces_no_e101() {
+        let diags = validate_schema(&valid_public_intake_handoff(), DocumentType::IntakeHandoff);
+        assert!(
+            diags.is_empty(),
+            "Valid intake handoff should produce no E101, got: {:?}",
+            diags
+                .iter()
+                .map(|d| (&d.code, &d.path, &d.message))
+                .collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn public_intake_handoff_rejects_existing_case_ref() {
+        let mut handoff = valid_public_intake_handoff();
+        handoff
+            .as_object_mut()
+            .unwrap()
+            .insert("caseRef".to_string(), json!("urn:wos:case:case-2026-0042"));
+
+        let diags = validate_schema(&handoff, DocumentType::IntakeHandoff);
+        assert!(
+            diags.iter().any(|d| d.code == "E101"),
+            "Public intake with a caseRef should produce E101, got: {:?}",
+            diags
+                .iter()
+                .map(|d| (&d.code, &d.path, &d.message))
+                .collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn workflow_intake_handoff_requires_case_ref() {
+        let mut handoff = valid_public_intake_handoff();
+        handoff
+            .as_object_mut()
+            .unwrap()
+            .insert("initiationMode".to_string(), json!("workflowInitiated"));
+
+        let diags = validate_schema(&handoff, DocumentType::IntakeHandoff);
+        assert!(
+            diags.iter().any(|d| d.code == "E101"),
+            "Workflow-initiated intake without caseRef should produce E101, got: {:?}",
+            diags
+                .iter()
+                .map(|d| (&d.code, &d.path, &d.message))
                 .collect::<Vec<_>>()
         );
     }

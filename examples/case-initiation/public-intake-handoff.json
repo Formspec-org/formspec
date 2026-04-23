@@ -1,0 +1,15 @@
+{
+  "$formspecIntakeHandoff": "1.0",
+  "handoffId": "handoff-public-2026-0001",
+  "initiationMode": "publicIntake",
+  "definitionRef": {
+    "url": "https://example.gov/forms/benefits-intake",
+    "version": "1.0.0"
+  },
+  "responseRef": "urn:formspec:response:resp-2026-0001",
+  "responseHash": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  "validationReportRef": "urn:formspec:validation-report:vr-2026-0001",
+  "intakeSessionId": "session-2026-0001",
+  "ledgerHeadRef": "urn:formspec:respondent-ledger-event:evt-2026-0003",
+  "occurredAt": "2026-04-22T17:15:00Z"
+}
