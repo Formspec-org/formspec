@@ -3,10 +3,11 @@ import { useState, useEffect, useMemo } from 'react';
 import { useProject } from '../../../state/useProject';
 import { InlineExpression } from '../../../components/ui/InlineExpression';
 import { ConditionBuilder, ConditionBuilderPreview } from '../../../components/ui/ConditionBuilder';
-import { flatItems, type FELEditorFieldOption } from '@formspec-org/studio-core';
+import { parseFELToGroup, type FELEditorFieldOption } from '@formspec-org/studio-core';
 import type { Route } from '@formspec-org/types';
 import { ExpandableCard } from '../../../components/shared/ExpandableCard';
 import { ConfirmDialog } from '../../../components/ConfirmDialog';
+import { useFieldOptions } from '../../../hooks/useFieldOptions';
 
 interface RouteCardProps {
   route: Route;
@@ -33,15 +34,7 @@ export function RouteCard({ route, index, phaseId, strategy, isExpanded, onToggl
   useEffect(() => { setEditMessage(route.message ?? ''); }, [route.message]);
   useEffect(() => { setEditThreshold(String(route.threshold ?? 0)); }, [route.threshold]);
 
-  const screenerFields = useMemo<FELEditorFieldOption[]>(() => {
-    const items = project.state.screener?.items;
-    if (!items) return [];
-    return flatItems(items).map((fi) => ({
-      path: fi.path,
-      label: fi.item.label || fi.path,
-      dataType: fi.item.dataType,
-    }));
-  }, [project.state.screener?.items]);
+  const screenerFields = useFieldOptions();
 
   const isScoreStrategy = strategy === 'score-threshold';
   const badge = isScoreStrategy ? 'SCORE' : 'IF';

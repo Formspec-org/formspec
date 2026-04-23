@@ -1,14 +1,6 @@
 /** @filedesc Changeset review wrapper with diagnostics and merge message for the studio chat panel. */
 import { ChangesetReview, type ChangesetReviewData } from '../ChangesetReview.js';
-
-function IconWarning() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M7 5v3M7 10h.01" />
-      <path d="M6.13 1.87l-4.9 8.5A1 1 0 002.1 12h9.8a1 1 0 00.87-1.5l-4.9-8.5a1 1 0 00-1.74-.13z" />
-    </svg>
-  );
-}
+import { IconTriangleWarning as IconWarning } from '../icons/index.js';
 
 interface DiagnosticEntry {
   severity: 'error' | 'warning';

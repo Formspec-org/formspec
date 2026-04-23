@@ -12,6 +12,7 @@ import { InlineExpression } from '../../components/ui/InlineExpression';
 import { ExpandableCard } from '../../components/shared/ExpandableCard';
 import { InlineCreateForm } from '../../components/shared/InlineCreateForm';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { EmptyWorkspaceState } from '../../components/shared/EmptyWorkspaceState';
 
 interface OptionEntry {
   value: string;
@@ -122,13 +123,15 @@ export function OptionSets() {
 
       {/* Empty state */}
       {entries.length === 0 && !isAdding && (
-        <div className="py-8 border-2 border-dashed border-border/50 rounded-2xl flex flex-col items-center justify-center text-center px-6">
-          <p className="text-sm text-muted font-medium mb-2">No lookup tables defined.</p>
-          <p className="text-[12px] text-muted/70 leading-relaxed max-w-[400px]">
-            Option sets are reusable lists of choices shared across fields.
-            Reference them on a field with <code className="font-mono text-accent/70">"optionSet": "name"</code>.
-          </p>
-        </div>
+        <EmptyWorkspaceState
+          message="No lookup tables defined."
+          description={
+            <>
+              Option sets are reusable lists of choices shared across fields.
+              Reference them on a field with <code className="font-mono text-accent/70">"optionSet": "name"</code>.
+            </>
+          }
+        />
       )}
 
       {/* Option set cards */}

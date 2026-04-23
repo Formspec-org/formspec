@@ -3,6 +3,17 @@ import React, { useState } from 'react';
 import type { SessionSummary, ProviderConfig } from '@formspec-org/chat';
 import { TemplateLibrary } from '@formspec-org/chat';
 
+import {
+  IconPen,
+  IconGrid,
+  IconUpload,
+  IconClock,
+  IconChevronRight as IconChevron,
+  IconChevronLeft as IconArrowLeft,
+  IconSettings,
+  IconTrash,
+} from '../../components/icons';
+
 const library = new TemplateLibrary();
 const templates = library.getAll();
 
@@ -15,78 +26,6 @@ interface EntryScreenProps {
   providerConfig?: ProviderConfig | null;
   onOpenSettings?: () => void;
   onDeleteSession?: (id: string) => void;
-}
-
-// ── Icons ────────────────────────────────────────────────────────────
-
-function IconPen() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M14.5 3.5l4 4L8 18H4v-4L14.5 3.5z" />
-    </svg>
-  );
-}
-
-function IconGrid() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="3" y="3" width="7" height="7" rx="1.5" />
-      <rect x="12" y="3" width="7" height="7" rx="1.5" />
-      <rect x="3" y="12" width="7" height="7" rx="1.5" />
-      <rect x="12" y="12" width="7" height="7" rx="1.5" />
-    </svg>
-  );
-}
-
-function IconUpload() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M11 14V5M7.5 8.5L11 5l3.5 3.5" />
-      <path d="M4.5 15v2.5a1.5 1.5 0 001.5 1.5h10a1.5 1.5 0 001.5-1.5V15" />
-    </svg>
-  );
-}
-
-function IconClock() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="7.5" cy="7.5" r="6" />
-      <path d="M7.5 4.5V7.5l2.5 1.5" />
-    </svg>
-  );
-}
-
-function IconChevron() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M5 3l4 4-4 4" />
-    </svg>
-  );
-}
-
-function IconArrowLeft() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M10 3L5 7.5 10 12" />
-    </svg>
-  );
-}
-
-function IconSettings() {
-  return (
-    <svg width="17" height="17" viewBox="0 0 17 17" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="8.5" cy="8.5" r="2.5" />
-      <path d="M14 8.5a5.5 5.5 0 01-.3 1.8l1.3 1-1.4 2.4-1.5-.6a5.5 5.5 0 01-1.5.9l-.3 1.6h-2.8L7.2 14a5.5 5.5 0 01-1.5-.9l-1.5.6-1.4-2.4 1.3-1A5.5 5.5 0 013.8 8.5a5.5 5.5 0 01.3-1.8l-1.3-1L4.2 3.3l1.5.6A5.5 5.5 0 017.2 3l.3-1.6h2.8l.3 1.6c.6.2 1.1.5 1.5.9l1.5-.6 1.4 2.4-1.3 1a5.5 5.5 0 01.3 1.8z" />
-    </svg>
-  );
-}
-
-function IconTrash() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M2.5 4h9M5 4V2.5h4V4M5.5 6v4M8.5 6v4M3.5 4l.5 7.5a1 1 0 001 .5h4a1 1 0 001-.5L10.5 4" />
-    </svg>
-  );
 }
 
 const PROVIDER_LABELS: Record<string, string> = {

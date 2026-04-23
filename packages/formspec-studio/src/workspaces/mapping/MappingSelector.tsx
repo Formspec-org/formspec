@@ -1,5 +1,6 @@
 /** @filedesc Mapping tab selector strip — switch, create, delete, and rename named mapping documents. */
 import { useState, useRef, useEffect } from 'react';
+import { IconEdit, IconClose, IconPlus } from '../../components/icons';
 import { useProject } from '../../state/useProject';
 import { useMappingIds } from '../../state/useMappingIds';
 
@@ -152,9 +153,7 @@ export function MappingSelector() {
                   className="opacity-0 group-hover:opacity-40 hover:!opacity-100 text-muted leading-none transition-opacity"
                   onClick={(e) => startRename(id, e)}
                 >
-                  <svg width="8" height="8" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M8.5 1.5l2 2L4 10H2v-2L8.5 1.5z" />
-                  </svg>
+                  <IconEdit size={8} />
                 </button>
               )}
 
@@ -167,9 +166,7 @@ export function MappingSelector() {
                   className={`leading-none transition-opacity opacity-0 group-hover:opacity-40 hover:!opacity-100 text-muted hover:text-error`}
                   onClick={(e) => handleDelete(id, e)}
                 >
-                  <svg width="8" height="8" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M2 2l8 8M10 2l-8 8" />
-                  </svg>
+                  <IconClose size={8} />
                 </button>
               )}
             </div>
@@ -205,17 +202,7 @@ export function MappingSelector() {
             className="flex items-center justify-center w-8 h-8 rounded-lg border border-dashed border-border hover:border-accent hover:bg-accent/5 hover:text-accent transition-all duration-200 text-muted group/add shadow-sm"
             onClick={() => { setCreating(true); setNewId(''); }}
           >
-            <svg 
-              width="12" 
-              height="12" 
-              viewBox="0 0 12 12" 
-              fill="none" 
-              stroke="currentColor" 
-              strokeWidth="2.5" 
-              className="transition-transform duration-300 group-hover/add:rotate-90"
-            >
-              <path d="M6 2v8M2 6h8" strokeLinecap="round" />
-            </svg>
+            <IconPlus size={12} className="transition-transform duration-300 group-hover/add:rotate-90" />
           </button>
         )}
       </div>

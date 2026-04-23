@@ -2,6 +2,7 @@
 import { useEffect } from 'react';
 import { useDefinition } from '../state/useDefinition';
 import { useProject } from '../state/useProject';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 import type { MetadataChanges } from '@formspec-org/studio-core';
 import { HelpTip } from './ui/HelpTip';
 
@@ -152,17 +153,7 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
   const project = useProject();
   const presentation = definition.formPresentation ?? {};
 
-  useEffect(() => {
-    if (!open) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        onClose();
-      }
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [open, onClose]);
+  useEscapeKey(onClose, open);
 
   if (!open) return null;
 

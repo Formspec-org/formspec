@@ -1,5 +1,6 @@
 /** @filedesc Colored-border card displaying a single bind rule's type, humanized description, and FEL expression. */
 import { useState } from 'react';
+import { IconClose, IconExclamation } from '../icons';
 import { HighlightedExpression } from './InlineExpression';
 
 const bindColors: Record<string, string> = {
@@ -66,10 +67,7 @@ export function BindCard({ bindType, expression, humanized, message, children, o
               className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-error/10 hover:text-error text-muted/40 transition-colors"
               title={`Remove ${bindType}`}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
+              <IconClose size={10} strokeWidth={3} />
             </button>
           )}
         </div>
@@ -94,11 +92,7 @@ export function BindCard({ bindType, expression, humanized, message, children, o
 
       {error && (
         <div role="alert" className="flex items-start gap-1 mt-1 text-error text-[11px] leading-tight">
-          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 mt-0.5">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="8" x2="12" y2="12" />
-            <line x1="12" y1="16" x2="12.01" y2="16" />
-          </svg>
+          <IconExclamation className="shrink-0 mt-0.5" />
           <span>{error.message}</span>
         </div>
       )}

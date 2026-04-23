@@ -16,7 +16,7 @@ Use this file as a **backlog**: each `- [ ]` is one shippable task unless noted 
 
 **Context:** `project.ts` remains large (~4.4k lines after helper extraction). Preserve `src/index.ts` public API.
 
-- [ ] **Split remaining `Project` responsibilities** into focused modules: layout/page/region operations, theme/breakpoint/locale, screener/phases, mapping — re-export or compose from `project.ts` without breaking consumers.
+- [x] **Split remaining `Project` responsibilities** into focused modules: layout/page/region operations, theme/breakpoint/locale, screener/phases, mapping — re-export or compose from `project.ts` without breaking consumers.
 
 ---
 
@@ -107,24 +107,25 @@ Items already tracked in P4 are cross-referenced, not duplicated.
 
 #### 6.1 Shared primitives (highest leverage — eliminates the most duplication)
 
-- [ ] **`useEscapeKey(callback, active)`** — escape-key handler duplicated in 5 dialogs (`ImportDialog`, `ConfirmDialog`, `AppSettingsDialog`, `ProviderSetupV2`, `SettingsDialog`); also duplicated in `useEditorState.ts` and `useShellLayout.ts`.
-- [ ] **`<InlineCreateForm>`** — inline add/create pattern duplicated in 10 files: `DataSources.tsx`, `OptionSets.tsx`, `ScreenerQuestions.tsx`, `PhaseList.tsx`, `VariablesSection.tsx`, `ShapesSection.tsx`, `ColorPalette.tsx`, `AllTokens.tsx`, `ScreenSizes.tsx`, `MappingSelector.tsx`. All share `isAdding` state, autoFocus input, Enter/Escape handling, identical CSS.
-- [ ] **`<ExpandableCard>`** — card-with-collapsible-header duplicated in 5 files: `DataSources.tsx`, `OptionSets.tsx`, `QuestionCard.tsx`, `RouteCard.tsx`, `PhaseCard.tsx`. All share clickable header, rotating chevron, border state toggle, animate-in.
-- [ ] **`<Pillar>`** — workspace section pillar triplicated across `MappingTab.tsx:14-54`, `LogicTab.tsx:17-50`, `DataTab.tsx:12-45`. Identical structure, only `accentColor` default differs. Move to `workspaces/shared/`.
-- [ ] **`<SectionFilterBar>`** — tab strip triplicated across `MappingTab.tsx:104-125`, `LogicTab.tsx:76-96`, `DataTab.tsx:76-91`. Identical JSX + controlled/uncontrolled state.
-- [ ] **Consolidate icons** — inline SVGs copy-pasted in 10+ files: close/X (4 places), chevron (4), trash (2), plus (2), edit-pencil, warning, exclamation. Chat files define 20+ local icons. Move all to `components/icons/index.tsx`.
+- [x] **`useEscapeKey(callback, active)`** — escape-key handler duplicated in 5 dialogs (`ImportDialog`, `ConfirmDialog`, `AppSettingsDialog`, `ProviderSetupV2`, `SettingsDialog`); also duplicated in `useEditorState.ts` and `useShellLayout.ts`.
+- [x] **`<InlineCreateForm>`** — inline add/create pattern duplicated in 10 files: `DataSources.tsx`, `OptionSets.tsx`, `ScreenerQuestions.tsx`, `PhaseList.tsx`, `VariablesSection.tsx`, `ShapesSection.tsx`, `ColorPalette.tsx`, `AllTokens.tsx`, `ScreenSizes.tsx`, `MappingSelector.tsx`. All share `isAdding` state, autoFocus input, Enter/Escape handling, identical CSS. Added `accentColor` support.
+- [x] **`<ExpandableCard>`** — card-with-collapsible-header duplicated in 5 files: `DataSources.tsx`, `OptionSets.tsx`, `QuestionCard.tsx`, `RouteCard.tsx`, `PhaseCard.tsx`. All share clickable header, rotating chevron, border state toggle, animate-in.
+- [x] **`<Pillar>`** — workspace section pillar triplicated across `MappingTab.tsx:14-54`, `LogicTab.tsx:17-50`, `DataTab.tsx:12-45`. Identical structure, only `accentColor` default differs. Move to `workspaces/shared/`.
+- [x] **`<SectionFilterBar>`** — tab strip triplicated across `MappingTab.tsx:104-125`, `LogicTab.tsx:76-96`, `DataTab.tsx:76-91`. Identical JSX + controlled/uncontrolled state.
+- [x] **Consolidate icons** — inline SVGs copy-pasted in 10+ files: close/X (4 places), chevron (4), trash (2), plus (2), edit-pencil, warning, exclamation. Chat files define 20+ local icons. Move all to `components/icons/index.tsx`.
 - [ ] **Unify `CollapsibleSection`** — `Section.tsx`, `CollapsibleSection.tsx`, `AccordionSection.tsx` implement the same core behavior. Merge into one component with controlled/uncontrolled modes + optional decoration slots. (Section uses text `▶▼` while others use SVG — unify on SVG.)
 - [ ] **`useControllableState`** — "controlled if prop provided, uncontrolled otherwise" pattern reimplemented independently in `MappingTab.tsx`, `MappingConfig.tsx`, `PreviewTab.tsx`, `DataTab.tsx`.
-- [ ] **`exportProjectZip(project)`** — ZIP export logic duplicated verbatim in `Shell.tsx:331-361` and `ChatShellV2.tsx:182-209`. Move to `lib/`.
+- [x] **`exportProjectZip(project)`** — ZIP export logic duplicated verbatim in `Shell.tsx:331-361` and `ChatShellV2.tsx:182-209`. Move to `lib/`.
 - [ ] **`<RenderableBindCard>`** — `BindCard`+`GuidedBindEditor` wrapper copy-pasted 7 times in `ItemRowCategoryPanel.tsx` (relevant/required/constraint/readonly), `BindsInlineSection.tsx`, `FieldConfigSection.tsx`. ~18 identical lines each.
-- [ ] **FEL quoting utilities** — `quoteFELValue`/`unquoteFELValue` logic duplicated in `ConditionBuilder.tsx:177-184` and `ConditionBuilderPreview.tsx:414`. Extract to shared utility.
-- [ ] **`<EmptyBlueprintState>`** — dashed-border empty state repeated in 6 blueprint files: `DataSourcesList`, `OptionSetsList`, `VariablesList`, `MappingsList`, `StructureTree`, `ComponentTree`.
-- [ ] **`useProjectSlice(selector)`** — `useSyncExternalStore` subscription boilerplate duplicated in `useComponent.ts` and `useProjectState.ts`. Currently over-subscribes: `useComponent`, `useTheme`, `useScreener` all re-render on any project change.
-- [ ] **`useFieldOptions()`** — `flatItems(definition.items).map(...)` field-options construction duplicated in `FELEditor.tsx:147-154` and `GuidedBindEditor.tsx:30-37`.
-- [ ] **`<OverflowButton>`** — inline toolbar overflow button triplicated in `InlineToolbar.tsx` lines 493-509, 555-571, 614-630 (identical 17-line blocks).
+- [x] **FEL quoting utilities** — `quoteFELValue`/`unquoteFELValue` logic duplicated in `ConditionBuilder.tsx:177-184` and `ConditionBuilderPreview.tsx:414`. Extract to shared utility.
+- [x] **`<EmptyBlueprintState>`** — dashed-border empty state repeated in 6 blueprint files: `DataSourcesList`, `OptionSetsList`, `VariablesList`, `MappingsList`, `StructureTree`, `ComponentTree`.
+- [x] **`<EmptyWorkspaceState>`** — large dashed-border empty state extracted from `DataSources.tsx`, `OptionSets.tsx`, etc.
+- [x] **`useProjectSlice(selector)`** — `useSyncExternalStore` subscription boilerplate duplicated in `useComponent.ts` and `useProjectState.ts`. Consolidated into `useProjectSlice.ts`. Hooks like `useTheme`, `useScreener`, and `useDefinition` now only re-render when their specific state slice changes.
+- [x] **`useFieldOptions()`** — `flatItems(definition.items).map(...)` field-options construction duplicated in `FELEditor.tsx:147-154` and `GuidedBindEditor.tsx:30-37`. Consolidated into a shared hook.
+- [x] **`<OverflowButton>`** — inline toolbar overflow button triplicated in `InlineToolbar.tsx` lines 493-509, 555-571, 614-630 (identical 17-line blocks).
 - [ ] **`useDirtyGuard` adoption** — hook exported from `DirtyGuardConfirm.tsx` but never used; `PropertyPopover.tsx` and `ThemeOverridePopover.tsx` each roll their own `Set<string>`-based dirty tracking.
-- [ ] **Replace `window.confirm()`** — used in 7 locations (`DataSources.tsx`, `OptionSets.tsx`, `QuestionCard.tsx`, `RouteCard.tsx`, `PhaseCard.tsx`, `ScreenerToggle.tsx`) despite `<ConfirmDialog>` component existing.
-- [ ] **`BindEntry` interface + `bindTypes`** — duplicated verbatim between `logic/BindsSection.tsx:9-26` and `logic/FilterBar.tsx:4-20`. Extract to shared types file.
+- [x] **Replace `window.confirm()`** — used in 7 locations (`DataSources.tsx`, `OptionSets.tsx`, `QuestionCard.tsx`, `RouteCard.tsx`, `PhaseCard.tsx`, `ScreenerToggle.tsx`, `RuleEditor.tsx`) despite `<ConfirmDialog>` component existing.
+- [x] **`BindEntry` interface + `bindTypes`** — duplicated verbatim between `logic/BindsSection.tsx:9-26` and `logic/FilterBar.tsx:4-20`. Extract to shared types file.
 
 #### 6.2 Decompose god components
 
@@ -138,17 +139,17 @@ Items already tracked in P4 are cross-referenced, not duplicated.
 
 #### 6.3 Bugs and correctness
 
-- [ ] **`useOptionalDefinition()` reads stale data** — `state/useDefinition.ts:10-13` reads `project.state.definition` directly without `useSyncExternalStore` subscription; consumers never re-render on definition changes.
-- [ ] **`manageCount` non-reactive** — `hooks/useEditorState.ts:21-28` accesses `project.definition` directly (not via `useProjectState`), no `useMemo`, shows stale counts.
-- [ ] **`ActiveGroupProvider` context not memoized** — `state/useActiveGroup.tsx:16` creates new object literal on every parent render, unnecessary re-renders in all consumers.
-- [ ] **`useMappingIds` new array every render** — `state/useMappingIds.ts:6` calls `Object.keys()` each render, breaking `React.memo` in downstream components.
-- [ ] **`ConditionBuilder` stale on prop change** — `ui/ConditionBuilder.tsx:204-383` does not reset `mode`/`group`/`advancedDraft` when `value` prop changes (e.g., undo/redo).
-- [ ] **`FELEditor` blur-to-save race** — `ui/FELEditor.tsx:381-390` uses 150ms `setTimeout` with stale closure; fires `onSave` with outdated value if component unmounts or draft changes within window.
-- [ ] **`ShapesSection.handleAdd` discards user ID** — `logic/ShapesSection.tsx:31-33` calls `project.addValidation('*', 'true', ...)` ignoring the user-entered shape ID.
-- [ ] **`MappingConfig.tsx` Enter double-fires setter** — `mapping/MappingConfig.tsx:167-169` calls `project.setMappingTargetSchema` then blurs, but `onBlur` already calls the setter.
-- [ ] **DnD context re-renders on every pointer move** — `LayoutCanvasDragFeedbackContext` updates on every pointer move during drag, cascading re-renders through every `LayoutContainer` and row drop guide. Split pointer coordinates (ref) from drop indicator (context).
-- [ ] **`RuleCard.tsx` `any` typing** — `mapping/RuleCard.tsx:29` types `rule` as `any`; proper interface exists partially in `RuleEditor.tsx` but is not shared.
-- [ ] **`SettingsDialog.tsx` duplicate functions** — `setProperty` and `setPresentation` (lines 169-175) are verbatim copies.
+- [x] **`useOptionalDefinition()` reads stale data** — `state/useDefinition.ts:10-13` reads `project.state.definition` directly without `useSyncExternalStore` subscription; consumers never re-render on definition changes.
+- [x] **`manageCount` non-reactive** — `hooks/useEditorState.ts:21-28` accesses `project.definition` directly (not via `useProjectState`), no `useMemo`, shows stale counts.
+- [x] **`ActiveGroupProvider` context not memoized** — `state/useActiveGroup.tsx:16` creates new object literal on every parent render, unnecessary re-renders in all consumers.
+- [x] **`useMappingIds` new array every render** — `state/useMappingIds.ts:6` calls `Object.keys()` each render, breaking `React.memo` in downstream components.
+- [x] **`ConditionBuilder` stale on prop change** — `ui/ConditionBuilder.tsx:204-383` does not reset `mode`/`group`/`advancedDraft` when `value` prop changes (e.g., undo/redo).
+- [x] **`FELEditor` blur-to-save race** — `ui/FELEditor.tsx:381-390` uses 150ms `setTimeout` with stale closure; fires `onSave` with outdated value if component unmounts or draft changes within window.
+- [x] **`ShapesSection.handleAdd` discards user ID** — `logic/ShapesSection.tsx:31-33` calls `project.addValidation('*', 'true', ...)` ignoring the user-entered shape ID.
+- [x] **`MappingConfig.tsx` Enter double-fires setter** — `mapping/MappingConfig.tsx:167-169` calls `project.setMappingTargetSchema` then blurs, but `onBlur` already calls the setter.
+- [x] **DnD context re-renders on every pointer move** — `LayoutCanvasDragFeedbackContext` updates on every pointer move during drag, cascading re-renders through every `LayoutContainer` and row drop guide. Split pointer coordinates (ref) from drop indicator (context).
+- [x] **`RuleCard.tsx` `any` typing** — `mapping/RuleCard.tsx:29` types `rule` as `any`; proper interface exists partially in `RuleEditor.tsx` but is not shared.
+- [x] **`SettingsDialog.tsx` duplicate functions** — `setProperty` and `setPresentation` (lines 169-175) are verbatim copies.
 - [ ] **Remove dead `collisionPriority` prop** — computed in `render-tree.tsx`, threaded to `LayoutContainer`, `FieldBlock`, `DisplayBlock`; all receive and `void` it. Remove until wired into Pragmatic DnD.
 - [ ] **Remove dead code** — `ItemListEditor.tsx:422` (`paletteScope` identical branches), `OptionsModal.tsx:291-298` (both branches identical), `MappingSelector.tsx:167-170` (dead ternary).
 
@@ -161,11 +162,11 @@ Items already tracked in P4 are cross-referenced, not duplicated.
 - [ ] **Cross-workspace dependency** — `data/DataTab.tsx` imports from `../editor/DataSources` and `../editor/OptionSets`. Move shared components to `workspaces/shared/`.
 - [ ] **DnD file naming inconsistency** — 7 files mix `pdnd`, `dnd`, `drag-chrome`, `Pragmatic` naming. `layout-pdnd-kind.ts` is 2 lines, already re-exported from `layout-pdnd.ts`. Consolidate kind file; group under `dnd/` subdirectory.
 - [ ] **`layout-node-styles.ts` + `layout-canvas-drag-chrome.ts` overlap** — both export Tailwind class strings for layout canvas visual states. Merge into one file.
-- [ ] **Delete dead code** — `ComponentRenderer.tsx` (155 lines, superseded by `<formspec-render>` web component, no imports found); `LayoutPreviewPanel.tsx` (10 lines, self-documented as "Legacy"); `LayoutWorkspace.tsx` (3-line unnecessary re-export alias).
+- [x] **Delete dead code** — `ComponentRenderer.tsx` (155 lines, superseded by `<formspec-render>` web component, no imports found); `LayoutPreviewPanel.tsx` (10 lines, self-documented as "Legacy"); `LayoutWorkspace.tsx` (3-line unnecessary re-export alias).
 - [ ] **Add `ThemeTab.tsx`** — every workspace has a `*Tab.tsx` orchestrator except theme. Creates structural asymmetry.
 - [ ] **`handleResend`/`handleEdit` near-duplicate** — `chat-v2/ChatPanelV2.tsx:109-135` differs only in content source (`msg.content` vs `newContent`). Merge into single function with content parameter.
 - [ ] **`useWorkspaceRouter` unsafe casts** — `hooks/useWorkspaceRouter.ts:47` casts arbitrary event string to `MappingTabId` without validation; line 36 casts event as `CustomEvent` without checking shape.
-- [ ] **`<span onClick>` a11y** — `ConditionBuilderPreview.tsx:399-430` and `InlineExpression.tsx:113-122` use `<span onClick>` without `role="button"`, `tabIndex`, or keyboard handler. Replace with `<button>`.
+- [x] **`<span onClick>` a11y** — `ConditionBuilderPreview.tsx:399-430` and `InlineExpression.tsx:113-122` use `<span onClick>` without `role="button"`, `tabIndex`, or keyboard handler. Replace with `<button>`.
 
 ---
 

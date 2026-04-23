@@ -6,21 +6,9 @@ import { ProjectRegistry } from '@formspec-org/mcp/registry';
 import { createToolDispatch } from '@formspec-org/mcp/dispatch';
 import { ChangesetReview, type ChangesetReviewData } from './ChangesetReview.js';
 import { getSavedProviderConfig } from './AppSettingsDialog.js';
-import { IconSparkle, IconArrowUp } from './icons/index.js';
+import { IconSparkle, IconArrowUp, IconClose } from './icons/index.js';
 import { ChatMessageList } from './chat/ChatMessageList.js';
 import { ChangesetReviewSection } from './chat/ChangesetReviewSection.js';
-
-// ── Icons ──────────────────────────────────────────────────────────
-// IconClose is ChatPanel-only — kept local. Shared icons
-// (IconSparkle, IconArrowUp) live in ./icons.
-
-function IconClose() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-      <path d="M12 4L4 12M4 4l8 8" />
-    </svg>
-  );
-}
 
 // ── Types ──────────────────────────────────────────────────────────
 

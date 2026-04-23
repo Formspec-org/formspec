@@ -1,52 +1,13 @@
 /** @filedesc Message rendering for ChatPanelV2 — includes MessageBubble, TypingIndicator, EmptyState, and local icons. */
 import React, { useState, useRef, useEffect } from 'react';
-import { IconArrowUp } from '../../components/icons/index.js';
-
-function IconSparkle() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path d="M8 1l1.5 4.5L14 7l-4.5 1.5L8 13l-1.5-4.5L2 7l4.5-1.5L8 1z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" fill="currentColor" fillOpacity="0.15" />
-      <path d="M12.5 10.5l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7.7-2z" stroke="currentColor" strokeWidth="1" strokeLinejoin="round" fill="currentColor" fillOpacity="0.15" />
-    </svg>
-  );
-}
-
-function IconPencil() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M2 11l-.5.5h2l5.5-5.5-1.5-1.5L2 10v1z" />
-      <path d="M7.5 4.5l1.5 1.5" />
-      <path d="M9 3l1.5-1.5 1.5 1.5L10.5 4.5" />
-    </svg>
-  );
-}
-
-function IconRotate() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M1.5 6.5a5 5 0 019-2.5l.5.5" />
-      <path d="M11 1v3H8" />
-      <path d="M11.5 6.5a5 5 0 01-9 2.5l-.5-.5" />
-      <path d="M2 12V9h3" />
-    </svg>
-  );
-}
-
-function IconCheck() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M10.5 3.5L5 9.5 2.5 7" />
-    </svg>
-  );
-}
-
-function IconX() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M10 3L3 10M3 3l7 7" />
-    </svg>
-  );
-}
+import {
+  IconArrowUp,
+  IconSparkle,
+  IconEdit as IconPencil,
+  IconRotate,
+  IconCheck,
+  IconClose as IconX,
+} from '../../components/icons';
 
 function EmptyState() {
   return (

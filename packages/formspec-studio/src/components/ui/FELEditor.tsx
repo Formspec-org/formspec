@@ -19,13 +19,13 @@ import {
   getInstanceFieldOptions,
   getInstanceNameOptions,
   validateFEL,
-  flatItems,
   dataTypeInfo,
   type FELAutocompleteTrigger,
   type FELEditorFieldOption,
   type FELEditorFunctionOption,
 } from '@formspec-org/studio-core';
 import { useOptionalDefinition } from '../../state/useDefinition';
+import { useFieldOptions } from '../../hooks/useFieldOptions';
 import { getBuiltinFELFunctionCatalog } from '@formspec-org/engine';
 import { formatCategoryName } from './FELReferencePopup';
 
@@ -153,14 +153,7 @@ export function FELEditor({ value, onSave, onCancel, placeholder, className, aut
   }, [autocomplete]);
 
   // Options memoization
-  const fieldOptions = useMemo(() => {
-    if (!definition) return [];
-    return flatItems(definition.items || []).map(fi => ({
-      path: fi.path,
-      label: fi.item.label || fi.path,
-      dataType: fi.item.dataType
-    }));
-  }, [definition]);
+  const fieldOptions = useFieldOptions();
 
   const functionOptions = useMemo(() => {
     return getBuiltinFELFunctionCatalog().map(entry => ({

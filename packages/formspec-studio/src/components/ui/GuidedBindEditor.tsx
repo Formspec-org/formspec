@@ -1,8 +1,9 @@
 /** @filedesc Guided bind editor: wraps ConditionBuilder for boolean binds, InlineExpression for others. */
-import { useState, useMemo } from 'react';
-import { flatItems, parseFELToGroup, type FELEditorFieldOption } from '@formspec-org/studio-core';
+import { useState } from 'react';
+import { type FELEditorFieldOption } from '@formspec-org/studio-core';
 import { InlineExpression } from './InlineExpression';
 import { ConditionBuilder, ConditionBuilderPreview } from './ConditionBuilder';
+import { useFieldOptions } from '../../hooks/useFieldOptions';
 import type { FormDefinition } from '@formspec-org/types';
 
 const GUIDED_BIND_TYPES = new Set(['relevant', 'required', 'readonly', 'constraint']);
@@ -22,28 +23,22 @@ export function GuidedBindEditor({
   onSave,
   placeholder,
   autoEdit,
-  definition,
 }: GuidedBindEditorProps) {
   const [editing, setEditing] = useState(Boolean(autoEdit));
   const isSelfRef = bindType === 'constraint';
 
-  const fields = useMemo<FELEditorFieldOption[]>(() => {
-    if (!definition?.items) return [];
-    return flatItems(definition.items).map((fi) => ({
-      path: fi.path,
-      label: fi.item.label || fi.path,
-      dataType: fi.item.dataType,
-    }));
-  }, [definition]);
+  const fields = useFieldOptions();
 
-  if (!GUIDED_BIND_TYPES.has(bindType)) {
+  const isGuided = GUIDED_BIND_TYPES.has(bindType);
+
+  if (!isGuided) {
     return (
       <InlineExpression
         value={value}
         onSave={onSave}
         placeholder={placeholder}
         autoEdit={autoEdit}
-        expressionType={bindType === 'calculate' ? 'calculate' : undefined}
+        expressionType={bindType === 'calculate' ? 'calculate' : 'default'}
       />
     );
   }

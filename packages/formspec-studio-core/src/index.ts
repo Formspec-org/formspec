@@ -176,6 +176,8 @@ export {
   groupToFEL,
   operatorRequiresValue,
   parseFELToGroup,
+  quoteFELValue,
+  unquoteFELValue,
 } from './fel-condition-builder.js';
 export type {
   ComparisonOperator,

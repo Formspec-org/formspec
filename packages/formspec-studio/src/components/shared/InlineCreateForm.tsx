@@ -1,6 +1,4 @@
 /** @filedesc Reusable inline create form with accent border, input area, and Cancel/Create actions. */
-import type React from 'react';
-
 interface InlineCreateFormProps {
   children: React.ReactNode;
   example?: React.ReactNode;
@@ -8,6 +6,7 @@ interface InlineCreateFormProps {
   onCreate: () => void;
   createLabel?: string;
   canCreate?: boolean;
+  accentColor?: 'accent' | 'logic' | 'teal';
 }
 
 export function InlineCreateForm({
@@ -17,14 +16,29 @@ export function InlineCreateForm({
   onCreate,
   createLabel = 'Create',
   canCreate = true,
+  accentColor = 'accent',
 }: InlineCreateFormProps) {
+  const borderClass = {
+    accent: 'border-accent/30 bg-accent/5',
+    logic: 'border-logic/30 bg-logic/5',
+    teal: 'border-teal/30 bg-teal/5',
+  }[accentColor];
+
+  const btnClass = {
+    accent: 'text-accent hover:text-accent-hover',
+    logic: 'text-logic hover:text-logic-hover',
+    teal: 'text-teal hover:text-teal-hover',
+  }[accentColor];
+
   return (
-    <div className="border border-accent/30 rounded-xl bg-accent/5 p-4 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
+    <div className={`border rounded-xl p-4 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200 ${borderClass}`}>
       {children}
       {example && (
-        <p className="text-[11px] text-muted">{example}</p>
+        <div className="text-[11px] text-muted italic">
+          {example}
+        </div>
       )}
-      <div className="flex justify-end gap-2">
+      <div className="flex justify-end items-center gap-2 pt-1">
         <button
           type="button"
           onClick={onCancel}
@@ -36,7 +50,7 @@ export function InlineCreateForm({
           type="button"
           onClick={onCreate}
           disabled={!canCreate}
-          className="text-[10px] uppercase font-bold text-accent hover:text-accent-hover transition-colors disabled:opacity-50"
+          className={`text-[10px] uppercase font-bold transition-colors disabled:opacity-50 ${btnClass}`}
         >
           {createLabel}
         </button>

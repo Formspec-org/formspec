@@ -1,10 +1,11 @@
 /** @filedesc Hooks that return the current form definition document from project state. */
-import { useSyncExternalStore, useCallback, useContext } from 'react';
-import { useProjectState } from './useProjectState';
+import { useProjectSlice } from './useProjectSlice';
+import { useContext, useCallback, useSyncExternalStore } from 'react';
 import { ProjectContext } from './ProjectContext';
+import type { FormDefinition } from '@formspec-org/studio-core';
 
-export function useDefinition() {
-  return useProjectState().definition;
+export function useDefinition(): Readonly<FormDefinition> {
+  return useProjectSlice((s) => s.definition);
 }
 
 export function useOptionalDefinition() {

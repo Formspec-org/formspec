@@ -1,6 +1,6 @@
 /** @filedesc Hook that returns the current theme document from project state. */
-import { useProjectState } from './useProjectState';
+import { useProjectSlice } from './useProjectSlice';
 
 export function useTheme() {
-  return useProjectState().theme;
+  return useProjectSlice((s) => s.theme);
 }

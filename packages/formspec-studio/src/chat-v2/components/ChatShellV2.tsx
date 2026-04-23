@@ -16,6 +16,14 @@ import {
   migrateLegacyProviderConfigKeys,
 } from '../../lib/provider-config-storage.js';
 
+import {
+  IconChevronLeft,
+  IconWarning,
+  IconExternal,
+  IconDownload,
+  IconSettings,
+  IconClose,
+} from '../../components/icons';
 const UPLOAD_ACCEPT = '.pdf,.png,.jpg,.jpeg,.csv,.tsv,.xlsx,.json';
 
 function attachmentTypeFromFilename(name: string): Attachment['type'] {
@@ -202,7 +210,7 @@ function ActiveSessionV2({ onBack, onUpload, onOpenSettings }: { onBack: () => v
       <header className="v2-session-header flex items-center justify-between px-4 sm:px-5 py-2.5 shrink-0">
         <div className="flex items-center gap-3">
           <button type="button" onClick={onBack} className="v2-icon-btn flex items-center gap-1.5 text-xs font-medium px-2 py-1.5 rounded-lg transition-all duration-150" aria-label="Back to start" title="Back to start">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 3L5 7l4 4" /></svg>
+            <IconChevronLeft />
             <span className="hidden sm:inline">New</span>
           </button>
           <div className="v2-header-divider w-px h-4" />
@@ -215,9 +223,7 @@ function ActiveSessionV2({ onBack, onUpload, onOpenSettings }: { onBack: () => v
               className="v2-issue-badge inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded-full cursor-pointer"
               aria-label={"Issues: " + state.openIssueCount}
             >
-              <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M5.5 1.5L10 9.5H1L5.5 1.5z" /><line x1="5.5" y1="4.5" x2="5.5" y2="6.5" /><circle cx="5.5" cy="8" r="0.4" fill="currentColor" stroke="none" />
-              </svg>
+              <IconWarning />
               {state.openIssueCount}
             </button>
           )}
@@ -243,24 +249,18 @@ function ActiveSessionV2({ onBack, onUpload, onOpenSettings }: { onBack: () => v
               </div>
 
               <button type="button" onClick={handleOpenInStudio} className="v2-header-action flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-lg font-medium transition-all duration-150" aria-label="Open in Studio" title="Open in Studio">
-                <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M9 2.5h2v2M7 6l4-4M5 2H3a1 1 0 00-1 1v7a1 1 0 001 1h7a1 1 0 001-1V8" />
-                </svg>
+                <IconExternal />
                 <span className="hidden sm:inline">Studio</span>
               </button>
 
               <button type="button" onClick={handleExport} className="v2-header-action flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-lg font-medium transition-all duration-150" aria-label="Export" title="Export">
-                <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M6.5 2v6.5M4 6L6.5 8.5 9 6" /><path d="M2 9.5v1.5a1 1 0 001 1h7a1 1 0 001-1V9.5" />
-                </svg>
+                <IconDownload />
                 <span className="hidden sm:inline">Export</span>
               </button>
             </>
           )}
           <button type="button" onClick={onOpenSettings} className="v2-icon-btn p-2 rounded-lg transition-all duration-150" aria-label="Settings">
-            <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <circle cx="7.5" cy="7.5" r="2" /><path d="M12.5 7.5a5 5 0 01-.3 1.6l1.2.9-1.3 2.2-1.4-.6a5 5 0 01-1.3.8l-.3 1.5H6.9l-.3-1.5a5 5 0 01-1.3-.8l-1.4.6L2.6 10l1.2-.9a5 5 0 01-.3-1.6 5 5 0 01.3-1.6l-1.2-.9L3.9 3l1.4.6a5 5 0 011.3-.8L6.9 1.3h2.2l.3 1.5a5 5 0 011.3.8l1.4-.6 1.3 2.2-1.2.9a5 5 0 01.3 1.6z" />
-            </svg>
+            <IconSettings />
           </button>
         </div>
       </header>
@@ -280,9 +280,7 @@ function ActiveSessionV2({ onBack, onUpload, onOpenSettings }: { onBack: () => v
                 className="v2-icon-btn p-1 rounded-md"
                 aria-label="Close sidebar"
               >
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
-                  <path d="M9 3L3 9M3 3l6 6" />
-                </svg>
+                <IconClose />
               </button>
             </div>
             <div className="flex-1 overflow-y-auto min-h-0 scrollbar-none">

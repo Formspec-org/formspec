@@ -5,6 +5,7 @@ import { useScreener } from '../../../state/useScreener';
 import { useProject } from '../../../state/useProject';
 import { QuestionCard } from './QuestionCard';
 import { InlineCreateForm } from '../../../components/shared/InlineCreateForm';
+import { EmptyWorkspaceState } from '../../../components/shared/EmptyWorkspaceState';
 
 const TYPE_OPTIONS = [
   { value: 'boolean', label: 'Yes / No' },
@@ -95,12 +96,10 @@ export function ScreenerQuestions() {
 
       {/* Empty state */}
       {items.length === 0 && !isAdding && (
-        <div className="py-8 border-2 border-dashed border-border/50 rounded-2xl flex flex-col items-center justify-center text-center px-6">
-          <p className="text-sm text-muted font-medium mb-2">No screening questions defined.</p>
-          <p className="text-[12px] text-muted/70 leading-relaxed max-w-[400px]">
-            Add questions to collect eligibility data before the respondent starts the full form.
-          </p>
-        </div>
+        <EmptyWorkspaceState
+          message="No screening questions defined."
+          description="Add questions to collect eligibility data before the respondent starts the full form."
+        />
       )}
 
       {/* Question cards */}

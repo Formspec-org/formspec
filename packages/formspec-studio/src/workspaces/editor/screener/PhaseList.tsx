@@ -5,6 +5,7 @@ import { useProject } from '../../../state/useProject';
 import { PhaseCard } from './PhaseCard';
 import type { Phase } from '@formspec-org/types';
 import { InlineCreateForm } from '../../../components/shared/InlineCreateForm';
+import { EmptyWorkspaceState } from '../../../components/shared/EmptyWorkspaceState';
 
 const STRATEGY_OPTIONS = [
   { value: 'first-match', label: 'First Match' },
@@ -87,13 +88,10 @@ export function PhaseList() {
 
       {/* Empty state */}
       {phases.length === 0 && !isAdding && (
-        <div className="py-8 border-2 border-dashed border-border/50 rounded-2xl flex flex-col items-center justify-center text-center px-6">
-          <p className="text-sm text-muted font-medium mb-2">No evaluation phases defined.</p>
-          <p className="text-[12px] text-muted/70 leading-relaxed max-w-[400px]">
-            Add phases to define how respondents are routed. Each phase uses a strategy
-            (first-match, fan-out, or score-threshold) and contains routing rules.
-          </p>
-        </div>
+        <EmptyWorkspaceState
+          message="No evaluation phases defined."
+          description="Add phases to define how respondents are routed. Each phase uses a strategy (first-match, fan-out, or score-threshold) and contains routing rules."
+        />
       )}
 
       {/* Phase cards */}

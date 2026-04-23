@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useProject } from '../../../state/useProject';
 import { Pill } from '../../../components/ui/Pill';
 import { ConfirmDialog } from '../../../components/ConfirmDialog';
+import { EmptyWorkspaceState } from '../../../components/shared/EmptyWorkspaceState';
 
 interface ScreenerToggleProps {
   isActive: boolean;
@@ -30,21 +31,25 @@ export function ScreenerToggle({ isActive, questionCount, routeCount, phaseCount
 
   if (!isActive) {
     return (
-      <div className="py-8 border-2 border-dashed border-border/50 rounded-2xl flex flex-col items-center justify-center text-center px-6">
-        <p className="text-sm text-muted font-medium mb-2">No screening configured.</p>
-        <p className="text-[12px] text-muted/70 leading-relaxed max-w-[400px] mb-4">
-          Add screening questions to pre-qualify respondents before they begin the full form.
-          Routing rules direct them to different destinations based on their answers.
-        </p>
-        <button
-          type="button"
-          aria-label="Set up screening"
-          onClick={handleSetup}
-          className="text-[11px] text-accent hover:text-accent-hover font-bold uppercase tracking-wider transition-colors"
-        >
-          Set up screening
-        </button>
-      </div>
+      <EmptyWorkspaceState
+        message="No screening configured."
+        description={
+          <>
+            <p className="mb-4">
+              Add screening questions to pre-qualify respondents before they begin the full form.
+              Routing rules direct them to different destinations based on their answers.
+            </p>
+            <button
+              type="button"
+              aria-label="Set up screening"
+              onClick={handleSetup}
+              className="text-[11px] text-accent hover:text-accent-hover font-bold uppercase tracking-wider transition-colors"
+            >
+              Set up screening
+            </button>
+          </>
+        }
+      />
     );
   }
 

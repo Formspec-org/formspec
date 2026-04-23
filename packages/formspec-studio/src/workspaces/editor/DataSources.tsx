@@ -6,6 +6,8 @@ import { useDefinition } from '../../state/useDefinition';
 import { InlineExpression } from '../../components/ui/InlineExpression';
 import { InlineCreateForm } from '../../components/shared/InlineCreateForm';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { ExpandableCard } from '../../components/shared/ExpandableCard';
+import { EmptyWorkspaceState } from '../../components/shared/EmptyWorkspaceState';
 
 function InlineDataEditor({ data, hasSource, onSave }: {
   data: unknown;
@@ -164,13 +166,15 @@ export function DataSources() {
 
       {/* Empty state */}
       {instances.length === 0 && !isAdding && (
-        <div className="py-8 border-2 border-dashed border-border/50 rounded-2xl flex flex-col items-center justify-center text-center px-6">
-          <p className="text-sm text-muted font-medium mb-2">No external sources connected.</p>
-          <p className="text-[12px] text-muted/70 leading-relaxed max-w-[400px]">
-            Instances let you load data from APIs, files, or inline JSON.
-            Reference them in FEL expressions with <code className="font-mono text-accent/70">@instance('name')</code>.
-          </p>
-        </div>
+        <EmptyWorkspaceState
+          message="No external sources connected."
+          description={
+            <>
+              Instances let you load data from APIs, files, or inline JSON.
+              Reference them in FEL expressions with <code className="font-mono text-accent/70">@instance('name')</code>.
+            </>
+          }
+        />
       )}
 
       {/* Instance cards */}
@@ -180,16 +184,12 @@ export function DataSources() {
         const hasInlineData = inst.data !== undefined && inst.data !== null;
 
         return (
-          <div
+          <ExpandableCard
             key={inst.name}
             data-testid={`instance-${inst.name}`}
-            className={`group relative bg-surface border rounded-xl transition-all overflow-hidden ${isExpanded ? 'border-accent ring-1 ring-accent/10' : 'border-border'}`}
-          >
-            {/* Header — click to expand/collapse */}
-            <div
-              className="flex items-center justify-between px-4 py-3 cursor-pointer"
-              onClick={() => setExpandedName(isExpanded ? null : inst.name)}
-            >
+            expanded={isExpanded}
+            onToggle={() => setExpandedName(isExpanded ? null : inst.name)}
+            header={
               <div className="min-w-0 flex-1">
                 <div className="font-bold text-[14px] text-ink flex items-center gap-2">
                   {inst.name}
@@ -212,123 +212,117 @@ export function DataSources() {
                   </div>
                 )}
               </div>
-              <div className="flex items-center gap-3 ml-2">
-                <div className={`text-[12px] text-muted transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>▼</div>
+            }
+          >
+            <div className="space-y-5">
+              {/* FEL usage hint */}
+              <div className="mt-4 flex items-center gap-2 px-3 py-2 bg-accent/5 rounded-lg border border-accent/10">
+                <span className="text-[11px] text-muted">Use in FEL:</span>
+                <code className="text-[12px] font-mono font-bold text-accent">@instance('{inst.name}')</code>
+              </div>
+
+              {/* Source URL */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-muted uppercase tracking-widest block">Source URL</label>
+                <InlineExpression
+                  value={inst.source || ''}
+                  onSave={(val) => handleSetProperty(inst.name, 'source', val || null)}
+                  placeholder="https://api.example.com/data/{{entityId}}"
+                  className="block w-full text-[13px] bg-subtle border border-border rounded-lg px-3 py-2.5 hover:border-accent/50 hover:bg-subtle/70 underline decoration-accent/30 decoration-dotted underline-offset-4"
+                />
+                <p className="text-[10px] text-muted/60 italic">
+                  {"Supports {{template}} variables. Leave empty for inline-only data."}
+                </p>
+              </div>
+
+              {/* Data format requirements */}
+              <div className="rounded-lg border border-border/60 bg-subtle/30 px-4 py-3 space-y-2" data-testid="data-format-info">
+                <h5 className="text-[10px] font-bold text-muted uppercase tracking-widest">Data Requirements</h5>
+                <ul className="text-[11px] text-muted space-y-1.5 leading-relaxed">
+                  <li>
+                    <span className="font-bold text-ink">Response must be JSON.</span>{' '}
+                    The source URL must return a valid JSON response (object or array).
+                  </li>
+                  <li>
+                    <span className="font-bold text-ink">At least one of source or inline data required.</span>{' '}
+                    Provide a URL, embed data directly, or both (inline data acts as fallback if the fetch fails).
+                  </li>
+                  <li>
+                    <span className="font-bold text-ink">Access via dot paths.</span>{' '}
+                    <code className="font-mono text-[10px] text-accent/80">@instance('{inst.name}').fieldName</code> navigates into the returned JSON.
+                  </li>
+                  <li>
+                    <span className="font-bold text-ink">Schema is informational.</span>{' '}
+                    The schema property aids tooling but does not enforce validation at runtime.
+                  </li>
+                </ul>
+              </div>
+
+              {/* Inline data editor */}
+              <InlineDataEditor
+                data={inst.data}
+                hasSource={hasSource}
+                onSave={(parsed) => handleSetProperty(inst.name, 'data', parsed)}
+              />
+
+              {/* Description */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-muted uppercase tracking-widest block">Description</label>
+                <textarea
+                  className="w-full bg-subtle border border-border rounded-lg px-3 py-2 text-[12px] text-ink outline-none focus:ring-1 focus:ring-accent resize-none h-16"
+                  defaultValue={inst.description || ''}
+                  placeholder="Describe what this data source provides..."
+                  onBlur={(e) => {
+                    const val = e.target.value.trim();
+                    handleSetProperty(inst.name, 'description', val || null);
+                  }}
+                />
+              </div>
+
+              {/* Behavior toggles */}
+              <div className="space-y-3">
+                <label className="text-[10px] font-bold text-muted uppercase tracking-widest block">Behavior</label>
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    aria-label="Static caching"
+                    className="w-4 h-4 rounded border-border text-accent focus:ring-accent mt-0.5"
+                    checked={!!inst.static}
+                    onChange={(e) => handleSetProperty(inst.name, 'static', e.target.checked)}
+                  />
+                  <div>
+                    <span className="text-[12px] font-bold text-ink block">Static (Caching)</span>
+                    <span className="text-[10px] text-muted/70">Data won't change during this form session. Enables aggressive caching.</span>
+                  </div>
+                </label>
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    aria-label="Read-only"
+                    className="w-4 h-4 rounded border-border text-accent focus:ring-accent mt-0.5"
+                    checked={inst.readonly !== false}
+                    onChange={(e) => handleSetProperty(inst.name, 'readonly', e.target.checked)}
+                  />
+                  <div>
+                    <span className="text-[12px] font-bold text-ink block">Read-only</span>
+                    <span className="text-[10px] text-muted/70">Prevent calculate binds from writing back. Uncheck for scratch-pad instances.</span>
+                  </div>
+                </label>
+              </div>
+
+              {/* Danger zone */}
+              <div className="pt-4 border-t border-border flex justify-end">
+                <button
+                  type="button"
+                  aria-label="Delete data source"
+                  onClick={() => handleDelete(inst.name)}
+                  className="text-[10px] font-bold text-muted hover:text-error uppercase tracking-widest transition-colors"
+                >
+                  Delete
+                </button>
               </div>
             </div>
-
-            {/* Expanded editor */}
-            {isExpanded && (
-              <div className="px-5 pb-5 pt-0 border-t border-border space-y-5 animate-in fade-in slide-in-from-top-1 duration-200">
-                {/* FEL usage hint */}
-                <div className="mt-4 flex items-center gap-2 px-3 py-2 bg-accent/5 rounded-lg border border-accent/10">
-                  <span className="text-[11px] text-muted">Use in FEL:</span>
-                  <code className="text-[12px] font-mono font-bold text-accent">@instance('{inst.name}')</code>
-                </div>
-
-                {/* Source URL */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-muted uppercase tracking-widest block">Source URL</label>
-                  <InlineExpression
-                    value={inst.source || ''}
-                    onSave={(val) => handleSetProperty(inst.name, 'source', val || null)}
-                    placeholder="https://api.example.com/data/{{entityId}}"
-                    className="block w-full text-[13px] bg-subtle border border-border rounded-lg px-3 py-2.5 hover:border-accent/50 hover:bg-subtle/70 underline decoration-accent/30 decoration-dotted underline-offset-4"
-                  />
-                  <p className="text-[10px] text-muted/60 italic">
-                    {"Supports {{template}} variables. Leave empty for inline-only data."}
-                  </p>
-                </div>
-
-                {/* Data format requirements */}
-                <div className="rounded-lg border border-border/60 bg-subtle/30 px-4 py-3 space-y-2" data-testid="data-format-info">
-                  <h5 className="text-[10px] font-bold text-muted uppercase tracking-widest">Data Requirements</h5>
-                  <ul className="text-[11px] text-muted space-y-1.5 leading-relaxed">
-                    <li>
-                      <span className="font-bold text-ink">Response must be JSON.</span>{' '}
-                      The source URL must return a valid JSON response (object or array).
-                    </li>
-                    <li>
-                      <span className="font-bold text-ink">At least one of source or inline data required.</span>{' '}
-                      Provide a URL, embed data directly, or both (inline data acts as fallback if the fetch fails).
-                    </li>
-                    <li>
-                      <span className="font-bold text-ink">Access via dot paths.</span>{' '}
-                      <code className="font-mono text-[10px] text-accent/80">@instance('{inst.name}').fieldName</code> navigates into the returned JSON.
-                    </li>
-                    <li>
-                      <span className="font-bold text-ink">Schema is informational.</span>{' '}
-                      The schema property aids tooling but does not enforce validation at runtime.
-                    </li>
-                  </ul>
-                </div>
-
-                {/* Inline data editor */}
-                <InlineDataEditor
-                  data={inst.data}
-                  hasSource={hasSource}
-                  onSave={(parsed) => handleSetProperty(inst.name, 'data', parsed)}
-                />
-
-                {/* Description */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-muted uppercase tracking-widest block">Description</label>
-                  <textarea
-                    className="w-full bg-subtle border border-border rounded-lg px-3 py-2 text-[12px] text-ink outline-none focus:ring-1 focus:ring-accent resize-none h-16"
-                    defaultValue={inst.description || ''}
-                    placeholder="Describe what this data source provides..."
-                    onBlur={(e) => {
-                      const val = e.target.value.trim();
-                      handleSetProperty(inst.name, 'description', val || null);
-                    }}
-                  />
-                </div>
-
-                {/* Behavior toggles */}
-                <div className="space-y-3">
-                  <label className="text-[10px] font-bold text-muted uppercase tracking-widest block">Behavior</label>
-                  <label className="flex items-start gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      aria-label="Static caching"
-                      className="w-4 h-4 rounded border-border text-accent focus:ring-accent mt-0.5"
-                      checked={!!inst.static}
-                      onChange={(e) => handleSetProperty(inst.name, 'static', e.target.checked)}
-                    />
-                    <div>
-                      <span className="text-[12px] font-bold text-ink block">Static (Caching)</span>
-                      <span className="text-[10px] text-muted/70">Data won't change during this form session. Enables aggressive caching.</span>
-                    </div>
-                  </label>
-                  <label className="flex items-start gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      aria-label="Read-only"
-                      className="w-4 h-4 rounded border-border text-accent focus:ring-accent mt-0.5"
-                      checked={inst.readonly !== false}
-                      onChange={(e) => handleSetProperty(inst.name, 'readonly', e.target.checked)}
-                    />
-                    <div>
-                      <span className="text-[12px] font-bold text-ink block">Read-only</span>
-                      <span className="text-[10px] text-muted/70">Prevent calculate binds from writing back. Uncheck for scratch-pad instances.</span>
-                    </div>
-                  </label>
-                </div>
-
-                {/* Danger zone */}
-                <div className="pt-4 border-t border-border flex justify-end">
-                  <button
-                    type="button"
-                    aria-label="Delete data source"
-                    onClick={() => handleDelete(inst.name)}
-                    className="text-[10px] font-bold text-muted hover:text-error uppercase tracking-widest transition-colors"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+          </ExpandableCard>
         );
       })}
     </div>

@@ -1,10 +1,9 @@
 /** @filedesc Hook that returns all mapping IDs and the currently selected ID from project state. */
-import { useMemo } from 'react';
-import { useProjectState } from './useProjectState';
+import { useProjectSlice } from './useProjectSlice';
 
 export function useMappingIds() {
-  const state = useProjectState();
-  const ids = useMemo(() => Object.keys(state.mappings), [state.mappings]);
-  const selectedId = state.selectedMappingId ?? ids[0] ?? 'default';
+  const ids = useProjectSlice((s) => Object.keys(s.mappings));
+  const selectedMappingId = useProjectSlice((s) => s.selectedMappingId);
+  const selectedId = selectedMappingId ?? ids[0] ?? 'default';
   return { ids, selectedId };
 }

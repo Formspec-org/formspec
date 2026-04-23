@@ -5,6 +5,7 @@ import type { SourceTrace, DefinitionDiff } from '@formspec-org/chat';
 import { planDefinitionFallback } from '@formspec-org/layout';
 import type { LayoutNode, PresentationBlock } from '@formspec-org/layout';
 import type { FormItem } from '@formspec-org/types';
+import { IconRotate, IconUpload, IconStack as IconFile } from '../../components/icons';
 
 interface OptionLike {
   value: string;
@@ -95,12 +96,7 @@ export function FormPreviewV2() {
     return (
       <div data-testid="form-preview" className="v2-preview flex flex-col items-center justify-center h-full gap-4 px-6">
         <div className="v2-empty-icon w-12 h-12 rounded-2xl flex items-center justify-center">
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <rect x="3" y="2" width="14" height="16" rx="2" />
-            <line x1="7" y1="7" x2="13" y2="7" />
-            <line x1="7" y1="10" x2="13" y2="10" />
-            <line x1="7" y1="13" x2="10" y2="13" />
-          </svg>
+          <IconFile size={20} />
         </div>
         <p className="text-sm v2-text-secondary text-center max-w-[220px] leading-relaxed">
           No form yet. Start a conversation or pick a template.
@@ -137,11 +133,7 @@ export function FormPreviewV2() {
           className="v2-regen-btn ml-auto flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg font-medium transition-all duration-150 disabled:opacity-40"
           data-testid="regenerate-btn"
         >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={regenerating ? 'animate-spin' : ''}>
-            <path d="M1 6a5 5 0 018.5-3.5L11 1" />
-            <path d="M11 1v3H8" />
-            <path d="M11 6a5 5 0 01-8.5 3.5L1 11" />
-          </svg>
+          <IconRotate size={12} className={regenerating ? 'animate-spin' : ''} />
           {regenerating ? 'Regenerating...' : 'Regenerate'}
         </button>
       </div>
@@ -551,9 +543,7 @@ function FieldMockup({ item }: { item: FieldMockupItem }) {
   if (dt === 'attachment') {
     return (
       <div className="v2-upload-zone rounded-xl p-5 flex flex-col items-center justify-center gap-2 pointer-events-none">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="v2-text-tertiary">
-          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" />
-        </svg>
+        <IconUpload size={20} className="v2-text-tertiary" />
         <span className="text-[10px] v2-text-tertiary font-medium">Upload File</span>
       </div>
     );

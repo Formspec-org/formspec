@@ -4,6 +4,8 @@ import { useProject } from '../../state/useProject';
 import { ShapeCard } from '../../components/ui/ShapeCard';
 import { InlineExpression } from '../../components/ui/InlineExpression';
 
+import { InlineCreateForm } from '../../components/shared/InlineCreateForm';
+
 interface Shape {
   id?: string;
   name: string;
@@ -64,8 +66,13 @@ export function ShapesSection({ shapes }: ShapesSectionProps) {
         )}
       </div>
 
+      {/* Inline add form */}
       {isAdding && (
-        <div className="border border-logic/30 rounded-lg bg-logic/5 p-3 space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+        <InlineCreateForm
+          accentColor="logic"
+          onCancel={() => setIsAdding(false)}
+          onCreate={handleAdd}
+        >
           <div className="flex items-center gap-2">
             <input
               autoFocus
@@ -80,21 +87,7 @@ export function ShapesSection({ shapes }: ShapesSectionProps) {
               className="flex-1 bg-transparent border-none outline-none text-sm font-mono text-ink placeholder:text-muted/40"
             />
           </div>
-          <div className="flex justify-end gap-2">
-            <button
-              onClick={() => setIsAdding(false)}
-              className="text-[10px] uppercase font-bold text-muted hover:text-ink transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleAdd}
-              className="text-[10px] uppercase font-bold text-logic hover:text-logic-hover transition-colors"
-            >
-              Create
-            </button>
-          </div>
-        </div>
+        </InlineCreateForm>
       )}
 
       {shapes.length === 0 && !isAdding && (

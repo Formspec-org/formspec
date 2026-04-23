@@ -13,7 +13,14 @@ import {
   groupToFEL,
   operatorRequiresValue,
   parseFELToGroup,
+  quoteFELValue,
+  unquoteFELValue,
 } from '@formspec-org/studio-core';
+import {
+  IconChevronRight,
+  IconTrash,
+  IconPlus,
+} from '../icons';
 import type { FELEditorFieldOption } from '@formspec-org/studio-core';
 import { HighlightedExpression } from './InlineExpression';
 import { FELEditor } from './FELEditor';
@@ -30,48 +37,6 @@ export interface ConditionBuilderProps {
 }
 
 type Mode = 'guided' | 'advanced';
-
-function ChevronIcon({ open }: { open: boolean }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 16 16"
-      fill="currentColor"
-      className={`w-3 h-3 transition-transform ${open ? 'rotate-90' : ''}`}
-      aria-hidden="true"
-    >
-      <path d="M6.22 3.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06Z" />
-    </svg>
-  );
-}
-
-function TrashIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 16 16"
-      fill="currentColor"
-      className="w-3 h-3"
-      aria-hidden="true"
-    >
-      <path d="M5.5 1a.75.75 0 0 0-.75.75V3h-2.5a.5.5 0 0 0 0 1h.5v8.5A1.5 1.5 0 0 0 3.75 14h8.5a1.5 1.5 0 0 0 1.5-1.5V4h.5a.5.5 0 0 0 0-1h-2.5V1.75A.75.75 0 0 0 10.5 1h-5ZM6 3V2h4v1H6Zm-1.5 2h7v7.5a.5.5 0 0 1-.5.5h-6a.5.5 0 0 1-.5-.5V5Z" />
-    </svg>
-  );
-}
-
-function PlusIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 16 16"
-      fill="currentColor"
-      className="w-3 h-3"
-      aria-hidden="true"
-    >
-      <path d="M8 2a.75.75 0 0 1 .75.75v4.5h4.5a.75.75 0 0 1 0 1.5h-4.5v4.5a.75.75 0 0 1-1.5 0v-4.5h-4.5a.75.75 0 0 1 0-1.5h4.5v-4.5A.75.75 0 0 1 8 2Z" />
-    </svg>
-  );
-}
 
 const SELECT_CLASSES =
   'font-ui text-[11px] bg-subtle border border-border rounded px-1.5 py-0.5 text-ink appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-accent/40';
@@ -174,14 +139,9 @@ function ConditionRow({
       {showValue && (
         <input
           type="text"
-          value={condition.value.replace(/^'(.*)'$/, '$1').replace(/^"(.*)"$/, '$1')}
+          value={unquoteFELValue(condition.value)}
           onChange={(e) => {
-            const raw = e.target.value;
-            const isNumeric = /^\d+(\.\d+)?$/.test(raw);
-            const isKeyword = raw === 'true' || raw === 'false' || raw === 'null';
-            const quoted = raw.length > 0 && !isNumeric && !isKeyword;
-            const felValue = quoted ? "'" + raw + "'" : raw;
-            handleValueChange(felValue);
+            handleValueChange(quoteFELValue(e.target.value));
           }}
           placeholder="Value"
           className="font-mono text-[11px] bg-subtle border border-border rounded px-1.5 py-0.5 text-ink flex-1 min-w-[60px] focus:outline-none focus:ring-1 focus:ring-accent/40"
@@ -195,7 +155,7 @@ function ConditionRow({
         className="w-5 h-5 flex items-center justify-center rounded text-muted/40 hover:text-error hover:bg-error/10 transition-colors shrink-0"
         aria-label="Remove condition"
       >
-        <TrashIcon />
+        <IconTrash size={12} />
       </button>
     </div>
   );
@@ -325,7 +285,7 @@ export function ConditionBuilder({
             onClick={addCondition}
             className="flex items-center gap-1 font-ui text-[10px] text-accent hover:text-accent/80 transition-colors"
           >
-            <PlusIcon />
+            <IconPlus size={12} />
             Add condition
           </button>
 
@@ -422,7 +382,7 @@ export function ConditionBuilderPreview({
   const parts = parsed.conditions.map((c) => {
     const fieldLabel = selfReference ? 'value' : (c.field || 'this');
     const opLabel = getOperatorLabel(c.operator);
-    const valDisplay = c.value.replace(/^'(.*)'$/, '$1').replace(/^"(.*)"$/, '$1');
+    const valDisplay = unquoteFELValue(c.value);
     if (!operatorRequiresValue(c.operator)) return `${fieldLabel} ${opLabel}`;
     return `${fieldLabel} ${opLabel} ${valDisplay}`;
   });

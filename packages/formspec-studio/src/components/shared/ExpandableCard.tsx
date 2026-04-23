@@ -1,5 +1,5 @@
 /** @filedesc Reusable expandable card with clickable header, chevron indicator, and collapsible content area. */
-import type React from 'react';
+import { IconChevronDown } from '../icons';
 
 interface ExpandableCardProps {
   children: React.ReactNode;
@@ -32,7 +32,7 @@ export function ExpandableCard({
         onClick={onToggle}
       >
         {header}
-        <div className={`text-[12px] text-muted transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}>&#9660;</div>
+        <IconChevronDown className={`text-muted transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
       </div>
       {expanded && (
         <div className="p-6 pt-0 border-t border-border animate-in fade-in slide-in-from-top-1 duration-200">

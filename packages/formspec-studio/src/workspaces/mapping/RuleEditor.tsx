@@ -1,15 +1,18 @@
 /** @filedesc Mapping tab section that lists all top-level mapping rules with their nested inner rules. */
+import { useState } from 'react';
 import { useMapping } from '../../state/useMapping';
 import { Section } from '../../components/ui/Section';
 import { RuleCard } from './RuleCard';
 import { InnerRules } from './InnerRules';
 import { useProject } from '../../state/useProject';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 import type { MappingRule } from './types';
 
 export function RuleEditor() {
   const mapping = useMapping();
   const rules = (mapping?.rules ?? []) as MappingRule[];
   const project = useProject();
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const addRule = () => {
     project.addMappingRule({ transform: 'preserve' });
@@ -20,13 +23,24 @@ export function RuleEditor() {
   };
 
   const clearAll = () => {
-    if (confirm('Are you sure you want to clear all mapping rules? This cannot be undone.')) {
-      project.clearMappingRules();
-    }
+    setShowClearConfirm(true);
+  };
+
+  const confirmClear = () => {
+    project.clearMappingRules();
+    setShowClearConfirm(false);
   };
 
   return (
     <Section title={`Rules (${rules.length})`}>
+      <ConfirmDialog
+        open={showClearConfirm}
+        title="Clear all rules"
+        description="Are you sure you want to clear all mapping rules? This cannot be undone."
+        confirmLabel="Clear All"
+        onConfirm={confirmClear}
+        onCancel={() => setShowClearConfirm(false)}
+      />
       <div className="flex items-center gap-2 mb-4">
         <button
           type="button"

@@ -3,6 +3,17 @@ import { useState, useRef, useEffect } from 'react';
 import { useProject } from '../state/useProject';
 import { useProjectState } from '../state/useProjectState';
 import { type ColorScheme, type ThemePreference } from '../hooks/useColorScheme';
+import {
+  IconMonitor,
+  IconMoon,
+  IconSun,
+  IconSearch,
+  IconUndo,
+  IconRedo,
+  IconSparkle,
+  IconMenu,
+  IconStack,
+} from './icons';
 
 const TABS: { name: string; help: string }[] = [
   { name: 'Editor', help: 'Build your form structure and manage shared resources' },
@@ -45,36 +56,12 @@ function nextTheme(current: ThemePreference): ThemePreference {
 
 function ThemeToggleIcon({ theme, resolved }: { theme: ThemePreference; resolved: 'light' | 'dark' }) {
   if (theme === 'system') {
-    // Monitor icon for "system"
-    return (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <rect x="2" y="3" width="20" height="14" rx="2"/>
-        <path d="M8 21h8M12 17v4"/>
-      </svg>
-    );
+    return <IconMonitor />;
   }
   if (resolved === 'dark') {
-    // Moon icon
-    return (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-      </svg>
-    );
+    return <IconMoon />;
   }
-  // Sun icon
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="12" cy="12" r="5"/>
-      <line x1="12" y1="1" x2="12" y2="3"/>
-      <line x1="12" y1="21" x2="12" y2="23"/>
-      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
-      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-      <line x1="1" y1="12" x2="3" y2="12"/>
-      <line x1="21" y1="12" x2="23" y2="12"/>
-      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
-      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-    </svg>
-  );
+  return <IconSun />;
 }
 
 export function Header({
@@ -250,7 +237,7 @@ export function Header({
           className="rounded-full border border-border/65 bg-surface/70 p-2 text-muted hover:bg-surface hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
           title="Search (⌘K)"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <IconSearch />
         </button>
       ) : (
         <button
@@ -283,7 +270,7 @@ export function Header({
         onClick={() => project.undo()}
         title="Undo (⌘Z)"
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
+        <IconUndo />
       </button>
       <button
         data-testid="redo-btn"
@@ -293,7 +280,7 @@ export function Header({
         onClick={() => project.redo()}
         title="Redo (⌘⇧Z)"
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"/></svg>
+        <IconRedo />
       </button>
 
       {onToggleChat && (
@@ -305,9 +292,7 @@ export function Header({
           onClick={onToggleChat}
           title="AI Assistant"
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <path d="M8 1l1.5 4.5L14 7l-4.5 1.5L8 13l-1.5-4.5L2 7l4.5-1.5L8 1z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" fill="currentColor" fillOpacity="0.15" />
-          </svg>
+          <IconSparkle />
         </button>
       )}
 
@@ -340,11 +325,7 @@ export function Header({
               className="rounded-full border border-border/60 bg-surface/75 p-2 -ml-1.5 hover:bg-surface transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
               onClick={onToggleMenu}
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <line x1="3" y1="12" x2="21" y2="12" />
-                <line x1="3" y1="6" x2="21" y2="6" />
-                <line x1="3" y1="18" x2="21" y2="18" />
-              </svg>
+              <IconMenu />
             </button>
           )}
           <button
@@ -354,11 +335,7 @@ export function Header({
             onClick={() => { onTabChange('Editor'); onHome?.(); }}
           >
             <div className="w-8 h-8 bg-[linear-gradient(160deg,var(--color-accent),color-mix(in_srgb,var(--color-accent)_68%,var(--color-teal)))] rounded-[9px] flex items-center justify-center shrink-0 shadow-[0_12px_30px_rgba(39,87,199,0.24)]" aria-hidden="true">
-              <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-                <rect x="2" y="1.5" width="8" height="2" rx=".4" fill="white" />
-                <rect x="2" y="5" width="8" height="2" rx=".4" fill="white" fillOpacity=".7" />
-                <rect x="2" y="8.5" width="8" height="2" rx=".4" fill="white" fillOpacity=".4" />
-              </svg>
+              <IconStack size={11} className="text-surface" />
             </div>
             <div>
               <div className="font-display text-[22px] tracking-[-0.04em] leading-none whitespace-nowrap text-ink">The Stack</div>
@@ -394,11 +371,7 @@ export function Header({
         onClick={() => { onTabChange('Editor'); onHome?.(); }}
       >
         <div className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-[linear-gradient(145deg,var(--color-accent),color-mix(in_srgb,var(--color-accent)_72%,var(--color-teal)))] shadow-[0_20px_40px_rgba(39,87,199,0.24)] shrink-0" aria-hidden="true">
-          <svg width="16" height="16" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-            <rect x="2" y="1.5" width="8" height="2" rx=".4" fill="white" />
-            <rect x="2" y="5" width="8" height="2" rx=".4" fill="white" fillOpacity=".7" />
-            <rect x="2" y="8.5" width="8" height="2" rx=".4" fill="white" fillOpacity=".4" />
-          </svg>
+          <IconStack size={16} className="text-surface" />
         </div>
         <div className="space-y-1">
           <div className="font-display text-[31px] tracking-[-0.05em] leading-none text-ink">The Stack</div>

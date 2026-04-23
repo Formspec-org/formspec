@@ -8,6 +8,11 @@ import { useShellPanels } from '../hooks/useShellPanels';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { createProject, buildDefLookup, type Project } from '@formspec-org/studio-core';
 import { exportProjectZip } from '../lib/export-zip';
+import {
+  IconActivity,
+  IconChevronRight,
+  IconChevronLeft,
+} from './icons';
 import { Header } from './Header';
 import { StatusBar } from './StatusBar';
 import { Blueprint } from './Blueprint';
@@ -397,9 +402,7 @@ export function Shell({ colorScheme }: ShellProps = {}) {
                       className="ml-2 shrink-0 rounded-full border border-border/60 bg-bg-default/75 p-2.5 text-muted hover:text-ink hover:bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
                       onClick={() => setShowHealthSheet(true)}
                     >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-                      </svg>
+                      <IconActivity />
                     </button>
                   </div>
                 </div>
@@ -450,7 +453,7 @@ export function Shell({ colorScheme }: ShellProps = {}) {
                       className="rounded p-1 text-muted hover:text-ink hover:bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
                       onClick={() => setShowRightPanel(false)}
                     >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+                      <IconChevronRight size={14} />
                     </button>
                   </div>
                   <div className="flex-1 min-h-0">
@@ -465,7 +468,7 @@ export function Shell({ colorScheme }: ShellProps = {}) {
                 className="shrink-0 border-l border-border/70 bg-[linear-gradient(180deg,rgba(255,252,247,0.95),rgba(246,238,227,0.9))] dark:bg-[linear-gradient(180deg,rgba(26,35,47,0.94),rgba(32,44,59,0.92))] px-1.5 py-3 text-muted hover:text-ink hover:bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
                 onClick={() => setShowRightPanel(true)}
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+                <IconChevronLeft size={14} />
               </button>
             )
           )}
@@ -486,7 +489,7 @@ export function Shell({ colorScheme }: ShellProps = {}) {
                       className="rounded p-1 text-muted hover:text-ink hover:bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
                       onClick={() => setShowLayoutPreviewPanel(false)}
                     >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+                      <IconChevronRight size={14} />
                     </button>
                   </div>
                   <div className="flex-1 min-h-0 px-3 pb-3">
@@ -507,7 +510,7 @@ export function Shell({ colorScheme }: ShellProps = {}) {
                 className="shrink-0 border-l border-border/70 bg-[linear-gradient(180deg,rgba(255,252,247,0.95),rgba(246,238,227,0.9))] dark:bg-[linear-gradient(180deg,rgba(26,35,47,0.94),rgba(32,44,59,0.92))] px-1.5 py-3 text-muted hover:text-ink hover:bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
                 onClick={() => setShowLayoutPreviewPanel(true)}
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+                <IconChevronLeft size={14} />
               </button>
             )
           )}
