@@ -2,9 +2,8 @@
 import { buildPlatformTheme } from '@formspec-org/layout';
 const defaultThemeJson = buildPlatformTheme();
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return !!value && typeof value === 'object' && !Array.isArray(value);
-}
+import type { FormDefinition, ComponentDocument, ThemeDocument } from '@formspec-org/types';
+import { isRecord } from './lib/guards.js';
 
 function normalizeTree(tree: unknown): unknown {
   if (!isRecord(tree)) return tree;
@@ -48,19 +47,19 @@ function synthesizePagedPreviewTree(tree: unknown, definition: unknown): unknown
   return synthesizedAny ? { ...tree, children } : tree;
 }
 
-export function normalizeDefinitionDoc(definition: unknown): unknown {
-  if (!definition || typeof definition !== 'object') return definition;
+export function normalizeDefinitionDoc(definition: unknown): FormDefinition {
+  if (!definition || typeof definition !== 'object') return definition as FormDefinition;
   const doc = { ...(definition as Record<string, unknown>) };
 
   if (doc.presentation && !doc.formPresentation) {
     doc.formPresentation = doc.presentation;
   }
 
-  return doc;
+  return doc as unknown as FormDefinition;
 }
 
-export function normalizeComponentDoc(doc: unknown, definition?: unknown): unknown {
-  if (!doc || typeof doc !== 'object') return doc;
+export function normalizeComponentDoc(doc: unknown, definition?: unknown): ComponentDocument {
+  if (!doc || typeof doc !== 'object') return doc as ComponentDocument;
   const record = doc as Record<string, unknown>;
   const definitionUrl =
     definition && typeof definition === 'object'
@@ -72,19 +71,25 @@ export function normalizeComponentDoc(doc: unknown, definition?: unknown): unkno
       ? (record.targetDefinition as Record<string, unknown>)
       : {};
 
+  const baseTd = targetDefinition as Record<string, unknown>;
+  const resolvedUrl =
+    typeof definitionUrl === 'string' && definitionUrl
+      ? definitionUrl
+      : (typeof baseTd.url === 'string' ? baseTd.url : '');
+
   return {
     ...record,
-    $formspecComponent: typeof record.$formspecComponent === 'string' ? record.$formspecComponent : '1.0',
+    $formspecComponent: (typeof record.$formspecComponent === 'string' ? record.$formspecComponent : '1.0') as '1.0',
     version: typeof record.version === 'string' ? record.version : '0.1.0',
     ...(record.tree ? { tree: synthesizePagedPreviewTree(normalizeTree(record.tree), definition) } : {}),
     targetDefinition: {
       ...targetDefinition,
-      ...(definitionUrl ? { url: definitionUrl } : {}),
+      url: resolvedUrl,
     },
-  };
+  } as ComponentDocument;
 }
 
-export function normalizeThemeDoc(doc: unknown, definition: unknown): unknown {
+export function normalizeThemeDoc(doc: unknown, definition: unknown): ThemeDocument {
   const theme = doc && typeof doc === 'object' ? (doc as Record<string, unknown>) : {};
   const fallback = defaultThemeJson;
   const definitionUrl =
@@ -99,7 +104,7 @@ export function normalizeThemeDoc(doc: unknown, definition: unknown): unknown {
     targetDefinition: {
       ...fallback.targetDefinition,
       ...((theme.targetDefinition as Record<string, unknown> | undefined) ?? {}),
-      ...(definitionUrl ? { url: definitionUrl } : {}),
+      ...(definitionUrl ? { url: (definitionUrl as string) } : {}),
     },
     tokens: {
       ...fallback.tokens,
@@ -112,9 +117,9 @@ export function normalizeThemeDoc(doc: unknown, definition: unknown): unknown {
     breakpoints: {
       ...((theme.breakpoints as Record<string, unknown> | undefined) ?? {}),
     },
-    selectors: Array.isArray(theme.selectors) ? theme.selectors : fallback.selectors,
+    selectors: Array.isArray(theme.selectors) ? (theme.selectors as any[]) : fallback.selectors,
     items: {
       ...((theme.items as Record<string, unknown> | undefined) ?? {}),
     },
-  };
+  } as ThemeDocument;
 }

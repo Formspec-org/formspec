@@ -34,12 +34,14 @@ import {
   type FELValidationResult,
   type FELSuggestion,
 } from './helper-types.js';
+import type { ProjectInternals } from './project-internals.js';
 import * as mappingOps from './project-mapping.js';
 import * as screenerOps from './project-screener.js';
 import * as themeOps from './project-theme.js';
 import * as layoutOps from './project-layout.js';
+import * as projectVariables from './project-variables.js';
 
-import { resolveFieldType, resolveWidget, widgetHintFor, isTextareaWidget, _FIELD_TYPE_MAP } from './field-type-aliases.js';
+import { resolveFieldType, resolveWidget, widgetHintFor, _FIELD_TYPE_MAP } from './field-type-aliases.js';
 import type { ResolvedFieldType } from './field-type-aliases.js';
 import {
   getFieldTypeCatalog,
@@ -58,7 +60,7 @@ import {
 } from './tree-utils.js';
 import { editDistance, resolvePath } from './lib/object-utils.js';
 import { filterByRelevance, pruneObject, sampleValueForField } from './lib/sample-data.js';
-import { buildRepeatScopeRewriter, checkVariableSelfReference } from './lib/fel-rewriter.js';
+import { buildRepeatScopeRewriter } from './lib/fel-rewriter.js';
 import { componentTargetRef } from './lib/component-target-ref.js';
 import type { CompNode } from './layout-helpers.js';
 import { COMPATIBILITY_MATRIX, COMPONENT_TO_HINT } from '@formspec-org/types';
@@ -391,6 +393,18 @@ export class Project {
     };
   }
 
+  /**
+   * Set definition-level `extensions` in one undoable command (`definition.setDefinitionProperty`).
+   * Caller supplies the full merged map, or `null` to remove the property. Prefer this over
+   * mutating `project.core.state` from adapters (e.g. MCP) that cannot access private `core`.
+   */
+  setDefinitionExtensions(extensions: Record<string, unknown> | null): void {
+    this.core.dispatch({
+      type: 'definition.setDefinitionProperty',
+      payload: { property: 'extensions', value: extensions },
+    } as AnyCommand);
+  }
+
   // ── History ────────────────────────────────────────────────
 
   undo(): boolean {
@@ -691,7 +705,7 @@ export class Project {
     ];
 
     // textarea needs extra widgetHint on the component node
-    if ((widgetAlias && isTextareaWidget(widgetAlias)) || (!widgetAlias && resolved.defaultWidgetHint === 'textarea')) {
+    if ((widgetAlias && widgetAlias === 'textarea') || (!widgetAlias && resolved.defaultWidgetHint === 'textarea')) {
       phase2.push({
         type: 'component.setNodeProperty',
         payload: { node: { bind: key }, property: 'widgetHint', value: 'textarea' },
@@ -1195,7 +1209,7 @@ export class Project {
     let canonicalActiveWhen = options?.activeWhen;
 
     if (targetWasNormalized) {
-      const rewriter = buildRepeatScopeRewriter(target, normalizedTarget);
+      const rewriter = buildRepeatScopeRewriter(target);
       canonicalRule = rewriter.rewriteExpression(rule);
       canonicalMessage = rewriter.rewriteMessage(message);
       if (canonicalActiveWhen) {
@@ -1524,12 +1538,6 @@ export class Project {
   private static readonly _BIND_KEYS = new Set([
     'required', 'constraint', 'constraintMessage', 'calculate',
     'relevant', 'readonly', 'default',
-  ]);
-
-  /** PresentationBlock top-level keys — everything else is a CSS property. */
-  private static readonly _PRESENTATION_BLOCK_KEYS = new Set([
-    'widget', 'widgetConfig', 'labelPosition', 'style',
-    'accessibility', 'fallback', 'cssClass',
   ]);
 
   /** Update any property of an existing item — fan-out helper. */
@@ -2481,36 +2489,41 @@ export class Project {
     };
   }
 
+  /** Narrow `this` for delegate modules that accept {@link ProjectInternals}. */
+  private _asInternals(): ProjectInternals {
+    return this as unknown as ProjectInternals;
+  }
+
   // ── Page Helpers ──
 
   /** Add a page — creates a Page node in the component tree. */
   addPage(title: string, description?: string, id?: string): HelperResult {
-    return layoutOps.addPage(this as any, title, description, id);
+    return layoutOps.addPage(this._asInternals(), title, description, id);
   }
 
   /** Remove a page — deletes only the page surface. Groups and fields remain intact as unassigned items. */
   removePage(pageId: string): HelperResult {
-    return layoutOps.removePage(this as any, pageId);
+    return layoutOps.removePage(this._asInternals(), pageId);
   }
 
   /** Reorder a page. */
   reorderPage(pageId: string, direction: 'up' | 'down'): HelperResult {
-    return layoutOps.reorderPage(this as any, pageId, direction);
+    return layoutOps.reorderPage(this._asInternals(), pageId, direction);
   }
 
   /** Move a page to an arbitrary zero-based index in one atomic undo step. */
   movePageToIndex(pageId: string, targetIndex: number): HelperResult {
-    return layoutOps.movePageToIndex(this as any, pageId, targetIndex);
+    return layoutOps.movePageToIndex(this._asInternals(), pageId, targetIndex);
   }
 
   /** List all pages with their id, title, description, and primary group path. */
   listPages(): Array<{ id: string; title: string; description?: string; groupPath?: string }> {
-    return layoutOps.listPages(this as any);
+    return layoutOps.listPages(this._asInternals());
   }
 
   /** Update a page's title or description. */
   updatePage(pageId: string, changes: { title?: string; description?: string }): HelperResult {
-    return layoutOps.updatePage(this as any, pageId, changes);
+    return layoutOps.updatePage(this._asInternals(), pageId, changes);
   }
 
   /**
@@ -2544,37 +2557,37 @@ export class Project {
 
   /** Assign an item to a page. */
   placeOnPage(target: string, pageId: string, options?: PlacementOptions): HelperResult {
-    return layoutOps.placeOnPage(this as any, target, pageId, options);
+    return layoutOps.placeOnPage(this._asInternals(), target, pageId, options);
   }
 
   /** Remove item from page assignment. */
   unplaceFromPage(target: string, pageId: string): HelperResult {
-    return layoutOps.unplaceFromPage(this as any, target, pageId);
+    return layoutOps.unplaceFromPage(this._asInternals(), target, pageId);
   }
 
   /** Set flow mode. */
   setFlow(mode: 'single' | 'wizard' | 'tabs', props?: FlowProps): HelperResult {
-    return layoutOps.setFlow(this as any, mode, props);
+    return layoutOps.setFlow(this._asInternals(), mode, props);
   }
 
   /** Set or clear the `$ref` for a group item. */
   setGroupRef(path: string, ref: string | null, keyPrefix?: string): HelperResult {
-    return layoutOps.setGroupRef(this as any, path, ref, keyPrefix);
+    return layoutOps.setGroupRef(this._asInternals(), path, ref, keyPrefix);
   }
 
   /** Set a component-level visual condition (`when`) on a bound item or layout node. */
   setComponentWhen(target: string, when: string | null): HelperResult {
-    return layoutOps.setComponentWhen(this as any, target, when);
+    return layoutOps.setComponentWhen(this._asInternals(), target, when);
   }
 
   /** Set a component accessibility override on a bound item or layout node. */
   setComponentAccessibility(target: string, property: string, value: unknown): HelperResult {
-    return layoutOps.setComponentAccessibility(this as any, target, property, value);
+    return layoutOps.setComponentAccessibility(this._asInternals(), target, property, value);
   }
 
   /** Set an arbitrary property on a component tree node (identified by `__node:<id>` or bind key). */
   setLayoutNodeProp(target: string, property: string, value: unknown): HelperResult {
-    return layoutOps.setLayoutNodeProp(this as any, target, property, value);
+    return layoutOps.setLayoutNodeProp(this._asInternals(), target, property, value);
   }
 
   /**
@@ -2583,34 +2596,24 @@ export class Project {
    * without clobbering other keys.
    */
   setNodeStyleProperty(ref: { nodeId?: string; bind?: string }, property: string, value: string): void {
-    return layoutOps.setNodeStyleProperty(this as any, ref, property, value);
+    return layoutOps.setNodeStyleProperty(this._asInternals(), ref, property, value);
   }
 
   /** Add a new item from the Layout workspace, placing it directly into the component tree. */
   addItemToLayout(spec: LayoutAddItemSpec, pageId?: string): HelperResult {
-    return layoutOps.addItemToLayout(this as any, spec, pageId);
+    return layoutOps.addItemToLayout(this._asInternals(), spec, pageId);
   }
 
   // ── Layout Helpers ──
 
-  /** Layout arrangement → component mapping. */
-  private static readonly _LAYOUT_MAP: Record<LayoutArrangement, { component: string; props?: Record<string, unknown> }> = {
-    'columns-2': { component: 'Grid', props: { columns: 2 } },
-    'columns-3': { component: 'Grid', props: { columns: 3 } },
-    'columns-4': { component: 'Grid', props: { columns: 4 } },
-    'card': { component: 'Card' },
-    'sidebar': { component: 'Panel', props: { position: 'left' } },
-    'inline': { component: 'Stack', props: { direction: 'horizontal' } },
-  };
-
   /** Apply spatial layout to targets. */
   applyLayout(targets: string | string[], arrangement: LayoutArrangement): HelperResult {
-    return layoutOps.applyLayout(this as any, targets, arrangement);
+    return layoutOps.applyLayout(this._asInternals(), targets, arrangement);
   }
 
   /** Apply style overrides to a specific field. */
   applyStyle(path: string, properties: Record<string, unknown>): HelperResult {
-    return layoutOps.applyStyle(this as any, path, properties);
+    return layoutOps.applyStyle(this._asInternals(), path, properties);
   }
 
   /** Apply style to form-level defaults or type selectors. */
@@ -2618,70 +2621,70 @@ export class Project {
     target: 'form' | { type: 'group' | 'field' | 'display' } | { dataType: string },
     properties: Record<string, unknown>,
   ): HelperResult {
-    return layoutOps.applyStyleAll(this as any, target, properties);
+    return layoutOps.applyStyleAll(this._asInternals(), target, properties);
   }
 
   // ── Theme Token / Default / Breakpoint Helpers ──
 
   /** Set or delete a single theme token (null = delete). */
   setToken(key: string, value: string | null): HelperResult {
-    return themeOps.setToken(this as any, key, value);
+    return themeOps.setToken(this._asInternals(), key, value);
   }
 
   /** Set a default theme property (e.g. labelPosition, widget, cssClass). */
   setThemeDefault(property: string, value: unknown): HelperResult {
-    return themeOps.setThemeDefault(this as any, property, value);
+    return themeOps.setThemeDefault(this._asInternals(), property, value);
   }
 
   /** Set or delete a responsive breakpoint (null minWidth = delete). */
   setBreakpoint(name: string, minWidth: number | null): HelperResult {
-    return themeOps.setBreakpoint(this as any, name, minWidth);
+    return themeOps.setBreakpoint(this._asInternals(), name, minWidth);
   }
 
   // ── Locale helpers ──
 
   /** Set a localized string for the selected or explicit locale. */
   setLocaleString(key: string, value: string, localeId?: string): HelperResult {
-    return themeOps.setLocaleString(this as any, key, value, localeId);
+    return themeOps.setLocaleString(this._asInternals(), key, value, localeId);
   }
 
   /** Remove a localized string for the selected or explicit locale. */
   removeLocaleString(key: string, localeId?: string): HelperResult {
-    return themeOps.removeLocaleString(this as any, key, localeId);
+    return themeOps.removeLocaleString(this._asInternals(), key, localeId);
   }
 
   /** Update a locale metadata property such as name, title, or description. */
   setLocaleMetadata(property: string, value: unknown, localeId?: string): HelperResult {
-    return themeOps.setLocaleMetadata(this as any, property, value, localeId);
+    return themeOps.setLocaleMetadata(this._asInternals(), property, value, localeId);
   }
 
   // ── Theme Selector CRUD ──
 
   /** Add a theme selector rule. */
   addThemeSelector(match: Record<string, unknown>, apply: Record<string, unknown>): HelperResult {
-    return themeOps.addThemeSelector(this as any, match, apply);
+    return themeOps.addThemeSelector(this._asInternals(), match, apply);
   }
 
   /** Update a theme selector rule by index. */
   updateThemeSelector(index: number, changes: { match?: Record<string, unknown>; apply?: Record<string, unknown> }): HelperResult {
-    return themeOps.updateThemeSelector(this as any, index, changes);
+    return themeOps.updateThemeSelector(this._asInternals(), index, changes);
   }
 
   /** Delete a theme selector rule by index. */
   deleteThemeSelector(index: number): HelperResult {
-    return themeOps.deleteThemeSelector(this as any, index);
+    return themeOps.deleteThemeSelector(this._asInternals(), index);
   }
 
   /** Reorder a theme selector rule. */
   reorderThemeSelector(index: number, direction: 'up' | 'down'): HelperResult {
-    return themeOps.reorderThemeSelector(this as any, index, direction);
+    return themeOps.reorderThemeSelector(this._asInternals(), index, direction);
   }
 
   // ── Migration helpers ──
 
   /** Ensure a migration descriptor exists for a source version. */
   addMigration(fromVersion: string, description?: string): HelperResult {
-    return themeOps.addMigration(this as any, fromVersion, description);
+    return themeOps.addMigration(this._asInternals(), fromVersion, description);
   }
 
   /** Add a field-map rule to a migration descriptor. */
@@ -2693,56 +2696,56 @@ export class Project {
     expression?: string;
     insertIndex?: number;
   }): HelperResult {
-    return themeOps.addMigrationRule(this as any, params);
+    return themeOps.addMigrationRule(this._asInternals(), params);
   }
 
   /** Remove a field-map rule from a migration descriptor. */
   removeMigrationRule(fromVersion: string, index: number): HelperResult {
-    return themeOps.removeMigrationRule(this as any, fromVersion, index);
+    return themeOps.removeMigrationRule(this._asInternals(), fromVersion, index);
   }
 
   // ── Theme Per-Item Override Helpers ──
 
   /** Set a per-item theme override (e.g. labelPosition for a specific field). */
   setItemOverride(itemKey: string, property: string, value: unknown): HelperResult {
-    return themeOps.setItemOverride(this as any, itemKey, property, value);
+    return themeOps.setItemOverride(this._asInternals(), itemKey, property, value);
   }
 
   /** Clear all per-item theme overrides for an item. */
   clearItemOverrides(itemKey: string): HelperResult {
-    return themeOps.clearItemOverrides(this as any, itemKey);
+    return themeOps.clearItemOverrides(this._asInternals(), itemKey);
   }
 
   // ── Region Helpers ──
 
   /** Add an empty region to a page. */
   addRegion(pageId: string, span?: number): HelperResult {
-    return layoutOps.addRegion(this as any, pageId, span);
+    return layoutOps.addRegion(this._asInternals(), pageId, span);
   }
 
   /** Update a region property by index. */
   updateRegion(pageId: string, regionIndex: number, property: string, value: unknown): HelperResult {
-    return layoutOps.updateRegion(this as any, pageId, regionIndex, property, value);
+    return layoutOps.updateRegion(this._asInternals(), pageId, regionIndex, property, value);
   }
 
   /** Delete a region from a page by index. */
   deleteRegion(pageId: string, regionIndex: number): HelperResult {
-    return layoutOps.deleteRegion(this as any, pageId, regionIndex);
+    return layoutOps.deleteRegion(this._asInternals(), pageId, regionIndex);
   }
 
   /** Reorder a region within a page by index. */
   reorderRegion(pageId: string, regionIndex: number, direction: 'up' | 'down'): HelperResult {
-    return layoutOps.reorderRegion(this as any, pageId, regionIndex, direction);
+    return layoutOps.reorderRegion(this._asInternals(), pageId, regionIndex, direction);
   }
 
   /** Set the field-key assignment for a region by index. */
   setRegionKey(pageId: string, regionIndex: number, newKey: string): HelperResult {
-    return layoutOps.setRegionKey(this as any, pageId, regionIndex, newKey);
+    return layoutOps.setRegionKey(this._asInternals(), pageId, regionIndex, newKey);
   }
 
   /** Rename a page's title. */
   renamePage(pageId: string, newTitle: string): HelperResult {
-    return layoutOps.renamePage(this as any, pageId, newTitle);
+    return layoutOps.renamePage(this._asInternals(), pageId, newTitle);
   }
 
   /** Find a bound child's index by item key on a page. Throws if page or item not found. */
@@ -2758,12 +2761,12 @@ export class Project {
 
   /** Set the width (grid span) of an item on a page. */
   setItemWidth(pageId: string, itemKey: string, width: number): HelperResult {
-    return layoutOps.setItemWidth(this as any, pageId, itemKey, width);
+    return layoutOps.setItemWidth(this._asInternals(), pageId, itemKey, width);
   }
 
   /** Set the offset (grid start) of an item on a page. */
   setItemOffset(pageId: string, itemKey: string, offset: number | undefined): HelperResult {
-    return layoutOps.setItemOffset(this as any, pageId, itemKey, offset);
+    return layoutOps.setItemOffset(this._asInternals(), pageId, itemKey, offset);
   }
 
   /** Set responsive breakpoint overrides for an item on a page. */
@@ -2773,12 +2776,12 @@ export class Project {
     breakpoint: string,
     overrides: { width?: number; offset?: number; hidden?: boolean } | undefined,
   ): HelperResult {
-    return layoutOps.setItemResponsive(this as any, pageId, itemKey, breakpoint, overrides);
+    return layoutOps.setItemResponsive(this._asInternals(), pageId, itemKey, breakpoint, overrides);
   }
 
   /** Remove an item from a page. */
   removeItemFromPage(pageId: string, itemKey: string): HelperResult {
-    return layoutOps.removeItemFromPage(this as any, pageId, itemKey);
+    return layoutOps.removeItemFromPage(this._asInternals(), pageId, itemKey);
   }
 
   /**
@@ -2786,17 +2789,17 @@ export class Project {
    * Batches the unassign + assign into one history entry so undo/redo is coherent.
    */
   moveItemToPage(sourcePageId: string, itemKey: string, targetPageId: string, opts?: PlacementOptions): HelperResult {
-    return layoutOps.moveItemToPage(this as any, sourcePageId, itemKey, targetPageId, opts);
+    return layoutOps.moveItemToPage(this._asInternals(), sourcePageId, itemKey, targetPageId, opts);
   }
 
   /** Reorder an item within a page (by key, not index). */
   reorderItemOnPage(pageId: string, itemKey: string, direction: 'up' | 'down'): HelperResult {
-    return layoutOps.reorderItemOnPage(this as any, pageId, itemKey, direction);
+    return layoutOps.reorderItemOnPage(this._asInternals(), pageId, itemKey, direction);
   }
 
   /** Move an item to an arbitrary position on a page by target index. */
   moveItemOnPageToIndex(pageId: string, itemKey: string, targetIndex: number): HelperResult {
-    return layoutOps.moveItemOnPageToIndex(this as any, pageId, itemKey, targetIndex);
+    return layoutOps.moveItemOnPageToIndex(this._asInternals(), pageId, itemKey, targetIndex);
   }
 
   // ── Component Tree Helpers ──
@@ -2998,12 +3001,12 @@ export class Project {
 
   /** Set a mapping document root property (e.g. version, direction, autoMap). */
   setMappingProperty(property: string, value: unknown, mappingId?: string): HelperResult {
-    return mappingOps.setMappingProperty(this as any, property, value, mappingId);
+    return mappingOps.setMappingProperty(this._asInternals(), property, value, mappingId);
   }
 
   /** Set a property on the mapping's target structure descriptor. */
   setMappingTargetSchema(property: string, value: unknown, mappingId?: string): HelperResult {
-    return mappingOps.setMappingTargetSchema(this as any, property, value, mappingId);
+    return mappingOps.setMappingTargetSchema(this._asInternals(), property, value, mappingId);
   }
 
   /** Add a mapping rule with optional transform parameters. */
@@ -3014,37 +3017,37 @@ export class Project {
     insertIndex?: number;
     mappingId?: string;
   }): HelperResult {
-    return mappingOps.addMappingRule(this as any, params);
+    return mappingOps.addMappingRule(this._asInternals(), params);
   }
 
   /** Update a property of an existing mapping rule. */
   updateMappingRule(index: number, property: string, value: unknown, mappingId?: string): HelperResult {
-    return mappingOps.updateMappingRule(this as any, index, property, value, mappingId);
+    return mappingOps.updateMappingRule(this._asInternals(), index, property, value, mappingId);
   }
 
   /** Remove a mapping rule by index. */
   removeMappingRule(index: number, mappingId?: string): HelperResult {
-    return mappingOps.removeMappingRule(this as any, index, mappingId);
+    return mappingOps.removeMappingRule(this._asInternals(), index, mappingId);
   }
 
   /** Clear all mapping rules. */
   clearMappingRules(mappingId?: string): HelperResult {
-    return mappingOps.clearMappingRules(this as any, mappingId);
+    return mappingOps.clearMappingRules(this._asInternals(), mappingId);
   }
 
   /** Reorder a mapping rule. */
   reorderMappingRule(index: number, direction: 'up' | 'down', mappingId?: string): HelperResult {
-    return mappingOps.reorderMappingRule(this as any, index, direction, mappingId);
+    return mappingOps.reorderMappingRule(this._asInternals(), index, direction, mappingId);
   }
 
   /** Set configuration for a specific wire-format adapter (JSON, XML, CSV). */
   setMappingAdapter(format: string, config: unknown): HelperResult {
-    return mappingOps.setMappingAdapter(this as any, format, config);
+    return mappingOps.setMappingAdapter(this._asInternals(), format, config);
   }
 
   /** Update the top-level mapping defaults. */
   updateMappingDefaults(defaults: Record<string, unknown>): HelperResult {
-    return mappingOps.updateMappingDefaults(this as any, defaults);
+    return mappingOps.updateMappingDefaults(this._asInternals(), defaults);
   }
 
   /** Auto-generate mapping rules for every field in the form. */
@@ -3054,112 +3057,49 @@ export class Project {
     priority?: number;
     replace?: boolean;
   } = {}): HelperResult {
-    return mappingOps.autoGenerateMappingRules(this as any, params);
+    return mappingOps.autoGenerateMappingRules(this._asInternals(), params);
   }
 
   /** Run a mapping preview and return the projected output. */
   previewMapping(params: import('./types.js').MappingPreviewParams): import('./types.js').MappingPreviewResult {
-    return mappingOps.previewMapping(this as any, params);
+    return mappingOps.previewMapping(this._asInternals(), params);
   }
 
   /** Create a new named mapping document and select it. */
   createMapping(id: string, options: { targetSchema?: Record<string, unknown> } = {}): HelperResult {
-    return mappingOps.createMapping(this as any, id, options);
+    return mappingOps.createMapping(this._asInternals(), id, options);
   }
 
   /** Delete a named mapping document. Throws if it is the last mapping. */
   deleteMapping(id: string): HelperResult {
-    return mappingOps.deleteMapping(this as any, id);
+    return mappingOps.deleteMapping(this._asInternals(), id);
   }
 
   /** Rename a mapping document. Throws if the new ID already exists. */
   renameMapping(oldId: string, newId: string): HelperResult {
-    return mappingOps.renameMapping(this as any, oldId, newId);
+    return mappingOps.renameMapping(this._asInternals(), oldId, newId);
   }
 
   /** Select the active mapping document by ID. */
   selectMapping(id: string): HelperResult {
-    return mappingOps.selectMapping(this as any, id);
+    return mappingOps.selectMapping(this._asInternals(), id);
   }
 
   // ── Variable Helpers ──
 
   /** Add a named FEL variable. */
   addVariable(name: string, expression: string, scope?: string): HelperResult {
-    this._validateFEL(expression);
-    checkVariableSelfReference(name, expression);
-    const payload: Record<string, unknown> = { name, expression };
-    if (scope) payload.scope = scope;
-
-    this.core.dispatch({ type: 'definition.addVariable', payload });
-
-    return {
-      summary: `Added variable '${name}'`,
-      action: { helper: 'addVariable', params: { name, expression, scope } },
-      affectedPaths: [],
-    };
+    return projectVariables.addVariable(this._asInternals(), name, expression, scope);
   }
 
   /** Update a variable's expression. */
   updateVariable(name: string, expression: string): HelperResult {
-    if (!this.core.variableNames().includes(name)) {
-      throw new HelperError('VARIABLE_NOT_FOUND', `Variable "${name}" does not exist`, {
-        name,
-        validVariables: this.core.variableNames(),
-      });
-    }
-    this._validateFEL(expression);
-    checkVariableSelfReference(name, expression);
-    this.core.dispatch({
-      type: 'definition.setVariable',
-      payload: { name, property: 'expression', value: expression },
-    });
-
-    return {
-      summary: `Updated variable '${name}'`,
-      action: { helper: 'updateVariable', params: { name, expression } },
-      affectedPaths: [],
-    };
+    return projectVariables.updateVariable(this._asInternals(), name, expression);
   }
 
   /** Remove a variable — warns about dangling references. */
   removeVariable(name: string): HelperResult {
-    if (!this.core.variableNames().includes(name)) {
-      throw new HelperError('VARIABLE_NOT_FOUND', `Variable "${name}" does not exist`, {
-        name,
-        validVariables: this.core.variableNames(),
-      });
-    }
-    // Scan for dangling references before deletion
-    const warnings: HelperWarning[] = [];
-    const allExprs = this.core.allExpressions();
-    const varRefAt = `@${name}`;
-    const varRefDollar = `$${name}`;
-    const danglingPaths: string[] = [];
-
-    for (const exprLoc of allExprs) {
-      if (typeof exprLoc.expression === 'string' && 
-          (exprLoc.expression.includes(varRefAt) || exprLoc.expression.includes(varRefDollar))) {
-        danglingPaths.push(exprLoc.location ?? 'unknown');
-      }
-    }
-
-    if (danglingPaths.length > 0) {
-      warnings.push({
-        code: 'DANGLING_REFERENCES',
-        message: `${danglingPaths.length} expression(s) still reference @${name}`,
-        detail: { referenceCount: danglingPaths.length, paths: danglingPaths },
-      });
-    }
-
-    this.core.dispatch({ type: 'definition.deleteVariable', payload: { name } });
-
-    return {
-      summary: `Removed variable '${name}'`,
-      action: { helper: 'removeVariable', params: { name } },
-      affectedPaths: [],
-      warnings: warnings.length > 0 ? warnings : undefined,
-    };
+    return projectVariables.removeVariable(this._asInternals(), name);
   }
 
   /**
@@ -3171,105 +3111,29 @@ export class Project {
    * “Known limitations” section for the product-facing note.
    */
   renameVariable(name: string, newName: string): HelperResult {
-    throw new HelperError(
-      'NOT_IMPLEMENTED',
-      `renameVariable is not yet implemented (definition.renameVariable handler does not exist)`,
-      { name, newName },
-    );
+    return projectVariables.renameVariable(this._asInternals(), name, newName);
   }
 
   // ── Instance Helpers ──
 
   /** Add a named external data source. */
   addInstance(name: string, props: InstanceProps): HelperResult {
-    this.core.dispatch({
-      type: 'definition.addInstance',
-      payload: { name, ...props },
-    });
-
-    return {
-      summary: `Added instance '${name}'`,
-      action: { helper: 'addInstance', params: { name, ...props } },
-      affectedPaths: [],
-    };
-  }
-
-  private _validateInstanceExists(name: string): void {
-    if (!this.core.instanceNames().includes(name)) {
-      throw new HelperError('INSTANCE_NOT_FOUND', `Instance "${name}" does not exist`, {
-        name,
-        validInstances: this.core.instanceNames(),
-      });
-    }
+    return projectVariables.addInstance(this._asInternals(), name, props);
   }
 
   /** Update instance properties. */
   updateInstance(name: string, changes: Partial<InstanceProps>): HelperResult {
-    this._validateInstanceExists(name);
-    const commands: AnyCommand[] = [];
-    for (const [prop, val] of Object.entries(changes)) {
-      if (val !== undefined) {
-        commands.push({
-          type: 'definition.setInstance',
-          payload: { name, property: prop, value: val },
-        });
-      }
-    }
-    if (commands.length > 0) this.core.dispatch(commands);
-
-    return {
-      summary: `Updated instance '${name}'`,
-      action: { helper: 'updateInstance', params: { name, changes } },
-      affectedPaths: [],
-    };
+    return projectVariables.updateInstance(this._asInternals(), name, changes);
   }
 
   /** Rename an instance — rewrites FEL references. */
   renameInstance(name: string, newName: string): HelperResult {
-    this._validateInstanceExists(name);
-    this.core.dispatch({
-      type: 'definition.renameInstance',
-      payload: { name, newName },
-    });
-
-    return {
-      summary: `Renamed instance '${name}' to '${newName}'`,
-      action: { helper: 'renameInstance', params: { name, newName } },
-      affectedPaths: [],
-    };
+    return projectVariables.renameInstance(this._asInternals(), name, newName);
   }
 
   /** Remove an instance. */
   removeInstance(name: string): HelperResult {
-    this._validateInstanceExists(name);
-    // Scan for dangling references
-    const warnings: HelperWarning[] = [];
-    const allExprs = this.core.allExpressions();
-    const ref = `@instance('${name}')`;
-    const danglingPaths: string[] = [];
-
-    for (const exprLoc of allExprs) {
-      if (typeof exprLoc.expression === 'string' && exprLoc.expression.includes(ref)) {
-        danglingPaths.push(exprLoc.location ?? 'unknown');
-      }
-    }
-
-    if (danglingPaths.length > 0) {
-      warnings.push({
-        code: 'DANGLING_REFERENCES',
-        message: `${danglingPaths.length} expression(s) still reference @instance('${name}')`,
-        detail: { referenceCount: danglingPaths.length, paths: danglingPaths },
-      });
-    }
-
-    this.core.dispatch({ type: 'definition.deleteInstance', payload: { name } });
-
-    return {
-      summary: `Removed instance '${name}'`,
-      action: { helper: 'removeInstance', params: { name } },
-      affectedPaths: [],
-      warnings: warnings.length > 0 ? warnings : undefined,
-    };
+    return projectVariables.removeInstance(this._asInternals(), name);
   }
 
   // ── Screener Document Helpers ──
@@ -3303,61 +3167,61 @@ export class Project {
 
   /** Create a new screener document with a default first-match phase. */
   createScreenerDocument(options?: { url?: string; title?: string }): HelperResult {
-    return screenerOps.createScreenerDocument(this as any, options);
+    return screenerOps.createScreenerDocument(this._asInternals(), options);
   }
 
   /** Remove the screener document. */
   deleteScreenerDocument(): HelperResult {
-    return screenerOps.deleteScreenerDocument(this as any);
+    return screenerOps.deleteScreenerDocument(this._asInternals());
   }
 
   /** Add a screener question. */
   addScreenField(key: string, label: string, type: string, props?: FieldProps): HelperResult {
-    return screenerOps.addScreenField(this as any, key, label, type, props);
+    return screenerOps.addScreenField(this._asInternals(), key, label, type, props);
   }
 
   /** Remove a screener question. */
   removeScreenField(key: string): HelperResult {
-    return screenerOps.removeScreenField(this as any, key);
+    return screenerOps.removeScreenField(this._asInternals(), key);
   }
 
   /** Update properties on a screener question. */
   updateScreenField(key: string, changes: { label?: string; helpText?: string; required?: boolean | string }): HelperResult {
-    return screenerOps.updateScreenField(this as any, key, changes);
+    return screenerOps.updateScreenField(this._asInternals(), key, changes);
   }
 
   /** Reorder a screener question by key. */
   reorderScreenField(key: string, direction: 'up' | 'down'): HelperResult {
-    return screenerOps.reorderScreenField(this as any, key, direction);
+    return screenerOps.reorderScreenField(this._asInternals(), key, direction);
   }
 
   // ── Phase Management ──
 
   /** Add an evaluation phase. */
   addEvaluationPhase(id: string, strategy: string, label?: string): HelperResult {
-    return screenerOps.addEvaluationPhase(this as any, id, strategy, label);
+    return screenerOps.addEvaluationPhase(this._asInternals(), id, strategy, label);
   }
 
   /** Remove an evaluation phase. */
   removeEvaluationPhase(phaseId: string): HelperResult {
-    return screenerOps.removeEvaluationPhase(this as any, phaseId);
+    return screenerOps.removeEvaluationPhase(this._asInternals(), phaseId);
   }
 
   /** Reorder an evaluation phase. */
   reorderPhase(phaseId: string, direction: 'up' | 'down'): HelperResult {
-    return screenerOps.reorderPhase(this as any, phaseId, direction);
+    return screenerOps.reorderPhase(this._asInternals(), phaseId, direction);
   }
 
   /** Set strategy and config on a phase. */
   setPhaseStrategy(phaseId: string, strategy: string, config?: Record<string, unknown>): HelperResult {
-    return screenerOps.setPhaseStrategy(this as any, phaseId, strategy, config);
+    return screenerOps.setPhaseStrategy(this._asInternals(), phaseId, strategy, config);
   }
 
   // ── Phase-Scoped Route Management ──
 
   /** Add a route to a phase. */
   addScreenRoute(phaseId: string, route: { condition?: string; target: string; label?: string; message?: string; score?: string; threshold?: number }, insertIndex?: number): HelperResult {
-    return screenerOps.addScreenRoute(this as any, phaseId, route, insertIndex);
+    return screenerOps.addScreenRoute(this._asInternals(), phaseId, route, insertIndex);
   }
 
   /** Update properties on a route. */
@@ -3366,29 +3230,29 @@ export class Project {
     routeIndex: number,
     changes: { condition?: string; target?: string; label?: string; message?: string; score?: string; threshold?: number; override?: boolean; terminal?: boolean },
   ): HelperResult {
-    return screenerOps.updateScreenRoute(this as any, phaseId, routeIndex, changes);
+    return screenerOps.updateScreenRoute(this._asInternals(), phaseId, routeIndex, changes);
   }
 
   /** Reorder a route within a phase. */
   reorderScreenRoute(phaseId: string, routeIndex: number, direction: 'up' | 'down'): HelperResult {
-    return screenerOps.reorderScreenRoute(this as any, phaseId, routeIndex, direction);
+    return screenerOps.reorderScreenRoute(this._asInternals(), phaseId, routeIndex, direction);
   }
 
   /** Remove a route from a phase. */
   removeScreenRoute(phaseId: string, routeIndex: number): HelperResult {
-    return screenerOps.removeScreenRoute(this as any, phaseId, routeIndex);
+    return screenerOps.removeScreenRoute(this._asInternals(), phaseId, routeIndex);
   }
 
   // ── Screener Lifecycle ──
 
   /** Set screener availability window. Pass null to clear. */
   setScreenerAvailability(from?: string | null, until?: string | null): HelperResult {
-    return screenerOps.setScreenerAvailability(this as any, from, until);
+    return screenerOps.setScreenerAvailability(this._asInternals(), from, until);
   }
 
   /** Set screener result validity duration. Pass null to clear. */
   setScreenerResultValidity(duration: string | null): HelperResult {
-    return screenerOps.setScreenerResultValidity(this as any, duration);
+    return screenerOps.setScreenerResultValidity(this._asInternals(), duration);
   }
 
   // ── Preview / Query Methods ──

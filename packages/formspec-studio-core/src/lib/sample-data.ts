@@ -1,6 +1,7 @@
 /** @filedesc Sample response generation and definition pruning for preview helpers. */
 import { createFormEngine, type FormspecDefinition, type IFormEngine } from '@formspec-org/engine/render';
 import type { FormItem } from '../types.js';
+import { sampleFieldValue } from '../mapping-sample-data.js';
 
 /** Default sample values by data type. Uses today's date for date/dateTime. */
 export function sampleValues(): Record<string, unknown> {
@@ -24,37 +25,27 @@ export function sampleValues(): Record<string, unknown> {
 /** Generate a context-aware sample value for a field. */
 export function sampleValueForField(item: FormItem, fieldIndex: number): unknown {
   const dt = item.dataType ?? 'string';
-  const key = item.key.toLowerCase();
-  const options = item.options;
+  const opts = item.options
+    ? { firstOptionValue: item.options[0]?.value as string | undefined, secondOptionValue: item.options[1]?.value as string | undefined }
+    : undefined;
 
   if (dt === 'choice' || dt === 'multiChoice') {
-    if (options?.length) {
-      return dt === 'multiChoice' ? [options[0].value] : options[0].value;
-    }
-    return dt === 'multiChoice' ? ['option1'] : 'option1';
+    return sampleFieldValue(item.key, dt, opts);
   }
 
-  if (dt === 'string' || dt === 'text') {
-    if (key.includes('email')) return 'sample@example.com';
-    if (key.includes('phone') || key.includes('tel')) return '+1-555-0100';
-    if (key.includes('name') && key.includes('first')) return 'Jane';
-    if (key.includes('name') && key.includes('last')) return 'Doe';
-    if (key.includes('name')) return 'Jane Doe';
+  if (dt === 'money') {
+    return sampleValues().money;
   }
 
   if (dt === 'integer' || dt === 'decimal') {
-    const min = typeof item.min === 'number' ? item.min : undefined;
-    const max = typeof item.max === 'number' ? item.max : undefined;
-    const baseValue = dt === 'integer' ? 10 + fieldIndex : parseFloat((1.5 + fieldIndex * 0.7).toFixed(2));
-    if (min !== undefined && max !== undefined) {
-      return dt === 'integer' ? Math.round((min + max) / 2) : parseFloat(((min + max) / 2).toFixed(2));
-    }
-    if (min !== undefined && baseValue < min) return min;
-    if (max !== undefined && baseValue > max) return max;
-    return baseValue;
+    return sampleFieldValue(item.key, dt, {
+      ...opts,
+      min: typeof item.min === 'number' ? item.min : undefined,
+      max: typeof item.max === 'number' ? item.max : undefined,
+    });
   }
 
-  return sampleValues()[dt] ?? 'Sample text';
+  return sampleFieldValue(item.key, dt, opts);
 }
 
 /**

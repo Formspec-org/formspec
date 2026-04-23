@@ -1,8 +1,75 @@
 import type { AnyCommand } from '@formspec-org/core';
 import type { HelperResult, FieldProps } from './helper-types.js';
-import { HelperError } from './helper-types.js';
+import { exec, type DispatchSpec } from './lib/dispatch-helpers.js';
+import type { ProjectInternals } from './project-internals.js';
 
-export function createScreenerDocument(project: any, options?: { url?: string; title?: string }): HelperResult {
+const S = {
+  deleteScreenerDocument: {
+    command: 'screener.remove',
+    summary: () => 'Removed screener document',
+    affectedPaths: () => ['screener'],
+  },
+  removeScreenField: {
+    command: 'screener.deleteItem',
+    summary: (p: { key: string }) => `Removed screener field '${p.key}'`,
+    affectedPaths: (p: { key: string }) => [p.key],
+  },
+  removeEvaluationPhase: {
+    command: 'screener.removePhase',
+    summary: (p: { phaseId: string }) => `Removed evaluation phase '${p.phaseId}'`,
+    affectedPaths: (p: { phaseId: string }) => [p.phaseId],
+  },
+  reorderPhase: {
+    command: 'screener.reorderPhase',
+    summary: (p: { phaseId: string; direction: 'up' | 'down' }) =>
+      `Reordered phase '${p.phaseId}' ${p.direction}`,
+    affectedPaths: (p: { phaseId: string }) => [p.phaseId],
+  },
+  addEvaluationPhase: {
+    command: 'screener.addPhase',
+    summary: (p: { id: string; strategy: string }) =>
+      `Added evaluation phase '${p.id}' (${p.strategy ?? '(unspecified)'})`,
+    affectedPaths: (p: { id: string }) => [p.id],
+    beforeDispatch: (project: ProjectInternals) => { project._getScreener(); },
+  },
+  removeScreenRoute: {
+    command: 'screener.deleteRoute',
+    payload: (p: { phaseId: string; routeIndex: number }) =>
+      ({ phaseId: p.phaseId, index: p.routeIndex }),
+    summary: (p: { phaseId: string; routeIndex: number }) =>
+      `Removed route ${p.routeIndex} from phase '${p.phaseId}'`,
+    affectedPaths: (p: { phaseId: string }) => [p.phaseId],
+    beforeDispatch: (project: ProjectInternals, p: { phaseId: string; routeIndex: number }) => {
+      project._validatePhaseRoute(p.phaseId, p.routeIndex);
+    },
+  },
+  reorderScreenRoute: {
+    command: 'screener.reorderRoute',
+    payload: (p: { phaseId: string; routeIndex: number; direction: 'up' | 'down' }) =>
+      ({ phaseId: p.phaseId, index: p.routeIndex, direction: p.direction }),
+    summary: (p: { phaseId: string; routeIndex: number; direction: 'up' | 'down' }) =>
+      `Reordered route ${p.routeIndex} in phase '${p.phaseId}' ${p.direction}`,
+    affectedPaths: (p: { phaseId: string }) => [p.phaseId],
+    beforeDispatch: (project: ProjectInternals, p: { phaseId: string; routeIndex: number }) => {
+      project._validatePhaseRoute(p.phaseId, p.routeIndex);
+    },
+  },
+  setScreenerAvailability: {
+    command: 'screener.setAvailability',
+    summary: () => 'Updated screener availability',
+    affectedPaths: () => ['screener.availability'],
+    beforeDispatch: (project: ProjectInternals) => { project._getScreener(); },
+  },
+  setScreenerResultValidity: {
+    command: 'screener.setResultValidity',
+    summary: (p: { duration: string | null }) =>
+      p.duration ? `Set result validity to ${p.duration}` : 'Cleared result validity',
+    affectedPaths: () => ['screener.validity'],
+    beforeDispatch: (project: ProjectInternals) => { project._getScreener(); },
+  },
+} satisfies Record<string, DispatchSpec<any>>;
+
+export function createScreenerDocument(project: ProjectInternals, options?: { url?: string; title?: string }): HelperResult {
   const doc = {
     $formspecScreener: '1.0' as const,
     url: options?.url ?? '',
@@ -15,20 +82,15 @@ export function createScreenerDocument(project: any, options?: { url?: string; t
   return {
     summary: 'Created screener document',
     action: { helper: 'createScreenerDocument', params: options ?? {} },
-    affectedPaths: [],
+    affectedPaths: ['screener'],
   };
 }
 
-export function deleteScreenerDocument(project: any): HelperResult {
-  project.core.dispatch({ type: 'screener.remove', payload: {} });
-  return {
-    summary: 'Removed screener document',
-    action: { helper: 'deleteScreenerDocument', params: {} },
-    affectedPaths: [],
-  };
+export function deleteScreenerDocument(project: ProjectInternals): HelperResult {
+  return exec(project, 'deleteScreenerDocument', {}, S.deleteScreenerDocument);
 }
 
-export function addScreenField(project: any, key: string, label: string, type: string, props?: FieldProps): HelperResult {
+export function addScreenField(project: ProjectInternals, key: string, label: string, type: string, props?: FieldProps): HelperResult {
   project._getScreener();
   const { resolved, extensionName, combinedConstraintExpr } = project._resolveAuthoringFieldType(type);
   const payload: Record<string, unknown> = {
@@ -52,16 +114,11 @@ export function addScreenField(project: any, key: string, label: string, type: s
   };
 }
 
-export function removeScreenField(project: any, key: string): HelperResult {
-  project.core.dispatch({ type: 'screener.deleteItem', payload: { key } });
-  return {
-    summary: `Removed screener field '${key}'`,
-    action: { helper: 'removeScreenField', params: { key } },
-    affectedPaths: [key],
-  };
+export function removeScreenField(project: ProjectInternals, key: string): HelperResult {
+  return exec(project, 'removeScreenField', { key }, S.removeScreenField);
 }
 
-export function updateScreenField(project: any, key: string, changes: { label?: string; helpText?: string; required?: boolean | string }): HelperResult {
+export function updateScreenField(project: ProjectInternals, key: string, changes: { label?: string; helpText?: string; required?: boolean | string }): HelperResult {
   project._validateScreenerItemKey(key);
   const commands: AnyCommand[] = [];
 
@@ -94,7 +151,7 @@ export function updateScreenField(project: any, key: string, changes: { label?: 
   };
 }
 
-export function reorderScreenField(project: any, key: string, direction: 'up' | 'down'): HelperResult {
+export function reorderScreenField(project: ProjectInternals, key: string, direction: 'up' | 'down'): HelperResult {
   const index = project._validateScreenerItemKey(key);
   project.core.dispatch({ type: 'screener.reorderItem', payload: { index, direction } });
   return {
@@ -104,35 +161,19 @@ export function reorderScreenField(project: any, key: string, direction: 'up' | 
   };
 }
 
-export function addEvaluationPhase(project: any, id: string, strategy: string, label?: string): HelperResult {
-  project._getScreener();
-  project.core.dispatch({ type: 'screener.addPhase', payload: { id, strategy, label } });
-  return {
-    summary: `Added evaluation phase '${id}' (${strategy ?? '(unspecified)'})`,
-    action: { helper: 'addEvaluationPhase', params: { id, strategy, label } },
-    affectedPaths: [],
-  };
+export function addEvaluationPhase(project: ProjectInternals, id: string, strategy: string, label?: string): HelperResult {
+  return exec(project, 'addEvaluationPhase', { id, strategy, label }, S.addEvaluationPhase);
 }
 
-export function removeEvaluationPhase(project: any, phaseId: string): HelperResult {
-  project.core.dispatch({ type: 'screener.removePhase', payload: { phaseId } });
-  return {
-    summary: `Removed evaluation phase '${phaseId}'`,
-    action: { helper: 'removeEvaluationPhase', params: { phaseId } },
-    affectedPaths: [],
-  };
+export function removeEvaluationPhase(project: ProjectInternals, phaseId: string): HelperResult {
+  return exec(project, 'removeEvaluationPhase', { phaseId }, S.removeEvaluationPhase);
 }
 
-export function reorderPhase(project: any, phaseId: string, direction: 'up' | 'down'): HelperResult {
-  project.core.dispatch({ type: 'screener.reorderPhase', payload: { phaseId, direction } });
-  return {
-    summary: `Reordered phase '${phaseId}' ${direction}`,
-    action: { helper: 'reorderPhase', params: { phaseId, direction } },
-    affectedPaths: [],
-  };
+export function reorderPhase(project: ProjectInternals, phaseId: string, direction: 'up' | 'down'): HelperResult {
+  return exec(project, 'reorderPhase', { phaseId, direction }, S.reorderPhase);
 }
 
-export function setPhaseStrategy(project: any, phaseId: string, strategy: string, config?: Record<string, unknown>): HelperResult {
+export function setPhaseStrategy(project: ProjectInternals, phaseId: string, strategy: string, config?: Record<string, unknown>): HelperResult {
   const commands: AnyCommand[] = [
     { type: 'screener.setPhaseProperty', payload: { phaseId, property: 'strategy', value: strategy } },
   ];
@@ -143,11 +184,11 @@ export function setPhaseStrategy(project: any, phaseId: string, strategy: string
   return {
     summary: `Set phase '${phaseId}' strategy to '${strategy}'`,
     action: { helper: 'setPhaseStrategy', params: { phaseId, strategy, config } },
-    affectedPaths: [],
+    affectedPaths: [phaseId],
   };
 }
 
-export function addScreenRoute(project: any, phaseId: string, route: { condition?: string; target: string; label?: string; message?: string; score?: string; threshold?: number }, insertIndex?: number): HelperResult {
+export function addScreenRoute(project: ProjectInternals, phaseId: string, route: { condition?: string; target: string; label?: string; message?: string; score?: string; threshold?: number }, insertIndex?: number): HelperResult {
   project._getScreener();
   if (route.condition) project._validateFEL(route.condition);
   if (route.score) project._validateFEL(route.score);
@@ -155,12 +196,12 @@ export function addScreenRoute(project: any, phaseId: string, route: { condition
   return {
     summary: `Added route to '${route.target ?? '(unspecified)'}' in phase '${phaseId}'`,
     action: { helper: 'addScreenRoute', params: { phaseId, ...route } },
-    affectedPaths: [],
+    affectedPaths: [phaseId],
   };
 }
 
 export function updateScreenRoute(
-  project: any,
+  project: ProjectInternals,
   phaseId: string,
   routeIndex: number,
   changes: { condition?: string; target?: string; label?: string; message?: string; score?: string; threshold?: number; override?: boolean; terminal?: boolean },
@@ -182,46 +223,22 @@ export function updateScreenRoute(
   return {
     summary: `Updated route ${routeIndex} in phase '${phaseId}'`,
     action: { helper: 'updateScreenRoute', params: { phaseId, routeIndex, ...changes } },
-    affectedPaths: [],
+    affectedPaths: [phaseId],
   };
 }
 
-export function reorderScreenRoute(project: any, phaseId: string, routeIndex: number, direction: 'up' | 'down'): HelperResult {
-  project._validatePhaseRoute(phaseId, routeIndex);
-  project.core.dispatch({ type: 'screener.reorderRoute', payload: { phaseId, index: routeIndex, direction } });
-  return {
-    summary: `Reordered route ${routeIndex} in phase '${phaseId}' ${direction}`,
-    action: { helper: 'reorderScreenRoute', params: { phaseId, routeIndex, direction } },
-    affectedPaths: [],
-  };
+export function reorderScreenRoute(project: ProjectInternals, phaseId: string, routeIndex: number, direction: 'up' | 'down'): HelperResult {
+  return exec(project, 'reorderScreenRoute', { phaseId, routeIndex, direction }, S.reorderScreenRoute);
 }
 
-export function removeScreenRoute(project: any, phaseId: string, routeIndex: number): HelperResult {
-  project._validatePhaseRoute(phaseId, routeIndex);
-  project.core.dispatch({ type: 'screener.deleteRoute', payload: { phaseId, index: routeIndex } });
-  return {
-    summary: `Removed route ${routeIndex} from phase '${phaseId}'`,
-    action: { helper: 'removeScreenRoute', params: { phaseId, routeIndex } },
-    affectedPaths: [],
-  };
+export function removeScreenRoute(project: ProjectInternals, phaseId: string, routeIndex: number): HelperResult {
+  return exec(project, 'removeScreenRoute', { phaseId, routeIndex }, S.removeScreenRoute);
 }
 
-export function setScreenerAvailability(project: any, from?: string | null, until?: string | null): HelperResult {
-  project._getScreener();
-  project.core.dispatch({ type: 'screener.setAvailability', payload: { from, until } });
-  return {
-    summary: 'Updated screener availability',
-    action: { helper: 'setScreenerAvailability', params: { from, until } },
-    affectedPaths: [],
-  };
+export function setScreenerAvailability(project: ProjectInternals, from?: string | null, until?: string | null): HelperResult {
+  return exec(project, 'setScreenerAvailability', { from, until }, S.setScreenerAvailability);
 }
 
-export function setScreenerResultValidity(project: any, duration: string | null): HelperResult {
-  project._getScreener();
-  project.core.dispatch({ type: 'screener.setResultValidity', payload: { duration } });
-  return {
-    summary: duration ? `Set result validity to ${duration}` : 'Cleared result validity',
-    action: { helper: 'setScreenerResultValidity', params: { duration } },
-    affectedPaths: [],
-  };
+export function setScreenerResultValidity(project: ProjectInternals, duration: string | null): HelperResult {
+  return exec(project, 'setScreenerResultValidity', { duration }, S.setScreenerResultValidity);
 }

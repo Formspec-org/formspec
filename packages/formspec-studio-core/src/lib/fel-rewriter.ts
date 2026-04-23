@@ -20,7 +20,6 @@ export function checkVariableSelfReference(name: string, expression: string): vo
  */
 export function buildRepeatScopeRewriter(
   authoredTarget: string,
-  _normalizedTarget: string,
 ): { rewriteExpression: (expr: string) => string; rewriteMessage: (msg: string) => string } {
   const authoredParts = authoredTarget.split('.');
   const authoredRowScope = authoredParts.slice(0, -1).join('.');

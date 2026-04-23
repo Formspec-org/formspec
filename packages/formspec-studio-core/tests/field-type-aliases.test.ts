@@ -4,7 +4,6 @@ import {
   resolveFieldType,
   resolveWidget,
   widgetHintFor,
-  isTextareaWidget,
   _WIDGET_ALIAS_MAP as WIDGET_ALIAS_MAP,
   _FIELD_TYPE_MAP as FIELD_TYPE_MAP,
 } from '../src/field-type-aliases.js';
@@ -184,20 +183,6 @@ describe('resolveFieldType', () => {
       expect(e).toBeInstanceOf(HelperError);
       expect((e as HelperError).code).toBe('INVALID_TYPE');
     }
-  });
-});
-
-// ── isTextareaWidget ────────────────────────────────────────────────
-
-describe('isTextareaWidget', () => {
-  it('returns true for "textarea"', () => {
-    expect(isTextareaWidget('textarea')).toBe(true);
-  });
-
-  it('returns false for other values', () => {
-    expect(isTextareaWidget('text')).toBe(false);
-    expect(isTextareaWidget('TextInput')).toBe(false);
-    expect(isTextareaWidget('richText')).toBe(false);
   });
 });
 

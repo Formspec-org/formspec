@@ -14,23 +14,32 @@ export interface MappingSampleOptions {
 export function sampleFieldValue(
   key: string,
   dataType: string | undefined,
-  options?: { firstOptionValue?: string; secondOptionValue?: string },
+  options?: { firstOptionValue?: string; secondOptionValue?: string; min?: number; max?: number },
 ): unknown {
   const dt = dataType ?? 'string';
   const k = key.toLowerCase();
 
   // --- Numeric ---
   if (dt === 'integer' || dt === 'decimal' || dt === 'number') {
-    if (k.includes('year')) return 2025;
-    if (k.includes('age')) return 34;
-    if (k.includes('price') || k.includes('amount') || k.includes('cost') || k.includes('total'))
-      return dt === 'integer' ? 1250 : 1250.00;
-    if (k.includes('percent') || k.includes('rate')) return dt === 'integer' ? 15 : 15.75;
-    if (k.includes('count') || k.includes('quantity') || k.includes('qty')) return 3;
-    if (k.includes('score') || k.includes('rating')) return dt === 'integer' ? 8 : 8.5;
-    if (k.includes('weight')) return dt === 'integer' ? 72 : 72.5;
-    if (k.includes('height')) return dt === 'integer' ? 175 : 175.3;
-    return dt === 'integer' ? 42 : 3.14;
+    let value: number;
+    if (k.includes('year')) value = 2025;
+    else if (k.includes('age')) value = 34;
+    else if (k.includes('price') || k.includes('amount') || k.includes('cost') || k.includes('total'))
+      value = dt === 'integer' ? 1250 : 1250.00;
+    else if (k.includes('percent') || k.includes('rate')) value = dt === 'integer' ? 15 : 15.75;
+    else if (k.includes('count') || k.includes('quantity') || k.includes('qty')) value = 3;
+    else if (k.includes('score') || k.includes('rating')) value = dt === 'integer' ? 8 : 8.5;
+    else if (k.includes('weight')) value = dt === 'integer' ? 72 : 72.5;
+    else if (k.includes('height')) value = dt === 'integer' ? 175 : 175.3;
+    else value = dt === 'integer' ? 42 : 3.14;
+
+    if (options?.min !== undefined && options?.max !== undefined) {
+      value = dt === 'integer' ? Math.round((options.min + options.max) / 2) : parseFloat(((options.min + options.max) / 2).toFixed(2));
+    } else {
+      if (options?.min !== undefined && value < options.min) value = options.min;
+      if (options?.max !== undefined && value > options.max) value = options.max;
+    }
+    return value;
   }
 
   if (dt === 'money') {
@@ -127,7 +136,6 @@ export function sampleFieldValue(
 
 export async function generateDefinitionSampleData(
   definition: FormDefinition,
-  _options: MappingSampleOptions = {},
 ): Promise<Record<string, unknown>> {
   const engine = createFormEngine({ ...definition });
   walkItems(engine, definition.items ?? []);

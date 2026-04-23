@@ -1,5 +1,6 @@
 /** @filedesc Definition-tree row summary and status derivation for the Editor workspace. */
 import type { FormBind, FormItem } from '@formspec-org/types';
+import { analyzeFEL } from '@formspec-org/engine/fel-runtime';
 import { humanizeFEL, bindsFor, buildDefLookup } from './authoring-helpers.js';
 
 export interface RowSummaryEntry {
@@ -190,6 +191,19 @@ export function buildCategorySummaries(item: FormItem, binds: Record<string, str
   return result;
 }
 
+function extractRootRefs(expression: string): string[] {
+  try {
+    const analysis = analyzeFEL(expression);
+    if (!analysis.valid) return [];
+    return analysis.references.map((r) => {
+      const dotIdx = r.indexOf('.');
+      return dotIdx >= 0 ? r.slice(0, dotIdx) : r;
+    });
+  } catch {
+    return [];
+  }
+}
+
 export function buildExpressionDiagnostics(
   binds: Record<string, string>,
   definitionKeys: string[],
@@ -203,14 +217,7 @@ export function buildExpressionDiagnostics(
       continue;
     }
 
-    // Extract $-prefixed tokens, strip leading $ and trailing dot-paths
-    const tokens = expression.split(/\s+/).filter((t) => t.startsWith('$'));
-    const refs = tokens.map((t) => {
-      const withoutDollar = t.slice(1);
-      // Take only the root key (before first dot)
-      const dotIdx = withoutDollar.indexOf('.');
-      return dotIdx >= 0 ? withoutDollar.slice(0, dotIdx) : withoutDollar;
-    }).filter((r) => r.length > 0);
+    const refs = extractRootRefs(expression);
 
     const undefined_refs = refs.filter((r) => !keySet.has(r));
     const unique_undefined = [...new Set(undefined_refs)];

@@ -14,14 +14,12 @@ describe('generateSampleData', () => {
 
     const data = project.generateSampleData();
 
-    expect(data.name).toBe('Jane Doe'); // key contains "name"
-    expect(data.bio).toBe('Sample paragraph text');
-    expect(data.age).toBe(12); // varied: 10 + fieldIndex(2)
-    expect(data.score).toBe(3.6); // varied: 1.5 + fieldIndex(3)*0.7
+    expect(data.name).toBe('Jane Doe');
+    expect(data.bio).toBe('A detailed description of the project goals and expected outcomes.');
+    expect(data.age).toBe(34);
+    expect(data.score).toBe(8.5);
     expect(data.active).toBe(true);
-    // date should be today's date in ISO format, not a hardcoded value
-    expect(data.dob).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    expect(data.dob).toBe(new Date().toISOString().slice(0, 10));
+    expect(data.dob).toBe('1990-06-15');
   });
 
   it('generates sample values for time-related types', () => {
@@ -31,10 +29,8 @@ describe('generateSampleData', () => {
 
     const data = project.generateSampleData();
 
-    expect(data.t).toBe('09:00:00');
-    // dateTime should include today's date with a time component
-    expect(data.dt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
-    expect((data.dt as string).slice(0, 10)).toBe(new Date().toISOString().slice(0, 10));
+    expect(data.t).toBe('14:30:00');
+    expect(data.dt).toBe('2025-03-31T09:00:00Z');
   });
 
   it('uses first choice value for select fields', () => {
@@ -57,7 +53,7 @@ describe('generateSampleData', () => {
 
     const data = project.generateSampleData();
 
-    expect(data.pick).toBe('option1');
+    expect(data.pick).toBe('option_a');
   });
 
   it('generates money sample data', () => {
@@ -78,8 +74,8 @@ describe('generateSampleData', () => {
     const data = project.generateSampleData();
 
     // Group fields should use their full path; key-based heuristics apply
-    expect(data['contact.email']).toBe('sample@example.com'); // key contains "email"
-    expect(data['contact.phone']).toBe('+1-555-0100'); // key contains "phone"
+    expect(data['contact.email']).toBe('jane@example.com');
+    expect(data['contact.phone']).toBe('+1-555-867-5309');
   });
 
   it('returns empty object for project with no fields', () => {
@@ -100,7 +96,7 @@ describe('generateSampleData', () => {
 
     // Only the field should produce sample data
     expect(Object.keys(data)).toEqual(['q1']);
-    expect(data.q1).toBe('Sample paragraph text');
+    expect(data.q1).toBe('A longer form text response with multiple sentences.');
   });
 
   it('applies overrides when provided', () => {
@@ -111,7 +107,7 @@ describe('generateSampleData', () => {
     const data = project.generateSampleData({ name: 'Alice' });
 
     expect(data.name).toBe('Alice');
-    expect(data.age).toBe(11); // non-overridden field: 10 + fieldIndex(1)
+    expect(data.age).toBe(34);
   });
 
   it('overrides take precedence over generated values', () => {
@@ -135,7 +131,7 @@ describe('generateSampleData', () => {
     const data = project.generateSampleData({ nonexistent: 'value' });
 
     expect(data).not.toHaveProperty('nonexistent');
-    expect(data.q1).toBe('Sample paragraph text');
+    expect(data.q1).toBe('A longer form text response with multiple sentences.');
   });
 
   it('excludes fields hidden by show_when conditions', () => {

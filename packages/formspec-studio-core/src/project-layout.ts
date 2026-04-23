@@ -1,33 +1,35 @@
 import type { AnyCommand } from '@formspec-org/core';
 import type { HelperResult, FlowProps, PlacementOptions, LayoutArrangement, LayoutAddItemSpec, HelperWarning } from './helper-types.js';
 import { HelperError } from './helper-types.js';
+import type { ProjectInternals } from './project-internals.js';
 import { pageChildren, findParentRefOfNodeRef, findComponentNodeById, findComponentNodeByRef, refForCompNode } from './tree-utils.js';
 import { componentTargetRef } from './lib/component-target-ref.js';
 import type { CompNode } from './layout-helpers.js';
 import type { FormItem } from './types.js';
 
-// Layout mapping
-const _LAYOUT_MAP: Record<LayoutArrangement, { component: string; props?: Record<string, unknown> }> = {
+const _LAYOUT_ENTRIES = {
   'columns-2': { component: 'Grid', props: { columns: 2 } },
   'columns-3': { component: 'Grid', props: { columns: 3 } },
   'columns-4': { component: 'Grid', props: { columns: 4 } },
   'card': { component: 'Card' },
   'sidebar': { component: 'Panel', props: { position: 'left' } },
   'inline': { component: 'Stack', props: { direction: 'horizontal' } },
-};
+} as const satisfies Record<LayoutArrangement, { component: string; props?: Record<string, unknown> }>;
 
-const _PRESENTATION_BLOCK_KEYS = new Set([
+const _LAYOUT_MAP: Record<string, { component: string; props?: Record<string, unknown> }> = _LAYOUT_ENTRIES;
+
+const _STYLE_ROUTING_PRESENTATION_KEYS = new Set([
   'widget', 'labelPosition', 'cssClass', 'inputMode', 'autoComplete',
   'prefix', 'suffix', 'format', 'currency', 'lines', 'placeholder',
   'trueLabel', 'falseLabel',
 ]);
 
-export function addPage(project: any, title: string, description?: string, id?: string): HelperResult {
+export function addPage(project: ProjectInternals, title: string, description?: string, id?: string): HelperResult {
   if (id !== undefined) {
     if (!/^[a-zA-Z][a-zA-Z0-9_\-]*$/.test(id)) {
       throw new HelperError('INVALID_PAGE_ID', `Page ID "${id}" is invalid. Must start with a letter and contain only letters, digits, underscores, or hyphens.`, { id });
     }
-    const existing = project._getPageNodes().find((n: any) => n.nodeId === id);
+    const existing = project._getPageNodes().find((n: CompNode) => n.nodeId === id);
     if (existing) {
       throw new HelperError('DUPLICATE_KEY', `A page with ID "${id}" already exists`, { id });
     }
@@ -68,7 +70,7 @@ export function addPage(project: any, title: string, description?: string, id?: 
   };
 }
 
-export function removePage(project: any, pageId: string): HelperResult {
+export function removePage(project: ProjectInternals, pageId: string): HelperResult {
   const page = project._findPageNode(pageId);
   const commands: AnyCommand[] = pageChildren(page).map((child) => ({
     type: 'component.moveNode',
@@ -90,7 +92,7 @@ export function removePage(project: any, pageId: string): HelperResult {
   };
 }
 
-export function reorderPage(project: any, pageId: string, direction: 'up' | 'down'): HelperResult {
+export function reorderPage(project: ProjectInternals, pageId: string, direction: 'up' | 'down'): HelperResult {
   project.core.dispatch({
     type: 'component.reorderNode',
     payload: { node: { nodeId: pageId }, direction },
@@ -102,7 +104,7 @@ export function reorderPage(project: any, pageId: string, direction: 'up' | 'dow
   };
 }
 
-export function movePageToIndex(project: any, pageId: string, targetIndex: number): HelperResult {
+export function movePageToIndex(project: ProjectInternals, pageId: string, targetIndex: number): HelperResult {
   const insertIndex = project._pageInsertIndex(targetIndex, pageId);
   project.core.dispatch({
     type: 'component.moveNode',
@@ -119,8 +121,8 @@ export function movePageToIndex(project: any, pageId: string, targetIndex: numbe
   };
 }
 
-export function listPages(project: any): Array<{ id: string; title: string; description?: string; groupPath?: string }> {
-  return project._getPageNodes().map((n: any) => {
+export function listPages(project: ProjectInternals): Array<{ id: string; title: string; description?: string; groupPath?: string }> {
+  return project._getPageNodes().map((n: CompNode) => {
     const boundChildren = project._pageBoundChildren(n);
     const groupPath = boundChildren[0]?.bind;
     return {
@@ -132,7 +134,7 @@ export function listPages(project: any): Array<{ id: string; title: string; desc
   });
 }
 
-export function updatePage(project: any, pageId: string, changes: { title?: string; description?: string }): HelperResult {
+export function updatePage(project: ProjectInternals, pageId: string, changes: { title?: string; description?: string }): HelperResult {
   const commands: AnyCommand[] = [];
   for (const [prop, val] of Object.entries(changes)) {
     if (val !== undefined) {
@@ -151,7 +153,7 @@ export function updatePage(project: any, pageId: string, changes: { title?: stri
   };
 }
 
-export function placeOnPage(project: any, target: string, pageId: string, options?: PlacementOptions): HelperResult {
+export function placeOnPage(project: ProjectInternals, target: string, pageId: string, options?: PlacementOptions): HelperResult {
   const sourceRef = project._nodeRefForItem(target);
   project._ensureComponentNodeExistsForMove(sourceRef);
   const commands: AnyCommand[] = [{
@@ -177,7 +179,7 @@ export function placeOnPage(project: any, target: string, pageId: string, option
   };
 }
 
-export function unplaceFromPage(project: any, target: string, pageId: string): HelperResult {
+export function unplaceFromPage(project: ProjectInternals, target: string, pageId: string): HelperResult {
   const sourceRef = project._nodeRefForItem(target);
   project._ensureComponentNodeExistsForMove(sourceRef);
   project.core.dispatch({
@@ -195,7 +197,7 @@ export function unplaceFromPage(project: any, target: string, pageId: string): H
   };
 }
 
-export function setFlow(project: any, mode: 'single' | 'wizard' | 'tabs', props?: FlowProps): HelperResult {
+export function setFlow(project: ProjectInternals, mode: 'single' | 'wizard' | 'tabs', props?: FlowProps): HelperResult {
   const commands: AnyCommand[] = [
     { type: 'definition.setFormPresentation', payload: { property: 'pageMode', value: mode } },
   ];
@@ -222,7 +224,7 @@ export function setFlow(project: any, mode: 'single' | 'wizard' | 'tabs', props?
   };
 }
 
-export function setGroupRef(project: any, path: string, ref: string | null, keyPrefix?: string): HelperResult {
+export function setGroupRef(project: ProjectInternals, path: string, ref: string | null, keyPrefix?: string): HelperResult {
   project.core.dispatch({
     type: 'definition.setGroupRef',
     payload: { path, ref, ...(keyPrefix !== undefined ? { keyPrefix } : {}) },
@@ -236,7 +238,7 @@ export function setGroupRef(project: any, path: string, ref: string | null, keyP
   };
 }
 
-export function setComponentWhen(project: any, target: string, when: string | null): HelperResult {
+export function setComponentWhen(project: ProjectInternals, target: string, when: string | null): HelperResult {
   project.core.dispatch({
     type: 'component.setNodeProperty',
     payload: {
@@ -255,7 +257,7 @@ export function setComponentWhen(project: any, target: string, when: string | nu
   };
 }
 
-export function setComponentAccessibility(project: any, target: string, property: string, value: unknown): HelperResult {
+export function setComponentAccessibility(project: ProjectInternals, target: string, property: string, value: unknown): HelperResult {
   project.core.dispatch({
     type: 'component.setNodeAccessibility',
     payload: {
@@ -274,7 +276,7 @@ export function setComponentAccessibility(project: any, target: string, property
   };
 }
 
-export function setLayoutNodeProp(project: any, target: string, property: string, value: unknown): HelperResult {
+export function setLayoutNodeProp(project: ProjectInternals, target: string, property: string, value: unknown): HelperResult {
   project.core.dispatch({
     type: 'component.setNodeProperty',
     payload: {
@@ -290,14 +292,14 @@ export function setLayoutNodeProp(project: any, target: string, property: string
   };
 }
 
-export function setNodeStyleProperty(project: any, ref: { nodeId?: string; bind?: string }, property: string, value: string): void {
+export function setNodeStyleProperty(project: ProjectInternals, ref: { nodeId?: string; bind?: string }, property: string, value: string): void {
   project.core.dispatch({
     type: 'component.setNodeStyle',
     payload: { node: ref, property, value },
   });
 }
 
-export function addItemToLayout(project: any, spec: LayoutAddItemSpec, pageId?: string): HelperResult {
+export function addItemToLayout(project: ProjectInternals, spec: LayoutAddItemSpec, pageId?: string): HelperResult {
   if (spec.itemType === 'layout') {
     const parentNodeId = pageId ?? 'root';
     return project.addLayoutNode(parentNodeId, spec.component ?? 'Card');
@@ -399,7 +401,7 @@ export function addItemToLayout(project: any, spec: LayoutAddItemSpec, pageId?: 
   };
 }
 
-export function applyLayout(project: any, targets: string | string[], arrangement: LayoutArrangement): HelperResult {
+export function applyLayout(project: ProjectInternals, targets: string | string[], arrangement: LayoutArrangement): HelperResult {
   const targetArray = Array.isArray(targets) ? targets : [targets];
   const layout = _LAYOUT_MAP[arrangement];
 
@@ -459,7 +461,7 @@ export function applyLayout(project: any, targets: string | string[], arrangemen
   };
 }
 
-export function applyStyle(project: any, path: string, properties: Record<string, unknown>): HelperResult {
+export function applyStyle(project: ProjectInternals, path: string, properties: Record<string, unknown>): HelperResult {
   const leafKey = path.split('.').pop()!;
   const warnings: HelperWarning[] = [];
   const commands: AnyCommand[] = [];
@@ -483,7 +485,7 @@ export function applyStyle(project: any, path: string, properties: Record<string
   }
 
   for (const [prop, val] of Object.entries(properties)) {
-    if (_PRESENTATION_BLOCK_KEYS.has(prop)) {
+    if (_STYLE_ROUTING_PRESENTATION_KEYS.has(prop)) {
       commands.push({
         type: 'theme.setItemOverride',
         payload: { itemKey: leafKey, property: prop, value: val },
@@ -509,7 +511,7 @@ export function applyStyle(project: any, path: string, properties: Record<string
 }
 
 export function applyStyleAll(
-  project: any,
+  project: ProjectInternals,
   target: 'form' | { type: 'group' | 'field' | 'display' } | { dataType: string },
   properties: Record<string, unknown>,
 ): HelperResult {
@@ -523,7 +525,7 @@ export function applyStyleAll(
           type: 'definition.setFormPresentation',
           payload: { property: 'density', value: val },
         });
-      } else if (_PRESENTATION_BLOCK_KEYS.has(prop)) {
+      } else if (_STYLE_ROUTING_PRESENTATION_KEYS.has(prop)) {
         commands.push({
           type: 'theme.setDefaults',
           payload: { property: prop, value: val },
@@ -543,7 +545,7 @@ export function applyStyleAll(
     const apply: Record<string, unknown> = {};
     const cssProps: Record<string, unknown> = {};
     for (const [prop, val] of Object.entries(properties)) {
-      if (_PRESENTATION_BLOCK_KEYS.has(prop)) {
+      if (_STYLE_ROUTING_PRESENTATION_KEYS.has(prop)) {
         apply[prop] = val;
       } else {
         cssProps[prop] = val;
@@ -569,7 +571,7 @@ export function applyStyleAll(
   };
 }
 
-export function addRegion(project: any, pageId: string, span?: number): HelperResult {
+export function addRegion(project: ProjectInternals, pageId: string, span?: number): HelperResult {
   const key = `region_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
   project.core.dispatch({
     type: 'component.addNode',
@@ -587,7 +589,7 @@ export function addRegion(project: any, pageId: string, span?: number): HelperRe
   };
 }
 
-export function updateRegion(project: any, pageId: string, regionIndex: number, property: string, value: unknown): HelperResult {
+export function updateRegion(project: ProjectInternals, pageId: string, regionIndex: number, property: string, value: unknown): HelperResult {
   const page = project._findPageNode(pageId);
   const child = project._pageBoundChildren(page)[regionIndex];
   if (!child) throw new HelperError('ROUTE_OUT_OF_BOUNDS', `Region not found at index ${regionIndex} on page '${pageId}'`);
@@ -602,7 +604,7 @@ export function updateRegion(project: any, pageId: string, regionIndex: number, 
   };
 }
 
-export function deleteRegion(project: any, pageId: string, regionIndex: number): HelperResult {
+export function deleteRegion(project: ProjectInternals, pageId: string, regionIndex: number): HelperResult {
   const page = project._findPageNode(pageId);
   const child = project._pageBoundChildren(page)[regionIndex];
   if (!child) throw new HelperError('ROUTE_OUT_OF_BOUNDS', `Region not found at index ${regionIndex} on page '${pageId}'`);
@@ -620,7 +622,7 @@ export function deleteRegion(project: any, pageId: string, regionIndex: number):
   };
 }
 
-export function reorderRegion(project: any, pageId: string, regionIndex: number, direction: 'up' | 'down'): HelperResult {
+export function reorderRegion(project: ProjectInternals, pageId: string, regionIndex: number, direction: 'up' | 'down'): HelperResult {
   const page = project._findPageNode(pageId);
   const child = project._pageBoundChildren(page)[regionIndex];
   if (!child) throw new HelperError('ROUTE_OUT_OF_BOUNDS', `Region not found at index ${regionIndex} on page '${pageId}'`);
@@ -640,7 +642,7 @@ export function reorderRegion(project: any, pageId: string, regionIndex: number,
   };
 }
 
-export function setRegionKey(project: any, pageId: string, regionIndex: number, newKey: string): HelperResult {
+export function setRegionKey(project: ProjectInternals, pageId: string, regionIndex: number, newKey: string): HelperResult {
   const page = project._findPageNode(pageId);
   const boundChildren = project._pageBoundChildren(page);
   const child = boundChildren[regionIndex];
@@ -677,7 +679,7 @@ export function setRegionKey(project: any, pageId: string, regionIndex: number, 
   };
 }
 
-export function renamePage(project: any, pageId: string, newTitle: string): HelperResult {
+export function renamePage(project: ProjectInternals, pageId: string, newTitle: string): HelperResult {
   project.core.dispatch({
     type: 'component.setNodeProperty',
     payload: { node: { nodeId: pageId }, property: 'title', value: newTitle },
@@ -689,9 +691,9 @@ export function renamePage(project: any, pageId: string, newTitle: string): Help
   };
 }
 
-export function setItemWidth(project: any, pageId: string, itemKey: string, width: number): HelperResult {
+export function setItemWidth(project: ProjectInternals, pageId: string, itemKey: string, width: number): HelperResult {
   const page = project._findPageNode(pageId);
-  const node = project._pageBoundChildren(page).find((n: any) => n.bind === itemKey);
+  const node = project._pageBoundChildren(page).find((n: CompNode) => n.bind === itemKey);
   if (!node) throw new HelperError('ITEM_NOT_ON_PAGE', `Item '${itemKey}' is not on page '${pageId}'`, { pageId, itemKey });
   project.core.dispatch({
     type: 'component.setNodeProperty',
@@ -704,9 +706,9 @@ export function setItemWidth(project: any, pageId: string, itemKey: string, widt
   };
 }
 
-export function setItemOffset(project: any, pageId: string, itemKey: string, offset: number | undefined): HelperResult {
+export function setItemOffset(project: ProjectInternals, pageId: string, itemKey: string, offset: number | undefined): HelperResult {
   const page = project._findPageNode(pageId);
-  const node = project._pageBoundChildren(page).find((n: any) => n.bind === itemKey);
+  const node = project._pageBoundChildren(page).find((n: CompNode) => n.bind === itemKey);
   if (!node) throw new HelperError('ITEM_NOT_ON_PAGE', `Item '${itemKey}' is not on page '${pageId}'`, { pageId, itemKey });
   project.core.dispatch({
     type: 'component.setNodeProperty',
@@ -720,7 +722,7 @@ export function setItemOffset(project: any, pageId: string, itemKey: string, off
 }
 
 export function setItemResponsive(
-  project: any,
+  project: ProjectInternals,
   pageId: string,
   itemKey: string,
   breakpoint: string,
@@ -729,9 +731,9 @@ export function setItemResponsive(
   project._regionIndexOf(pageId, itemKey);
   const page = project._findPageNode(pageId);
   const boundChildren = project._pageBoundChildren(page);
-  const node = boundChildren.find((n: any) => n.bind === itemKey)!;
+  const node = boundChildren.find((n: CompNode) => n.bind === itemKey)!;
 
-  const responsive: any = { ...(node.responsive ?? {}) };
+  const responsive: Record<string, unknown> = { ...(node.responsive ?? {}) };
 
   if (overrides === undefined) {
     delete responsive[breakpoint];
@@ -758,7 +760,7 @@ export function setItemResponsive(
   };
 }
 
-export function removeItemFromPage(project: any, pageId: string, itemKey: string): HelperResult {
+export function removeItemFromPage(project: ProjectInternals, pageId: string, itemKey: string): HelperResult {
   project._regionIndexOf(pageId, itemKey);
   project.core.dispatch({
     type: 'component.moveNode',
@@ -774,7 +776,7 @@ export function removeItemFromPage(project: any, pageId: string, itemKey: string
   };
 }
 
-export function moveItemToPage(project: any, sourcePageId: string, itemKey: string, targetPageId: string, opts?: PlacementOptions): HelperResult {
+export function moveItemToPage(project: ProjectInternals, sourcePageId: string, itemKey: string, targetPageId: string, opts?: PlacementOptions): HelperResult {
   project._regionIndexOf(sourcePageId, itemKey);
   const leafKey = itemKey.split('.').pop()!;
   const commands: AnyCommand[] = [{
@@ -798,7 +800,7 @@ export function moveItemToPage(project: any, sourcePageId: string, itemKey: stri
   };
 }
 
-export function reorderItemOnPage(project: any, pageId: string, itemKey: string, direction: 'up' | 'down'): HelperResult {
+export function reorderItemOnPage(project: ProjectInternals, pageId: string, itemKey: string, direction: 'up' | 'down'): HelperResult {
   const currentIndex = project._regionIndexOf(pageId, itemKey);
   const targetIndex = Math.max(0, direction === 'up' ? currentIndex - 1 : currentIndex + 1);
   project.core.dispatch({
@@ -816,7 +818,7 @@ export function reorderItemOnPage(project: any, pageId: string, itemKey: string,
   };
 }
 
-export function moveItemOnPageToIndex(project: any, pageId: string, itemKey: string, targetIndex: number): HelperResult {
+export function moveItemOnPageToIndex(project: ProjectInternals, pageId: string, itemKey: string, targetIndex: number): HelperResult {
   if (targetIndex < 0) {
     throw new HelperError('ROUTE_OUT_OF_BOUNDS', `targetIndex must be non-negative, got ${targetIndex}`);
   }

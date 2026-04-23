@@ -654,6 +654,22 @@ describe('editor-tree-helpers', () => {
       );
       expect(result.constraint).toBeNull();
     });
+
+    it('does not treat $-prefixed names inside block comments as references', () => {
+      const result = buildExpressionDiagnostics(
+        { relevant: '$enabled = true /* $notARealField */' },
+        ['enabled'],
+      );
+      expect(result.relevant).toBeNull();
+    });
+
+    it('does not treat $-prefixed names inside string literals as references', () => {
+      const result = buildExpressionDiagnostics(
+        { calculate: "$enabled + concat('$ghost', 'suffix') + $age" },
+        ['enabled', 'age'],
+      );
+      expect(result.calculate).toBeNull();
+    });
   });
 
   describe('buildStatusPills with diagnostics', () => {

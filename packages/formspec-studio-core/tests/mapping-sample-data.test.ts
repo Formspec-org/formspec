@@ -15,7 +15,7 @@ describe('generateDefinitionSampleData', () => {
       ],
     } as any;
 
-    const result = await generateDefinitionSampleData(definition, { seed: 123 });
+    const result = await generateDefinitionSampleData(definition);
 
     expect(result).toHaveProperty('first_name');
     expect(typeof result.first_name).toBe('string');
@@ -40,7 +40,7 @@ describe('generateDefinitionSampleData', () => {
       ],
     } as any;
 
-    const result = await generateDefinitionSampleData(definition, { seed: 123 });
+    const result = await generateDefinitionSampleData(definition);
 
     expect(Array.isArray(result.children)).toBe(true);
     expect(result.children.length).toBeGreaterThan(0);
@@ -64,7 +64,7 @@ describe('generateDefinitionSampleData', () => {
       ],
     } as any;
 
-    const result = await generateDefinitionSampleData(definition, { seed: 123 });
+    const result = await generateDefinitionSampleData(definition);
 
     expect(result.address).toMatchObject({
       street: expect.any(String),

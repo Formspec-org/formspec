@@ -572,3 +572,83 @@ describe('getEnrichedGroupedTokens', () => {
     expect(groups.has('spacing')).toBe(true);
   });
 });
+
+describe('affectedPaths for theme/mapping/screener helpers', () => {
+  it('setToken returns token key in affectedPaths', () => {
+    const project = createProject();
+    const result = project.setToken('color.primary', '#ff0000');
+    expect(result.affectedPaths).toEqual(['color.primary']);
+  });
+
+  it('setThemeDefault returns property in affectedPaths', () => {
+    const project = createProject();
+    const result = project.setThemeDefault('labelPosition', 'top');
+    expect(result.affectedPaths).toEqual(['labelPosition']);
+  });
+
+  it('setBreakpoint returns breakpoint name in affectedPaths', () => {
+    const project = createProject();
+    const result = project.setBreakpoint('desktop', 1024);
+    expect(result.affectedPaths).toEqual(['desktop']);
+  });
+
+  it('addThemeSelector returns selectors in affectedPaths', () => {
+    const project = createProject();
+    const result = project.addThemeSelector({ type: 'field' }, { labelPosition: 'side' });
+    expect(result.affectedPaths).toEqual(['selectors']);
+  });
+
+  it('setLocaleString returns key in affectedPaths', () => {
+    const project = createProject();
+    project.core.dispatch({ type: 'locale.load', payload: { document: { locale: 'en' } } });
+    project.core.dispatch({ type: 'locale.select', payload: { localeId: 'en' } });
+    const result = project.setLocaleString('welcome', 'Welcome!');
+    expect(result.affectedPaths).toEqual(['welcome']);
+  });
+
+  it('createMapping returns mapping id in affectedPaths', () => {
+    const project = createProject();
+    const result = project.createMapping('export-csv');
+    expect(result.affectedPaths).toEqual(['export-csv']);
+  });
+
+  it('setMappingProperty returns mapping id in affectedPaths', () => {
+    const project = createProject();
+    project.createMapping('export');
+    const result = project.setMappingProperty('name', 'Export', 'export');
+    expect(result.affectedPaths).toEqual(['export']);
+  });
+
+  it('setMappingProperty without mappingId returns default in affectedPaths', () => {
+    const project = createProject();
+    const result = project.setMappingProperty('name', 'Default');
+    expect(result.affectedPaths).toEqual(['default']);
+  });
+
+  it('deleteMapping returns mapping id in affectedPaths', () => {
+    const project = createProject();
+    project.createMapping('extra');
+    const result = project.deleteMapping('extra');
+    expect(result.affectedPaths).toEqual(['extra']);
+  });
+
+  it('createScreenerDocument returns screener in affectedPaths', () => {
+    const project = createProject();
+    const result = project.createScreenerDocument();
+    expect(result.affectedPaths).toEqual(['screener']);
+  });
+
+  it('addEvaluationPhase returns phase id in affectedPaths', () => {
+    const project = createProject();
+    project.createScreenerDocument();
+    const result = project.addEvaluationPhase('eligibility', 'score');
+    expect(result.affectedPaths).toEqual(['eligibility']);
+  });
+
+  it('addScreenRoute returns phase id in affectedPaths', () => {
+    const project = createProject();
+    project.createScreenerDocument();
+    const result = project.addScreenRoute('default', { target: '/next' });
+    expect(result.affectedPaths).toEqual(['default']);
+  });
+});

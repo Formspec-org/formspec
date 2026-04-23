@@ -55,4 +55,23 @@ describe('serializeMappedData', () => {
     const result = serializeMappedData(circular, { format: 'json' });
     expect(result).toMatch(/^Serialization Error:/);
   });
+
+  it('escapes apostrophes in XML attribute values and text', () => {
+    const result = serializeMappedData(
+      { item: { '@label': "it's", text: "don't" } },
+      { format: 'xml', declaration: false },
+    );
+    expect(result).toContain('label="it&apos;s"');
+    expect(result).toContain('<text>don&apos;t</text>');
+  });
+
+  it('CSV handles rows with inconsistent key sets', () => {
+    const result = serializeMappedData(
+      [{ name: 'Alice' }, { name: 'Bob', email: 'bob@test.com' }],
+      { format: 'csv' },
+    );
+    expect(result).toContain('name,email');
+    expect(result).toContain('Alice,');
+    expect(result).toContain('Bob,bob@test.com');
+  });
 });

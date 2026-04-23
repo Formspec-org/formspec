@@ -267,11 +267,24 @@ export function getEditablePropertiesForNode(
 }
 
 // ── 11. Token registry helpers ───────────────────────────────────────
+interface RawTokenRegistryEntry {
+  description?: string;
+  type?: string;
+  default?: string | number;
+  dark?: string | number;
+}
+
+interface RawTokenRegistryCategory {
+  description?: string;
+  type?: string;
+  darkPrefix?: string;
+  tokens?: Record<string, RawTokenRegistryEntry>;
+}
 
 /** Parse a token-registry.json document into a lookup-friendly structure. */
-export function parseTokenRegistry(registryDoc: Record<string, unknown>): TokenRegistryMap {
+export function parseTokenRegistry(registryDoc: { categories?: Record<string, RawTokenRegistryCategory> }): TokenRegistryMap {
   const map: TokenRegistryMap = new Map();
-  const categories = registryDoc.categories as Record<string, any> | undefined;
+  const categories = registryDoc.categories;
   if (!categories) return map;
 
   for (const [catKey, category] of Object.entries(categories)) {
@@ -280,7 +293,7 @@ export function parseTokenRegistry(registryDoc: Record<string, unknown>): TokenR
     const entries = new Map<string, TokenRegistryEntry>();
 
     if (category.tokens) {
-      for (const [tokenKey, entry] of Object.entries(category.tokens as Record<string, any>)) {
+      for (const [tokenKey, entry] of Object.entries(category.tokens)) {
         const suffix = tokenKey.startsWith(catKey + '.') ? tokenKey.slice(catKey.length + 1) : tokenKey;
         entries.set(tokenKey, {
           key: tokenKey,

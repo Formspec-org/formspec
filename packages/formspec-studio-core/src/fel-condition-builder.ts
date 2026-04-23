@@ -148,7 +148,7 @@ function detectConnector(fel: string): 'and' | 'or' | null {
   return 'and';
 }
 
-function containsTopLevel(fel: string, token: string): boolean {
+function walkTopLevel(fel: string, onSegment: (offset: number) => void): void {
   let depth = 0;
   let inSingle = false;
   let inDouble = false;
@@ -162,41 +162,31 @@ function containsTopLevel(fel: string, token: string): boolean {
       else if (ch === ')') depth--;
     }
 
-    if (depth === 0 && !inSingle && !inDouble && fel.slice(i, i + token.length) === token) {
-      return true;
+    if (depth === 0 && !inSingle && !inDouble) {
+      onSegment(i);
     }
   }
-  return false;
+}
+
+function containsTopLevel(fel: string, token: string): boolean {
+  let found = false;
+  walkTopLevel(fel, (i) => {
+    if (fel.slice(i, i + token.length) === token) found = true;
+  });
+  return found;
 }
 
 function splitByConnector(fel: string, connector: 'and' | 'or'): string[] | null {
   const token = ` ${connector} `;
   const parts: string[] = [];
-  let depth = 0;
-  let inSingle = false;
-  let inDouble = false;
   let lastSplit = 0;
 
-  for (let i = 0; i < fel.length; i++) {
-    const ch = fel[i];
-    if (ch === "'" && !inDouble) inSingle = !inSingle;
-    else if (ch === '"' && !inSingle) inDouble = !inDouble;
-    else if (!inSingle && !inDouble) {
-      if (ch === '(') depth++;
-      else if (ch === ')') depth--;
-    }
-
-    if (
-      depth === 0 &&
-      !inSingle &&
-      !inDouble &&
-      fel.slice(i, i + token.length) === token
-    ) {
+  walkTopLevel(fel, (i) => {
+    if (fel.slice(i, i + token.length) === token) {
       parts.push(fel.slice(lastSplit, i));
       lastSplit = i + token.length;
-      i += token.length - 1;
     }
-  }
+  });
 
   if (lastSplit < fel.length) {
     parts.push(fel.slice(lastSplit));

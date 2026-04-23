@@ -176,7 +176,7 @@ export class ProposalManager {
     }
 
     // VP-02 defense-in-depth: refuse on non-draft definitions
-    const status = (this.core.definition as any).status;
+    const status = this.core.definition.status;
     if (status && status !== 'draft') {
       throw new Error(`Cannot open changeset on ${status} definition (VP-02: active/retired definitions are immutable)`);
     }

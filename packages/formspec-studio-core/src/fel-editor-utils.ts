@@ -280,45 +280,34 @@ export function getFELFunctionAutocompleteTrigger(expression: string, caret: num
   };
 }
 
-export function filterFELFieldOptions(options: FELEditorFieldOption[], query: string): FELEditorFieldOption[] {
+function filterByQuery<T>(items: T[], query: string, getPrimary: (item: T) => string, getLabel: (item: T) => string): T[] {
   const trimmed = query.trim().toLowerCase();
-  if (!trimmed.length) return options.slice(0, 10);
+  if (!trimmed.length) return items.slice(0, 10);
 
-  return options
-    .filter((option) => {
-      const path = option.path.toLowerCase();
-      const label = option.label.toLowerCase();
-      return path.includes(trimmed) || label.includes(trimmed);
+  return items
+    .filter((item) => {
+      const primary = getPrimary(item).toLowerCase();
+      const label = getLabel(item).toLowerCase();
+      return primary.includes(trimmed) || label.includes(trimmed);
     })
     .sort((left, right) => {
-      const leftStarts = left.path.toLowerCase().startsWith(trimmed) ? 0 : 1;
-      const rightStarts = right.path.toLowerCase().startsWith(trimmed) ? 0 : 1;
+      const leftStarts = getPrimary(left).toLowerCase().startsWith(trimmed) ? 0 : 1;
+      const rightStarts = getPrimary(right).toLowerCase().startsWith(trimmed) ? 0 : 1;
       if (leftStarts !== rightStarts) return leftStarts - rightStarts;
-      return left.path.localeCompare(right.path);
+      return getPrimary(left).localeCompare(getPrimary(right));
     })
     .slice(0, 10);
+}
+
+export function filterFELFieldOptions(options: FELEditorFieldOption[], query: string): FELEditorFieldOption[] {
+  return filterByQuery(options, query, (o) => o.path, (o) => o.label);
 }
 
 export function filterFELFunctionOptions(
   options: FELEditorFunctionOption[],
   query: string,
 ): FELEditorFunctionOption[] {
-  const trimmed = query.trim().toLowerCase();
-  if (!trimmed.length) return options.slice(0, 10);
-
-  return options
-    .filter((option) => {
-      const name = option.name.toLowerCase();
-      const label = option.label.toLowerCase();
-      return name.includes(trimmed) || label.includes(trimmed);
-    })
-    .sort((left, right) => {
-      const leftStarts = left.name.toLowerCase().startsWith(trimmed) ? 0 : 1;
-      const rightStarts = right.name.toLowerCase().startsWith(trimmed) ? 0 : 1;
-      if (leftStarts !== rightStarts) return leftStarts - rightStarts;
-      return left.name.localeCompare(right.name);
-    })
-    .slice(0, 10);
+  return filterByQuery(options, query, (o) => o.name, (o) => o.label);
 }
 
 export function getInstanceFieldOptions(
@@ -370,9 +359,7 @@ function isFunctionIdentifierChar(char: string | undefined): boolean {
   return /[A-Za-z0-9_]/.test(char);
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
+import { isRecord } from './lib/guards.js';
 
 function collectInstancePathsFromSchema(
   schema: Record<string, unknown>,

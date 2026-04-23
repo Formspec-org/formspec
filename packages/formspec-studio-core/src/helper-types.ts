@@ -89,6 +89,8 @@ export interface BranchPath {
 
 /** Layout arrangement for applyLayout */
 export type LayoutArrangement = 'columns-2' | 'columns-3' | 'columns-4' | 'card' | 'sidebar' | 'inline';
+/** @internal */
+export const LAYOUT_ARRANGEMENTS = ['columns-2', 'columns-3', 'columns-4', 'card', 'sidebar', 'inline'] as const;
 
 /** Placement options for placeOnPage */
 export interface PlacementOptions {

@@ -76,7 +76,7 @@ export {
 } from './choice-option-keywords.js';
 
 // ── Field type aliases ──────────────────────────────────────────────
-export { resolveFieldType, resolveWidget, widgetHintFor, isTextareaWidget } from './field-type-aliases.js';
+export { resolveFieldType, resolveWidget, widgetHintFor } from './field-type-aliases.js';
 export type { ResolvedFieldType } from './field-type-aliases.js';
 
 // ── FEL & dependency query types (re-exported from formspec-core) ────

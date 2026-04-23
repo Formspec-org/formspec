@@ -1,5 +1,9 @@
 /** @filedesc Global Studio keyboard shortcut policy for undo/redo, delete, escape, and search. */
 
+export type WorkspaceName = 'Editor' | 'Layout';
+
+const DELETE_ALLOWED_WORKSPACES = new Set<string>(['Editor', 'Layout']);
+
 export interface ShortcutHandlers {
   undo: () => void;
   redo: () => void;
@@ -78,7 +82,7 @@ export function handleKeyboardShortcut(
   if (key === 'Delete' || key === 'Backspace') {
     if (editing) return;
     const workspace = options.activeWorkspace ?? resolveWorkspace(event);
-    if (workspace && workspace !== 'Editor' && workspace !== 'Layout') return;
+    if (workspace && !DELETE_ALLOWED_WORKSPACES.has(workspace)) return;
     handlers.delete();
   }
 }

@@ -4,6 +4,7 @@ import {
   KNOWN_COMPONENT_TYPES,
   SPEC_WIDGET_TO_COMPONENT,
   COMPONENT_TO_HINT,
+  widgetTokenToComponent,
 } from '@formspec-org/types';
 
 export interface ResolvedFieldType {
@@ -62,30 +63,9 @@ const AUTHORING_ALIASES: Record<string, string> = {
  */
 function buildWidgetAliasMap(): Record<string, string> {
   const map: Record<string, string> = {};
-  // Canonical spec hints (lowercase → PascalCase from layout)
-  // Convert to camelCase for authoring layer (spec keys are all-lowercase)
   for (const [key, component] of Object.entries(SPEC_WIDGET_TO_COMPONENT)) {
-    // Find the camelCase form: 'textinput' → 'textInput', 'checkbox' → 'checkbox'
-    // We keep a curated camelCase list for the ones that differ
     map[key] = component;
   }
-  // Overlay camelCase forms for multi-word hints
-  map['textInput'] = 'TextInput';
-  map['richText'] = 'TextInput';
-  map['numberInput'] = 'NumberInput';
-  map['yesNo'] = 'Toggle';
-  map['datePicker'] = 'DatePicker';
-  map['dateTimePicker'] = 'DatePicker';
-  map['timePicker'] = 'DatePicker';
-  map['dateInput'] = 'TextInput';
-  map['dateTimeInput'] = 'TextInput';
-  map['timeInput'] = 'TextInput';
-  map['checkboxGroup'] = 'CheckboxGroup';
-  map['multiSelect'] = 'CheckboxGroup';
-  map['fileUpload'] = 'FileUpload';
-  map['moneyInput'] = 'MoneyInput';
-  map['urlInput'] = 'TextInput';
-  // Authoring aliases
   Object.assign(map, AUTHORING_ALIASES);
   return map;
 }
@@ -105,25 +85,22 @@ export function resolveFieldType(type: string): ResolvedFieldType {
 export function resolveWidget(widget: string): string {
   if (WIDGET_ALIAS_MAP[widget]) return WIDGET_ALIAS_MAP[widget];
   if (KNOWN_COMPONENT_TYPES.has(widget)) return widget;
+  const resolved = widgetTokenToComponent(widget);
+  if (resolved) return resolved;
   throw new HelperError('INVALID_WIDGET', `Unknown widget "${widget}"`, {
     validWidgets: Object.keys(WIDGET_ALIAS_MAP),
   });
 }
 
 export function widgetHintFor(aliasOrComponent: string): string | undefined {
-  // "text" as a short alias doesn't carry a widgetHint (it's the TextInput default)
   if (aliasOrComponent === 'text') return undefined;
   if (WIDGET_ALIAS_MAP[aliasOrComponent]) return aliasOrComponent;
   if (KNOWN_COMPONENT_TYPES.has(aliasOrComponent)) {
     if (aliasOrComponent === 'TextInput') return undefined;
-    // Use the canonical reverse map from layout
     return COMPONENT_TO_HINT[aliasOrComponent] ?? aliasOrComponent.toLowerCase();
   }
+  if (widgetTokenToComponent(aliasOrComponent)) return aliasOrComponent;
   return undefined;
-}
-
-export function isTextareaWidget(widget: string): boolean {
-  return widget === 'textarea';
 }
 
 // ── Test-only exports ───────────────────────────────────────────────
