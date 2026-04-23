@@ -1,5 +1,7 @@
 # Refactoring Audit: `packages/formspec-studio-core/`
 
+> **Archived** (2026-04-23). Former path: `packages/formspec-studio-core/STUDIO-CORE-TODO.md`. Audit closed; all items implemented. Retained for provenance.
+
 ## Inventory
 
 | Metric | Count |
