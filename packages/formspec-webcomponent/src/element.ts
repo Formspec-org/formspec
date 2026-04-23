@@ -671,7 +671,8 @@ export class FormspecRender extends HTMLElement {
         this.scheduleRender();
     }
 
-    /** @internal */ findItemByKey = (key: string, items: any[] = this._definition.items): any | null => {
+    /** @internal */ findItemByKey = (key: string, items: any[] = this._definition?.items ?? []): any | null => {
+        if (key == null || typeof key !== 'string') return null;
         const dot = key.indexOf('.');
         if (dot !== -1) {
             const head = key.slice(0, dot);

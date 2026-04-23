@@ -31,7 +31,8 @@
   },
   "dependencies": {
     "@formspec-org/engine": "*",
-    "@formspec-org/layout": "*"
+    "@formspec-org/layout": "*",
+    "@formspec-org/types": "*"
   },
   "devDependencies": {
     "happy-dom": "^17.6.1",

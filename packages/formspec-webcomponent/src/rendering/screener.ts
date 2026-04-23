@@ -1,6 +1,6 @@
-/** @filedesc Screener UI: renders eligibility questions and routes to internal/external forms. */
 import type { IFormEngine } from '@formspec-org/engine/render';
 import { wasmEvaluateScreenerDocument } from '@formspec-org/engine';
+import { FormDefinition, ScreenerDocument, FormItem, ScreenerBind, DeterminationRecord, PhaseResult } from '@formspec-org/types';
 import type { ScreenerRoute } from '../types.js';
 
 /** Use as {@link ScreenerRoute.extensions} only for plain objects (excludes null, arrays, Date, etc.). */
@@ -11,13 +11,12 @@ function asRouteExtensionsRecord(value: unknown): Record<string, any> | undefine
     return value as Record<string, any>;
 }
 
-function firstMatchedRouteFromDetermination(determination: any): ScreenerRoute | null {
+function firstMatchedRouteFromDetermination(determination: DeterminationRecord): ScreenerRoute | null {
     const matched =
-        determination.overrides?.matched?.[0] ?? determination.phases?.flatMap((p: any) => p.matched)?.[0];
+        determination.overrides?.matched?.[0] ?? determination.phases?.flatMap((p: PhaseResult) => p.matched)?.[0];
     if (!matched) return null;
-    const extensions =
-        asRouteExtensionsRecord(matched.extensions) ?? asRouteExtensionsRecord(matched.metadata);
-    return { target: matched.target, label: matched.label, extensions };
+    const extensions = asRouteExtensionsRecord(matched.metadata);
+    return { target: matched.target, label: matched.label, extensions } as ScreenerRoute;
 }
 
 /**
@@ -25,24 +24,24 @@ function firstMatchedRouteFromDetermination(determination: any): ScreenerRoute |
  * See specs/screener/screener-spec.md — embedded `definition.screener` is not supported.
  */
 export function evaluateScreenerDocumentForRoute(
-    screenerDocument: any,
-    answers: Record<string, any>,
+    screenerDocument: ScreenerDocument,
+    answers: Record<string, unknown>,
 ): ScreenerRoute | null {
     const determination = wasmEvaluateScreenerDocument(screenerDocument, answers);
     return firstMatchedRouteFromDetermination(determination);
 }
 
 export interface ScreenerHost {
-    _definition: any;
+    _definition: FormDefinition;
     /** Standalone Screener Document (`$formspecScreener`). Required for the gate UI. */
-    _screenerDocument: any | null;
+    _screenerDocument: ScreenerDocument | null;
     engine: IFormEngine;
     _screenerCompleted: boolean;
     _screenerRoute: ScreenerRoute | null;
     /** Initial answers when the screener mounts — from {@link extractScreenerSeedFromData} / host integration. */
-    screenerSeedAnswers: Record<string, any> | null;
+    screenerSeedAnswers: Record<string, unknown> | null;
     classifyScreenerRoute(route: ScreenerRoute | null | undefined): 'none' | 'internal' | 'external';
-    emitScreenerStateChange(reason: string, answers?: Record<string, any>): void;
+    emitScreenerStateChange(reason: string, answers?: Record<string, unknown>): void;
     dispatchEvent(event: Event): boolean;
     render(): void;
 }
@@ -50,10 +49,10 @@ export interface ScreenerHost {
 /**
  * True when `answers` satisfies the same required / “at least one answer” rules as the Continue button.
  */
-export function screenerAnswersSatisfyRequired(screener: any, answers: Record<string, any>): boolean {
-    const binds: any[] = screener.binds || [];
+export function screenerAnswersSatisfyRequired(screener: ScreenerDocument, answers: Record<string, unknown>): boolean {
+    const binds = screener.binds || [];
     const requiredPaths = new Set(
-        binds.filter((b: any) => b.required === 'true' || b.required === true).map((b: any) => b.path),
+        binds.filter((b: ScreenerBind) => String(b.required) === 'true' || b.required === true).map((b: ScreenerBind) => b.path),
     );
     if (requiredPaths.size > 0) {
         for (const item of screener.items) {
@@ -63,23 +62,24 @@ export function screenerAnswersSatisfyRequired(screener: any, answers: Record<st
         }
         return true;
     }
-    return screener.items.some((it: any) => {
+    return screener.items.some((it: FormItem) => {
         const val = answers[it.key];
         return val != null && val !== '';
     });
 }
 
-function normalizeMoneySeed(raw: any, defaultCurrency: string): { amount: number; currency: string } | null {
+function normalizeMoneySeed(raw: unknown, defaultCurrency: string): { amount: number; currency: string } | null {
     if (raw == null) return null;
     if (typeof raw === 'number' && !Number.isNaN(raw)) {
         return { amount: raw, currency: defaultCurrency };
     }
-    if (typeof raw === 'object' && raw.amount != null) {
-        const n = typeof raw.amount === 'string' ? parseFloat(raw.amount) : Number(raw.amount);
+    if (typeof raw === 'object' && raw !== null && 'amount' in raw) {
+        const r = raw as { amount: unknown; currency?: unknown };
+        const n = typeof r.amount === 'string' ? parseFloat(r.amount) : Number(r.amount);
         if (Number.isNaN(n)) return null;
         return {
             amount: n,
-            currency: typeof raw.currency === 'string' ? raw.currency : defaultCurrency,
+            currency: typeof r.currency === 'string' ? r.currency : defaultCurrency,
         };
     }
     return null;
@@ -89,7 +89,7 @@ function normalizeMoneySeed(raw: any, defaultCurrency: string): { amount: number
  * Coerce values from external systems (saved responses, REST/GraphQL, auth claims, etc.) into
  * shapes the screener DOM and WASM screener evaluation expect.
  */
-export function normalizeScreenerSeedForItem(item: any, raw: any, defaultCurrency: string): any {
+export function normalizeScreenerSeedForItem(item: FormItem, raw: unknown, defaultCurrency: string): unknown {
     if (raw === undefined) return undefined;
     if (item.dataType === 'boolean') return !!raw;
     if (item.dataType === 'money') return normalizeMoneySeed(raw, defaultCurrency);
@@ -109,7 +109,7 @@ export function normalizeScreenerSeedForItem(item: any, raw: any, defaultCurrenc
 /**
  * Build the in-memory answer map for the screener from optional seed data (same keys as screener items).
  */
-export function buildInitialScreenerAnswers(screener: any, seed: Record<string, any> | null, defaultCurrency: string): Record<string, any> {
+export function buildInitialScreenerAnswers(screener: ScreenerDocument, seed: Record<string, any> | null, defaultCurrency: string): Record<string, any> {
     const answers: Record<string, any> = {};
     for (const item of screener.items) {
         if (item.dataType === 'boolean') {
@@ -133,7 +133,7 @@ export function buildInitialScreenerAnswers(screener: any, seed: Record<string, 
  * {@link FormspecRender.initialData} so seeds line up with the same document.
  */
 export function extractScreenerSeedFromData(
-    screenerDocument: any | null | undefined,
+    screenerDocument: ScreenerDocument | null | undefined,
     data: Record<string, any> | null | undefined,
 ): Record<string, any> | null {
     const items = screenerDocument?.items;
@@ -152,14 +152,14 @@ export function extractScreenerSeedFromData(
 
 /** Shallow copy of `data` without top-level keys that match screener item keys. */
 export function omitScreenerKeysFromData(
-    screenerDocument: any | null | undefined,
+    screenerDocument: ScreenerDocument | null | undefined,
     data: Record<string, any>,
 ): Record<string, any> {
     const items = screenerDocument?.items;
     if (!Array.isArray(items) || !items.length) {
         return { ...data };
     }
-    const drop = new Set(items.map((i: any) => i?.key).filter(Boolean));
+    const drop = new Set(items.map((i: FormItem) => i?.key).filter(Boolean));
     const out: Record<string, any> = {};
     for (const [k, v] of Object.entries(data)) {
         if (!drop.has(k)) {
@@ -170,8 +170,8 @@ export function omitScreenerKeysFromData(
 }
 
 /** True when a standalone Screener Document is attached and has at least one item. */
-export function hasActiveScreener(screenerDocument: any | null | undefined): boolean {
-    return Boolean(screenerDocument) && Array.isArray(screenerDocument.items) && screenerDocument.items.length > 0;
+export function hasActiveScreener(screenerDocument: ScreenerDocument | null | undefined): boolean {
+    return Boolean(screenerDocument) && Array.isArray(screenerDocument?.items) && (screenerDocument?.items?.length ?? 0) > 0;
 }
 
 export function renderScreener(host: ScreenerHost, container: HTMLElement): void {
@@ -199,7 +199,7 @@ export function renderScreener(host: ScreenerHost, container: HTMLElement): void
     const defaultCurrency = host._definition.formPresentation?.defaultCurrency || 'USD';
     const answers = buildInitialScreenerAnswers(screener, host.screenerSeedAnswers, defaultCurrency);
 
-    for (const item of screener.items) {
+    for (const item of (screener.items as FormItem[])) {
         const fieldWrapper = document.createElement('div');
         fieldWrapper.className = 'formspec-field formspec-screener-field';
         fieldWrapper.dataset.name = item.key;
@@ -232,7 +232,7 @@ export function renderScreener(host: ScreenerHost, container: HTMLElement): void
             emptyOpt.value = '';
             emptyOpt.textContent = '-- Select --';
             select.appendChild(emptyOpt);
-            for (const opt of item.options) {
+            for (const opt of (item.options || [])) {
                 const option = document.createElement('option');
                 option.value = opt.value;
                 option.textContent = opt.label || opt.value;
@@ -315,11 +315,11 @@ export function renderScreener(host: ScreenerHost, container: HTMLElement): void
 
         // Validate: check screener.binds for required fields; if no binds exist,
         // require at least one answer to prevent empty routing.
-        const binds: any[] = screener.binds || [];
+        const binds = screener.binds || [];
         const requiredPaths = new Set(
             binds
-                .filter((b: any) => b.required === 'true' || b.required === true)
-                .map((b: any) => b.path)
+                .filter((b: ScreenerBind) => String(b.required) === 'true' || b.required === true)
+                .map((b: ScreenerBind) => b.path)
         );
         let valid = true;
 
@@ -342,7 +342,7 @@ export function renderScreener(host: ScreenerHost, container: HTMLElement): void
             }
         } else {
             // No explicit required binds — require at least one non-null answer
-            const hasAny = screener.items.some((it: any) => {
+            const hasAny = (screener.items as FormItem[]).some((it: FormItem) => {
                 const val = answers[it.key];
                 return val != null && val !== '';
             });

@@ -3,6 +3,7 @@ import type { Signal } from '@preact/signals-core';
 import type { IFormEngine } from '@formspec-org/engine/render';
 import type { FieldViewModel } from '@formspec-org/engine';
 import type { PresentationBlock, ItemDescriptor } from '@formspec-org/layout';
+import type { ValidationReport, FormResponse } from '@formspec-org/types';
 
 /**
  * Pre-resolved PresentationBlock — all $token. references already
@@ -39,13 +40,8 @@ export interface FieldRefs {
 
 /** Returned by every field behavior hook. */
 export interface SubmitDetail {
-    response: any;
-    validationReport: {
-        valid: boolean;
-        results: any[];
-        counts: { error: number; warning: number; info: number };
-        timestamp: string;
-    };
+    response: FormResponse;
+    validationReport: ValidationReport;
 }
 
 export interface FieldBehavior {

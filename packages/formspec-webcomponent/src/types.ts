@@ -1,7 +1,13 @@
-/** @filedesc Shared type definitions: RenderContext, ComponentPlugin, and screener types. */
 import type { IFormEngine } from '@formspec-org/engine/render';
 import type { Signal } from '@preact/signals-core';
-import { ThemeDocument, PresentationBlock, ItemDescriptor } from '@formspec-org/layout';
+import { ThemeDocument, PresentationBlock, ItemDescriptor, LayoutNode } from '@formspec-org/layout';
+import {
+    ComponentDocument,
+    FormResponse,
+    ValidationResult,
+    ValidationReport,
+    FormItem,
+} from '@formspec-org/types';
 import type { BehaviorContext } from './behaviors/types';
 import type { AdapterContext } from './adapters/types';
 
@@ -45,7 +51,7 @@ export interface RenderContext {
     engine: IFormEngine;
 
     /** The loaded component document (component tree, custom components, tokens, breakpoints). */
-    componentDocument: any;
+    componentDocument: ComponentDocument | null;
 
     /** The loaded theme document, or `null` when no theme is provided. */
     themeDocument: ThemeDocument | null;
@@ -55,17 +61,12 @@ export interface RenderContext {
 
     /** Build submit payload + validation report and optionally dispatch `formspec-submit`. */
     submit: (options?: { mode?: 'continuous' | 'submit'; emitEvent?: boolean }) => {
-        response: any;
-        validationReport: {
-            valid: boolean;
-            results: any[];
-            counts: { error: number; warning: number; info: number };
-            timestamp: string;
-        };
+        response: FormResponse;
+        validationReport: ValidationReport;
     } | null;
 
     /** Resolve a validation result/path to a target path + label + jump metadata. */
-    resolveValidationTarget: (resultOrPath: any) => ValidationTargetMetadata;
+    resolveValidationTarget: (resultOrPath: string | ValidationResult) => ValidationTargetMetadata;
 
     /** Reveal and focus a field by path; returns false when no target field is found. */
     focusField: (path: string) => boolean;
@@ -75,13 +76,8 @@ export interface RenderContext {
 
     /** Latest renderer submit detail (`{ response, validationReport }`), or null before first submit. */
     latestSubmitDetailSignal: Signal<{
-        response: any;
-        validationReport: {
-            valid: boolean;
-            results: any[];
-            counts: { error: number; warning: number; info: number };
-            timestamp: string;
-        };
+        response: FormResponse;
+        validationReport: ValidationReport;
     } | null>;
 
     /** Set shared submit pending state and emit change event when it toggles. */
@@ -91,19 +87,19 @@ export interface RenderContext {
     isSubmitPending: () => boolean;
 
     /** Recursively render a child component descriptor into a parent element. */
-    renderComponent: (comp: any, parent: HTMLElement, prefix?: string) => void;
+    renderComponent: (comp: LayoutNode, parent: HTMLElement, prefix?: string) => void;
 
     /** Resolve a `$token.xxx` reference against component and theme token maps. Non-token values pass through unchanged. */
     resolveToken: (val: any) => any;
 
     /** Apply an inline style object to an element, resolving token references in values. */
-    applyStyle: (el: HTMLElement, style: any) => void;
+    applyStyle: (el: HTMLElement, style: Record<string, any>) => void;
 
     /** Apply `cssClass` entries from a component descriptor to an element's classList. */
-    applyCssClass: (el: HTMLElement, comp: any) => void;
+    applyCssClass: (el: HTMLElement, comp: LayoutNode) => void;
 
     /** Apply accessibility attributes (role, aria-description, aria-live) from a component descriptor. */
-    applyAccessibility: (el: HTMLElement, comp: any) => void;
+    applyAccessibility: (el: HTMLElement, comp: LayoutNode) => void;
 
     /** Resolve the effective PresentationBlock for a definition item via the 5-level theme cascade. */
     resolveItemPresentation: (item: ItemDescriptor) => PresentationBlock;
@@ -126,7 +122,7 @@ export interface RenderContext {
     touchedVersion: Signal<number>;
 
     /** Look up a definition item by key (supports dotted paths like `"group.field"`). Returns `null` if not found. */
-    findItemByKey: (key: string, items?: any[]) => any | null;
+    findItemByKey: (key: string, items?: FormItem[]) => FormItem | null;
 
     /** The currently active responsive breakpoint name, or `null` when no breakpoint matches. */
     activeBreakpoint: string | null;
@@ -156,5 +152,5 @@ export interface ComponentPlugin {
      * @param parent - The parent DOM element to append rendered content into.
      * @param ctx    - Rendering context providing engine access, helpers, and cleanup tracking.
      */
-    render: (comp: any, parent: HTMLElement, ctx: RenderContext) => void;
+    render: (comp: LayoutNode, parent: HTMLElement, ctx: RenderContext) => void;
 }

@@ -1,27 +1,29 @@
 /** @filedesc Submit flow: payload building, touch-all, pending state, and validation targeting. */
 import type { Signal } from '@preact/signals-core';
 import type { IFormEngine } from '@formspec-org/engine/render';
+import {
+    FormDefinition,
+    FormItem,
+    FormResponse,
+    ValidationResult,
+    ValidationReport,
+} from '@formspec-org/types';
 import { normalizeFieldPath, externalPathToInternal, findFieldElement } from '../navigation/index.js';
 import type { NavigationHost } from '../navigation/index.js';
 import type { ValidationTargetMetadata } from '../types.js';
 
 export interface SubmitHost extends NavigationHost {
     engine: IFormEngine | null;
-    _definition: any;
+    _definition: FormDefinition | null;
     touchedFields: Set<string>;
     touchedVersion: Signal<number>;
     _submitPendingSignal: Signal<boolean>;
     _latestSubmitDetailSignal: Signal<{
-        response: any;
-        validationReport: {
-            valid: boolean;
-            results: any[];
-            counts: { error: number; warning: number; info: number };
-            timestamp: string;
-        };
+        response: FormResponse;
+        validationReport: ValidationReport;
     } | null>;
     dispatchEvent(event: Event): boolean;
-    findItemByKey(key: string, items?: any[]): any | null;
+    findItemByKey(key: string, items?: FormItem[]): FormItem | null;
     focusField?(path: string): void;
 }
 
@@ -95,7 +97,8 @@ export function submit(
             counts[severity] += 1;
         }
     }
-    const validationReport = {
+    const validationReport: ValidationReport = {
+        $formspecValidationReport: '1.0',
         valid: counts.error === 0,
         results,
         counts,
@@ -114,7 +117,7 @@ export function submit(
 
     // Scroll to first error if invalid
     if (!validationReport.valid && host.focusField) {
-        const firstError = validationReport.results.find((r: any) => r.severity === 'error');
+        const firstError = validationReport.results.find((r: ValidationResult) => r.severity === 'error');
         if (firstError) {
             host.focusField(firstError.path);
         }
@@ -146,12 +149,13 @@ export function isSubmitPending(host: SubmitHost): boolean {
 /**
  * Resolve a validation result/path to a navigation target with metadata.
  */
-export function resolveValidationTarget(host: SubmitHost, resultOrPath: any): ValidationTargetMetadata {
-    const rawPath = typeof resultOrPath === 'string'
-        ? resultOrPath
-        : (typeof resultOrPath?.sourceId === 'string'
-            ? resultOrPath.sourceId
-            : (typeof resultOrPath?.path === 'string' ? resultOrPath.path : ''));
+export function resolveValidationTarget(host: SubmitHost, resultOrPath: string | ValidationResult): ValidationTargetMetadata {
+    let rawPath = '';
+    if (typeof resultOrPath === 'string') {
+        rawPath = resultOrPath;
+    } else if (resultOrPath && typeof resultOrPath === 'object') {
+        rawPath = resultOrPath.sourceId || resultOrPath.path || '';
+    }
     const normalizedPath = normalizeFieldPath(rawPath);
     const formLevel = normalizedPath === '' || normalizedPath === '#';
 

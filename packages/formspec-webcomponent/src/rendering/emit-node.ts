@@ -223,6 +223,20 @@ export function emitNode(host: RenderHost, node: LayoutNode, parent: HTMLElement
     if (node.cssClasses.length > 0) comp.cssClass = node.cssClasses;
     if (node.accessibility) comp.accessibility = node.accessibility;
     comp.children = node.children;
+    // Planner-only fields (theme cascade for definition fallback) live on the
+    // LayoutNode alongside `props`. Props win when both are set (component doc).
+    if (node.labelPosition !== undefined && comp.labelPosition === undefined) {
+        comp.labelPosition = node.labelPosition;
+    }
+    if (node.presentation !== undefined && comp.presentation === undefined) {
+        comp.presentation = node.presentation;
+    }
+    if (node.fieldItem !== undefined && comp.fieldItem === undefined) {
+        comp.fieldItem = node.fieldItem;
+    }
+    if (node.bindPath !== undefined && comp.bindPath === undefined) {
+        comp.bindPath = node.bindPath;
+    }
 
     renderActualComponent(host, comp, target, prefix);
 }

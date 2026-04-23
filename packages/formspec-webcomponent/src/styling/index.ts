@@ -7,13 +7,15 @@ import {
     resolvePresentation,
 } from '@formspec-org/layout';
 
+import { FormDefinition, ComponentDocument, FormItem } from '@formspec-org/types';
+
 export interface StylingHost {
-    _componentDocument: any;
-    _definition: any;
+    _componentDocument: ComponentDocument | null;
+    _definition: FormDefinition | null;
     _themeDocument: ThemeDocument | null;
     stylesheetHrefs: string[];
     getEffectiveTheme(): ThemeDocument;
-    findItemByKey(key: string, items?: any[]): any | null;
+    findItemByKey(key: string, items?: FormItem[]): FormItem | null;
 }
 
 export function resolveItemPresentation(host: StylingHost, itemDesc: ItemDescriptor): PresentationBlock {
