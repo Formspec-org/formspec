@@ -4,6 +4,8 @@ import { useProject } from '../../state/useProject';
 import { useMapping } from '../../state/useMapping';
 import { HelpTip } from '../../components/ui/HelpTip';
 
+import { useControllableState } from '../../hooks/useControllableState';
+
 const directions = ['unset', 'forward', 'reverse', 'both'] as const;
 
 interface MappingConfigProps {
@@ -15,11 +17,9 @@ export function MappingConfig({ open: controlledOpen, onOpenChange }: MappingCon
   const mapping = useMapping();
   const project = useProject();
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [localOpen, setLocalOpen] = useState(true);
+  const [open, setOpen] = useControllableState(controlledOpen, onOpenChange, true);
   const listboxId = useId();
   const direction = mapping?.direction ?? 'unset';
-  const isControlled = controlledOpen !== undefined;
-  const open = controlledOpen ?? localOpen;
 
   useEffect(() => {
     if (!pickerOpen) return;
@@ -38,9 +38,7 @@ export function MappingConfig({ open: controlledOpen, onOpenChange }: MappingCon
   };
 
   const toggleOpen = () => {
-    const nextOpen = !open;
-    if (!isControlled) setLocalOpen(nextOpen);
-    onOpenChange?.(nextOpen);
+    setOpen(!open);
   };
 
   return (

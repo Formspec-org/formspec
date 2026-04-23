@@ -1,5 +1,6 @@
 /** @filedesc Collapsible section with an uppercase header used in the properties panel and blueprint sidebar. */
 import { useState, type ReactNode } from 'react';
+import { IconChevronDown } from '../icons';
 
 interface SectionProps {
   title: string;
@@ -24,9 +25,7 @@ export function Section({ title, children, defaultOpen = true }: SectionProps) {
         <span className="text-[12px] font-semibold tracking-[0.08em] uppercase text-muted/90 group-hover:text-ink transition-colors">
           {title}
         </span>
-        <span className={`text-[11px] text-muted transition-transform duration-150 ${open ? 'rotate-90' : ''}`}>
-          {open ? '▼' : '▶'}
-        </span>
+        <IconChevronDown size={11} className={`text-muted transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && <div className="mt-3 space-y-2">{children}</div>}
     </div>

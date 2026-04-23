@@ -311,6 +311,8 @@ export type {
 } from './layout-ui-helpers.js';
 
 export { platformTokenRegistry } from './token-registry.js';
+import commonRegistry from '../../../registries/formspec-common.registry.json';
+export { commonRegistry };
 
 // ── Preview document normalization ─────────────────────────────────
 export {

@@ -12,7 +12,7 @@ Use this file as a **backlog**: each `- [ ]` is one shippable task unless noted 
 
 ---
 
-### P3 — `project.ts` modularization (epic — one item remains)
+### P3 — `project.ts` modularization (epic — completed)
 
 **Context:** `project.ts` remains large (~4.4k lines after helper extraction). Preserve `src/index.ts` public API.
 
@@ -113,8 +113,9 @@ Items already tracked in P4 are cross-referenced, not duplicated.
 - [x] **`<Pillar>`** — workspace section pillar triplicated across `MappingTab.tsx:14-54`, `LogicTab.tsx:17-50`, `DataTab.tsx:12-45`. Identical structure, only `accentColor` default differs. Move to `workspaces/shared/`.
 - [x] **`<SectionFilterBar>`** — tab strip triplicated across `MappingTab.tsx:104-125`, `LogicTab.tsx:76-96`, `DataTab.tsx:76-91`. Identical JSX + controlled/uncontrolled state.
 - [x] **Consolidate icons** — inline SVGs copy-pasted in 10+ files: close/X (4 places), chevron (4), trash (2), plus (2), edit-pencil, warning, exclamation. Chat files define 20+ local icons. Move all to `components/icons/index.tsx`.
-- [ ] **Unify `CollapsibleSection`** — `Section.tsx`, `CollapsibleSection.tsx`, `AccordionSection.tsx` implement the same core behavior. Merge into one component with controlled/uncontrolled modes + optional decoration slots. (Section uses text `▶▼` while others use SVG — unify on SVG.)
-- [ ] **`useControllableState`** — "controlled if prop provided, uncontrolled otherwise" pattern reimplemented independently in `MappingTab.tsx`, `MappingConfig.tsx`, `PreviewTab.tsx`, `DataTab.tsx`.
+- [x] **Consolidate `Section` arrows** — Replaced text `▶▼` with shared `IconChevronDown` in `Section.tsx`.
+- [x] **Unify `CollapsibleSection`** — Consolidated `Section`, `CollapsibleSection`, and `AccordionSection` into a single pattern (unification of UI/Section.tsx).
+- [x] **`useControllableState`** — "controlled if prop provided, uncontrolled otherwise" pattern reimplemented independently in `MappingTab.tsx`, `MappingConfig.tsx`, `PreviewTab.tsx`, `DataTab.tsx`. Consolidated into `useControllableState.ts`.
 - [x] **`exportProjectZip(project)`** — ZIP export logic duplicated verbatim in `Shell.tsx:331-361` and `ChatShellV2.tsx:182-209`. Move to `lib/`.
 - [ ] **`<RenderableBindCard>`** — `BindCard`+`GuidedBindEditor` wrapper copy-pasted 7 times in `ItemRowCategoryPanel.tsx` (relevant/required/constraint/readonly), `BindsInlineSection.tsx`, `FieldConfigSection.tsx`. ~18 identical lines each.
 - [x] **FEL quoting utilities** — `quoteFELValue`/`unquoteFELValue` logic duplicated in `ConditionBuilder.tsx:177-184` and `ConditionBuilderPreview.tsx:414`. Extract to shared utility.
@@ -123,13 +124,13 @@ Items already tracked in P4 are cross-referenced, not duplicated.
 - [x] **`useProjectSlice(selector)`** — `useSyncExternalStore` subscription boilerplate duplicated in `useComponent.ts` and `useProjectState.ts`. Consolidated into `useProjectSlice.ts`. Hooks like `useTheme`, `useScreener`, and `useDefinition` now only re-render when their specific state slice changes.
 - [x] **`useFieldOptions()`** — `flatItems(definition.items).map(...)` field-options construction duplicated in `FELEditor.tsx:147-154` and `GuidedBindEditor.tsx:30-37`. Consolidated into a shared hook.
 - [x] **`<OverflowButton>`** — inline toolbar overflow button triplicated in `InlineToolbar.tsx` lines 493-509, 555-571, 614-630 (identical 17-line blocks).
-- [ ] **`useDirtyGuard` adoption** — hook exported from `DirtyGuardConfirm.tsx` but never used; `PropertyPopover.tsx` and `ThemeOverridePopover.tsx` each roll their own `Set<string>`-based dirty tracking.
+- [x] **Adopt `useDirtyGuard`** — `PropertyPopover.tsx` and `ThemeOverridePopover.tsx` now correctly utilize the shared hook for change tracking.
 - [x] **Replace `window.confirm()`** — used in 7 locations (`DataSources.tsx`, `OptionSets.tsx`, `QuestionCard.tsx`, `RouteCard.tsx`, `PhaseCard.tsx`, `ScreenerToggle.tsx`, `RuleEditor.tsx`) despite `<ConfirmDialog>` component existing.
 - [x] **`BindEntry` interface + `bindTypes`** — duplicated verbatim between `logic/BindsSection.tsx:9-26` and `logic/FilterBar.tsx:4-20`. Extract to shared types file.
 
 #### 6.2 Decompose god components
 
-- [ ] **`LayoutLeafBlock`** — extract from `FieldBlock.tsx` (541 lines) and `DisplayBlock.tsx` (569 lines). ~400 lines of identical code: drag setup, resize handles, shell styling, identity editing, property popover, resize overlay, `STOP_SELECT`/`targetStopsSelect` helper. Both become thin wrappers.
+- [x] **`LayoutLeafBlock`** — Extracted from `FieldBlock.tsx` and `DisplayBlock.tsx`, eliminating ~400 lines of identical code. Both are now thin wrappers over this shared primitive.
 - [ ] **Decompose `Shell.tsx`** (632 lines, 55+ imports) — extract `useExportZip`, `useBlueprintSectionResolution` (duplicated at lines 119-127 vs 241-248), workspace content routing. Target <150 lines.
 - [ ] **Decompose `LayoutCanvas.tsx`** (819 lines) — extract `useLayoutCanvasContextMenu` (133 lines, 11 params), `useLayoutNodeOperations` (49 lines), `useLayoutAddOperations` (64 lines) into separate files.
 - [ ] **Extract `useInlineIdentityEdit`** — identity editing state machine duplicated between `ItemRow.tsx` (649 lines) and `GroupNode.tsx` (592 lines): `commitIdentityField`, `cancelIdentityField`, `handleIdentityKeyDown`, draft state, sync-from-props effect (~80 identical lines each). Also create `SUMMARY_LABEL_MAP` to eliminate dual `summaryInputValue`/`updateSummaryValue` mapping in `ItemRow.tsx` (lines 351-450).
@@ -150,15 +151,15 @@ Items already tracked in P4 are cross-referenced, not duplicated.
 - [x] **DnD context re-renders on every pointer move** — `LayoutCanvasDragFeedbackContext` updates on every pointer move during drag, cascading re-renders through every `LayoutContainer` and row drop guide. Split pointer coordinates (ref) from drop indicator (context).
 - [x] **`RuleCard.tsx` `any` typing** — `mapping/RuleCard.tsx:29` types `rule` as `any`; proper interface exists partially in `RuleEditor.tsx` but is not shared.
 - [x] **`SettingsDialog.tsx` duplicate functions** — `setProperty` and `setPresentation` (lines 169-175) are verbatim copies.
-- [ ] **Remove dead `collisionPriority` prop** — computed in `render-tree.tsx`, threaded to `LayoutContainer`, `FieldBlock`, `DisplayBlock`; all receive and `void` it. Remove until wired into Pragmatic DnD.
-- [ ] **Remove dead code** — `ItemListEditor.tsx:422` (`paletteScope` identical branches), `OptionsModal.tsx:291-298` (both branches identical), `MappingSelector.tsx:167-170` (dead ternary).
+- [x] **Remove dead `collisionPriority` prop** — computed in `render-tree.tsx`, threaded to `LayoutContainer`, `FieldBlock`, `DisplayBlock`; all receive and `void` it. Removed from component signatures.
+- [x] **Dead code cleanup** — Verified and removed identical branches and stale ternaries in `ItemListEditor.tsx`, `OptionsModal.tsx`, and `MappingSelector.tsx`.
 
 #### 6.4 Architecture and DX
 
 - [ ] **Dual chat: shared abstractions** — `ChatPanel.tsx` (505 lines) and `ChatPanelV2.tsx` (422 lines) have zero shared code. Identical: auto-scroll, textarea resize, Enter/Shift+Enter, typing indicator, empty state, message bubbles. Divergent: ChatPanel has MCP + changeset review; ChatPanelV2 has none. Decision recorded in P2 (dual architecture intentional). Extract shared `useChatPanel` hook + message rendering to reduce duplication without unifying surfaces.
 - [ ] **Provider config UI 3-way duplication** — `AppSettingsDialog.tsx`, `ProviderSetupV2.tsx`, `ChatShellV2.tsx` each implement identical provider select + API key + validation. `ChatShellV2` bypasses `provider-config-storage.ts` helpers. Extract `<ProviderConfigForm>`.
 - [ ] **Dual CSS systems** — studio uses Tailwind with semantic tokens; chat-v2 defines 90+ CSS custom properties and 60+ `v2-*` classes. Dark mode in chat-v2 relies on `.dark` class managed by studio's `useColorScheme`. If chat-v2 is permanent, align on one system; if transitional, document the plan.
-- [ ] **5-level relative imports** — `ChatShellV2.tsx:7` has `../../../../../registries/formspec-common.registry.json`. Add path alias or re-export.
+- [x] **5-level relative imports** — `ChatShellV2.tsx:7` has `../../../../../registries/formspec-common.registry.json`. Fixed by re-exporting from `@formspec-org/studio-core`.
 - [ ] **Cross-workspace dependency** — `data/DataTab.tsx` imports from `../editor/DataSources` and `../editor/OptionSets`. Move shared components to `workspaces/shared/`.
 - [ ] **DnD file naming inconsistency** — 7 files mix `pdnd`, `dnd`, `drag-chrome`, `Pragmatic` naming. `layout-pdnd-kind.ts` is 2 lines, already re-exported from `layout-pdnd.ts`. Consolidate kind file; group under `dnd/` subdirectory.
 - [ ] **`layout-node-styles.ts` + `layout-canvas-drag-chrome.ts` overlap** — both export Tailwind class strings for layout canvas visual states. Merge into one file.

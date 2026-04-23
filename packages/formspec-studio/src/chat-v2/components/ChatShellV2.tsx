@@ -2,9 +2,8 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { ChatSession, GeminiAdapter, MockAdapter, SessionStore, validateProviderConfig, extractRegistryHints } from '@formspec-org/chat';
 import type { AIAdapter, Attachment, ProviderConfig, StorageBackend } from '@formspec-org/chat';
-import { buildBundleFromDefinition } from '@formspec-org/studio-core';
+import { buildBundleFromDefinition, commonRegistry } from '@formspec-org/studio-core';
 import { exportProjectZip } from '../../lib/export-zip';
-import commonRegistry from '../../../../../registries/formspec-common.registry.json';
 import { ChatProvider, useChatState, useChatSession } from '../state/ChatContext.js';
 import { EntryScreenV2 } from './EntryScreenV2.js';
 import { ChatPanelV2 } from './ChatPanelV2.js';
