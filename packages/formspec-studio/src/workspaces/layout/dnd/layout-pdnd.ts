@@ -3,9 +3,9 @@ import { extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/clo
 import type { ElementDragPayload } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
 import type { CompNode, Project } from '@formspec-org/studio-core';
 import { findComponentNodeByRef } from '@formspec-org/studio-core';
-import { finalIndexFromRowEdge, postRemovalIndexForFinalIndex } from '../shared/reorder-insert-index';
+import { finalIndexFromRowEdge, postRemovalIndexForFinalIndex } from '../../shared/reorder-insert-index';
 import { sortGroupToParentRef, type DragEndEvent } from './layout-dnd-utils';
-import { isRecord } from '../shared/runtime-guards';
+import { isRecord } from '../../shared/runtime-guards';
 
 export const LAYOUT_PDND_KIND = 'layout-canvas' as const;
 

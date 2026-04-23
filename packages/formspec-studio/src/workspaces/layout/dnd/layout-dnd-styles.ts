@@ -1,5 +1,33 @@
-/** @filedesc Canonical Tailwind + pure helpers for layout-canvas drag affordances — insertion bar, drop-target emphasis, floating preview offset. */
-import { LAYOUT_DRAG_SOURCE_STYLE } from './layout-node-styles';
+/** @filedesc Canonical Tailwind + pure helpers for layout-canvas drag affordances and selection states. */
+
+/** --- Selection Styles (from layout-node-styles.ts) --- */
+
+/** Selected layout container: structural frame with inline-start rail (RTL-safe). */
+export const LAYOUT_CONTAINER_SELECTED =
+  'rounded-[8px] border border-border/60 border-s-[3px] border-s-accent bg-accent/[0.04] shadow-[0_1px_3px_rgba(0,0,0,0.02)] ring-1 ring-accent/20';
+
+/** Unselected layout container shell (dashed wireframe). */
+export const LAYOUT_CONTAINER_UNSELECTED = 'rounded-[8px] border border-dashed border-border/80 bg-surface transition-colors hover:border-accent/40';
+
+/**
+ * Stack (and similar) on the active layout page — solid frame.
+ */
+export const LAYOUT_CONTAINER_UNSELECTED_ON_ACTIVE_PAGE =
+  'rounded-[8px] border border-border/50 bg-surface transition-colors hover:border-border/80 shadow-[0_1px_2px_rgba(0,0,0,0.015)]';
+
+/** Selected field/display card: same selection vocabulary as containers, no diffuse glow. */
+export const LAYOUT_LEAF_SELECTED =
+  'rounded-[8px] border border-border/60 border-s-[3px] border-s-accent bg-accent/[0.04] shadow-[0_1px_3px_rgba(0,0,0,0.02)] ring-1 ring-accent/20';
+
+/** Unselected leaf: transparent border until hover. */
+export const LAYOUT_LEAF_UNSELECTED = 'rounded-[8px] border border-transparent hover:border-border/60 hover:bg-subtle/30 transition-all';
+
+/** Premium style for an active drag source: 'picked up' feel with scale, grayscale, and reduced opacity. */
+export const LAYOUT_DRAG_SOURCE_STYLE =
+  'opacity-55 grayscale-[0.15] scale-[0.98] ring-2 ring-accent/60 ring-offset-2 ring-offset-background shadow-md';
+
+
+/** --- Drag & Drop Affordances (from layout-canvas-drag-chrome.ts) --- */
 
 /** Offset from cursor for the floating drag preview so the finger does not cover the chip. */
 export const LAYOUT_CANVAS_DRAG_OVERLAY_POINTER_OFFSET_PX = 14;

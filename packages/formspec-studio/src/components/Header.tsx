@@ -17,7 +17,8 @@ import {
 
 const TABS: { name: string; help: string }[] = [
   { name: 'Editor', help: 'Build your form structure and manage shared resources' },
-  { name: 'Layout', help: 'Visual form builder — pages, layout containers, widget selection, and theme overrides' },
+  { name: 'Layout', help: 'Visual form builder — pages, layout containers, and widget placement' },
+  { name: 'Theme', help: 'Brand styling, typography, and responsive breakpoints' },
   { name: 'Mapping', help: 'Bidirectional data transforms for import/export formats' },
   { name: 'Preview', help: 'Live form preview, behavior lab, and JSON document view' },
 ];

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type MouseEvent, type Keyboar
 import { hasTier3Content } from '@formspec-org/studio-core';
 import { useResizeHandle } from './useResizeHandle';
 import { useLayoutResizeReporter } from './LayoutResizeContext';
-import { useLayoutPragmaticItem } from './useLayoutPragmaticItem';
+import { useLayoutPdndItem } from './dnd/useLayoutPdndItem';
 import type { LayoutContext } from './FieldBlock';
 
 export interface UseLayoutLeafStateProps {
@@ -51,7 +51,7 @@ export function useLayoutLeafState({
     setIsDragSource(active);
   }, []);
 
-  useLayoutPragmaticItem({
+  useLayoutPdndItem({
     enabled: true,
     element: shellEl,
     dragHandle: dragHandleHost,

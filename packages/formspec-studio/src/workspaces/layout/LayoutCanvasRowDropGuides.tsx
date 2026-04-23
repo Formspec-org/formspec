@@ -1,6 +1,6 @@
 /** @filedesc Accent insertion bar on the top or bottom edge of a layout row when it is the active list drop target. */
-import { useLayoutCanvasRowDropEdge } from './LayoutCanvasDragFeedbackContext';
-import { LAYOUT_CANVAS_ROW_INSERT_BAR_BASE } from './layout-canvas-drag-chrome';
+import { useLayoutRowDropEdge } from './dnd/LayoutDragFeedbackContext';
+import { LAYOUT_CANVAS_ROW_INSERT_BAR_BASE } from './dnd/layout-dnd-styles';
 
 export function LayoutCanvasRowDropGuides({
   sortableGroup,
@@ -9,7 +9,7 @@ export function LayoutCanvasRowDropGuides({
   sortableGroup: string;
   sortableIndex: number;
 }) {
-  const edge = useLayoutCanvasRowDropEdge(sortableGroup, sortableIndex);
+  const edge = useLayoutRowDropEdge(sortableGroup, sortableIndex);
   if (!edge) return null;
   return (
     <>

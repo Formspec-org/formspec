@@ -10,7 +10,7 @@ import {
   applyLayoutStepNavDrop,
   type StepNavPdndRowData,
   type StepNavPdndSourceData,
-} from './layout-step-nav-pdnd';
+} from './dnd/layout-step-nav-pdnd';
 import { isRecord } from '../shared/runtime-guards';
 
 export interface LayoutStepNavPage {

@@ -5,7 +5,7 @@ import { draggable, dropTargetForElements } from '@atlaskit/pragmatic-drag-and-d
 import { attachClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge';
 import { LAYOUT_PDND_KIND } from './layout-pdnd';
 import type { LayoutPdndSourceData } from './layout-pdnd';
-import { isRecord } from '../shared/runtime-guards';
+import { isRecord } from '../../shared/runtime-guards';
 
 export interface UseLayoutPragmaticItemArgs {
   enabled: boolean;
@@ -21,7 +21,7 @@ export interface UseLayoutPragmaticItemArgs {
   onDragSourceChange?: (active: boolean) => void;
 }
 
-export function useLayoutPragmaticItem(args: UseLayoutPragmaticItemArgs): void {
+export function useLayoutPdndItem(args: UseLayoutPragmaticItemArgs): void {
   const { enabled, element, dragHandle, sortableGroup, sortableIndex, nodeRef, sourceId, onDragSourceChange } = args;
   const bind = nodeRef.bind;
   const nodeId = nodeRef.nodeId;

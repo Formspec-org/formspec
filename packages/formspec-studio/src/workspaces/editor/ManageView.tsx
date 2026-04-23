@@ -7,8 +7,8 @@ import { VariablesSection } from '../logic/VariablesSection';
 import { BindsSection } from '../logic/BindsSection';
 import { ShapesSection } from '../logic/ShapesSection';
 import { FilterBar } from '../logic/FilterBar';
-import { OptionSets } from './OptionSets';
-import { DataSources } from './DataSources';
+import { OptionSets } from '../shared/OptionSets';
+import { DataSources } from '../shared/DataSources';
 import { WorkspacePage, WorkspacePageSection } from '../../components/ui/WorkspacePage';
 import { HelpTip } from '../../components/ui/HelpTip';
 

@@ -9,15 +9,13 @@ import {
   LAYOUT_CONTAINER_SELECTED,
   LAYOUT_CONTAINER_UNSELECTED,
   LAYOUT_CONTAINER_UNSELECTED_ON_ACTIVE_PAGE,
-} from './layout-node-styles';
-import { useLayoutCanvasContainerDropTargetActive } from './LayoutCanvasDragFeedbackContext';
-import { LayoutCanvasRowDropGuides } from './LayoutCanvasRowDropGuides';
-import {
   LAYOUT_CANVAS_EMPTY_CONTAINER_DROP_ACTIVE,
   layoutCanvasContainerShellClassName,
-} from './layout-canvas-drag-chrome';
-import { useLayoutPragmaticContainerDrop } from './useLayoutPragmaticContainerDrop';
-import { useLayoutPragmaticItem } from './useLayoutPragmaticItem';
+} from './dnd/layout-dnd-styles';
+import { useLayoutContainerDropTargetActive } from './dnd/LayoutDragFeedbackContext';
+import { LayoutCanvasRowDropGuides } from './LayoutCanvasRowDropGuides';
+import { useLayoutPdndContainerDrop } from './dnd/useLayoutPdndContainerDrop';
+import { useLayoutPdndItem } from './dnd/useLayoutPdndItem';
 
 export interface LayoutContainerProps {
   component: string;
@@ -114,8 +112,8 @@ function buildContentStyle(component: string, layoutProps: ContentStyleProps = {
 /** Subtle drop target rendered only when a container is empty. */
 function EmptyContainerPlaceholder({ containerRef }: { containerRef: { bind?: string; nodeId?: string } }) {
   const [host, setHost] = useState<HTMLDivElement | null>(null);
-  const emptyDropActive = useLayoutCanvasContainerDropTargetActive(containerRef);
-  useLayoutPragmaticContainerDrop({
+  const emptyDropActive = useLayoutContainerDropTargetActive(containerRef);
+  useLayoutPdndContainerDrop({
     element: host,
     enabled: !!(containerRef.nodeId || containerRef.bind),
     nodeRef: containerRef,
@@ -175,9 +173,9 @@ export function LayoutContainer(props: LayoutContainerProps) {
 
   const dragId = nodeId ? `node:${nodeId}` : `bind:${bind ?? component}`;
   const nodeRef = nodeId ? { nodeId } : bind ? { bind } : undefined;
-  const containerDropActive = useLayoutCanvasContainerDropTargetActive(nodeRef ?? null);
+  const containerDropActive = useLayoutContainerDropTargetActive(nodeRef ?? null);
 
-  useLayoutPragmaticItem({
+  useLayoutPdndItem({
     enabled: !!nodeRef,
     element: shellEl,
     dragHandle: dragHandleHost,
@@ -192,7 +190,7 @@ export function LayoutContainer(props: LayoutContainerProps) {
   /** Visually collapse only — content stays mounted (nested drag targets stay registered). */
   const collapsibleContentClosed = isCollapsible && !open;
 
-  useLayoutPragmaticContainerDrop({
+  useLayoutPdndContainerDrop({
     element: headerDropEl,
     enabled: isCollapsible && !!nodeRef && !isDragSource,
     nodeRef: nodeRef!,

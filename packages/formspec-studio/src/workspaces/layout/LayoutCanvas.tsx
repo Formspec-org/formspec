@@ -20,7 +20,7 @@ import {
 } from './render-tree';
 import { UnassignedTray } from './UnassignedTray';
 import { LayoutContextMenu } from './LayoutContextMenu';
-import { LayoutDndProvider } from './LayoutDndProvider';
+import { LayoutDndProvider } from './dnd/LayoutDndProvider';
 import { ThemeOverridePopover } from './ThemeOverridePopover';
 import { useOptionalLayoutMode } from './LayoutModeContext';
 import { useLayoutPreviewNav } from './LayoutPreviewNavContext';

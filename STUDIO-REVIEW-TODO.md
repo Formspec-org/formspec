@@ -160,13 +160,13 @@ Items already tracked in P4 are cross-referenced, not duplicated.
 - [ ] **Provider config UI 3-way duplication** — (SKIPPED per user request)
 - [ ] **Dual CSS systems** — studio uses Tailwind with semantic tokens; chat-v2 defines 90+ CSS custom properties.
 - [x] **5-level relative imports** — Fixed by re-exporting from `studio-core`.
-- [ ] **Cross-workspace dependency** — `data/DataTab.tsx` imports from `../editor/DataSources`. Move to `workspaces/shared/`.
-- [ ] **DnD file naming inconsistency** — 7 files mix `pdnd`, `dnd`, `drag-chrome`, `Pragmatic` naming.
-- [ ] **`layout-node-styles.ts` + `layout-canvas-drag-chrome.ts` overlap** — Merge into one file.
+- [x] **Cross-workspace dependency** — Moved `DataSources` and `OptionSets` to `workspaces/shared/`.
+- [x] **DnD file naming inconsistency** — Consolidated all layout DnD files into `workspaces/layout/dnd/` with unified naming (Pdnd).
+- [x] **`layout-node-styles.ts` + `layout-canvas-drag-chrome.ts` overlap** — Merged into `layout-dnd-styles.ts`.
 - [x] **Delete dead code** — `ComponentRenderer.tsx`, `LayoutPreviewPanel.tsx`, `LayoutWorkspace.tsx`.
-- [ ] **Add `ThemeTab.tsx`** — structural asymmetry.
+- [x] **Add `ThemeTab.tsx`** — Introduced top-level Theme workspace and tab orchestrator.
 - [ ] **`handleResend`/`handleEdit` near-duplicate** — (SKIPPED per user request)
-- [ ] **`useWorkspaceRouter` unsafe casts** — Fixed via validation.
+- [x] **`useWorkspaceRouter` unsafe casts** — Fixed via validation.
 - [x] **`<span onClick>` a11y** — Replaced with `<button>`.
 
 ---

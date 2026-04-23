@@ -2,9 +2,9 @@
 import { useEffect } from 'react';
 import { dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
 import { LAYOUT_PDND_KIND } from './layout-pdnd';
-import { isRecord } from '../shared/runtime-guards';
+import { isRecord } from '../../shared/runtime-guards';
 
-export function useLayoutPragmaticContainerDrop(args: {
+export function useLayoutPdndContainerDrop(args: {
   element: HTMLElement | null;
   enabled: boolean;
   nodeRef: { bind?: string; nodeId?: string };

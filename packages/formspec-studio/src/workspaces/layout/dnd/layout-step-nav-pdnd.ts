@@ -1,8 +1,8 @@
 /** @filedesc Pragmatic drag-and-drop data + drop mapping for {@link LayoutStepNav}. */
 import { extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge';
 import type { ElementDragPayload } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
-import { finalIndexFromRowEdge } from '../shared/reorder-insert-index';
-import { isRecord } from '../shared/runtime-guards';
+import { finalIndexFromRowEdge } from '../../shared/reorder-insert-index';
+import { isRecord } from '../../shared/runtime-guards';
 
 export const STEP_NAV_PDND_KIND = 'layout-step-nav';
 

@@ -1,8 +1,8 @@
 /** @filedesc Tray showing definition items not bound in the component tree. */
 import { useEffect, useMemo, useState } from 'react';
 import { draggable } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
-import { LAYOUT_PDND_KIND } from './layout-pdnd';
-import { LAYOUT_DRAG_SOURCE_STYLE } from './layout-node-styles';
+import { LAYOUT_PDND_KIND } from './dnd/layout-pdnd';
+import { LAYOUT_DRAG_SOURCE_STYLE } from './dnd/layout-dnd-styles';
 import type { FormItem } from '@formspec-org/types';
 import {
   computeUnassignedItems,

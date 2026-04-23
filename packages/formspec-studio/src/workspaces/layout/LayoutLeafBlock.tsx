@@ -3,7 +3,7 @@ import { DragHandle } from '../../components/ui/DragHandle';
 import { InlineToolbar } from './InlineToolbar';
 import { PropertyPopover } from './PropertyPopover';
 import { DefinitionCopyReadonlyPanel } from './DefinitionCopyReadonlyPanel';
-import { LAYOUT_LEAF_SELECTED, LAYOUT_LEAF_UNSELECTED, LAYOUT_DRAG_SOURCE_STYLE } from './layout-node-styles';
+import { LAYOUT_LEAF_SELECTED, LAYOUT_LEAF_UNSELECTED, LAYOUT_DRAG_SOURCE_STYLE } from './dnd/layout-dnd-styles';
 import { LayoutCanvasRowDropGuides } from './LayoutCanvasRowDropGuides';
 import { useLayoutLeafState } from './useLayoutLeafState';
 import type { LayoutContext } from './FieldBlock';

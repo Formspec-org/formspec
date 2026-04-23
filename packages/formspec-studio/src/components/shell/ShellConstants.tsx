@@ -15,6 +15,7 @@ import { DefaultFieldStyle } from '../../workspaces/theme/DefaultFieldStyle';
 import { FieldTypeRules } from '../../workspaces/theme/FieldTypeRules';
 import { ScreenSizes } from '../../workspaces/theme/ScreenSizes';
 import { AllTokens } from '../../workspaces/theme/AllTokens';
+import { ThemeTab } from '../../workspaces/theme/ThemeTab';
 
 import { LayoutCanvas as LayoutWorkspace } from '../../workspaces/layout/LayoutCanvas';
 import { MappingTab } from '../../workspaces/mapping/MappingTab';
@@ -22,6 +23,7 @@ import { PreviewTab } from '../../workspaces/preview/PreviewTab';
 
 export const WORKSPACES: Record<string, React.FC<any>> = {
   Layout: LayoutWorkspace,
+  Theme: ThemeTab,
   Mapping: MappingTab,
   Preview: PreviewTab,
 };
@@ -57,6 +59,7 @@ export const THEME_MODE_BLUEPRINT_SECTIONS = [
 export const BLUEPRINT_SECTIONS_BY_TAB: Record<string, string[]> = {
   Editor: ['Structure', 'Variables', 'Data Sources', 'Option Sets', 'Screener', 'Settings'],
   Layout: ['Structure', 'Component Tree', 'Screener', 'Variables', 'Data Sources', 'Option Sets', 'Mappings', 'Settings', 'Theme'],
+  Theme: THEME_MODE_BLUEPRINT_SECTIONS,
   Mapping: ['Mappings', 'Structure', 'Data Sources', 'Option Sets', 'Settings'],
   Preview: ['Structure', 'Component Tree', 'Theme', 'Settings'],
 };

@@ -1,7 +1,7 @@
 /** @filedesc Data workspace tab composing OutputBlueprint, DataSources, and OptionSets panels. */
 import { OutputBlueprint } from '../../components/blueprint/OutputBlueprint';
-import { DataSources } from '../editor/DataSources';
-import { OptionSets } from '../editor/OptionSets';
+import { DataSources } from '../shared/DataSources';
+import { OptionSets } from '../shared/OptionSets';
 import { WorkspacePage, WorkspacePageSection } from '../../components/ui/WorkspacePage';
 import { Pillar } from '../shared/Pillar';
 import { SectionFilterBar } from '../shared/SectionFilterBar';

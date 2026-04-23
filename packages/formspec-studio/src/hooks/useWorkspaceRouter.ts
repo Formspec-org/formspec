@@ -22,7 +22,7 @@ export interface WorkspaceRouterState {
   setPreviewMode: (mode: PreviewMode) => void;
 }
 
-const VALID_TABS = new Set(['Editor', 'Layout', 'Mapping', 'Preview']);
+const VALID_TABS = new Set(['Editor', 'Layout', 'Theme', 'Mapping', 'Preview']);
 const VALID_MAPPING_TAB_IDS = new Set<string>(['all', 'config', 'rules', 'adapter', 'preview']);
 const VALID_EDITOR_VIEWS = new Set<string>(['build', 'manage', 'screener', 'health']);
 
@@ -49,9 +49,6 @@ export function useWorkspaceRouter(): WorkspaceRouterState {
       const subTab = typeof detail.subTab === 'string' ? detail.subTab : undefined;
       const view = typeof detail.view === 'string' ? detail.view : undefined;
       const section = typeof detail.section === 'string' ? detail.section : undefined;
-      if (tab === 'Theme') {
-        tab = 'Layout';
-      }
       if (tab && VALID_TABS.has(tab)) {
         setActiveTab(tab);
         if (tab === 'Editor' && view && VALID_EDITOR_VIEWS.has(view)) {
