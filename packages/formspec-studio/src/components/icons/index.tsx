@@ -1,4 +1,4 @@
-/** @filedesc Shared studio icons used across chat surfaces and context menus. */
+/** @filedesc Shared studio icons used across the AI chat panel, workspaces, and context menus. */
 
 interface SvgProps {
   className?: string;

@@ -94,30 +94,11 @@ Nine sections with entity count badges:
 8. **Mappings** — rule count and direction
 9. **Settings** — definition metadata, presentation defaults, extensions
 
-### Chat shell
+### Integrated AI chat
 
-`src/chat/` contains the conversational form builder. It is a self-contained feature with its own state (`ChatProvider`, `useChatSession`) and four panels:
+The studio exposes one conversational surface: **`ChatPanel`** (`src/components/ChatPanel.tsx`), toggled from the header (stack menu → **Open AI chat panel**) or the sparkle control. It uses `ChatSession` from `@formspec-org/chat` with MCP tool dispatch against the live `Project`, and `src/components/chat/` for thread UI (`ChatMessageList`, `ChangesetReviewSection`). Optional dev seeding: set `VITE_GEMINI_DEV_KEY` in `.env.local` (same pattern as before the standalone chat page was removed).
 
-- `ChatShell` — layout wrapper
-- `ChatPanel` — conversation thread
-- `FormPreview` — live preview alongside the chat
-- `IssuePanel` — validation issues surfaced from the session
-
-The chat shell is exported from `formspec-chat` and consumed by the studio as a workspace mode.
-
-### Two chat surfaces
-
-The studio currently ships two distinct chat entry points. They serve different
-flows and share no runtime state.
-
-| Surface | Entry | Analytics label | Role |
-|---------|-------|-----------------|------|
-| Integrated sidebar | `src/components/ChatPanel.tsx` | `integrated-studio-ai` | Assistant bound to the live `Project`, routed through MCP tools, producing reviewable changesets inside the editor. |
-| Standalone MPA | `src/chat-v2/` + `main-chat.tsx` at `/studio/chat.html` | `standalone-conversational-entry` | Conversational intake built on `ChatSession`. Hands off to the editor via the `?h=` query parameter. |
-
-The integrated panel mutates the open project directly; the standalone page is
-a separate entry that scaffolds a definition and hands it to the editor. Both
-use `@formspec-org/chat` but compose it differently.
+External tools can still open the studio with a one-time definition handoff via `?h=` (see `StudioApp.tsx`); that path is unrelated to the old standalone chat HTML entry.
 
 ---
 

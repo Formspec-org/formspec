@@ -6,7 +6,7 @@
   "private": true,
   "scripts": {
     "build:studio": "npm run build -w @formspec-org/studio",
-    "copy:studio": "rm -rf public/studio public/chat && mkdir -p public/studio public/chat && cp -r ../packages/formspec-studio/dist/* public/studio/ && mv public/studio/chat.html public/chat/index.html",
+    "copy:studio": "rm -rf public/studio && mkdir -p public/studio && cp -r ../packages/formspec-studio/dist/* public/studio/",
     "build:references": "cd ../examples/refrences && FORMSPEC_BASE_PATH=/references/ npx vite build",
     "copy:references": "rm -rf public/references && mkdir -p public/references && cp -r ../examples/refrences/dist/* public/references/ && mkdir -p public/references/examples && cp -r ../examples/grant-application public/references/examples/ && cp -r ../examples/grant-report public/references/examples/ && cp -r ../examples/invoice public/references/examples/ && cp -r ../examples/clinical-intake public/references/examples/ && cp -r ../examples/uswds-grant public/references/examples/ && mkdir -p public/references/registries && cp ../registries/*.json public/references/registries/",
     "build:react-demo": "cd ../examples/react-demo && FORMSPEC_BASE_PATH=/react/ npx vite build",

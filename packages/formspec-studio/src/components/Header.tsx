@@ -212,16 +212,17 @@ export function Header({
             App Settings
           </button>
           <div className="border-t border-border my-1" role="separator" />
-          <a
-            href="/chat.html"
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            type="button"
             role="menuitem"
-            className="block w-full text-left px-3 py-2 text-[13px] hover:bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 focus-visible:ring-inset"
-            onClick={() => setMenuOpen(false)}
+            className="w-full text-left px-3 py-2 text-[13px] hover:bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 focus-visible:ring-inset"
+            onClick={() => {
+              setMenuOpen(false);
+              onToggleChat?.();
+            }}
           >
-            AI Chat Studio
-          </a>
+            Open AI chat panel
+          </button>
         </div>
       )}
     </div>

@@ -7,7 +7,6 @@ const __dirname = dirname(__filename);
 
 export default defineConfig({
   testDir: './tests/e2e/playwright',
-  testIgnore: ['chat-e2e.spec.ts'],  // requires its own server + API key; use playwright-chat.config.ts
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

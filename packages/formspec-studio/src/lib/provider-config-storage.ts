@@ -1,4 +1,4 @@
-/** @filedesc Unified localStorage access for the AI provider config shared by studio and chat-v2. */
+/** @filedesc Unified localStorage access for the AI provider config used by the studio (integrated chat + settings). */
 import { validateProviderConfig } from '@formspec-org/chat';
 import type { ProviderConfig, StorageBackend } from '@formspec-org/chat';
 

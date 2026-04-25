@@ -29,7 +29,7 @@ Use this file as a **backlog**: each `- [ ]` is one shippable task unless noted 
 - [x] **`mapping-serialization.ts`:** Sanitize or validate **XML element names** derived from user-controlled keys (today `escapeXml` covers text, not tag names); document client-only risk if server exposure is out of scope.
 - [x] **`lib.ts` / `registerFormspecRender`:** Documented as `@experimental` embed API in `lib.ts` (dynamic import). Automated consumer test not added (optional stretch).
 - [x] Add **targeted tests** for largest UI modules: `item-row.test.tsx`, `group-node.test.tsx`, `display-block.unit.test.tsx` (LayoutLeafBlock stub); extended `form-preview-v2.test.tsx` (aria-pressed, regenerate in-flight, diff highlight queries); extended `options-modal.test.tsx` (keywords → `onUpdateOptions`).
-- [ ] Replace hardcoded **`VITE_GEMINI_DEV_KEY=mock-key-for-playwright`** in `playwright-chat.config.ts` (~24) with a dedicated mock server or Playwright network interception pattern.
+- [x] ~~Replace hardcoded `VITE_GEMINI_DEV_KEY` in standalone chat Playwright config~~ — **N/A:** standalone `chat.html` / `playwright-chat.config.ts` removed with chat v2; integrated chat E2E can be added later if needed.
 - [ ] If profiling shows pain: evaluate **structural sharing** (e.g. Immer) for ProposalManager / partial merge paths that clone full `ProjectState` multiple times per operation (`_partialMerge` etc.).
 
 ---
@@ -158,7 +158,7 @@ Items already tracked in P4 are cross-referenced, not duplicated.
 
 - [ ] **Dual chat: shared abstractions** — (SKIPPED per user request)
 - [ ] **Provider config UI 3-way duplication** — (SKIPPED per user request)
-- [ ] **Dual CSS systems** — studio uses Tailwind with semantic tokens; chat-v2 defines 90+ CSS custom properties.
+- [x] **Dual CSS systems** — resolved by removing chat v2 (`chat-v2.css`); studio remains Tailwind + semantic tokens.
 - [x] **5-level relative imports** — Fixed by re-exporting from `studio-core`.
 - [x] **Cross-workspace dependency** — Moved `DataSources` and `OptionSets` to `workspaces/shared/`.
 - [x] **DnD file naming inconsistency** — Consolidated all layout DnD files into `workspaces/layout/dnd/` with unified naming (Pdnd).

@@ -20,7 +20,6 @@ export const ROBOTS_DISALLOWED_PATHS = [
   "/react/",
   "/references/",
   "/uswds-grant/",
-  "/chat/",
   "/studio/changeset-review-harness.html",
 ];
 

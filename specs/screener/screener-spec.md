@@ -1549,6 +1549,7 @@ in lockstep with the canonical schema.
 - `schemas/determination.schema.json` — Determination Record output schema (`$formspecDetermination`).
 
 These need to be:
+
 1. Copied into `crates/formspec-lint/schemas/` for Rust-side validation.
 2. Registered in `crates/formspec-lint/src/schema_validation.rs` for document type
    detection (`DocumentType` enum, `MARKER_FIELDS` constant).
@@ -1766,8 +1767,8 @@ route deletion.
 - `Shell.tsx` — update sidebar badge count to read from standalone screener.
 - `Blueprint.tsx` — `SECTIONS` array (line 35) counts `definition.screener`
   items + routes. Update to read from standalone screener document.
-- `FormPreviewV2.tsx` (chat-v2 component) — reads `def.screener` directly
-  (lines 172–187), iterates items and routes. Update to standalone document.
+- Any studio preview surface that still reads `definition.screener` inline —
+  update to the standalone screener document.
 
 **C.6.3 Preview**
 

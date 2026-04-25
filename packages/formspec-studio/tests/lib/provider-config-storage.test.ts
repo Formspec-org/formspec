@@ -171,8 +171,7 @@ describe('cross-surface unification', () => {
     const srcRoot = resolve(here, '../../src');
     const files = [
       resolve(srcRoot, 'components/AppSettingsDialog.tsx'),
-      resolve(srcRoot, 'chat-v2/components/ChatShellV2.tsx'),
-      resolve(srcRoot, 'main-chat.tsx'),
+      resolve(srcRoot, 'components/ChatPanel.tsx'),
       resolve(srcRoot, 'main.tsx'),
     ];
 
