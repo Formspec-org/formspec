@@ -1,152 +1,165 @@
-# ADR 0074: WOS Governed Output-Commit Pipeline
+# ADR 0074: Governed Output-Commit Pipeline
 
 **Status:** Proposed
-**Date:** 2026-04-24
-**Scope:** WOS — Kernel (Layer 0) + AI Integration (Layer 2) + Governance (Layer 1) + Runtime Companion
-**Related:** [ADR 0073 (case initiation and intake handoff)](./0073-stack-case-initiation-and-intake-handoff.md); [ADR 0072 (evidence integrity and attachment binding)](./0072-stack-evidence-integrity-and-attachment-binding.md); [ADR 0070 (failure and compensation)](./0070-stack-failure-and-compensation.md); [ADR 0076 (artifact taxonomy)](./0076-artifact-taxonomy.md); [ADR 0077 (canonical kernel extension seams)](./0077-canonical-kernel-extension-seams.md); WOS Kernel spec (`wos-spec/specs/kernel/spec.md`, §4.4 fork/join, §5.4 mutation history, §9.2 action declarations, §9.4 correlation keys, §9.7 timeout categories, §10 seam enumeration); WOS AI Integration spec (`wos-spec/specs/ai/ai-integration.md`, §3.3 `CapabilityDeclaration`, §8 fallback); WOS Runtime Companion (`wos-spec/specs/companions/runtime.md`, §5.4 service invocation execution, §15 Formspec coprocessor); kernel provenance schema (`wos-spec/schemas/kernel/wos-provenance-record.schema.json`, `$defs/FactsTierRecord`, `$defs/MutationSource`, `$defs/VerificationLevel`); prior analysis context: [counter-proposal disposition §Wave 0](../../wos-spec/counter-proposal-disposition.md) and [standards absorption gap analysis §Refactor Target #2](../../wos-spec/thoughts/2026-04-24-standards-absorption-gap-analysis.md)
+**Date:** 2026-04-25
+**Scope:** WOS — workflow schema, processing model, provenance
+**Related:** [ADR 0073 (case initiation and intake handoff)](./0073-stack-case-initiation-and-intake-handoff.md); [ADR 0075 (rejection register)](./0075-rejection-register.md); [ADR 0076 (product-tier consolidation)](./0076-product-tier-consolidation.md); [ADR 0077 (canonical kernel extension seams)](./0077-canonical-kernel-extension-seams.md); [ADR 0078 (foreach topology)](./0078-foreach-topology.md); [`wos-spec/schemas/wos-workflow.schema.json`](../../wos-spec/schemas/wos-workflow.schema.json) `$defs/OutputBinding`; [`wos-spec/counter-proposal-disposition.md`](../../wos-spec/counter-proposal-disposition.md) §Wave 0 / §Sequenced absorption; [`wos-spec/thoughts/2026-04-24-standards-absorption-gap-analysis.md`](../../wos-spec/thoughts/2026-04-24-standards-absorption-gap-analysis.md) §Refactor Target item 2
 
 ## Context
 
-Five WOS surfaces write to the case file as a side effect of external work:
+Five external-work surfaces in WOS write into the case file:
 
-1. **Agent output** — an L2 `CapabilityDeclaration` invocation returns structured data that a processor projects into case fields.
-2. **Service response** — a Kernel §9.2 `invokeService` action returns a payload whose fields map into the case file. Execution semantics live in Runtime Companion §5.4 today; ADR 0076 sequences §5.4 prose into Kernel §9.2.
-3. **Event payload** — an external callback routed by `correlationKey` (Kernel §9.4) and bounded by `signalTimeout` (Kernel §9.7) accepts a payload and projects its body into case data. Signal/message wait is a usage pattern over those two mechanisms; the kernel does not name a dedicated wait section.
-4. **Human task action** — a Runtime Companion §15 Formspec-backed task submits a validated Response and projects via `responseMappingRef` (§15.3, §15.5). The forward-looking `taskActions` shape (counter-proposal Wave 3) generalizes that projection to non-Formspec respondent inputs.
-5. **Parallel branch result** — Kernel §4.4 fork/join joins per-branch outputs into one case-file projection. The `mergeStrategy` + `collectPath` shape (Wave 4 absorption target) does not yet exist in kernel prose or schema.
+- **Capability invocation** — agent output projected into case fields (AI Integration `CapabilityDeclaration`).
+- **Service invocation** — external service response projected into case fields (`invokeService` action).
+- **Signal/message wait** — event payload projected into case fields (signal/message wait substates with correlation key + signal timeout).
+- **Task action** — human respondent input projected into case fields (Formspec-bound task surface).
+- **Parallel join** — region results aggregated into case fields (parallel-state merge).
 
-Every one of those surfaces does the same job: validate an untrusted payload against a named contract, gate the write against an allowed scope, project it into case fields, and record what happened. Today each surface is (or is about to be) designed independently. Agent output has `outputContractRef` + `outputBindings`. `invokeService` will gain its own response contract + bindings. Event wait will grow `eventContract` + `eventOutputBindings`. Human task projection will grow `taskActions` beyond `responseMappingRef`'s Formspec scope. Parallel will grow `mergeStrategy` + `collectPath`. Five shapes for one abstraction.
+ADR 0078 adds a sixth: **foreach iteration aggregation**, with the same shape.
 
-Two thinking documents converged independently on the same insight. The counter-proposal disposition named "Wave 0 — unified declarative output-commit pipeline" as the cross-cutting pattern that all Wave 2–4 items instantiate. The standards-absorption gap analysis named "Refactor Target #2 — Governed output commit" as one of three shared abstractions that absorb BPMN/CMMN/WS-HumanTask operational surfaces without growing extension surface. Both reached the same decomposition (inputs, allowed write scope, `mutationSource`, `verificationLevel`, validated mutation + provenance output) from opposite starting points. That convergence is the ratification signal this ADR captures.
+Each surface today reasons about the same questions independently:
 
-If each surface ships its own binding shape, lint vocabulary, provenance emission, and write-scope gate, WOS accrues four parallel artifacts for one pattern and then needs a consolidation pass later. Processor authors must reimplement the same validate-gate-project-record loop five times. Governance-profile authors must attach write policies (who may write which paths) to five different surfaces. Audit readers must learn five provenance shapes for one semantic event.
+1. What contract validates the output?
+2. How does the output map into case fields (projection map)?
+3. Which case-field paths is this surface permitted to write?
+4. What is the provenance source label for the resulting mutations?
+5. What is the verification level of the resulting mutations?
+6. How does failure manifest (rejection, retry, fallback, quarantine)?
+
+Without a unified abstraction, each surface grows its own per-question vocabulary. Lint and conformance grow per-surface rules. Schema duplication compounds with every new surface.
+
+The pre-consolidation framing of this ADR landed work across four documents (kernel + governance + AI + advanced) in five waves. ADR 0076 collapses those into one merged schema; this ADR retargets accordingly. The pipeline is now realized as **one shape** in `wos-workflow.schema.json` `$defs/OutputBinding`, declared via the top-level `bindings[]` array and via per-block surface declarations (capability outputBindings, service outputBindings, event outputBindings, task actions, parallel mergeStrategy, foreach outputPath).
 
 ## Decision
 
-**Every external-work surface in WOS routes case-file mutations through one governed output-commit pipeline.** The pipeline is the canonical abstraction; each surface supplies the pipeline's inputs in its surface-specific shape and receives the pipeline's outputs in one uniform form. The pipeline's base semantics (validate → gate → project → record) are kernel-level (Layer 0) and apply to every conformant processor. Per-surface policy attachments (write-scope rules, verification-level requirements per impact tier, per-actor authority) attach via the Layer 1 Governance Document at the existing `lifecycleHook` seam; a kernel-only deployment runs the pipeline shape with policy fields absent.
+### D-1. Single declarative pipeline shape
 
-### D-1. Pipeline inputs (what every surface supplies)
+The governed output-commit pipeline takes one input shape across all six surfaces:
 
-The pipeline takes six inputs. Every external-work surface supplies all six; only the binding-map field name and the contract-ref field name vary per surface.
+| Field | Required | Description |
+|---|---|---|
+| `on` | REQUIRED | Source surface identifier: state id, transition id, capability id, signal name, parallel region id, foreach state id |
+| `contractRef` | OPTIONAL | URI to the output contract schema. Default: surface's declared output contract (capability `outputContractRef`, service `responseContractRef`, signal `eventContract`, task `formspecRef`) |
+| `projection` | OPTIONAL | Projection map from output to case-field paths. Default: identity for matching field names |
+| `writeScope` | REQUIRED | Array of case-field path patterns this surface is permitted to write. Out-of-scope writes fail at lint and at runtime |
+| `mutationSource` | REQUIRED | Open enum `oneOf [reserved literals \| x- pattern]`. Reserved literals: `agent-extracted`, `system-fetched`, `human-entered`, `human-corrected`, `computed`, `self-attested`. Vendor labels via `x-` prefix |
+| `verificationLevel` | OPTIONAL | Open enum `oneOf [reserved literals \| x- pattern]`. Reserved literals: `independent`, `attested`, `corroborated`, `authoritative` |
 
-1. **Actor or action output** — the untrusted payload to be committed. Agent result, service response body, event payload, human task action payload, parallel branch result.
-2. **Contract ref** — the schema the payload MUST validate against before any projection. `outputContractRef` on L2 `CapabilityDeclaration`; on a `invokeService` action (Kernel §9.2 declaration; Runtime §5.4 execution) a service response contract; on signal/message wait a contract paired with `correlationKey` (§9.4) and `signalTimeout` (§9.7); on a Runtime §15 task the pinned Formspec Definition; on a Kernel §4.4 parallel branch a per-branch contract. Content-addressable refs are preferred over inline schemas so `verificationLevel` and Trellis custody anchoring compare cleanly across invocations.
-3. **Output bindings** — the projection map from validated payload paths to case-file field paths. `outputBindings` on agent + service, `eventOutputBindings` on event wait, `responseMappingRef` (today) and `taskActions` (Wave 3) on human task, `collectPath` on parallel `mergeStrategy: "collect"` (Wave 4).
-4. **Allowed write scope** — the closed list of case-file paths this surface invocation may write. Human tasks constrain to the task's editable surface (today via Mapping document; Wave 3 via `taskActions` `editableFields`). Agents constrain to the capability's registered write scope. Services, events, and parallel merges constrain to their declared binding targets. The pipeline MUST reject any projection that would write a path outside this scope — no silent clamp, no truncation. A projection that escapes scope is a lint failure at authoring time and a processor rejection at runtime.
-5. **`mutationSource` value** — origin of the value. Reserved literals: `human-entered` | `human-corrected` | `agent-extracted` | `system-fetched` | `computed` | `self-attested`. Vendor extensions MUST use the `x-` prefix. One value per mutation. Supplied by the surface: `agent-extracted` for L2 capability output, `system-fetched` for `invokeService` response and signal/message payload, `human-entered` or `human-corrected` for task actions, `computed` for parallel-merge derived values, `self-attested` for respondent-affirmed intake paths. Renamed from FlowSpec's `ai-extracted` to `agent-extracted` for WOS actor-vocabulary alignment.
-6. **`verificationLevel` value** — degree of independent confirmation. Reserved literals: `independent` | `attested` | `corroborated` | `authoritative`. Vendor extensions MUST use the `x-` prefix. OPTIONAL at L0; governance profiles MAY require a minimum level on `determination`-tagged transitions.
+Pipeline output: validated case mutations + one Facts-tier provenance record per mutation. On contract validation failure: surface-specific rejection (capability quarantine, service retry, task validation failure). On write-scope violation: hard rejection at runtime, lint failure at authoring.
 
-`mutationSource` and `verificationLevel` are open enums by construction: the kernel provenance schema declares each as `oneOf [enum-of-reserved-literals | pattern: ^x-[a-z][a-z0-9-]*$]` with `"x-wos": {"open-enum": true}` (`wos-provenance-record.schema.json` `$defs/MutationSource`, `$defs/VerificationLevel`). A vendor adds `x-vendor-batch-import` or `x-vendor-quota-confirmed` with no schema change. The reserved-literal set is closed; the extension surface is the standard `x-` prefix.
+### D-2. Per-surface defaults
 
-### D-2. Pipeline outputs (what every surface receives back)
+Every surface declares its `mutationSource` default, so trivial `OutputBinding` declarations don't repeat the obvious:
 
-The pipeline emits two artifacts per invocation:
+| Surface | Default `mutationSource` |
+|---|---|
+| Capability invocation (agent) | `agent-extracted` |
+| Service invocation | `system-fetched` |
+| Signal/message wait | `system-fetched` |
+| Task action | `human-entered` (or `human-corrected` on overrides) |
+| Parallel join | `computed` |
+| Foreach iteration aggregation | `computed` |
 
-1. **Validated case mutations.** Applied atomically to the case file under kernel append-only mutation semantics (Kernel §5.4). Either all bindings apply or none do; partial commit is forbidden. A contract-validation failure, a write-scope violation, or a value-coercion failure fails the whole projection and emits no mutations.
-2. **Provenance records.** One Facts-tier mutation record per applied mutation (Kernel §5.4; schema `$defs/FactsTierRecord` in `wos-provenance-record.schema.json`). Each carries the field path, previous value, new value, `mutationSource`, optional `verificationLevel`, actor ref, contract ref, and the originating transition id. Failures emit a rejection record under existing failure-and-compensation rules (ADR 0070) — the surface does not silently drop or retry the untrusted payload.
+Authors override defaults explicitly. A capability emitting `human-corrected` (e.g. an agent-suggested override of a prior human entry) requires an explicit `mutationSource` setting; lint warns on default deviation without a `rationaleRef`.
 
-### D-3. Reuse targets (where each surface plugs in)
+### D-3. Surface attachment
 
-Five surfaces become instances of one pipeline. No new seam is introduced; each surface attaches via existing Kernel §10 hooks (`contractHook` for validation, `provenanceLayer` for record emission, `lifecycleHook` for transition-tagged policy attachment).
+The pipeline is realized at six attachment points in `wos-workflow.schema.json`:
 
-| Surface | Status | Spec section | Contract field | Bindings field | Default `mutationSource` |
-|---|---|---|---|---|---|
-| Agent output | current | AI Integration §3.3 (`CapabilityDeclaration`) | `outputContractRef` | `outputBindings` | `agent-extracted` |
-| Service response | partial — declaration current, response-contract field future (Wave 2) | Kernel §9.2 (declaration) + Runtime §5.4 (execution; absorbs into Kernel §9.2 under ADR 0076) | service response contract (Wave 2) | `outputBindings` (Wave 2) | `system-fetched` |
-| Event payload | future (Wave 2) | Kernel §9.4 (`correlationKey`) + Kernel §9.7 (`signalTimeout`) | `eventContract` (Wave 2) | `eventOutputBindings` (Wave 2) | `system-fetched` |
-| Human task action | partial — Formspec coprocessor current, generalized `taskActions` future (Wave 3) | Runtime §15 (`responseMappingRef` today; `taskActions` Wave 3) | Formspec definition pin (today); ContractReference (`taskActions`) | `responseMappingRef` (today); `taskActions` (Wave 3) | `human-entered` (or `human-corrected` on overrides) |
-| Parallel branch | future (Wave 4) | Kernel §4.4 (fork/join) | per-branch contract (Wave 4) | `mergeStrategy` + `collectPath` (Wave 4) | `computed` |
+| Surface | Where it lives in the merged schema |
+|---|---|
+| Top-level cross-cutting | `bindings[]` — `OutputBinding[]` whose `on` references any state, transition, capability, or signal id |
+| Capability invocation | `agents[*].capabilities[*]` carries `outputContractRef` + `outputBindings` (projection) + `writeScope` (capability-declared scope) |
+| Service invocation | `lifecycle.states[*].transitions[*].actions[invokeService]` carries `serviceRef` + `outputBindings` + `retryPolicy` |
+| Signal/message wait | `lifecycle.states[*]` (signal/message wait substates) carries `eventContract` + `eventOutputBindings` (routed by `correlationKey`, bounded by `signalTimeout`) |
+| Task action | `lifecycle.states[*]` (task substates) carries `taskActions` (Formspec-binding shape: `fieldBinding` + `fieldValue` + reveal-on-action surfaces) |
+| Parallel join | `lifecycle.states[*]` (parallel) carries `mergeStrategy` (`shallow` / `deep` / `collect`) + `collectPath` |
+| Foreach aggregation | `lifecycle.states[*]` (foreach) carries `outputPath` + `mergeStrategy` (per ADR 0078) |
 
-Three of five surfaces are forward-looking: their contract and bindings fields land in their Wave under the pipeline shape this ADR ratifies. Surface-specific authority rules (who may write, how deep the write scope runs, which verification levels are acceptable) remain per-surface and attach through governance-layer policy. The pipeline shape is shared; the policy is per-surface.
+Each attachment site references the same underlying `OutputBinding` `$defs` shape. Surface-specific extensions (e.g. capability `inputBindings` for self-documenting inputs; service `retryPolicy`; signal `correlationKey`; task `additionalEditableFields`) ride alongside the common pipeline shape, not as a parallel pipeline.
 
-### D-4. Spec changes to land
+### D-4. Provenance integration
 
-The pipeline ships through documentation and reserved-literal work, not new schema fields. Both shipped under counter-proposal Wave 1.
+Every projected mutation emits one Facts-tier provenance record per the kernel rule (ADR 0075 invariant I-12). The `MutationRecord` `$defs` (consolidated into `wos-workflow.schema.json` per ADR 0076 D-4) carries:
 
-1. **Kernel §5.4 cross-reference table.** `mutationSource` and `verificationLevel` already exist as OPTIONAL fields on `$defs/FactsTierRecord` in `wos-provenance-record.schema.json` with open-enum `oneOf` shapes referencing `$defs/MutationSource` and `$defs/VerificationLevel`. Wave 1 extends Kernel §5.4 prose with a per-surface defaults table that points at AI Integration §3.3, Kernel §9.2 (with cross-reference to Runtime §5.4 until ADR 0076 absorbs it), Kernel §9.4 + §9.7, Runtime §15, and Kernel §4.4 for surface-specific reuse targets. No schema field is added; existing fixtures remain valid.
-2. **Reserved `recordKind` literals.** `recordKind` on `FactsTierRecord` is an open discriminator string with no enum constraint. Wave 1 reserves two new literals in Kernel §5.4 / §8 prose: `capabilityQuarantined` (a capability invocation was held for authorized-actor reset after a contract-validation failure the surface policy flagged as non-retryable) and `capabilityOutputInvalidated` (a previously-committed capability output was superseded by later evidence). Reservation is a normative-prose act: the kernel names the literal, defines the shape constraint, and bans collisions. Processor semantics for these record kinds land in counter-proposal Wave 4 under AI Integration §8 extensions. Separating the literal reservation from the behavior preserves the kernel's schema-first sequencing.
+- `mutationSource` (open enum, REQUIRED on declaration)
+- `verificationLevel` (open enum, OPTIONAL)
+- `path` (case-file path written)
+- `value` and `previousValue` (mutation content)
+- `actor` reference
+- `surface` reference (capability id / transition id / signal name — links the mutation to the binding that produced it)
 
-No changes are required to `wos-ai-integration.schema.json`, `wos-workflow-governance.schema.json`, or the Runtime Companion schema as part of this ADR. Their surface-specific binding fields land in their respective absorption waves (Waves 2–4) with the pipeline shape this ADR ratifies.
+Higher-tier records (Reasoning, Counterfactual, Narrative) attach via the `provenanceLayer` seam (ADR 0077 §10.3) when the corresponding embedded blocks are present (`governance` for Reasoning/Counterfactual, `aiOversight.narrativeTier` for Narrative). The Facts-tier record is always emitted.
 
-### D-5. Non-goals
+### D-5. Reserved record kinds for capability disposition
 
-This ADR does **not**:
+Two `recordKind` literals on `wos-provenance-log.schema.json` capture capability-output disposition outside the happy path:
 
-- **Change statechart topology.** Kernel §4 nested states, parallel regions, and transition semantics are untouched. The pipeline is a processor abstraction for side effects on transitions, not a new state shape.
-- **Adopt FlowSpec's flat `nodes[] / edges[]` form.** Hierarchical statechart remains authoritative; LLM-authorability is not a pipeline concern.
-- **Invent new seams.** The pipeline attaches at three of the six canonical Kernel §10 seams enumerated in ADR 0077 (`contractHook`, `provenanceLayer`, `lifecycleHook`). The named-seams invariant (WOS `CLAUDE.md` decision heuristic 3) holds.
-- **Define surface-specific policy.** Who may write which paths, which verification levels are required for rights-impacting transitions, and which `mutationSource` values are acceptable on which surfaces remain governance-layer concerns attached at `lifecycleHook` per surface.
-- **Replace Trellis custody.** Provenance records flow out of the pipeline into the standard exporter path (`wos-export` → `custodyHook` → Trellis). The pipeline emits; Trellis anchors.
+- `capabilityQuarantined` — capability invocation held for authorized-actor reset after non-retryable validation failure. Processor MUST NOT auto-retry; resume requires authorized-actor reset (provenance-recorded as a fresh mutation).
+- `capabilityOutputInvalidated` — previously-committed capability output superseded by later evidence. Emitted when a fallback chain or human correction overrides an earlier mutation.
+
+Both reserved by **normative prose** in the merged spec. The `recordKind` discriminator stays open (`type: string`) — no enum constraint. Vendors register their own record kinds via `x-` prefix.
+
+**Reset-authority precedence (Q7 owner decision):** when `governance.delegation.quarantineReset` is declared, it overrides any `agents[*].resetAuthority` setting. When governance is absent (operational-tier workflows), `agents[*].resetAuthority` is the binding rule. Authors writing both in the same workflow get a lint warning (`WOS-QUARANTINE-PRECEDENCE-001`) so the precedence is explicit, not silent.
+
+### D-6. Write-scope rule (surface-specific)
+
+Every surface declares its write scope at authoring time; runtime rejects out-of-scope writes:
+
+- Capability `writeScope` MUST contain every path in `outputBindings[*].targetPath`. Capability scope is declared at `agents[*].capabilities[*].writeScope`.
+- Task `writeScope` is the union of `editableFields` plus any reveal-on-action `additionalEditableFields`. `taskActions[*].fieldBinding` MUST fall within scope.
+- Service `writeScope` is declared at the action; `outputBindings[*].targetPath` MUST fall within scope.
+- Signal `writeScope` is declared on the wait substate; `eventOutputBindings[*].targetPath` MUST fall within scope.
+- Parallel `collectPath` MUST fall within the parallel region's declared merge scope.
+- Foreach iteration body writes MUST fall within `outputPath` plus governance-permitted paths (ADR 0078 lint rule L-foreach-003).
+
+Lint rules per surface (`WOS-BIND-SCOPE-001` through `WOS-BIND-SCOPE-006`) check at authoring; processor enforces at runtime.
+
+### D-7. Mandatory wait-state timeout
+
+Signal/message wait substates MUST declare `signalTimeout`. Indefinite waits are forbidden — closes FlowSpec §3.10's prohibition without schema change (the `signalTimeout` surface already exists; this ADR makes it a MUST in the merged spec). Aligned with ADR 0075 invariants I-1 (statechart determinism) and I-11 (deterministic evaluation).
 
 ## Consequences
 
 **Positive.**
 
-- Wave 2–4 absorption items from the counter-proposal disposition land as instances of one pipeline rather than four parallel additions. `outputBindings` on `CapabilityDeclaration`, `retryPolicy` on `invokeService`, `eventContract` + `eventOutputBindings` on signal/message wait, `taskActions` on Runtime §15, and `mergeStrategy` + `collectPath` on parallel states all share the same input/output contract.
-- One provenance shape (`FactsTierRecord` with `mutationSource` + `verificationLevel`) covers every external-work write. Audit readers learn one record, not five.
-- Governance profiles attach write policy (scope, verification level, actor authority) at one abstraction point through `lifecycleHook`. A rule like "`verificationLevel` MUST be `independent` on all mutations from `determination`-tagged transitions" applies uniformly across agent, service, event, task, and parallel surfaces.
-- Future external-work surfaces default to this pipeline. A new capability kind (e.g. a federated-inference adapter) supplies contract + bindings + scope + source; it does not reinvent the validation and emission loop.
-- Closes the FlowSpec §4.4 `provenance` enum absorption target with a WOS-native vocabulary (`agent-extracted` actor-aligned, `self-attested` added for respondent intake paths).
+- **One pipeline, six surfaces.** Processor logic for "validate output, project to fields, check write scope, emit provenance" lives in one `commit_external_output(...)` function in `wos-runtime`. Replaces five (now six with foreach) per-surface implementations.
+- **Cross-surface conformance is uniform.** One fixture pattern (positive + negative per surface) covers the whole pipeline; new surfaces inherit it.
+- **Provenance shape is uniform.** Every mutation carries the same source/verification metadata. Audit export, drift analysis, and equity monitoring read one shape across all surfaces.
+- **Write-scope violations fail closed at two layers.** Lint catches at authoring; processor catches at runtime. Out-of-scope writes never silently project.
 
 **Negative.**
 
-- Five surfaces must converge their authoring shapes during Waves 2–4. Any surface landed ahead of the pipeline must be re-fit. Counter-proposal wave sequencing (documentation + literal reservation in Wave 1, behavior in Waves 2–4) assumes no surface ships its bindings before the kernel cross-reference table and reserved literals land.
-- The reserved-literal set for `mutationSource` and `verificationLevel` is closed (the open-enum surface is the `x-` prefix). Adding a seventh reserved `mutationSource` literal that all conformant processors must understand requires a kernel spec revision; vendor-specific labels do not, because they belong in `x-` extensions and pass through unchanged.
-- Lint must grow write-scope-violation rules per surface. A pipeline that rejects out-of-scope writes at runtime is a correctness floor; lint catching the same violation at authoring time is a usability requirement the counter-proposal disposition's §5.2 invariant already implies but does not yet enforce.
-- The pipeline does not prescribe coercion rules for payload→case-field projections. Type mismatches (a capability returns a string where the case field expects a number) fail the projection atomically. Surfaces that want lenient coercion must declare it in their binding map, not in the pipeline. This is deliberate — silent coercion is how rival write-scope meanings appear — but authoring ergonomics will need to document the failure modes.
+- **Six attachment sites have independent backwards-incompatible work.** Each attachment site needs schema definition, processor implementation, and conformance fixture. Bounded but non-trivial.
+- **`mutationSource` and `verificationLevel` are open enums.** Vendor extensions via `x-` interoperate at the schema layer; semantic interoperability is the vendor's responsibility. Mitigation: lint warns on non-reserved-literal usage without `rationaleRef`.
 
 **Neutral.**
 
-- Transport of the payload (HTTP response, queue message, durable activity result, in-process return value) is adapter territory. The pipeline sees a validated payload; it does not see the wire.
-- Whether a projection fires inline with the transition or asynchronously (e.g. a parallel branch that gathers over time) is a surface-specific concern. The pipeline is surface-neutral on timing; it is not neutral on atomicity of the commit once invoked.
+- **Per-surface ergonomics survive.** Capability `inputBindings`, service `retryPolicy`, signal `correlationKey`, task reveal-on-action surfaces — each rides alongside the common pipeline. The pipeline does not flatten the surfaces; it gives them a shared output shape.
 
 ## Implementation plan
 
-The pipeline lands in one structural pass on the `kernel-restructure` branch governed by ADR 0076. Kernel cross-reference prose, per-surface bindings, lint rules, and runtime conformance ship together. Each surface supplies its six pipeline inputs in its surface-specific shape and emits the two pipeline outputs through the existing Facts-tier mutation record path.
+Numbered for tracking. Lands on the `workflow-consolidation` branch alongside ADR 0076.
 
-**Kernel prose and reserved literals.**
+1. **`OutputBinding` `$defs` in merged schema.** Land the shape in `wos-workflow.schema.json` (sketch already published). Promote to full normative `$defs` with `x-lm.critical` annotations on `mutationSource` / `verificationLevel`.
+2. **Reserved record kinds.** Reserve `capabilityQuarantined`, `capabilityOutputInvalidated`, and ADR-0078 iteration kinds (`iterationStarted`, `iterationCompleted`, `iterationFailed`, `iterationSkipped`) in normative spec prose. No enum extension on the open `recordKind` discriminator.
+3. **Surface attachments.** Wire `OutputBinding` references at the seven attachment sites listed in D-3.
+4. **Per-surface defaults table.** Land the D-2 default-`mutationSource` table in normative spec prose. Lint warns on default deviation without rationale.
+5. **`signalTimeout` MUST.** One-sentence prose addition making `signalTimeout` MUST on signal/message wait substates.
+6. **Processor implementation.** Single `commit_external_output(...)` function in `wos-runtime` + `wos-formspec-binding` taking the six pipeline inputs and returning validated mutations + Facts-tier provenance records. Replaces five per-surface commit implementations. **Coercion via shared `fel-core::coerce` library (Q5 owner decision)** — every surface uses the same string→datetime / string→number / string→bool functions. Per-surface defaults (Q5 retains capability of stricter parsing where the *contract* declares it; the coercion library is the canonical primitive).
+7. **Disposition record-kind processor semantics.** `capabilityQuarantined` MUST NOT auto-retry; resume requires authorized-actor reset (provenance-recorded). `capabilityOutputInvalidated` emitted on fallback / correction.
+8. **Write-scope lint rules.** `WOS-BIND-SCOPE-001` through `WOS-BIND-SCOPE-006` registered with positive + negative fixtures per surface.
+9. **`mutationSource` rationale lint.** `WOS-MUT-SOURCE-001` warns when a surface emits a non-default `mutationSource` without `rationaleRef`.
+10. **`verificationLevel` lints.** `WOS-VER-LEVEL-001` (governance-profile-gated): on `determination`-tagged transitions in `rightsImpacting` workflows, mutations MAY require minimum `verificationLevel`. Profile-configurable. `WOS-VER-LEVEL-002` (Q6 owner decision): warns when a capability declares `fallbackChain` but omits `verificationLevel`. Author must explicitly set the level (`corroborated` if the chain corroborates, `attested` if it merely escalates) — no silent default.
+11a. **Quarantine-reset precedence lint.** `WOS-QUARANTINE-PRECEDENCE-001` (Q7 owner decision): warns when both `governance.delegation.quarantineReset` and any `agents[*].resetAuthority` declare reset authorities; governance overrides, but the lint surfaces the conflict to the author rather than letting it pass silently.
+11. **Conformance fixtures.** Positive + negative per surface. `mutationSource` round-trip (one per reserved literal + one per `x-vendor-*`). `verificationLevel` round-trip. Three-way agreement: spec + in-memory adapter + Restate.
 
-- Per-surface defaults table in Kernel §5.4 normative prose. The table cites `mutationSource` and `verificationLevel` as already-OPTIONAL fields on `FactsTierRecord` (schema `wos-provenance-record.schema.json`), restates the open-enum semantics (`oneOf [reserved literals | x- pattern]`), and points readers at AI Integration §3.3, Kernel §9.2 (with cross-reference to Runtime §5.4 until ADR 0076 absorbs §5.4 prose into the kernel), Kernel §9.4 + §9.7, Runtime §15, and Kernel §4.4 for per-surface defaults. No schema change.
-- Reserved `recordKind` literals `capabilityQuarantined` and `capabilityOutputInvalidated` in Kernel §5.4 / §8 prose. Each literal's shape constraint is defined normatively; the discriminator is `type: string` with no enum, so reservation is prose, not a schema enum extension.
-- Kernel §10 seam prose states that `contractHook`, `provenanceLayer`, and `lifecycleHook` together carry the output-commit pipeline; no new seam is declared. Reference ADR 0077 for the canonical six-seam enumeration.
-- Conformance fixtures: at least one fixture per `mutationSource` reserved literal proving the kernel round-trips the value through a Facts-tier mutation record emission, plus at least one fixture proving an `x-vendor-*` extension value round-trips unchanged.
+## Decisions made (closing prior open questions)
 
-**Per-surface bindings.**
-
-- `outputBindings` + `inputBindings` on `CapabilityDeclaration` (AI Integration §3.3).
-- `eventContract` + `retryPolicy` on `invokeService` (Kernel §9.2 declaration; Runtime §5.4 execution, absorbed into kernel under ADR 0076) and on signal/message wait substates routed by `correlationKey` (Kernel §9.4) with `signalTimeout` (Kernel §9.7).
-- `taskActions` on the Runtime Companion §15 Formspec coprocessor surface, generalizing `responseMappingRef` to non-Formspec respondent inputs.
-- `mergeStrategy` + `collectPath` on parallel-state join (Kernel §4.4).
-- Processor semantics for `capabilityQuarantined` and `capabilityOutputInvalidated` under AI Integration §8.
-
-**Lint.**
-
-- Write-scope-violation rule per surface: `outputBindings` target paths MUST fall within the capability's registered write scope; `taskActions` fields MUST fall within the task's editable surface; event and service bindings MUST fall within their declared projection scope; parallel `collectPath` MUST fall within the parallel region's declared merge scope.
-- `mutationSource` default rule per surface: lint warns when a surface emits a `mutationSource` outside the D-3 default set without a `rationaleRef` (e.g. a capability emitting `human-corrected` requires an explicit rationale that a human override occurred).
-- `verificationLevel` rule on rights-impacting transitions: governance profile lint MAY require a minimum `verificationLevel` on mutations emitted during `determination`-tagged transitions when the workflow's `impactLevel` is `rightsImpacting`.
-
-**Runtime conformance (`wos-runtime` + `wos-formspec-binding`).**
-
-- One `commit_external_output` function takes the six inputs and returns validated mutations + Facts-tier provenance records, replacing five per-surface commit implementations.
-- Runtime conformance fixtures: at least one positive and one negative fixture per surface, where the negative fixture proves the write-scope gate rejects an out-of-scope projection.
-- Three-way agreement: spec + in-memory reference adapter + production adapter (Restate) MUST all pass the same fixture set.
+- **Q5 — Shared `fel-core::coerce` library across all six surfaces.** Owner decision 2026-04-25. Single coercion source of truth; one canonical primitive shared by `commit_external_output`. Per-surface coercion strictness is expressed via the *contract* (output schema), not the coercion function itself. Hardening: parity fixtures across reserved type set; vendor `x-` types out of fixture scope.
+- **Q6 — No default `verificationLevel`; lint warns on `fallbackChain` without explicit setting.** Owner decision 2026-04-25. Lint rule `WOS-VER-LEVEL-002` registered. See implementation plan step 10.
+- **Q7 — Governance overrides; agent-level fallback.** Owner decision 2026-04-25. `governance.delegation.quarantineReset` (when present) overrides `agents[*].resetAuthority`. Lint rule `WOS-QUARANTINE-PRECEDENCE-001` warns when both declared. See D-5 + implementation plan step 11a.
 
 ## Open questions
 
-1. **Coercion policy.** Whether a single normative coercion table lives at the pipeline level (e.g. "string → number coerces under ISO-8601 number-string rules; otherwise fails") or each surface declares its own coercion stance. Default: per-surface, declared in the binding map. Revisit if Wave 4 surfaces need a shared coercion contract.
-
-2. **`verificationLevel` requirement posture.** Whether `verificationLevel` becomes a MUST on `determination`-tagged transitions at L1 or remains a governance-profile requirement. Default: governance-profile. Elevating to L1 MUST would tighten rights-proportional claims but forces every kernel-only deployment to supply the value.
-
-3. **Quarantine resume authorization.** Whether `capabilityQuarantined` reset authority is a kernel concept (e.g. role-tagged actor MUST be referenced in the resume provenance) or an AI Integration §8 concept (resume policy declared per capability). Default: AI Integration §8; the kernel reservation is neutral on who may reset, only on the fact that reset is provenance-recorded.
-
-## Alternatives considered
-
-**Ship each surface independently with its own binding shape.** Rejected. Produces four parallel artifacts for one pattern, forces processor authors to implement five variations of the same validate-gate-project-record loop, and forces governance profiles to attach policy at five different surfaces. Consolidation later is more expensive than consolidation first — every deployment that ships against the fragmented surfaces must migrate.
-
-**Land the pipeline as a new kernel seam.** Rejected. Violates the named-seams invariant (WOS `CLAUDE.md` decision heuristic 3; ADR 0077 canonically enumerates six kernel seams). The pipeline attaches at three existing seams (`contractHook`, `provenanceLayer`, `lifecycleHook`); no new extension point is needed.
-
-**Make `mutationSource` a fully open string with no reserved literals.** Rejected. Open strings without reserved-literal anchors are how vendor-specific sourcing labels end up shaping interoperable audit — every deployment invents its own value, cross-reader analysis breaks, and the field loses meaning. Open enum (closed reserved literals + `x-` extension pattern, declared in schema as `oneOf [enum | pattern]` with `"x-wos": {"open-enum": true}`) preserves the interoperable baseline while admitting vendor-specific labels.
-
-**Collapse `mutationSource` and `verificationLevel` into one field.** Rejected. They answer different questions: `mutationSource` is "who produced this value?" and `verificationLevel` is "how was it verified before commit?". A human-entered value may be `independent` (caseworker independently assessed) or `attested` (respondent affirmed). An agent-extracted value may be `corroborated` (two agents agreed) or `authoritative` (upstream authority returned it). Flattening loses the cross-product.
-
-**Put the pipeline in the Runtime Companion rather than the kernel.** Rejected. The pipeline's outputs (Facts-tier mutation records with `mutationSource` + `verificationLevel`) are kernel-grade processing-model content. Two conformant processors given the same inputs must emit the same mutation records — that is a kernel invariant per WOS `CLAUDE.md` Claim A. Splitting it across the Runtime Companion boundary would produce two sources of truth for the mutation shape.
+None outstanding for this ADR.

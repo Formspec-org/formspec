@@ -91,7 +91,7 @@ Two edits are flagged for separate follow-up passes, **not** touched by this ADR
 
 3. `thoughts/2026-04-24-standards-absorption-gap-analysis.md` §Refactor Target: `contractHook`, `provenanceLayer`, and `lifecycleHook` citations are all **correct**. No edits required; flag only for confirmation when the gap analysis is next revised.
 
-4. Kernel spec abstract + schema description: "five named extension seams" → "six named extension seams." Folded into ADR 0076's kernel-restructure pass — lands on the same branch.
+4. Kernel spec abstract + schema description: "five named extension seams" → "six named extension seams." Folded into ADR 0076's workflow-consolidation pass — lands on the same branch.
 
 ## Consequences
 

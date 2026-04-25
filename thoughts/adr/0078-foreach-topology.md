@@ -3,7 +3,7 @@
 **Status:** Proposed
 **Date:** 2026-04-24
 **Scope:** WOS Kernel
-**Related:** [ADR 0073 (case initiation and intake handoff)](./0073-stack-case-initiation-and-intake-handoff.md); [ADR 0074 (governed output-commit pipeline)](./0074-governed-output-commit-pipeline.md); [ADR 0076 (artifact taxonomy / kernel restructure branch)](./0076-artifact-taxonomy.md); [ADR 0077 (canonical kernel extension seams)](./0077-canonical-kernel-extension-seams.md); [`wos-spec/specs/kernel/spec.md`](../../wos-spec/specs/kernel/spec.md) §4.3, §4.4, §4.8; [`wos-spec/counter-proposal-disposition.md`](../../wos-spec/counter-proposal-disposition.md) Wave 5 / FlowSpec §3.9 absorption; [`wos-spec/schemas/kernel/wos-kernel.schema.json`](../../wos-spec/schemas/kernel/wos-kernel.schema.json) `$defs/State`
+**Related:** [ADR 0073 (case initiation and intake handoff)](./0073-stack-case-initiation-and-intake-handoff.md); [ADR 0074 (governed output-commit pipeline)](./0074-governed-output-commit-pipeline.md); [ADR 0076 (product-tier consolidation)](./0076-product-tier-consolidation.md); [ADR 0077 (canonical kernel extension seams)](./0077-canonical-kernel-extension-seams.md); [`wos-spec/specs/kernel/spec.md`](../../wos-spec/specs/kernel/spec.md) §4.3, §4.4, §4.8; [`wos-spec/counter-proposal-disposition.md`](../../wos-spec/counter-proposal-disposition.md) Wave 5 / FlowSpec §3.9 absorption; [`wos-spec/schemas/kernel/wos-kernel.schema.json`](../../wos-spec/schemas/kernel/wos-kernel.schema.json) `$defs/State`
 
 ## Context
 
@@ -125,7 +125,7 @@ A foreach state with `concurrency: N` and inner-body events that arrive concurre
 
 ## Implementation plan
 
-**Lands on the `kernel-restructure` branch governed by ADR 0076.** ADR 0076 sequences the kernel absorption pass (Runtime Companion + Lifecycle Detail Companion → Kernel; Integration Profile split). The foreach topology lands in the same branch because §4.3's enumeration and the `$defs/State` schema shape both change in that pass; sequencing foreach against an unrelated branch would force a merge against the in-flight kernel restructure.
+**Lands on the `workflow-consolidation` branch governed by ADR 0076.** ADR 0076 sequences the schema merge (kernel + governance + AI integration + advanced → `wos-workflow.schema.json`; Companions and Profiles deletion; sidecar narrowing). The foreach topology lands in the same branch because §4.3's enumeration and the `$defs/State` schema shape both change in that pass; sequencing foreach against an unrelated branch would force a merge against the in-flight consolidation.
 
 1. **Kernel §4.3 prose.** Extend the topology kinds enumeration to five. Add a foreach subsection describing the iteration loop, `collection` evaluation timing, `itemVariable` / `indexVariable` defaults, `concurrency` semantics, and `breakCondition` evaluation order. Add a paragraph clarifying that final remains terminal; the count goes from "four kinds" to "five kinds" with foreach joining the composite set.
 2. **Kernel §4.7 transition execution sequence.** No change. Iteration body transitions follow the existing four-step sequence per iteration.
