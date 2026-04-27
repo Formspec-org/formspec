@@ -106,6 +106,10 @@ describe('ChatPanel scaffold-as-changeset', () => {
     await waitFor(() => {
       expect(screen.getByTestId('changeset-review')).toBeInTheDocument();
     });
+
+    // Conversation stays visible in a ribbon above review (chat-first UX)
+    expect(screen.getByTestId('chat-message-list-ribbon')).toBeInTheDocument();
+    expect(screen.getByText(/Chat stays visible above/i)).toBeInTheDocument();
   });
 
   it('scaffold changeset label describes the generated form', async () => {
@@ -205,6 +209,65 @@ describe('ChatPanel scaffold-as-changeset', () => {
     expect(project.definition.items.length).toBeGreaterThan(0);
   });
 
+  it('uploads a text source and opens a scaffold changeset', async () => {
+    const project = createProject();
+    renderChatPanel(project);
+
+    const fileInput = screen.getByLabelText(/upload source file/i);
+    const file = new File(['Fields: Full name, Date of birth, Household income'], 'source.txt', { type: 'text/plain' });
+
+    await act(async () => {
+      fireEvent.change(fileInput, { target: { files: [file] } });
+    });
+
+    await waitFor(() => {
+      const changeset = project.proposals?.changeset;
+      expect(changeset).not.toBeNull();
+      expect(changeset!.status).toBe('pending');
+      expect(changeset!.label).toMatch(/upload scaffold/i);
+    });
+
+    const studioExt = (project.definition.extensions as Record<string, any> | undefined)?.['x-studio'];
+    expect(studioExt).toBeDefined();
+    expect(studioExt.patches.some((patch: any) => patch.status === 'open' && String(patch.id).startsWith('changeset:'))).toBe(true);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('changeset-review')).toBeInTheDocument();
+    });
+  });
+
+  it('accepting an uploaded source changeset keeps extracted fields in the project', async () => {
+    const project = createProject();
+    renderChatPanel(project);
+
+    const fileInput = screen.getByLabelText(/upload source file/i);
+    const file = new File(['Fields: Full name, Date of birth, Household income'], 'source.txt', { type: 'text/plain' });
+
+    await act(async () => {
+      fireEvent.change(fileInput, { target: { files: [file] } });
+    });
+
+    await waitFor(() => {
+      expect(project.proposals?.changeset?.status).toBe('pending');
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /accept all/i }));
+    });
+    expect(project.definition.items.map((item) => item.label)).toEqual([
+      'Full name',
+      'Date of birth',
+      'Household income',
+    ]);
+
+    const studioExt = (project.definition.extensions as Record<string, any> | undefined)?.['x-studio'];
+    expect(studioExt).toBeDefined();
+    expect(Array.isArray(studioExt.patches)).toBe(true);
+    expect(studioExt.patches.some((patch: any) => patch.status === 'accepted' && String(patch.id).startsWith('changeset:'))).toBe(true);
+    expect(Array.isArray(studioExt.provenance)).toBe(true);
+    expect(studioExt.provenance.some((entry: any) => entry.origin === 'ai')).toBe(true);
+  });
+
   it('does not show Generate Form button while changeset review is shown', async () => {
     const project = createProject();
     renderChatPanel(project);
@@ -230,5 +293,32 @@ describe('ChatPanel scaffold-as-changeset', () => {
       expect(screen.getByTestId('changeset-review')).toBeInTheDocument();
     });
     expect(screen.queryByRole('button', { name: /generate form/i })).not.toBeInTheDocument();
+  });
+
+  it('records rejected durable patch status when review is rejected', async () => {
+    const project = createProject();
+    renderChatPanel(project);
+
+    const fileInput = screen.getByLabelText(/upload source file/i);
+    const file = new File(['Fields: Full name, Date of birth, Household income'], 'source.txt', { type: 'text/plain' });
+
+    await act(async () => {
+      fireEvent.change(fileInput, { target: { files: [file] } });
+    });
+
+    await waitFor(() => {
+      expect(project.proposals?.changeset?.status).toBe('pending');
+      expect(screen.getByTestId('changeset-review')).toBeInTheDocument();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /reject all/i }));
+    });
+
+    const studioExt = (project.definition.extensions as Record<string, any> | undefined)?.['x-studio'];
+    expect(studioExt).toBeDefined();
+    expect(studioExt.patches.some((patch: any) => patch.status === 'rejected' && String(patch.id).startsWith('changeset:'))).toBe(true);
+    const confirmedAiProvenance = (studioExt.provenance ?? []).filter((entry: any) => entry.origin === 'ai' && entry.reviewStatus === 'confirmed');
+    expect(confirmedAiProvenance.length).toBe(0);
   });
 });

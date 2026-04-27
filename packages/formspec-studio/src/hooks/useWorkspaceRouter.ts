@@ -23,7 +23,7 @@ export interface WorkspaceRouterState {
 }
 
 /** Theme authoring lives under Layout + blueprint; no separate Theme workspace tab. */
-const VALID_TABS = new Set(['Editor', 'Layout', 'Mapping', 'Preview']);
+const VALID_TABS = new Set(['Editor', 'Layout', 'Evidence', 'Mapping', 'Preview']);
 const VALID_MAPPING_TAB_IDS = new Set<string>(['all', 'config', 'rules', 'adapter', 'preview']);
 const VALID_EDITOR_VIEWS = new Set<string>(['build', 'manage', 'screener', 'health']);
 
@@ -50,7 +50,9 @@ export function useWorkspaceRouter(): WorkspaceRouterState {
       const subTab = typeof detail.subTab === 'string' ? detail.subTab : undefined;
       const view = typeof detail.view === 'string' ? detail.view : undefined;
       const section = typeof detail.section === 'string' ? detail.section : undefined;
-      if (tab === 'Theme') {
+      if (tab === 'Playthrough') {
+        setActiveTab('Editor');
+      } else if (tab === 'Theme') {
         setActiveTab('Layout');
         if (section) {
           setActiveSection(section);

@@ -7,11 +7,16 @@ import {
   saveProviderConfig,
   clearProviderConfig,
 } from '../lib/provider-config-storage.js';
+import { OPEN_ASSISTANT_WORKSPACE_EVENT, type OpenAssistantWorkspaceEventDetail } from '../studio-app/StudioWorkspaceViewContext.js';
 import { useEscapeKey } from '../hooks/useEscapeKey';
 
 interface AppSettingsDialogProps {
   open: boolean;
   onClose: () => void;
+}
+
+function dispatchOpenAssistantWorkspace(detail: OpenAssistantWorkspaceEventDetail): void {
+  window.dispatchEvent(new CustomEvent(OPEN_ASSISTANT_WORKSPACE_EVENT, { detail }));
 }
 
 /** Returns the currently saved provider config, or null. */
@@ -58,6 +63,16 @@ export function AppSettingsDialog({ open, onClose }: AppSettingsDialogProps) {
     setProvider('google');
     setApiKey('');
     setSaved_(false);
+  };
+
+  const handleOpenAssistantWorkspaceOnly = () => {
+    dispatchOpenAssistantWorkspace({});
+    onClose();
+  };
+
+  const handleResetFirstRunAndOpenAssistant = () => {
+    dispatchOpenAssistantWorkspace({ resetFirstRun: true });
+    onClose();
   };
 
   const hasExisting = !!saved;
@@ -131,6 +146,35 @@ export function AppSettingsDialog({ open, onClose }: AppSettingsDialogProps) {
               <p className="text-[12px] text-green font-medium">Settings saved.</p>
             </div>
           )}
+
+          <div className="border-t border-border pt-4 space-y-3">
+            <p className="text-[12px] font-semibold text-ink">Assistant workspace</p>
+            <p className="text-[11px] text-muted">
+              Open the full-screen assistant (starters, import, chat) with your current project. Your API key and provider choice are not changed.
+            </p>
+            <button
+              type="button"
+              data-testid="app-settings-open-assistant"
+              onClick={handleOpenAssistantWorkspaceOnly}
+              className="w-full px-3 py-1.5 text-[12px] font-medium rounded-[4px] border border-border hover:bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+            >
+              Open assistant workspace
+            </button>
+            <div className="rounded-[4px] border border-border/80 bg-bg-default/40 px-3 py-2">
+              <p className="text-[11px] font-medium text-ink">Reset first-run and open</p>
+              <p className="mt-1 text-[11px] text-muted leading-snug">
+                Clears completion, orientation tips, and saved assistant/workspace preference. Then opens the assistant workspace with this project.
+              </p>
+              <button
+                type="button"
+                data-testid="app-settings-reset-first-run-open-assistant"
+                onClick={handleResetFirstRunAndOpenAssistant}
+                className="mt-2 w-full px-3 py-1.5 text-[12px] font-medium rounded-[4px] border border-border text-ink hover:bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              >
+                Reset first-run tips &amp; open assistant
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Footer */}

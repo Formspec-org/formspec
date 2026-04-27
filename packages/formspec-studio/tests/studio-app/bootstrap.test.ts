@@ -3,8 +3,15 @@ import { createStudioProject } from '../../src/studio-app/StudioApp';
 import { exampleDefinition } from '../../src/fixtures/example-definition';
 
 describe('createStudioProject bootstrap', () => {
-  it('does not synthesize component pages from definition groups', () => {
+  it('uses the minimal blank definition when no seed or handoff exists', () => {
     const project = createStudioProject();
+
+    expect(project.definition.title).toBe('Untitled form');
+    expect(project.definition.items).toHaveLength(0);
+  });
+
+  it('does not synthesize component pages from definition groups', () => {
+    const project = createStudioProject({ seed: { definition: exampleDefinition as any } });
     const pages = project.listPages();
 
     expect(pages).toBeDefined();
@@ -13,7 +20,7 @@ describe('createStudioProject bootstrap', () => {
   });
 
   it('sets pageMode to wizard when groups exist', () => {
-    const project = createStudioProject();
+    const project = createStudioProject({ seed: { definition: exampleDefinition as any } });
     const fp = project.definition.formPresentation;
 
     expect(fp?.pageMode).toBe('wizard');

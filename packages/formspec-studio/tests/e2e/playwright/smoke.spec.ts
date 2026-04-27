@@ -9,7 +9,7 @@ test.describe('Smoke — App Bootstrap', () => {
     await expect(page.locator('[data-testid="header"]')).toContainText('The Stack');
 
     // Workspace tabs (theme authoring lives under Layout — Layout / Theme mode toggle)
-    const tabs = ['Editor', 'Layout', 'Mapping', 'Preview'];
+    const tabs = ['Editor', 'Layout', 'Evidence', 'Mapping', 'Preview'];
     for (const tab of tabs) {
       await expect(page.locator(`[data-testid="tab-${tab}"]`)).toBeVisible();
     }

@@ -8,6 +8,8 @@ import type { FormShape, FormVariable } from '@formspec-org/types';
 interface CommandPaletteProps {
   open: boolean;
   onClose: () => void;
+  /** Assistant workspace uses tighter copy before the user enters tabbed Studio. */
+  surface?: 'studio' | 'assistant';
 }
 
 interface PaletteResult {
@@ -21,7 +23,8 @@ interface PaletteResult {
   actionable?: boolean;
 }
 
-export function CommandPalette({ open, onClose }: CommandPaletteProps) {
+export function CommandPalette({ open, onClose, surface = 'studio' }: CommandPaletteProps) {
+  const assistantSurface = surface === 'assistant';
   const definition = useDefinition();
   const { select } = useSelection();
   const [search, setSearch] = useState('');
@@ -131,6 +134,13 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
 
   if (!open) return null;
 
+  const searchPlaceholder = assistantSurface
+    ? 'Search this draft (fields, variables, binds…)'
+    : 'Search items, variables...';
+  const searchAriaLabel = assistantSurface
+    ? 'Search fields, variables, binds, and shapes in this draft'
+    : 'Search items, variables, binds, and shapes';
+
   const listboxId = 'command-palette-listbox';
   const activeId = highlightedIndex >= 0 && filteredResults[highlightedIndex]
     ? `palette-result-${filteredResults[highlightedIndex].id}`
@@ -150,10 +160,15 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
         className="w-full max-w-lg bg-surface border border-border rounded-lg shadow-xl"
       >
         <div className="p-3 border-b border-border">
+          {assistantSurface ? (
+            <p className="mb-2 text-[11px] leading-snug text-muted">
+              Jump to a field or rule in the current draft. Full tabbed Studio opens after you enter workspace.
+            </p>
+          ) : null}
           <input
             type="text"
-            placeholder="Search items, variables..."
-            aria-label="Search items, variables, binds, and shapes"
+            placeholder={searchPlaceholder}
+            aria-label={searchAriaLabel}
             role="combobox"
             aria-expanded="true"
             aria-controls={listboxId}
@@ -165,7 +180,11 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
               updateHighlightedIndex(0);
             }}
             onKeyDown={(event) => {
-              if (event.key === 'Escape') { onClose(); return; }
+              if (event.key === 'Escape') {
+                event.preventDefault();
+                onClose();
+                return;
+              }
               if (filteredResults.length === 0) return;
               if (event.key === 'ArrowDown') {
                 event.preventDefault();
@@ -228,7 +247,11 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
             </div>
           ))}
           {filteredResults.length === 0 && (
-            <div className="px-3 py-4 text-sm text-muted text-center" role="status">No results found</div>
+            <div className="px-3 py-4 text-sm text-muted text-center" role="status">
+              {assistantSurface
+                ? 'No matches — describe fields in the assistant, pick a starter, or import JSON.'
+                : 'No results found'}
+            </div>
           )}
         </div>
       </div>

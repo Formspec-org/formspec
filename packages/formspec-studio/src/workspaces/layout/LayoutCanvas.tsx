@@ -8,7 +8,9 @@ import { useLayoutPageStructure } from './useLayoutPageStructure';
 import {
   buildDefLookup,
   buildBindKeyMap,
+  getStudioIntelligence,
   type CompNode,
+  type LayoutDocument,
 } from '@formspec-org/studio-core';
 import { WorkspacePage, WorkspacePageSection } from '../../components/ui/WorkspacePage';
 import { AddItemPalette } from '../../components/AddItemPalette';
@@ -59,6 +61,7 @@ export function LayoutCanvas() {
 
   const items = definition?.items ?? [];
   const tree = component?.tree as CompNode | undefined;
+  const intelligence = useMemo(() => getStudioIntelligence({ definition }), [definition]);
 
   const defLookup = useMemo(() => buildDefLookup(items), [items]);
   const bindKeyMap = useMemo(() => buildBindKeyMap(defLookup), [defLookup]);
@@ -306,6 +309,7 @@ export function LayoutCanvas() {
         onMovePageToIndex={handlePageNavMoveToIndex}
         onRequestRemovePage={(navId) => setPendingRemovePageNavId(navId)}
       />
+      <LayoutDocumentStrip layouts={intelligence.layouts} />
 
     <div className="min-h-0 flex-1 overflow-y-auto relative w-full">
     <WorkspacePage maxWidth="max-w-[980px]" className="relative">
@@ -445,5 +449,39 @@ export function LayoutCanvas() {
     </div>
     </div>
     </LayoutDndProvider>
+  );
+}
+
+function LayoutDocumentStrip({ layouts }: { layouts: LayoutDocument[] }) {
+  const openDrift = layouts.reduce((count, layout) => count + layout.drift.filter((entry) => entry.status === 'open').length, 0);
+
+  return (
+    <section className="border-b border-border/50 bg-surface/68 px-4 py-3" aria-label="Layout documents">
+      <div className="mx-auto flex w-full max-w-[980px] flex-wrap items-center gap-2">
+        <span className="mr-1 font-mono text-[10px] uppercase tracking-[0.18em] text-muted">Layout documents</span>
+        {layouts.map((layout) => {
+          const drift = layout.drift.filter((entry) => entry.status === 'open').length;
+          return (
+            <span
+              key={layout.id}
+              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] ${
+                drift > 0
+                  ? 'border-amber-500/35 bg-amber-500/10 text-amber-800 dark:text-amber-200'
+                  : 'border-border bg-bg-default/70 text-ink'
+              }`}
+              title={`${layout.channel} · ${layout.publishStatus ?? 'draft'}`}
+            >
+              <span className={`h-1.5 w-1.5 rounded-full ${drift > 0 ? 'bg-amber-500' : 'bg-accent'}`} />
+              <span className="font-medium">{layout.name}</span>
+              <span className="font-mono text-[10px] text-muted">{layout.placements.filter((entry) => !entry.hidden).length} placed</span>
+              {drift > 0 && <span className="font-mono text-[10px]">drift {drift}</span>}
+            </span>
+          );
+        })}
+        <span className="ml-auto font-mono text-[10px] uppercase tracking-[0.14em] text-muted">
+          {openDrift === 0 ? 'in sync' : `${openDrift} open drift`}
+        </span>
+      </div>
+    </section>
   );
 }

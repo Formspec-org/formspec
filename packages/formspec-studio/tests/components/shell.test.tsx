@@ -49,9 +49,9 @@ describe('Shell', () => {
     expect(screen.getByRole('button', { name: /the stack home/i })).toBeInTheDocument();
   });
 
-  it('shows 4 workspace tabs — Theme tab eliminated (Theme mode lives inside Layout)', () => {
+  it('shows unified workspace tabs — Theme mode lives inside Layout', () => {
     renderShell();
-    for (const tab of ['Editor', 'Layout', 'Mapping', 'Preview']) {
+    for (const tab of ['Editor', 'Layout', 'Evidence', 'Mapping', 'Preview']) {
       expect(screen.getByRole('tab', { name: tab })).toBeInTheDocument();
     }
     expect(screen.queryByRole('tab', { name: 'Theme' })).toBeNull();

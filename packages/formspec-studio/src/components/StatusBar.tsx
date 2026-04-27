@@ -1,14 +1,20 @@
 /** @filedesc Bottom status bar showing formspec version, form status, field count, and bind/shape counts with interactive enhancements. */
 import { useState } from 'react';
-import { countDefinitionFields } from '@formspec-org/studio-core';
-import { useDefinition } from '../state/useDefinition';
+import { countDefinitionFields, getStudioIntelligence } from '@formspec-org/studio-core';
+import { useProjectState } from '../state/useProjectState';
 
 function plural(n: number, singular: string): string {
   return `${n} ${singular}${n === 1 ? '' : 's'}`;
 }
 
-export function StatusBar() {
-  const definition = useDefinition();
+interface StatusBarProps {
+  /** Hides intelligence rows that rarely matter before the tabbed workspace. */
+  variant?: 'full' | 'assistant';
+}
+
+export function StatusBar({ variant = 'full' }: StatusBarProps) {
+  const state = useProjectState();
+  const { definition } = state;
   const [copied, setCopied] = useState(false);
 
   const formspecVersion = definition.$formspec ?? '1.0';
@@ -17,6 +23,14 @@ export function StatusBar() {
   const fieldCount = countDefinitionFields(items);
   const bindCount = definition.binds?.length ?? 0;
   const shapeCount = definition.shapes?.length ?? 0;
+  const intelligence = getStudioIntelligence(state);
+  const evidence = intelligence.evidence.coverage;
+  const confirmedProvenanceCount = intelligence.provenance.filter((entry) => entry.reviewStatus === 'confirmed').length;
+  const openPatchCount = intelligence.patches.filter((patch) => patch.status === 'open').length;
+  const layoutDriftCount = intelligence.layouts.reduce(
+    (count, layout) => count + layout.drift.filter((entry) => entry.status === 'open').length,
+    0,
+  );
 
   const presentation = definition.formPresentation ?? {};
   const pageMode = presentation.pageMode;
@@ -82,6 +96,26 @@ export function StatusBar() {
             <span className="text-[18px] leading-none text-brass" aria-hidden="true">◯</span>
             <span>{plural(shapeCount, 'shape')}</span>
           </span>
+          {variant !== 'assistant' && (
+            <>
+          <span className="hidden items-center gap-2 uppercase tracking-[0.18em] text-muted lg:flex">
+            <span className="text-[16px] leading-none text-teal" aria-hidden="true">◬</span>
+            <span>Evidence {evidence.linkedFields}/{evidence.totalFields}</span>
+          </span>
+          <span className="hidden items-center gap-2 uppercase tracking-[0.18em] text-muted xl:flex">
+            <span className="text-[16px] leading-none text-accent" aria-hidden="true">◎</span>
+            <span>Provenance {confirmedProvenanceCount}</span>
+          </span>
+          <span className="hidden items-center gap-2 uppercase tracking-[0.18em] text-muted 2xl:flex">
+            <span className={`text-[16px] leading-none ${openPatchCount > 0 ? 'text-brass' : 'text-teal'}`} aria-hidden="true">⟟</span>
+            <span>Patches open {openPatchCount}</span>
+          </span>
+          <span className="hidden items-center gap-2 uppercase tracking-[0.18em] text-muted xl:flex">
+            <span className={`text-[16px] leading-none ${layoutDriftCount > 0 ? 'text-brass' : 'text-accent'}`} aria-hidden="true">◆</span>
+            <span>Layout drift {layoutDriftCount}</span>
+          </span>
+            </>
+          )}
         </div>
       </div>
 

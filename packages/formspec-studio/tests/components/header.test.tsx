@@ -114,16 +114,68 @@ describe('Header', () => {
     expect(layoutTab).toHaveAttribute('tabindex', '-1');
   });
 
-  it('renders exactly 4 workspace tabs (Editor, Layout, Mapping, Preview) — Theme tab eliminated', () => {
+  it('renders the unified Studio workspace tabs', () => {
     renderHeader();
     const tabs = screen.getAllByRole('tab');
-    expect(tabs).toHaveLength(4);
-    expect(tabs.map(t => t.textContent)).toEqual(['Editor', 'Layout', 'Mapping', 'Preview']);
+    expect(tabs).toHaveLength(5);
+    expect(tabs.map(t => t.textContent)).toEqual(['Editor', 'Layout', 'Evidence', 'Mapping', 'Preview']);
   });
 
-  it('does not render Logic or Data tabs', () => {
+  it('does not render legacy Logic or Data tabs', () => {
     renderHeader();
     expect(screen.queryByRole('tab', { name: 'Logic' })).not.toBeInTheDocument();
     expect(screen.queryByRole('tab', { name: 'Data' })).not.toBeInTheDocument();
+  });
+
+  it('assistantSurface replaces tabs with assistant status and Enter workspace', async () => {
+    const onEnterWorkspace = vi.fn();
+    render(
+      <ProjectProvider project={createProject()}>
+        <SelectionProvider>
+          <Header
+            activeTab="Editor"
+            onTabChange={() => {}}
+            onImport={() => {}}
+            onSearch={() => {}}
+            assistantSurface={{
+              onEnterWorkspace,
+              onReopenHelp: vi.fn(),
+              showHelpButton: true,
+            }}
+            isCompact={false}
+          />
+        </SelectionProvider>
+      </ProjectProvider>,
+    );
+    expect(screen.getByTestId('assistant-enter-workspace')).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'Layout' })).not.toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Assistant workspace' })).toBeInTheDocument();
+    await act(async () => {
+      screen.getByTestId('assistant-enter-workspace').click();
+    });
+    expect(onEnterWorkspace).toHaveBeenCalledTimes(1);
+    expect(onEnterWorkspace).toHaveBeenCalledWith('header');
+  });
+
+  it('assistantSurface shows Help on compact layout', () => {
+    render(
+      <ProjectProvider project={createProject()}>
+        <SelectionProvider>
+          <Header
+            activeTab="Editor"
+            onTabChange={() => {}}
+            onImport={() => {}}
+            onSearch={() => {}}
+            assistantSurface={{
+              onEnterWorkspace: vi.fn(),
+              onReopenHelp: vi.fn(),
+              showHelpButton: true,
+            }}
+            isCompact
+          />
+        </SelectionProvider>
+      </ProjectProvider>,
+    );
+    expect(screen.getByRole('button', { name: /studio setup help/i })).toBeInTheDocument();
   });
 });

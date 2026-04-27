@@ -6,11 +6,13 @@ import { useEscapeKey } from '../hooks/useEscapeKey';
 interface ImportDialogProps {
   open: boolean;
   onClose: () => void;
+  /** When false or resolved false, load is aborted. May return a Promise (e.g. in-app confirm). */
+  onBeforeLoad?: () => boolean | Promise<boolean>;
 }
 
 const ARTIFACT_TYPES = ['Definition', 'Component', 'Theme', 'Mapping'] as const;
 
-export function ImportDialog({ open, onClose }: ImportDialogProps) {
+export function ImportDialog({ open, onClose, onBeforeLoad }: ImportDialogProps) {
   const project = useProject();
   const titleId = useId();
   const descriptionId = useId();
@@ -123,7 +125,12 @@ export function ImportDialog({ open, onClose }: ImportDialogProps) {
             type="button"
             className="px-3 py-1.5 text-[13px] font-medium rounded-[4px] bg-accent text-white hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:opacity-50 transition-colors"
             disabled={!canLoad}
-            onClick={() => {
+            onClick={async () => {
+              if (onBeforeLoad) {
+                const result = onBeforeLoad();
+                const ok = result instanceof Promise ? await result : result;
+                if (!ok) return;
+              }
               try {
                 const parsed = JSON.parse(jsonText);
                 const artifactKey = selectedType.toLowerCase();

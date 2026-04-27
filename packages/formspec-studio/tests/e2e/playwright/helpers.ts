@@ -8,13 +8,13 @@ export function layoutContainerHeaderSelectRow(container: Locator): Locator {
 
 /** Wait for the app to be fully loaded (Shell visible). */
 export async function waitForApp(page: Page) {
-  await page.goto('/');
+  await page.goto('/?skipOnboarding=1');
   await page.waitForSelector('[data-testid="shell"]', { timeout: 10000 });
 }
 
 /** Wait for app with e2e=1 so window.__FORMSPEC_TEST_EXPORT is available for export validation tests. */
 export async function waitForAppWithExport(page: Page) {
-  await page.goto('/?e2e=1');
+  await page.goto('/?e2e=1&skipOnboarding=1');
   await page.waitForSelector('[data-testid="shell"]', { timeout: 10000 });
 }
 

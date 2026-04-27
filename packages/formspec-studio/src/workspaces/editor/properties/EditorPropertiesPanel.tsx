@@ -1,6 +1,6 @@
 /** @filedesc Editor-tab properties panel showing only Tier 1 (definition) properties — no appearance, widget, or layout. */
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { bindsFor, shapesFor, buildDefLookup, isLayoutId, dataTypeInfo, propertyHelp, getPresentationCascade } from '@formspec-org/studio-core';
+import { bindsFor, shapesFor, buildDefLookup, isLayoutId, dataTypeInfo, propertyHelp, getPresentationCascade, getStudioIntelligence } from '@formspec-org/studio-core';
 import { useDefinition } from '../../../state/useDefinition';
 import { useProject } from '../../../state/useProject';
 import { useSelection } from '../../../state/useSelection';
@@ -17,6 +17,7 @@ import { Section } from '../../../components/ui/Section';
 import { PropertyRow } from '../../../components/ui/PropertyRow';
 import { HelpTip } from '../../../components/ui/HelpTip';
 import type { FormItem } from '@formspec-org/types';
+import { recordManualPatchAndProvenance } from '../../shared/studio-intelligence-writer';
 
 export function EditorPropertiesPanel({ showActions = true }: { showActions?: boolean }) {
   const {
@@ -44,6 +45,7 @@ export function EditorPropertiesPanel({ showActions = true }: { showActions?: bo
     () => itemPath ? getPresentationCascade(project, itemPath) : {},
     [project, itemPath],
   );
+  const intelligence = useMemo(() => getStudioIntelligence({ definition }), [definition]);
 
   const handleRename = useCallback((originalPath: string, inputEl: HTMLInputElement) => {
     const nextKey = inputEl.value;
@@ -52,16 +54,29 @@ export function EditorPropertiesPanel({ showActions = true }: { showActions?: bo
       project.renameItem(originalPath, nextKey);
       const parentPath = originalPath.split('.').slice(0, -1).join('.');
       const nextPath = parentPath ? `${parentPath}.${nextKey}` : nextKey;
+      recordManualPatchAndProvenance(project, {
+        summary: `Renamed ${currentKey ?? originalPath} to ${nextKey}.`,
+        affectedRefs: [originalPath, nextPath],
+      });
       select(nextPath, selectedType ?? 'field', { tab: 'editor' });
     }
   }, [project, select, selectedType]);
 
   const handleDelete = useCallback((path: string) => {
     project.removeItem(path);
+    recordManualPatchAndProvenance(project, {
+      summary: `Deleted ${path}.`,
+      affectedRefs: [path],
+      reviewStatus: 'confirmed',
+    });
   }, [project]);
 
   const handleDuplicate = useCallback((path: string) => {
     project.copyItem(path);
+    recordManualPatchAndProvenance(project, {
+      summary: `Duplicated ${path}.`,
+      affectedRefs: [path],
+    });
   }, [project]);
 
   useEffect(() => {
@@ -140,6 +155,10 @@ export function EditorPropertiesPanel({ showActions = true }: { showActions?: bo
     ...Object.keys(binds).filter(k => binds[k] !== null && binds[k] !== undefined),
     ...(item.prePopulate ? ['pre-populate'] : []),
   ];
+  const provenance = intelligence.provenance.find((entry) => entry.objectRef === path);
+  const openPatchCount = intelligence.patches.filter(
+    (patch) => patch.status === 'open' && patch.affectedRefs.includes(path),
+  ).length;
 
   return (
     <div className="h-full flex flex-col bg-surface overflow-hidden">
@@ -190,6 +209,10 @@ export function EditorPropertiesPanel({ showActions = true }: { showActions?: bo
               defaultValue={(item.label as string) || ''}
               onBlur={(event) => {
                 project.updateItem(path, { label: event.currentTarget.value || null });
+                recordManualPatchAndProvenance(project, {
+                  summary: `Updated label for ${path}.`,
+                  affectedRefs: [path],
+                });
               }}
             />
           </div>
@@ -200,6 +223,14 @@ export function EditorPropertiesPanel({ showActions = true }: { showActions?: bo
               {info.label}
             </PropertyRow>
           )}
+        </Section>
+
+        <Section title="Provenance">
+          <PropertyRow label="Origin">{provenance?.origin ?? 'manual'}</PropertyRow>
+          <PropertyRow label="Confidence">{provenance?.confidence ?? 'medium'}</PropertyRow>
+          <PropertyRow label="Review">{provenance?.reviewStatus ?? 'unreviewed'}</PropertyRow>
+          <PropertyRow label="Sources">{String(provenance?.sourceRefs.length ?? 0)}</PropertyRow>
+          <PropertyRow label="Open patches">{String(openPatchCount)}</PropertyRow>
         </Section>
 
         <ContentSection path={path} item={item} project={project} />

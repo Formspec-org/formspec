@@ -58,6 +58,7 @@ describe('EditorPropertiesPanel', () => {
     expect(screen.getByText('Advanced Details')).toBeInTheDocument();
     expect(screen.getByText(/use the rows for fast edits/i)).toBeInTheDocument();
     expect(screen.getByDisplayValue('name')).toBeInTheDocument();
+    expect(screen.getByText(/^Provenance$/i)).toBeInTheDocument();
   });
 
   it('shows behavior rules section for a field with binds', async () => {
@@ -198,6 +199,22 @@ describe('EditorPropertiesPanel', () => {
     await act(async () => { screen.getByText('Select').click(); });
     expect(screen.getByRole('button', { name: /delete/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /duplicate/i })).toBeInTheDocument();
+  });
+
+  it('records manual provenance/patch metadata when label is edited', async () => {
+    const { project } = renderPanel(baseDef, 'name', 'field');
+    await act(async () => { screen.getByText('Select').click(); });
+
+    const labelInput = screen.getByLabelText(/^label$/i);
+    await act(async () => {
+      fireEvent.change(labelInput, { target: { value: 'Applicant name' } });
+      fireEvent.blur(labelInput);
+    });
+
+    const studioExt = (project.definition.extensions as Record<string, any> | undefined)?.['x-studio'];
+    expect(studioExt).toBeDefined();
+    expect(studioExt.patches.some((patch: any) => patch.source === 'manual')).toBe(true);
+    expect(studioExt.provenance.some((entry: any) => entry.objectRef === 'name' || entry.objectRef === 'items.name')).toBe(true);
   });
 
   it('shows "item not found" for non-existent keys', async () => {

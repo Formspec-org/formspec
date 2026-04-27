@@ -7,6 +7,7 @@ import { useShellLayout } from '../hooks/useShellLayout';
 import { useShellPanels } from '../hooks/useShellPanels';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { createProject, buildDefLookup, type Project } from '@formspec-org/studio-core';
+import { isOnboardingCompleted } from '../onboarding/onboarding-storage';
 import { exportProjectZip } from '../lib/export-zip';
 import {
   IconActivity,
@@ -35,24 +36,12 @@ import { BlueprintSidebar } from './shell/BlueprintSidebar';
 import { WorkspaceContent } from './shell/WorkspaceContent';
 import { ShellDialogs } from './shell/ShellDialogs';
 import { useBlueprintSectionResolution } from './shell/useBlueprintSectionResolution';
+import { getShellBackgroundImage } from './shell/shell-background-image';
+import { useOpenAssistantWorkspace } from '../studio-app/StudioWorkspaceViewContext';
+import { ASSISTANT_COMPOSER_INPUT_TEST_ID } from '../constants/assistant-dom';
 
 interface ShellProps {
   colorScheme?: ColorScheme;
-}
-
-function getShellBackgroundImage(theme: 'light' | 'dark') {
-  if (theme === 'dark') {
-    return [
-      'radial-gradient(circle at 0% 0%, rgba(123,161,255,0.13), transparent 26%)',
-      'radial-gradient(circle at 100% 0%, rgba(131,216,219,0.11), transparent 28%)',
-      'linear-gradient(180deg, rgba(19,24,33,0.96), rgba(23,32,46,0.98) 34%, rgba(27,38,54,0.94) 100%)',
-    ].join(', ');
-  }
-  return [
-    'radial-gradient(circle at 0% 0%, rgba(183,121,31,0.12), transparent 26%)',
-    'radial-gradient(circle at 100% 0%, rgba(47,107,126,0.12), transparent 28%)',
-    'linear-gradient(180deg, rgba(255,249,241,0.8), rgba(246,240,232,0.96) 34%, rgba(241,232,220,0.82) 100%)',
-  ].join(', ');
 }
 
 export function Shell({ colorScheme }: ShellProps = {}) {
@@ -113,9 +102,15 @@ export function Shell({ colorScheme }: ShellProps = {}) {
     setShowAppSettings,
     showChatPanel,
     setShowChatPanel,
+    primaryAssistantOpen,
+    setPrimaryAssistantOpen,
     chatPrompt,
     setChatPrompt,
   } = panels;
+
+  const assistantRailOpen = showChatPanel && !compactLayout;
+  const assistantPrimaryOpen = primaryAssistantOpen;
+  const assistantDocked = assistantRailOpen || assistantPrimaryOpen;
 
   const activeTabScope = activeTab.toLowerCase();
   const scopedSelectedKey = selectedKeyForTab(activeTabScope);
@@ -135,6 +130,9 @@ export function Shell({ colorScheme }: ShellProps = {}) {
     setShowPalette(false);
     setShowImport(false);
     deselect();
+    if (!isOnboardingCompleted()) {
+      window.dispatchEvent(new CustomEvent('formspec:restart-onboarding'));
+    }
   }, [project]);
 
   const openDefinitionInEditor = useCallback(
@@ -181,6 +179,7 @@ export function Shell({ colorScheme }: ShellProps = {}) {
 
   const hasScreener = project.state.screener !== null;
   const shellBackgroundImage = getShellBackgroundImage(colorScheme?.resolvedTheme ?? 'light');
+  const openAssistantWorkspace = useOpenAssistantWorkspace();
 
   const workspaceContent = (
     <WorkspaceContent
@@ -220,7 +219,32 @@ export function Shell({ colorScheme }: ShellProps = {}) {
         onOpenMetadata={() => setShowSettings(true)}
         onToggleAccountMenu={() => setShowAppSettings(true)}
         onToggleMenu={compactLayout ? () => setShowBlueprintDrawer(true) : undefined}
-        onToggleChat={() => setShowChatPanel(!showChatPanel)}
+        assistantMenu={
+          openAssistantWorkspace
+            ? {
+                compactLayout,
+                onOpenFullWorkspace: openAssistantWorkspace,
+                sideChatOpen: showChatPanel && !primaryAssistantOpen,
+                overlayChatOpen: primaryAssistantOpen,
+                onOpenSideChat: () => {
+                  setPrimaryAssistantOpen(false);
+                  setShowChatPanel(true);
+                },
+                onCloseAllChat: () => {
+                  setShowChatPanel(false);
+                  setPrimaryAssistantOpen(false);
+                  setChatPrompt(null);
+                },
+                onOpenOverlayChat: () => {
+                  setPrimaryAssistantOpen(true);
+                  setShowChatPanel(false);
+                  queueMicrotask(() => {
+                    document.querySelector<HTMLTextAreaElement>(`[data-testid="${ASSISTANT_COMPOSER_INPUT_TEST_ID}"]`)?.focus();
+                  });
+                },
+              }
+            : null
+        }
         isCompact={compactLayout}
         colorScheme={colorScheme}
       />
@@ -228,8 +252,9 @@ export function Shell({ colorScheme }: ShellProps = {}) {
       <LayoutPreviewNavProvider>
       <LayoutModeProvider>
       <CanvasTargetsProvider>
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <div
-          className={`flex flex-1 overflow-hidden ${activeTab === 'Editor' ? 'bg-[linear-gradient(180deg,rgba(255,252,247,0.42)_0%,rgba(244,235,224,0.7)_100%)] dark:bg-[linear-gradient(180deg,rgba(26,35,47,0.38)_0%,rgba(20,28,39,0.74)_100%)]' : ''}`}
+          className={`relative flex flex-1 min-h-0 overflow-hidden ${activeTab === 'Editor' ? 'bg-[linear-gradient(180deg,rgba(255,252,247,0.42)_0%,rgba(244,235,224,0.7)_100%)] dark:bg-[linear-gradient(180deg,rgba(26,35,47,0.38)_0%,rgba(20,28,39,0.74)_100%)]' : ''}`}
           aria-hidden={overlayOpen ? true : undefined}
         >
           {/* Desktop Left Sidebar */}
@@ -304,7 +329,7 @@ export function Shell({ colorScheme }: ShellProps = {}) {
               </div>
             </div>
           </main>
-          {activeTab === 'Editor' && !compactLayout && !showChatPanel && (
+          {activeTab === 'Editor' && !compactLayout && !assistantDocked && (
             showRightPanel ? (
               <>
                 <ResizeHandle side="right" onResize={onResizeRight} />
@@ -340,7 +365,7 @@ export function Shell({ colorScheme }: ShellProps = {}) {
               </button>
             )
           )}
-          {activeTab === 'Layout' && !compactLayout && !showChatPanel && (
+          {activeTab === 'Layout' && !compactLayout && !assistantDocked && (
             showLayoutPreviewPanel ? (
               <>
                 <ResizeHandle side="right" onResize={onResizeRight} />
@@ -382,15 +407,32 @@ export function Shell({ colorScheme }: ShellProps = {}) {
               </button>
             )
           )}
-          {showChatPanel && !compactLayout && (
-            <aside className="w-[360px] shrink-0" data-testid="chat-panel-container" aria-label="AI chat panel">
+          {assistantDocked && (
+            <div
+              id="chat-panel-container"
+              data-testid="chat-panel-container"
+              aria-label={assistantPrimaryOpen ? 'AI assistant — full view' : 'AI assistant'}
+              className={
+                assistantPrimaryOpen
+                  ? compactLayout
+                    ? 'fixed inset-0 z-50 flex min-h-0 flex-col bg-surface'
+                    : 'absolute inset-0 z-[38] m-2 flex min-h-0 flex-col overflow-hidden rounded-2xl border border-border/70 bg-surface shadow-[0_24px_80px_rgba(23,32,51,0.16)] dark:border-border/50 dark:shadow-[0_24px_80px_rgba(0,0,0,0.45)]'
+                  : 'flex w-[360px] shrink-0 min-h-0 flex-col border-l border-border/70 bg-surface'
+              }
+            >
               <ChatPanel
                 project={project}
-                onClose={() => { setShowChatPanel(false); setChatPrompt(null); }}
+                surfaceLayout={assistantPrimaryOpen ? 'primary' : 'rail'}
+                onClose={() => {
+                  setShowChatPanel(false);
+                  setPrimaryAssistantOpen(false);
+                  setChatPrompt(null);
+                }}
                 initialPrompt={chatPrompt}
               />
-            </aside>
+            </div>
           )}
+        </div>
         </div>
 
         {/* Compact Blueprint Drawer */}

@@ -12,6 +12,9 @@ export interface ShellPanelsState {
   setShowAppSettings: (show: boolean) => void;
   showChatPanel: boolean;
   setShowChatPanel: (show: boolean) => void;
+  /** Full-workspace assistant (distinct from the slim header rail). */
+  primaryAssistantOpen: boolean;
+  setPrimaryAssistantOpen: (open: boolean) => void;
   chatPrompt: string | null;
   setChatPrompt: (prompt: string | null) => void;
 }
@@ -22,6 +25,7 @@ export function useShellPanels(): ShellPanelsState {
   const [showSettings, setShowSettings] = useState(false);
   const [showAppSettings, setShowAppSettings] = useState(false);
   const [showChatPanel, setShowChatPanel] = useState(false);
+  const [primaryAssistantOpen, setPrimaryAssistantOpen] = useState(false);
   const [chatPrompt, setChatPrompt] = useState<string | null>(null);
 
   useEffect(() => {
@@ -40,7 +44,8 @@ export function useShellPanels(): ShellPanelsState {
       const { prompt } = (event as CustomEvent<{ prompt: string }>).detail ?? {};
       if (prompt) {
         setChatPrompt(prompt);
-        setShowChatPanel(true);
+        setShowChatPanel(false);
+        setPrimaryAssistantOpen(true);
       }
     };
     window.addEventListener('formspec:ai-action', onAIAction);
@@ -58,6 +63,8 @@ export function useShellPanels(): ShellPanelsState {
     setShowAppSettings,
     showChatPanel,
     setShowChatPanel,
+    primaryAssistantOpen,
+    setPrimaryAssistantOpen,
     chatPrompt,
     setChatPrompt,
   };

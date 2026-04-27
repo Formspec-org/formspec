@@ -10,14 +10,25 @@ import {
   IconSearch,
   IconUndo,
   IconRedo,
-  IconSparkle,
   IconMenu,
   IconStack,
 } from './icons';
+import { AssistantEntryMenu, type AssistantEntryMenuProps } from './AssistantEntryMenu';
+import type { EnterWorkspaceSource } from '../onboarding/enter-workspace-source';
+
+/** Header chrome when the user is on the full-screen assistant surface (before tabbed Studio). */
+export interface AssistantHeaderSurfaceProps {
+  /** Prefer passing a source for telemetry (`header` from this control). */
+  onEnterWorkspace: (source: EnterWorkspaceSource) => void;
+  onReopenHelp?: () => void;
+  /** When true, show a Help control that calls `onReopenHelp`. */
+  showHelpButton?: boolean;
+}
 
 const TABS: { name: string; help: string }[] = [
   { name: 'Editor', help: 'Build your form structure and manage shared resources' },
   { name: 'Layout', help: 'Visual form builder — pages, layout containers, and widget placement' },
+  { name: 'Evidence', help: 'Review source documents, citations, missing coverage, and conflicts' },
   { name: 'Mapping', help: 'Bidirectional data transforms for import/export formats' },
   { name: 'Preview', help: 'Live form preview, behavior lab, and JSON document view' },
 ];
@@ -33,7 +44,10 @@ interface HeaderProps {
   onOpenMetadata?: () => void;
   onToggleAccountMenu?: () => void;
   onToggleMenu?: () => void;
-  onToggleChat?: () => void;
+  /** Unified assistant control (full workspace + in-shell chat). Omitted when not in Shell context. */
+  assistantMenu?: AssistantEntryMenuProps | null;
+  /** Replaces workspace tabs with assistant labeling and adds Enter workspace (+ optional Help). */
+  assistantSurface?: AssistantHeaderSurfaceProps | null;
   isCompact?: boolean;
   colorScheme?: ColorScheme;
 }
@@ -75,13 +89,15 @@ export function Header({
   onOpenMetadata,
   onToggleAccountMenu,
   onToggleMenu,
-  onToggleChat,
+  assistantMenu,
+  assistantSurface,
   isCompact = false,
   colorScheme,
 }: HeaderProps) {
   const project = useProject();
   const state = useProjectState();
   const { definition } = state;
+  const formTitle = definition.title?.trim() ? definition.title.trim() : 'Untitled form';
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -158,7 +174,7 @@ export function Header({
         onClick={() => setMenuOpen(!menuOpen)}
       />
       {menuOpen && (
-        <div className="absolute right-0 top-full mt-1 w-44 bg-surface border border-border rounded-[6px] shadow-lg py-1 z-50" role="menu" aria-label="Account actions">
+        <div className="absolute right-0 top-full mt-1 w-56 bg-surface border border-border rounded-[6px] shadow-lg py-1 z-50" role="menu" aria-label="Account actions">
           <button
             type="button"
             role="menuitem"
@@ -211,25 +227,17 @@ export function Header({
           >
             App Settings
           </button>
-          <div className="border-t border-border my-1" role="separator" />
-          <button
-            type="button"
-            role="menuitem"
-            className="w-full text-left px-3 py-2 text-[13px] hover:bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 focus-visible:ring-inset"
-            onClick={() => {
-              setMenuOpen(false);
-              onToggleChat?.();
-            }}
-          >
-            Open AI chat panel
-          </button>
         </div>
       )}
     </div>
   );
 
   const actionButtons = (
-    <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+    <div
+      className={`flex min-w-0 shrink-0 items-center gap-1.5 sm:gap-2 ${
+        assistantSurface && isCompact ? 'max-w-[min(100%,52vw)] overflow-x-auto scrollbar-none pr-0.5' : ''
+      }`}
+    >
       {/* Search — icon-only on compact, full bar on wide */}
       {isCompact ? (
         <button
@@ -243,11 +251,11 @@ export function Header({
       ) : (
         <button
           onClick={onSearch}
-          className="group flex items-center gap-2 rounded-full border border-border/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(246,237,226,0.88))] dark:bg-[linear-gradient(180deg,rgba(32,44,59,0.9),rgba(26,35,47,0.88))] px-4 py-2 max-w-[260px] text-muted shadow-[0_10px_25px_rgba(23,32,51,0.06)] dark:shadow-[0_12px_26px_rgba(0,0,0,0.28)] hover:border-muted/50 hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+          className="group flex max-w-[220px] items-center gap-2 rounded-full border border-border/55 bg-surface/70 px-3.5 py-1.5 text-muted hover:border-border/80 hover:bg-surface hover:text-ink dark:bg-surface/40 dark:hover:bg-surface/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
         >
           <span className="text-[13px]">⌕</span>
           <span className="text-[13px] font-ui">Search…</span>
-          <span className="ml-auto rounded-full border border-border/70 px-2 py-0.5 font-mono text-[11px] group-hover:bg-surface transition-colors">
+          <span className="ml-auto rounded-full border border-border/50 px-1.5 py-0.5 font-mono text-[10px] text-muted group-hover:text-ink/80 transition-colors">
             ⌘K
           </span>
         </button>
@@ -258,7 +266,7 @@ export function Header({
           type="button"
           aria-label={`FORMSPEC ${definition.$formspec} metadata`}
           className="rounded-full border border-border/75 px-3.5 py-2 text-[12.5px] font-medium text-ink/88 hover:bg-surface/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
-          onClick={onOpenMetadata}
+          onClick={() => onOpenMetadata?.()}
         >
           Metadata
         </button>
@@ -284,16 +292,31 @@ export function Header({
         <IconRedo />
       </button>
 
-      {onToggleChat && (
+      {!assistantSurface && assistantMenu && <AssistantEntryMenu {...assistantMenu} />}
+
+      {assistantSurface?.showHelpButton && assistantSurface.onReopenHelp && (
         <button
           type="button"
-          data-testid="toggle-chat"
-          aria-label="Toggle AI chat"
-          className="rounded-full border border-transparent p-2 text-muted hover:border-border/60 hover:bg-surface/75 hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
-          onClick={onToggleChat}
-          title="AI Assistant"
+          aria-label="Studio setup help"
+          title="Studio setup help"
+          className={`inline-flex shrink-0 items-center rounded-full border border-border/65 bg-surface/70 font-medium text-ink hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 ${
+            isCompact ? 'px-2.5 py-1.5 text-[11px]' : 'hidden px-3 py-1.5 text-[12px] md:inline-flex'
+          }`}
+          onClick={() => assistantSurface.onReopenHelp?.()}
         >
-          <IconSparkle />
+          Help
+        </button>
+      )}
+      {assistantSurface && (
+        <button
+          type="button"
+          data-testid="assistant-enter-workspace"
+          className={`shrink-0 rounded-full bg-accent font-semibold text-white shadow-sm hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
+            isCompact ? 'px-2.5 py-1.5 text-[11px]' : 'px-3.5 py-2 text-[12px]'
+          }`}
+          onClick={() => assistantSurface.onEnterWorkspace('header')}
+        >
+          Enter workspace
         </button>
       )}
 
@@ -341,7 +364,11 @@ export function Header({
             <div>
               <div className="font-display text-[22px] tracking-[-0.04em] leading-none whitespace-nowrap text-ink">The Stack</div>
               <div className="font-mono text-[11px] text-muted/85 tracking-[0.22em] uppercase whitespace-nowrap">
-                FORMSPEC {definition.$formspec} · {definition.status || 'DRAFT'}
+                {assistantSurface ? (
+                  <span className="truncate">{formTitle} · Assistant workspace</span>
+                ) : (
+                  <>FORMSPEC {definition.$formspec} · {definition.status || 'DRAFT'}</>
+                )}
               </div>
             </div>
           </button>
@@ -349,10 +376,20 @@ export function Header({
           {actionButtons}
         </div>
 
-        {/* Row 2: Scrollable tab strip */}
-        <nav className="flex h-[42px] overflow-x-auto scrollbar-none border-t border-border/40 px-3 bg-[linear-gradient(180deg,rgba(255,253,249,0.8),rgba(255,248,239,0.72))] dark:bg-[linear-gradient(180deg,rgba(26,35,47,0.88),rgba(23,32,46,0.82))]" role="tablist" aria-label="Studio workspaces">
-          {tabButtons}
-        </nav>
+        {/* Row 2: Workspace tabs or assistant surface label */}
+        {assistantSurface ? (
+          <div
+            className="flex h-[42px] items-center justify-center border-t border-border/40 px-3 bg-[linear-gradient(180deg,rgba(255,253,249,0.8),rgba(255,248,239,0.72))] dark:bg-[linear-gradient(180deg,rgba(26,35,47,0.88),rgba(23,32,46,0.82))]"
+            role="status"
+            aria-label="Assistant workspace"
+          >
+            <span className="rounded-full border border-border/55 bg-surface/55 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Assistant workspace</span>
+          </div>
+        ) : (
+          <nav className="flex h-[42px] overflow-x-auto scrollbar-none border-t border-border/40 px-3 bg-[linear-gradient(180deg,rgba(255,253,249,0.8),rgba(255,248,239,0.72))] dark:bg-[linear-gradient(180deg,rgba(26,35,47,0.88),rgba(23,32,46,0.82))]" role="tablist" aria-label="Studio workspaces">
+            {tabButtons}
+          </nav>
+        )}
       </div>
     );
   }
@@ -377,15 +414,25 @@ export function Header({
         <div className="space-y-1">
           <div className="font-display text-[31px] tracking-[-0.05em] leading-none text-ink">The Stack</div>
           <div className="font-mono text-[11px] text-muted tracking-[0.24em] uppercase">
-            FORMSPEC {definition.$formspec} · {definition.status || 'DRAFT'}
+            {assistantSurface ? (
+              <span className="block max-w-[min(52vw,28rem)] truncate">{formTitle} · Assistant workspace</span>
+            ) : (
+              <>FORMSPEC {definition.$formspec} · {definition.status || 'DRAFT'}</>
+            )}
           </div>
         </div>
       </button>
 
-      {/* Tabs */}
-      <nav className="flex h-12 items-end self-stretch" role="tablist" aria-label="Studio workspaces">
-        {tabButtons}
-      </nav>
+      {/* Workspace tabs or assistant surface label */}
+      {assistantSurface ? (
+        <div className="flex h-12 items-end self-stretch pb-1" role="status" aria-label="Assistant workspace">
+          <span className="mb-0.5 rounded-full border border-border/60 bg-surface/50 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Assistant workspace</span>
+        </div>
+      ) : (
+        <nav className="flex h-12 items-end self-stretch" role="tablist" aria-label="Studio workspaces">
+          {tabButtons}
+        </nav>
+      )}
 
       <div className="flex-1 min-w-0" />
 

@@ -14,6 +14,15 @@ export function IconSparkle({ className, size = 16, strokeWidth = 1.3 }: SvgProp
   );
 }
 
+/** Side / docked chat panel (distinct from full assistant workspace). */
+export function IconChat({ className, size = 16 }: SvgProps = {}) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.45" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={className}>
+      <path d="M2.5 3.5h11a1 1 0 0 1 1 1v5.5a1 1 0 0 1-1 1H8l-3.5 3v-3H2.5a1 1 0 0 1-1-1v-5.5a1 1 0 0 1 1-1Z" />
+    </svg>
+  );
+}
+
 export function IconArrowUp({ size = 18 }: { size?: number | string } = {}) {
   return (
     <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

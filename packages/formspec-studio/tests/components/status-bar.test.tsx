@@ -14,6 +14,27 @@ function renderStatusBar(seedDef?: Record<string, unknown>) {
 }
 
 describe('StatusBar', () => {
+  it('assistant variant omits intelligence summary chips', () => {
+    const project = createProject({
+      seed: {
+        definition: {
+          $formspec: '1.0',
+          title: 'T',
+          status: 'draft',
+          items: [{ key: 'f1', type: 'field', label: 'F', dataType: 'string' }],
+        } as any,
+      },
+    });
+    render(
+      <ProjectProvider project={project}>
+        <StatusBar variant="assistant" />
+      </ProjectProvider>,
+    );
+    expect(screen.getByText(/1 field/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Evidence /i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Layout drift/i)).not.toBeInTheDocument();
+  });
+
   it('shows formspec version', () => {
     renderStatusBar();
     expect(screen.getByText(/formspec 1\.0/i)).toBeInTheDocument();
@@ -63,6 +84,40 @@ describe('StatusBar', () => {
       shapes: [{ name: 's1', severity: 'error', constraint: '1 = 1' }],
     });
     expect(screen.getByText(/1 shape/i)).toBeInTheDocument();
+  });
+
+  it('shows evidence and layout intelligence metrics', () => {
+    renderStatusBar({
+      $formspec: '1.0',
+      url: 'urn:test',
+      version: '1.0.0',
+      items: [
+        { key: 'ein', type: 'field', label: 'EIN', dataType: 'string' },
+        { key: 'name', type: 'field', label: 'Legal name', dataType: 'string' },
+      ],
+      extensions: {
+        'x-studio': {
+          provenance: [
+            { objectRef: 'items.ein', origin: 'evidence', confidence: 'high', reviewStatus: 'confirmed', sourceRefs: ['evidence.irs#p1'], patchRefs: [] },
+            { objectRef: 'items.name', origin: 'manual', confidence: 'medium', reviewStatus: 'unreviewed' },
+          ],
+          patches: [
+            { id: 'patch-1', source: 'ai', scope: 'spec', summary: 'Draft patch', affectedRefs: ['items.ein'], status: 'open' },
+          ],
+          layouts: [
+            { id: 'mobile', name: 'Mobile', channel: 'Mobile', placements: [{ fieldRef: 'items.ein' }], hiddenFields: [], drift: [{ fieldRef: 'items.name', status: 'open' }] },
+          ],
+          evidence: {
+            documents: [{ id: 'irs', name: 'IRS letter.pdf', mimeType: 'application/pdf', fieldRefs: ['items.ein'] }],
+          },
+        },
+      },
+    });
+
+    expect(screen.getByText(/Evidence 1\/2/i)).toBeInTheDocument();
+    expect(screen.getByText(/Provenance 1/i)).toBeInTheDocument();
+    expect(screen.getByText(/Patches open 1/i)).toBeInTheDocument();
+    expect(screen.getByText(/Layout drift 1/i)).toBeInTheDocument();
   });
 
   it('shows presentation mode when set', () => {
