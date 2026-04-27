@@ -12,6 +12,9 @@ Inspector UX (Studio): [`thoughts/archive/adr/0044-inspector-ux-redesign.md`](..
 |------|-------------|
 | [2026-03-05-product-requirements-v2.md](2026-03-05-product-requirements-v2.md) | PRD: Studio v2 |
 | [2026-03-05-design-visual-spec.md](2026-03-05-design-visual-spec.md) | Visual design specification |
+| [2026-04-25-prd-studio-first-run-onboarding.md](2026-04-25-prd-studio-first-run-onboarding.md) | PRD: assistant-first first-run onboarding flow |
+| [2026-04-26-studio-unified-feature-matrix.md](2026-04-26-studio-unified-feature-matrix.md) | Feature matrix extracted from the Direction 7 unified Studio prototype |
+| [2026-04-26-prd-playthrough-deferred.md](2026-04-26-prd-playthrough-deferred.md) | PRD: Playthrough persona sessions (deferred; spike removed from codebase) |
 
 ## V2 plans (canon)
 
