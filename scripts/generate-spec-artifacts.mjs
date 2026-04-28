@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 
-/** @filedesc Generates BLUF injections, schema-ref blocks, and LLM spec docs from source specs. */
+/**
+ * @filedesc Generates BLUF injections, schema-ref blocks, and LLM spec docs from source specs.
+ * Optional: `--only=<spec path>` processes a single config row (repo-relative or absolute `spec` path).
+ */
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
@@ -291,8 +294,41 @@ function applySchemaRefBlocks(specText, schemaCache) {
   });
 }
 
-function collectCriticalNodes(schema) {
-  const nodes = [];
+function decodePointerSegment(segment) {
+  return segment.replace(/~1/g, "/").replace(/~0/g, "~");
+}
+
+/** True when `pointer` is exactly `#/properties/<key>` and `schema.required` lists that key. */
+function topLevelPropertyRequired(schema, pointer) {
+  if (!isObject(schema)) {
+    return false;
+  }
+  try {
+    const normalized = normalizePointer(pointer);
+    if (normalized === "") {
+      return false;
+    }
+    const parts = normalized.slice(1).split("/").map(decodePointerSegment);
+    if (parts.length !== 2 || parts[0] !== "properties") {
+      return false;
+    }
+    const key = parts[1];
+    return Array.isArray(schema.required) && schema.required.includes(key);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Collect nodes annotated with `x-lm.critical`.
+ * When `rootPointers` is a non-empty array, only walks those JSON Pointer subtrees (deduped);
+ * otherwise walks the full schema (backward compatible).
+ *
+ * @param {object} schema
+ * @param {string[] | undefined} rootPointers
+ */
+function collectCriticalNodes(schema, rootPointers) {
+  const byPointer = new Map();
 
   function walk(node, pointer, required) {
     if (!isObject(node)) {
@@ -300,7 +336,7 @@ function collectCriticalNodes(schema) {
     }
 
     if (isObject(node["x-lm"]) && node["x-lm"].critical === true) {
-      nodes.push({
+      byPointer.set(pointer, {
         pointer,
         required: required ? "yes" : "no",
         description: shortText(node.description),
@@ -349,8 +385,30 @@ function collectCriticalNodes(schema) {
     }
   }
 
-  walk(schema, "#", false);
-  return nodes.sort((a, b) => a.pointer.localeCompare(b.pointer));
+  if (!Array.isArray(rootPointers) || rootPointers.length === 0) {
+    walk(schema, "#", false);
+  } else {
+    for (const raw of rootPointers) {
+      const trimmed = String(raw).trim();
+      let ptr;
+      try {
+        ptr = `#${normalizePointer(trimmed)}`;
+      } catch (error) {
+        state.errors.push(`llmCriticalRoots: invalid pointer ${raw}: ${error.message}`);
+        continue;
+      }
+      let node;
+      try {
+        node = resolvePointer(schema, ptr);
+      } catch (error) {
+        state.errors.push(`llmCriticalRoots: cannot resolve ${ptr}: ${error.message}`);
+        continue;
+      }
+      walk(node, ptr, topLevelPropertyRequired(schema, ptr));
+    }
+  }
+
+  return Array.from(byPointer.values()).sort((a, b) => a.pointer.localeCompare(b.pointer));
 }
 
 function validateCriticalAnnotations(schemaPath, criticalNodes) {
@@ -518,8 +576,10 @@ function processEntry(entry, schemaCache) {
 
   const schema = schemaCache.get(schemaAbs) ?? readJson(schemaAbs);
   schemaCache.set(schemaAbs, schema);
-  const criticalNodes = collectCriticalNodes(schema);
-  validateCriticalAnnotations(entry.schema, criticalNodes);
+  const criticalNodes = collectCriticalNodes(schema, entry.llmCriticalRoots);
+  if (entry.llm) {
+    validateCriticalAnnotations(entry.schema, criticalNodes);
+  }
 
   let specText = readText(specAbs);
   try {
@@ -555,8 +615,22 @@ function main() {
     process.exit(1);
   }
 
+  const onlyArg = process.argv.find((a) => a.startsWith("--only="));
+  let specs = config.specs;
+  if (onlyArg) {
+    const onlyRaw = onlyArg.slice("--only=".length).trim();
+    const onlyAbs = path.isAbsolute(onlyRaw) ? path.normalize(onlyRaw) : path.resolve(ROOT_DIR, onlyRaw);
+    specs = config.specs.filter((e) => path.resolve(ROOT_DIR, e.spec) === onlyAbs || e.spec === onlyRaw);
+    if (specs.length === 0) {
+      console.error(
+        `No config entry matches --only=${onlyRaw} (use a path like wos-spec/specs/kernel/spec.md)`
+      );
+      process.exit(1);
+    }
+  }
+
   const schemaCache = new Map();
-  for (const entry of config.specs) {
+  for (const entry of specs) {
     processEntry(entry, schemaCache);
   }
 

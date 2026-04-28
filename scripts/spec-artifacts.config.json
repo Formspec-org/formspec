@@ -198,8 +198,30 @@
     },
     {
       "spec": "wos-spec/specs/kernel/spec.md",
-      "schema": "wos-spec/schemas/kernel/wos-kernel.schema.json",
+      "schema": "wos-spec/schemas/wos-workflow.schema.json",
       "llm": "wos-spec/specs/kernel/spec.llm.md",
+      "llmCriticalRoots": [
+        "#/properties/$wosWorkflow",
+        "#/properties/url",
+        "#/properties/version",
+        "#/properties/title",
+        "#/properties/impactLevel",
+        "#/properties/actors",
+        "#/properties/lifecycle",
+        "#/properties/caseFile",
+        "#/properties/intake",
+        "#/properties/contracts",
+        "#/properties/status",
+        "#/$defs/Lifecycle",
+        "#/$defs/State",
+        "#/$defs/Transition",
+        "#/$defs/TransitionEvent",
+        "#/$defs/Actor",
+        "#/$defs/CaseFile",
+        "#/$defs/FieldDeclaration",
+        "#/$defs/IntakeReference",
+        "#/$defs/Contracts"
+      ],
       "behaviorEssentials": [
         "Kernel documents define the immutable topology (states and transitions) and case state of a workflow orchestration substrate.",
         "The case file structure SHOULD mirror the data-capture definitions used for input in the workflow.",
@@ -207,15 +229,14 @@
         "Impact level classification established in the kernel determines baseline governance constraints for the entire workflow lifecycle."
       ],
       "conformanceEssentials": [
-        "A conforming kernel document must include $wosKernel=1.0, id, version, status, title, and topology.",
-        "Processors must reject kernel documents that do not conform to the kernel schema shape.",
-        "The (id, version) pair must be treated as immutable identity for pinning and execution."
+        "A conforming author-time workflow document must include `$wosWorkflow: \"1.0\"` plus required core fields `url`, `version`, `title`, `impactLevel`, `actors`, and `lifecycle` (merged envelope per ADR 0076).",
+        "Processors must reject workflow documents that do not conform to the workflow schema shape.",
+        "The (url, version) pair must be treated as immutable identity for pinning and execution."
       ]
     },
     {
       "spec": "wos-spec/specs/governance/workflow-governance.md",
-      "schema": "wos-spec/schemas/governance/wos-workflow-governance.schema.json",
-      "llm": "wos-spec/specs/governance/workflow-governance.llm.md",
+      "schema": "wos-spec/schemas/wos-workflow.schema.json",
       "behaviorEssentials": [
         "Workflow Governance sidecars attach to kernel workflows via semantic tags (lifecycleHook) and data contracts (contractHook).",
         "Due process requirements (notice, explanation, appeal) are normative for rights-impacting or safety-impacting impact levels.",
@@ -230,8 +251,7 @@
     },
     {
       "spec": "wos-spec/specs/ai/ai-integration.md",
-      "schema": "wos-spec/schemas/ai/wos-ai-integration.schema.json",
-      "llm": "wos-spec/specs/ai/ai-integration.llm.md",
+      "schema": "wos-spec/schemas/wos-workflow.schema.json",
       "behaviorEssentials": [
         "AI Integration sidecars register agents as actors and impose deontic constraints (Permission, Prohibition, Obligation, Right) on their behavior.",
         "Effective autonomy levels for agent actions are capped by the kernel impactLevel; rights-impacting workflows default to assistive.",
@@ -245,25 +265,8 @@
       ]
     },
     {
-      "spec": "wos-spec/specs/advanced/advanced-governance.md",
-      "schema": "wos-spec/schemas/advanced/wos-advanced.schema.json",
-      "llm": "wos-spec/specs/advanced/advanced-governance.llm.md",
-      "behaviorEssentials": [
-        "Advanced Governance introduces DCR-style Constraint Zones for declarative, adaptive case management within compound states.",
-        "Equity guardrails monitor for statistical outcomes disparity across demographic or categorical case groupings.",
-        "Formal verification via SMT solvers targets a decidable fragment of the FEL expression language for provenance-safe proofs.",
-        "Operational resilience patterns like shadow mode and circuit breakers protect production stability from agent behavioral drift."
-      ],
-      "conformanceEssentials": [
-        "A conforming advanced governance document must include $wosAdvancedGovernance=1.0, version, and targetWorkflow.",
-        "DCR zone markings (included, pending, executed) must be tracked immutably within the session context.",
-        "SMT verification inconclusive results should trigger additional runtime monitoring warnings rather than blocking execution."
-      ]
-    },
-    {
       "spec": "wos-spec/specs/kernel/correspondence-metadata.md",
-      "schema": "wos-spec/schemas/kernel/wos-correspondence-metadata.schema.json",
-      "llm": "wos-spec/specs/kernel/correspondence-metadata.llm.md",
+      "schema": "wos-spec/schemas/wos-workflow.schema.json",
       "behaviorEssentials": [
         "Declare structured metadata for correspondence stored in case state without adding new event types.",
         "Use entry templates to define channel, direction, and actorType requirements for categories of communication.",
@@ -278,8 +281,7 @@
     },
     {
       "spec": "wos-spec/specs/governance/policy-parameters.md",
-      "schema": "wos-spec/schemas/governance/wos-policy-parameters.schema.json",
-      "llm": "wos-spec/specs/governance/policy-parameters.llm.md",
+      "schema": "wos-spec/schemas/wos-workflow.schema.json",
       "behaviorEssentials": [
         "Externalize date-indexed business rules as temporal parameters resolved against a date in the case state.",
         "Support value-over-time resolution (OpenFisca-style) for both scalar parameters and document bindings (URIs).",
@@ -293,57 +295,8 @@
       ]
     },
     {
-      "spec": "wos-spec/specs/governance/due-process-config.md",
-      "schema": "wos-spec/schemas/governance/wos-due-process.schema.json",
-      "llm": "wos-spec/specs/governance/due-process-config.llm.md",
-      "behaviorEssentials": [
-        "Detail operational due process implementation (notice templates, explanation rules, routing) separate from governance structure.",
-        "Declare notice requirements for adverse decisions, including required sections and Formspec definition references.",
-        "Define appeal routing rules and independence constraints to satisfy procedural fairness requirements.",
-        "Describe continuation-of-service policies that maintain benefits or status during active appeal windows."
-      ],
-      "conformanceEssentials": [
-        "A conforming due process document must include $wosDueProcess=1.0 and targetGovernance.",
-        "Notice templates MUST include all sections declared required by the governing Workflow Governance document.",
-        "Processors MUST enforce the declared independence constraints for appeal reviewers (pool-based or actor-based)."
-      ]
-    },
-    {
-      "spec": "wos-spec/specs/governance/assertion-library.md",
-      "schema": "wos-spec/schemas/governance/wos-assertion-gate.schema.json",
-      "llm": "wos-spec/specs/governance/assertion-library.llm.md",
-      "behaviorEssentials": [
-        "Declare reusable data validation logic gates that can be shared across multiple pipelines and governance documents.",
-        "Categorize assertions by type (source-grounded, temporal, cross-document) to guide processor optimization and audit tagging.",
-        "Provide FEL-based expressions for data constraints that evaluate to true for valid data and false for violations.",
-        "Attach default rejection policies (retry, escalate, hold) to assertions to drive automated or human recovery."
-      ],
-      "conformanceEssentials": [
-        "A conforming assertion library document must include $wosAssertionLibrary=1.0 and at least one assertion.",
-        "Assertion IDs MUST be unique within the library and SHOULD follow persistent naming stability across versions.",
-        "Processors should reject libraries with syntax-invalid FEL expressions in assertion definitions."
-      ]
-    },
-    {
-      "spec": "wos-spec/specs/ai/agent-config.md",
-      "schema": "wos-spec/schemas/ai/wos-agent-config.schema.json",
-      "llm": "wos-spec/specs/ai/agent-config.llm.md",
-      "behaviorEssentials": [
-        "Parameterize agent-specific model configurations (endpoint, model name, temperature, context limit) for WOS integration.",
-        "Declare fallback strategies for model failure, including secondary models, parameter shifts, and human escalation.",
-        "Fine-tune deontic constraints and autonomy levels per-action for a specific agent instance.",
-        "Configure confidence scoring requirements that determine when an agent transition requires supervisory approval."
-      ],
-      "conformanceEssentials": [
-        "A conforming agent config document must include $wosAgentConfig=1.0 and targetWorkflow.",
-        "Agent references MUST match registration IDs in the corresponding AI Integration sidecar.",
-        "Processors SHOULD treat provided model parameters as implementation-specific hints while enforcing WOS constraint logic."
-      ]
-    },
-    {
       "spec": "wos-spec/specs/ai/drift-monitor.md",
-      "schema": "wos-spec/schemas/ai/wos-drift-monitor.schema.json",
-      "llm": "wos-spec/specs/ai/drift-monitor.llm.md",
+      "schema": "wos-spec/schemas/wos-workflow.schema.json",
       "behaviorEssentials": [
         "Monitor agent behavioral stability over time using statistical metrics (PSI, KS) and performance benchmarks (accuracy).",
         "Detect 'rubber-stamping' where human reviewers agree with agent output at rates or speeds that indicate a lack of engagement.",
@@ -357,137 +310,8 @@
       ]
     },
     {
-      "spec": "wos-spec/specs/advanced/verification-report.md",
-      "schema": "wos-spec/schemas/advanced/wos-verification-report.schema.json",
-      "llm": "wos-spec/specs/advanced/verification-report.llm.md",
-      "behaviorEssentials": [
-        "Standardize the recording of results from formal verification (SMT proofs) of workflow governance properties.",
-        "Capture result status (proven-safe, proven-unsafe, inconclusive) per-constraint with solver metadata and timestamps.",
-        "Record counterexamples for unsafe constraints to assist in remediation of flawed workflow logic.",
-        "Treat reports as immutable provenance artifacts that provide the reasoning foundation for high-stakes automation choices."
-      ],
-      "conformanceEssentials": [
-        "A conforming verification report must include $wosVerificationReport=1.0, targetWorkflow, and results.",
-        "Results MUST identify the exact version of the specification being verified to maintain the proof-to-document link.",
-        "Solver metadata MUST include the tool version and configuration parameters used for the proof."
-      ]
-    },
-    {
-      "spec": "wos-spec/specs/advanced/equity-config.md",
-      "schema": "wos-spec/schemas/advanced/wos-equity.schema.json",
-      "llm": "wos-spec/specs/advanced/equity-config.llm.md",
-      "behaviorEssentials": [
-        "Configure disparity monitoring for protected categories across both human and AI decision points.",
-        "Specify statistical methods (e.g., impact ratio, odds ratio) and reporting schedules for equity guardrails.",
-        "Define remediation triggers that activate structured reviews when statistical disparity exceeds a defined bias cap.",
-        "Enable category-level monitoring that does not require individual-level demographic data in the primary case record."
-      ],
-      "conformanceEssentials": [
-        "A conforming equity document must include $wosEquityConfig=1.0 and targetWorkflow.",
-        "Category definitions MUST NOT conflict with the privacy constraints of the integration environment.",
-        "Processors MUST apply the declared disparity calculation method exactly as specified to ensure result comparability over time."
-      ]
-    },
-    {
-      "spec": "wos-spec/specs/sidecars/business-calendar.md",
-      "schema": "wos-spec/schemas/sidecars/wos-business-calendar.schema.json",
-      "llm": "wos-spec/specs/sidecars/business-calendar.llm.md",
-      "behaviorEssentials": [
-        "Declare working hours, weekend rules, and holiday schedules for time-sensitive SLA and deadline calculations.",
-        "Support regional holiday libraries and ad-hoc exceptions (one-time closures) to ensure calendar accuracy.",
-        "Define 'grace day' logic where deadlines that fall on non-working days are automatically shifted to the next business day.",
-        "Integrate with Governance holds to exclude non-working time from SLA 'aging' calculations."
-      ],
-      "conformanceEssentials": [
-        "A conforming business calendar document must include $wosBusinessCalendar=1.0 and weekend/holiday rules.",
-        "Holiday definitions MUST include unambiguous effective dates (fixed, floating, or calculated).",
-        "Processors MUST apply calendar logic consistently across all time-indexed logic triggers in the workflow."
-      ]
-    },
-    {
-      "spec": "wos-spec/specs/sidecars/notification-template.md",
-      "schema": "wos-spec/schemas/sidecars/wos-notification-template.schema.json",
-      "llm": "wos-spec/specs/sidecars/notification-template.llm.md",
-      "behaviorEssentials": [
-        "Define standardized notice templates for human and agent communication triggered by lifecycle events.",
-        "Support multi-channel content (subject, body, SMS text) and attachments bound to specific notification types.",
-        "Declare FEL-based variable requirements for template interpolation to ensure data availability at notice-generation time.",
-        "Track notification delivery status and receipt in the provenance record for due process verification."
-      ],
-      "conformanceEssentials": [
-        "A conforming notification template document must include $wosNotificationTemplate=1.0 and at least one template.",
-        "Templates SHOULD declare an audience hint (human, agent, internal) to guide presentation and tone.",
-        "Processors should warn if required FEL variables are missing from the case state when a notice is enqueued."
-      ]
-    },
-    {
-      "spec": "wos-spec/specs/registry/extension-registry.md",
-      "schema": "wos-spec/schemas/registry/wos-extension-registry.schema.json",
-      "llm": "wos-spec/specs/registry/extension-registry.llm.md",
-      "behaviorEssentials": [
-        "Catalog the kernel's six named extension seams (actorExtension, contractHook, provenanceLayer, lifecycleHook, custodyHook, vendor x- extensions) plus vendor-specific shape registrations.",
-        "Track each registry entry through a draft → stable → deprecated → retired lifecycle with explicit replacedBy chains so consumers can follow migrations deterministically.",
-        "Declare composition semantics (merge / replace / augment) per entry so multiple registrations at one seam combine predictably.",
-        "Provide deterministic discovery and resolution: when multiple registries declare the same seam, the resolution order is published and stable."
-      ],
-      "conformanceEssentials": [
-        "A conforming extension-registry document must include $wosExtensionRegistry=1.0, version, and at least one entry.",
-        "Every entry MUST declare seam, kind, lifecycle, and description; entries that change vendor extensions MUST declare a vendorPrefix matching ^x-[a-z][a-z0-9-]*$.",
-        "Processors MUST treat unknown registry entries as forward-compatible additions and MUST NOT reject documents that reference unregistered seams unless strict validation is requested."
-      ]
-    },
-    {
-      "spec": "wos-spec/specs/companions/runtime.md",
-      "schema": "wos-spec/schemas/companions/wos-case-instance.schema.json",
-      "llm": "wos-spec/specs/companions/runtime.llm.md",
-      "behaviorEssentials": [
-        "Execute WOS workflows through exactly four evaluation layers: Kernel (L0), Governance (L1), AI (L2), and Advanced (L3).",
-        "Apply sidecar documents as a layered sieve: each layer refines and constrains the behavior allowed by the substrate.",
-        "Enforce synchronous, atomic transitions where all layer constraints MUST hold before case state and provenance are committed.",
-        "Maintain crash-safety and resume-capability by serializing the complete execution state as a Case Instance."
-      ],
-      "conformanceEssentials": [
-        "A WOS-conformant processor MUST satisfy all Runtime G1-G6 durability and atomicity requirements.",
-        "Processor evaluation MUST follow the normative layer order to prevent governance bypass.",
-        "The processor MUST reject any transition where an L1-L3 constraint fails, even if the L0 transition is valid."
-      ]
-    },
-    {
-      "spec": "wos-spec/specs/companions/lifecycle-detail.md",
-      "schema": "wos-spec/schemas/companions/wos-lifecycle-detail.schema.json",
-      "llm": "wos-spec/specs/companions/lifecycle-detail.llm.md",
-      "behaviorEssentials": [
-        "Implement a SCXML-compatible statechart engine with support for atomic, compound, parallel, and final states.",
-        "Apply deterministic transition selection based on document order and hierarchy depth (ancestor-first).",
-        "Manage compensable scopes using backward-recovery (saga) patterns to undo effects of failed long-running activities.",
-        "Provide durable timer semantics that ensure timeouts fire reliably even across processor restarts."
-      ],
-      "conformanceEssentials": [
-        "Lifecycle implementations MUST adhere to the normative transition algorithm specified in Section 4.",
-        "Parallel regions MUST support the declared cancellation policies: wait-all, cancel-siblings, and fail-fast.",
-        "Compensation MUST execute compensating actions in reverse completion order within each compensable scope."
-      ]
-    },
-    {
-      "spec": "wos-spec/specs/profiles/integration.md",
-      "schema": "wos-spec/schemas/profiles/wos-integration-profile.schema.json",
-      "llm": "wos-spec/specs/profiles/integration.llm.md",
-      "behaviorEssentials": [
-        "Define compliance requirements for system-to-system interoperability in the WOS ecosystem.",
-        "Declare supported event transport protocols (Webhook, CloudEvents, AMQP) and security profiles (mTLS, OAuth2).",
-        "Establish data mapping requirements for projection between WOS case state and host-legacy systems.",
-        "Identify policy engine adapters (OPA, Cedar) that provide authoritative external decision support."
-      ],
-      "conformanceEssentials": [
-        "A conforming integration profile must include $wosIntegrationProfile=1.0 and targetWorkflow.",
-        "Profiles MUST specify the required telemetry and observability hooks for WOS process monitoring.",
-        "Security profiles MUST meet the minimum complexity requirements for the workflow impact level."
-      ]
-    },
-    {
       "spec": "wos-spec/specs/profiles/semantic.md",
-      "schema": "wos-spec/schemas/profiles/wos-semantic-profile.schema.json",
-      "llm": "wos-spec/specs/profiles/semantic.llm.md",
+      "schema": "wos-spec/schemas/wos-workflow.schema.json",
       "behaviorEssentials": [
         "Standardize semantic alignments between WOS case state and global vocabularies (JSON-LD, Schema.org).",
         "Map WOS provenance records to PROV-O RDF shapes for cross-organizational audit exchange.",

@@ -1,6 +1,6 @@
 # WOS Kernel Document — Schema Reference Map
 
-> `wos-spec/schemas/kernel/wos-kernel.schema.json` — 1834 lines — JSON Schema property index
+> **ADR 0076:** Kernel authoring shape lives in `wos-spec/schemas/wos-workflow.schema.json` (merged envelope). This reference map is retained for navigation; prefer the workflow schema file on disk.
 
 ## Overview
 
@@ -11,7 +11,7 @@ A WOS Kernel Document per the Workflow Orchestration Standard (WOS) Kernel Speci
 | Property | Type / shape | Notes |
 |----------|--------------|-------|
 | `$schema` | JsonSchemaUri | See schema for constraints. |
-| `$wosKernel` | string | See schema for constraints. |
+| `$wosWorkflow` | string | See schema for constraints (envelope version pin, literal `1.0`). |
 | `actors` | array | See schema for constraints. |
 | `caseFile` | CaseFile | See schema for constraints. |
 | `contracts` | object | See schema for constraints. |
