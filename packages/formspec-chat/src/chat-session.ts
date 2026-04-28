@@ -250,6 +250,28 @@ export class ChatSession {
   }
 
   /**
+   * Initializes refinement mode from the host project's current snapshot.
+   * Safe to call repeatedly; once initialized, subsequent calls are no-ops.
+   */
+  async initializeFromSnapshot(): Promise<boolean> {
+    if (this.definition) return false;
+    if (!this.toolContext) {
+      throw new Error('No tool context available. Call setToolContext() before initialization.');
+    }
+    const snapshot = await this.toolContext.getProjectSnapshot();
+    if (!snapshot?.definition) {
+      throw new Error('Project snapshot is unavailable. Cannot initialize chat refinement context.');
+    }
+    this.definition = snapshot.definition;
+    this.bundle = this.tryBuildBundle(snapshot.definition);
+    this.lastDiff = null;
+    this.readyToScaffold = false;
+    this.updatedAt = Date.now();
+    this.notify();
+    return true;
+  }
+
+  /**
    * Generate a form scaffold from the conversation so far.
    * Called when the user explicitly triggers scaffolding after the interview.
    */

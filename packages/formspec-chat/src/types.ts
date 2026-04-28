@@ -109,6 +109,8 @@ export interface ToolContext {
   callTool(name: string, args: Record<string, unknown>): Promise<ToolCallResult>;
   /** Get the current project state snapshot (for diff tracking after refinement). */
   getProjectSnapshot?(): Promise<{ definition: FormDefinition } | null>;
+  /** Get the current workspace selection and viewport for AI context. */
+  getWorkspaceContext?(): { selection: { path: string; sourceTab: string } | null; viewport: 'desktop' | 'tablet' | 'mobile' | null };
 }
 
 /** Record of a tool call executed during refinement (for logging/traces). */
