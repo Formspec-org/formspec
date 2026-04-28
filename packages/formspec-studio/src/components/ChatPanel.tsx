@@ -1246,6 +1246,7 @@ export function ChatPanel({
               onRejectGroup={handleRejectGroup}
               onAcceptAll={handleAcceptAll}
               onRejectAll={handleRejectAll}
+              project={project}
             />
           ) : (
             <ChatMessageList

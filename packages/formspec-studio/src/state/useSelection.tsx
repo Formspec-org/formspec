@@ -1,5 +1,5 @@
 /** @filedesc Context and hooks managing single and multi-item selection state, with per-tab scoping. */
-import { createContext, useContext, useState, useCallback, useMemo, useRef, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo, useRef, useEffect, useSyncExternalStore, type ReactNode } from 'react';
 
 /** Options bag for selection actions. */
 export interface SelectionOptions {
@@ -44,6 +44,11 @@ interface SelectionState {
   // Inspector focus (e.g. rename on double-click)
   shouldFocusInspector: boolean;
   consumeFocusInspector: () => void;
+
+  // Scroll-and-expand intent (no selection change)
+  revealedPath: string | null;
+  reveal: (path: string) => void;
+  consumeRevealedPath: () => string | null;
 }
 
 export const SelectionContext = createContext<SelectionState | null>(null);
@@ -56,10 +61,11 @@ function emptyTabSelection(): TabSelection {
   return { selectedKeys: EMPTY_SET, primaryKey: null, primaryType: null };
 }
 
-export function SelectionProvider({ children }: { children: ReactNode }) {
+export function SelectionProvider({ children, project }: { children: ReactNode; project?: import('@formspec-org/studio-core').Project }) {
   const [tabSelections, setTabSelections] = useState<Map<string, TabSelection>>(EMPTY_MAP);
   const [activeTab, setActiveTab] = useState<string>(DEFAULT_TAB);
   const [focusInspector, setFocusInspector] = useState(false);
+  const [revealPath, setRevealPath] = useState<string | null>(null);
   // Ref to avoid stale closure in isSelected — always points to current active tab's keys
   const activeKeysRef = useRef<Set<string>>(EMPTY_SET);
 
@@ -162,9 +168,42 @@ export function SelectionProvider({ children }: { children: ReactNode }) {
     return getTabState(tab).selectedKeys.has(key);
   }, [getTabState]);
 
+  const definitionSnapshot = useSyncExternalStore(
+    useCallback((onStoreChange) => project?.onChange(onStoreChange) ?? (() => {}), [project]),
+    useCallback(() => project?.state.definition ?? null, [project]),
+  );
+
+  // Clear selection when the selected primaryKey no longer resolves in the definition.
+  useEffect(() => {
+    if (!project || !definitionSnapshot) return;
+    const paths = new Set(project.fieldPaths());
+    setTabSelections(prev => {
+      let changed = false;
+      const next = new Map(prev);
+      for (const [tab, sel] of prev) {
+        if (sel.primaryKey && !paths.has(sel.primaryKey)) {
+          next.set(tab, emptyTabSelection());
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [definitionSnapshot, project]);
+
   const consumeFocusInspector = useCallback(() => {
     setFocusInspector(false);
   }, []);
+
+  const reveal = useCallback((path: string) => {
+    setRevealPath(path);
+  }, []);
+
+  const consumeRevealedPath = useCallback((): string | null => {
+    if (!revealPath) return null;
+    const current = revealPath;
+    setRevealPath(null);
+    return current;
+  }, [revealPath]);
 
   const value = useMemo<SelectionState>(() => ({
     selectedKeys: active.selectedKeys,
@@ -188,12 +227,17 @@ export function SelectionProvider({ children }: { children: ReactNode }) {
     // Inspector focus
     shouldFocusInspector: focusInspector,
     consumeFocusInspector,
+    // Reveal intent
+    revealedPath: revealPath,
+    reveal,
+    consumeRevealedPath,
   }), [
     active.selectedKeys, active.primaryKey, active.primaryType,
     select, toggleSelect, rangeSelect,
     deselect, isSelected, selectedKeyForTab, selectedTypeForTab,
     selectedKeysForTab, isSelectedForTab,
     focusInspector, consumeFocusInspector,
+    revealPath, reveal, consumeRevealedPath,
   ]);
 
   return (

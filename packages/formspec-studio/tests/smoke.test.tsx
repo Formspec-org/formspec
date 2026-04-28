@@ -12,7 +12,7 @@ describe('Smoke', () => {
   it('mounts onboarding before the shell on first run', () => {
     render(<App />);
     expect(screen.getByTestId('assistant-workspace')).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: /enter workspace/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: /open manual controls/i }).length).toBeGreaterThan(0);
   });
 
   it('mounts Studio after onboarding has completed', () => {

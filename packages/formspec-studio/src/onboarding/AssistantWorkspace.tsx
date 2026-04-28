@@ -50,6 +50,9 @@ export interface AssistantWorkspaceProps {
   onEnterStudio: () => void;
   /** When provided, theme toggle matches the tabbed Studio shell. */
   colorScheme?: ColorScheme;
+  chatThreadRepository?: import('../components/chat/chat-thread-repository').ChatThreadRepository;
+  versionRepository?: import('../components/chat/version-repository').VersionRepository;
+  chatProjectScope?: string;
 }
 
 type MobileSheet = 'start' | 'snapshot' | 'diagnostics' | null;
@@ -66,7 +69,7 @@ interface SourceState {
   message?: string;
 }
 
-export function AssistantWorkspace({ project, onEnterStudio, colorScheme }: AssistantWorkspaceProps) {
+export function AssistantWorkspace({ project, onEnterStudio, colorScheme, chatThreadRepository, versionRepository, chatProjectScope }: AssistantWorkspaceProps) {
   const { compactLayout, leftWidth } = useShellLayout();
   const projectFromContext = useProject();
   const { selectedKeyForTab, deselect } = useSelection();
@@ -184,9 +187,18 @@ export function AssistantWorkspace({ project, onEnterStudio, colorScheme }: Assi
     }));
   }, [diagnostics]);
 
-  const assistantChatRepository = useMemo(() => createLocalChatThreadRepository(), []);
-  const assistantVersionRepository = useMemo(() => createLocalVersionRepository(), []);
-  const assistantPersistenceScope = useMemo(() => deriveChatProjectScope(project), [project]);
+  const localChatRepoRef = useRef<import('../components/chat/chat-thread-repository').ChatThreadRepository | null>(null);
+  const localVersionRepoRef = useRef<import('../components/chat/version-repository').VersionRepository | null>(null);
+  if (!chatThreadRepository && !localChatRepoRef.current) {
+    localChatRepoRef.current = createLocalChatThreadRepository();
+  }
+  if (!versionRepository && !localVersionRepoRef.current) {
+    localVersionRepoRef.current = createLocalVersionRepository();
+  }
+  const derivedChatProjectScope = useMemo(() => deriveChatProjectScope(project), [project]);
+  const assistantChatRepository = chatThreadRepository ?? localChatRepoRef.current!;
+  const assistantVersionRepository = versionRepository ?? localVersionRepoRef.current!;
+  const assistantPersistenceScope = chatProjectScope ?? derivedChatProjectScope;
 
   useEffect(() => {
     const openSettings = () => setShowAppSettings(true);

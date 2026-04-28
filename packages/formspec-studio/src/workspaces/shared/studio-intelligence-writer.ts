@@ -9,6 +9,7 @@ import {
   type StudioPatch,
   type StudioReviewStatus,
   type Project,
+  type MutationClass,
 } from '@formspec-org/studio-core';
 import {
   emitAuthoringTelemetry,
@@ -154,6 +155,15 @@ export function recordManualPatchAndProvenance(
   return id;
 }
 
+function capabilityToMutationClass(capability: AuthoringCapability | undefined): MutationClass | undefined {
+  if (capability === 'bind_rules') return 'bind';
+  if (capability === 'mappings') return 'Mapping';
+  if (capability === 'layout_overrides') return 'shape';
+  // field_group_crud could be Variable or OptionSet depending on the tool;
+  // leave undefined here and let call sites pass explicit mutationClass when known.
+  return undefined;
+}
+
 export function recordAiPatchLifecycle(
   project: Project,
   params: {
@@ -179,6 +189,7 @@ export function recordAiPatchLifecycle(
     status: params.status,
   });
   if (params.status === 'accepted' && affectedRefs.length > 0) {
+    const mutationClass = capabilityToMutationClass(params.capability);
     upsertFieldProvenance(project, affectedRefs.map((ref) => ({
       objectRef: ref,
       origin: 'ai',
@@ -187,6 +198,8 @@ export function recordAiPatchLifecycle(
       sourceRefs: [`changeset.${params.changesetId}`],
       patchRefs: [id],
       reviewStatus: params.provenanceReviewStatus ?? 'confirmed',
+      mutationClass,
+      beforeAfterSummary: mutationClass ? `This ${mutationClass.toLowerCase()} change affects ${ref}.` : undefined,
     })));
   }
   const outcome = params.status === 'open' ? 'open' : params.status === 'accepted' ? 'accepted' : 'rejected';

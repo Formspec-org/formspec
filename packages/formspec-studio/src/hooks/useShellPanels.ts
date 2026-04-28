@@ -1,4 +1,4 @@
-/** @filedesc Manages shell panel visibility: command palette, import dialog, settings dialogs, chat panel, and AI action events. */
+/** @filedesc Manages shell panel visibility: command palette, import dialog, settings dialogs, chat panel. */
 import { useState, useEffect } from 'react';
 
 export interface ShellPanelsState {
@@ -10,13 +10,9 @@ export interface ShellPanelsState {
   setShowSettings: (show: boolean) => void;
   showAppSettings: boolean;
   setShowAppSettings: (show: boolean) => void;
-  showChatPanel: boolean;
-  setShowChatPanel: (show: boolean) => void;
-  /** Full-workspace assistant (distinct from the slim header rail). */
-  primaryAssistantOpen: boolean;
-  setPrimaryAssistantOpen: (open: boolean) => void;
-  chatPrompt: string | null;
-  setChatPrompt: (prompt: string | null) => void;
+  /** Assistant chat panel open state (right rail in Shell). */
+  assistantOpen: boolean;
+  setAssistantOpen: (open: boolean) => void;
 }
 
 export function useShellPanels(): ShellPanelsState {
@@ -24,9 +20,7 @@ export function useShellPanels(): ShellPanelsState {
   const [showImport, setShowImport] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showAppSettings, setShowAppSettings] = useState(false);
-  const [showChatPanel, setShowChatPanel] = useState(false);
-  const [primaryAssistantOpen, setPrimaryAssistantOpen] = useState(false);
-  const [chatPrompt, setChatPrompt] = useState<string | null>(null);
+  const [assistantOpen, setAssistantOpen] = useState(false);
 
   useEffect(() => {
     const onOpenSettings = () => setShowSettings(true);
@@ -39,19 +33,6 @@ export function useShellPanels(): ShellPanelsState {
     };
   }, []);
 
-  useEffect(() => {
-    const onAIAction = (event: Event) => {
-      const { prompt } = (event as CustomEvent<{ prompt: string }>).detail ?? {};
-      if (prompt) {
-        setChatPrompt(prompt);
-        setShowChatPanel(false);
-        setPrimaryAssistantOpen(true);
-      }
-    };
-    window.addEventListener('formspec:ai-action', onAIAction);
-    return () => window.removeEventListener('formspec:ai-action', onAIAction);
-  }, []);
-
   return {
     showPalette,
     setShowPalette,
@@ -61,11 +42,7 @@ export function useShellPanels(): ShellPanelsState {
     setShowSettings,
     showAppSettings,
     setShowAppSettings,
-    showChatPanel,
-    setShowChatPanel,
-    primaryAssistantOpen,
-    setPrimaryAssistantOpen,
-    chatPrompt,
-    setChatPrompt,
+    assistantOpen,
+    setAssistantOpen,
   };
 }

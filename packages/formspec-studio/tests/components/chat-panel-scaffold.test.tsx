@@ -5,6 +5,7 @@ import React from 'react';
 import { createProject, type Project } from '@formspec-org/studio-core';
 import { ChatSession } from '@formspec-org/chat';
 import { createLocalChatThreadRepository, clearAllLocalChatThreadScopes } from '../../src/components/chat/chat-thread-repository.js';
+import { createLocalVersionRepository } from '../../src/components/chat/version-repository.js';
 import { clearAllLocalVersionScopes } from '../../src/components/chat/version-repository.js';
 
 // Replace GeminiAdapter with MockAdapter so tests don't hit real APIs
@@ -39,11 +40,13 @@ function renderChatPanel(project?: Project) {
   const p = project ?? createProject();
   const onClose = vi.fn();
   const repository = createLocalChatThreadRepository(localStorage);
+  const versionRepository = createLocalVersionRepository(localStorage);
   return {
-    ...render(<ChatPanel project={p} onClose={onClose} chatThreadRepository={repository} chatProjectScope="test-scope" />),
+    ...render(<ChatPanel project={p} onClose={onClose} chatThreadRepository={repository} chatProjectScope="test-scope" versionRepository={versionRepository} />),
     project: p,
     onClose,
     repository,
+    versionRepository,
   };
 }
 

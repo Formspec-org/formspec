@@ -4,6 +4,7 @@ import { useProject } from '../../state/useProject';
 import { ScreenerItemEditor } from './ScreenerItemEditor';
 import { ScreenerToggle } from './screener/ScreenerToggle';
 import { PhaseList } from './screener/PhaseList';
+import { ScreenerTestRouting } from './screener/ScreenerTestRouting';
 import { WorkspacePage, WorkspacePageSection } from '../../components/ui/WorkspacePage';
 
 export function ScreenerWorkspace() {
@@ -46,6 +47,9 @@ export function ScreenerWorkspace() {
               </p>
             </div>
             <PhaseList />
+            <div className="mt-4">
+              <ScreenerTestRouting />
+            </div>
           </div>
         </WorkspacePageSection>
       </WorkspacePage>

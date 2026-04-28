@@ -71,7 +71,7 @@ describe('StudioApp assistant workspace', () => {
     expect(localStorage.getItem('formspec-studio:onboarding-completed:v1')).toBeNull();
   });
 
-  it('opens assistant workspace from the header assistant menu then returns to shell', async () => {
+  it('opens assistant panel from the header assistant menu then closes it', async () => {
     window.history.replaceState({}, '', '/');
     localStorage.clear();
     render(<StudioApp />);
@@ -84,13 +84,16 @@ describe('StudioApp assistant workspace', () => {
       fireEvent.click(screen.getByTestId('assistant-entry-trigger'));
     });
     await act(async () => {
-      fireEvent.click(screen.getByTestId('assistant-menu-open-workspace'));
+      fireEvent.click(screen.getByTestId('assistant-menu-open-side-chat'));
     });
-    expect(screen.getByTestId('assistant-workspace')).toBeInTheDocument();
+    expect(screen.getByTestId('chat-panel-container')).toBeInTheDocument();
 
     await act(async () => {
-      fireEvent.click(screen.getAllByRole('button', { name: /Open manual controls/i })[0]);
+      fireEvent.click(screen.getByTestId('assistant-entry-trigger'));
     });
-    expect(screen.getByTestId('shell')).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('assistant-menu-hide-chat'));
+    });
+    expect(screen.queryByTestId('chat-panel-container')).not.toBeInTheDocument();
   });
 });

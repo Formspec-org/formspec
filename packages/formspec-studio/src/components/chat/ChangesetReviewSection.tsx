@@ -1,6 +1,8 @@
 /** @filedesc Changeset review wrapper with diagnostics and merge message for the studio chat panel. */
 import { ChangesetReview, type ChangesetReviewData } from '../ChangesetReview.js';
 import { IconTriangleWarning as IconWarning } from '../icons/index.js';
+import { MutationProvenancePanel } from './MutationProvenancePanel.js';
+import type { Project } from '@formspec-org/studio-core';
 
 interface DiagnosticEntry {
   severity: 'error' | 'warning';
@@ -16,6 +18,8 @@ export interface ChangesetReviewSectionProps {
   onRejectGroup: (groupIndex: number) => void;
   onAcceptAll: () => void;
   onRejectAll: () => void;
+  /** When provided, renders the "What changes behind the scenes" provenance panel (ADR 0087). */
+  project?: Project;
 }
 
 export function ChangesetReviewSection({
@@ -26,6 +30,7 @@ export function ChangesetReviewSection({
   onRejectGroup,
   onAcceptAll,
   onRejectAll,
+  project,
 }: ChangesetReviewSectionProps) {
   return (
     <div className="space-y-4">
@@ -36,6 +41,10 @@ export function ChangesetReviewSection({
         onAcceptAll={onAcceptAll}
         onRejectAll={onRejectAll}
       />
+
+      {project && (
+        <MutationProvenancePanel changeset={changeset} project={project} />
+      )}
 
       {diagnostics.length > 0 && (
         <div data-testid="merge-diagnostics" className="mx-4 space-y-2">

@@ -1,4 +1,5 @@
 import { render, screen, act } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, it, expect } from 'vitest';
 import { createProject } from '@formspec-org/studio-core';
 import { ProjectProvider } from '../../src/state/ProjectContext';
@@ -31,8 +32,8 @@ describe('StatusBar', () => {
       </ProjectProvider>,
     );
     expect(screen.getByText(/1 field/i)).toBeInTheDocument();
-    expect(screen.queryByText(/Evidence /i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Layout drift/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Documents attached/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Layout warnings/i)).not.toBeInTheDocument();
   });
 
   it('shows formspec version', () => {
@@ -64,29 +65,20 @@ describe('StatusBar', () => {
     expect(screen.getByText(/2 fields/i)).toBeInTheDocument();
   });
 
-  it('shows bind count', () => {
+  it('shows default chips: status, fields, healthy, ask ai', () => {
     renderStatusBar({
       $formspec: '1.0',
       url: 'urn:test',
       version: '1.0.0',
       items: [{ key: 'f1', type: 'field', dataType: 'string' }],
-      binds: { f1: { required: 'true' } },
     });
-    expect(screen.getByText(/1 bind/i)).toBeInTheDocument();
+    expect(screen.getByText(/draft/i)).toBeInTheDocument();
+    expect(screen.getByText(/1 field/i)).toBeInTheDocument();
+    expect(screen.getByTestId('health-chip')).toBeInTheDocument();
+    expect(screen.getByText(/Ask AI/i)).toBeInTheDocument();
   });
 
-  it('shows shape count', () => {
-    renderStatusBar({
-      $formspec: '1.0',
-      url: 'urn:test',
-      version: '1.0.0',
-      items: [],
-      shapes: [{ name: 's1', severity: 'error', constraint: '1 = 1' }],
-    });
-    expect(screen.getByText(/1 shape/i)).toBeInTheDocument();
-  });
-
-  it('shows evidence and layout intelligence metrics', () => {
+  it('shows renamed metrics behind the more menu', async () => {
     renderStatusBar({
       $formspec: '1.0',
       url: 'urn:test',
@@ -95,6 +87,8 @@ describe('StatusBar', () => {
         { key: 'ein', type: 'field', label: 'EIN', dataType: 'string' },
         { key: 'name', type: 'field', label: 'Legal name', dataType: 'string' },
       ],
+      binds: { f1: { required: 'true' } },
+      shapes: [{ name: 's1', severity: 'error', constraint: '1 = 1' }],
       extensions: {
         'x-studio': {
           provenance: [
@@ -114,21 +108,31 @@ describe('StatusBar', () => {
       },
     });
 
-    expect(screen.getByText(/Evidence 1\/2/i)).toBeInTheDocument();
-    expect(screen.getByText(/Provenance 1/i)).toBeInTheDocument();
-    expect(screen.getByText(/Patches open 1/i)).toBeInTheDocument();
-    expect(screen.getByText(/Layout drift 1/i)).toBeInTheDocument();
+    const moreBtn = screen.getByLabelText(/more metrics/i);
+    await userEvent.click(moreBtn);
+
+    expect(screen.getByText(/Data connections/i)).toBeInTheDocument();
+    expect(screen.getByText(/Cross-field rules/i)).toBeInTheDocument();
+    expect(screen.getByText(/Documents attached/i)).toBeInTheDocument();
+    expect(screen.getByText(/AI changes/i)).toBeInTheDocument();
+    expect(screen.getByText(/Layout warnings/i)).toBeInTheDocument();
   });
 
-  it('shows presentation mode when set', () => {
+  it('health chip shows warnings when issues exist', () => {
     renderStatusBar({
       $formspec: '1.0',
       url: 'urn:test',
       version: '1.0.0',
       items: [],
-      formPresentation: { pageMode: 'wizard' },
+      extensions: {
+        'x-studio': {
+          layouts: [
+            { id: 'mobile', name: 'Mobile', channel: 'Mobile', placements: [], hiddenFields: [], drift: [{ fieldRef: 'items.name', status: 'open' }] },
+          ],
+        },
+      },
     });
-    expect(screen.getByText(/wizard/i)).toBeInTheDocument();
+    expect(screen.getByTestId('health-chip')).toHaveTextContent(/1 warning/i);
   });
 
   it('updates when definition changes', () => {

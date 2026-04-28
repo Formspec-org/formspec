@@ -1,5 +1,5 @@
 /** @filedesc Main studio shell; composes the header, blueprint sidebar, workspace tabs, and status bar. */
-import { useEffect, useMemo, useCallback } from 'react';
+import { useEffect, useMemo, useCallback, useRef } from 'react';
 import { type ColorScheme } from '../hooks/useColorScheme';
 import { useWorkspaceRouter } from '../hooks/useWorkspaceRouter';
 import { useEditorState } from '../hooks/useEditorState';
@@ -39,18 +39,28 @@ import { WorkspaceContent } from './shell/WorkspaceContent';
 import { ShellDialogs } from './shell/ShellDialogs';
 import { useBlueprintSectionResolution } from './shell/useBlueprintSectionResolution';
 import { getShellBackgroundImage } from './shell/shell-background-image';
-import { useOpenAssistantWorkspace } from '../studio-app/StudioWorkspaceViewContext';
-import { ASSISTANT_COMPOSER_INPUT_TEST_ID } from '../constants/assistant-dom';
 
 interface ShellProps {
   colorScheme?: ColorScheme;
+  chatThreadRepository?: import('./chat/chat-thread-repository').ChatThreadRepository;
+  versionRepository?: import('./chat/version-repository').VersionRepository;
+  chatProjectScope?: string;
 }
 
-export function Shell({ colorScheme }: ShellProps = {}) {
+export function Shell({ colorScheme, chatThreadRepository, versionRepository, chatProjectScope }: ShellProps = {}) {
   const project = useProject();
-  const shellChatThreadRepository = useMemo(() => createLocalChatThreadRepository(), []);
-  const shellVersionRepository = useMemo(() => createLocalVersionRepository(), []);
-  const shellAssistantPersistenceScope = useMemo(() => deriveChatProjectScope(project), [project]);
+  const localChatRepoRef = useRef<import('./chat/chat-thread-repository').ChatThreadRepository | null>(null);
+  const localVersionRepoRef = useRef<import('./chat/version-repository').VersionRepository | null>(null);
+  if (!chatThreadRepository && !localChatRepoRef.current) {
+    localChatRepoRef.current = createLocalChatThreadRepository();
+  }
+  if (!versionRepository && !localVersionRepoRef.current) {
+    localVersionRepoRef.current = createLocalVersionRepository();
+  }
+  const derivedChatProjectScope = useMemo(() => deriveChatProjectScope(project), [project]);
+  const shellChatThreadRepository = chatThreadRepository ?? localChatRepoRef.current!;
+  const shellVersionRepository = versionRepository ?? localVersionRepoRef.current!;
+  const shellAssistantPersistenceScope = chatProjectScope ?? derivedChatProjectScope;
   const { selectedKey, selectedKeyForTab, deselect, select } = useSelection();
 
   const router = useWorkspaceRouter();
@@ -105,17 +115,9 @@ export function Shell({ colorScheme }: ShellProps = {}) {
     setShowSettings,
     showAppSettings,
     setShowAppSettings,
-    showChatPanel,
-    setShowChatPanel,
-    primaryAssistantOpen,
-    setPrimaryAssistantOpen,
-    chatPrompt,
-    setChatPrompt,
+    assistantOpen,
+    setAssistantOpen,
   } = panels;
-
-  const assistantRailOpen = showChatPanel && !compactLayout;
-  const assistantPrimaryOpen = primaryAssistantOpen;
-  const assistantDocked = assistantRailOpen || assistantPrimaryOpen;
 
   const activeTabScope = activeTab.toLowerCase();
   const scopedSelectedKey = selectedKeyForTab(activeTabScope);
@@ -184,7 +186,6 @@ export function Shell({ colorScheme }: ShellProps = {}) {
 
   const hasScreener = project.state.screener !== null;
   const shellBackgroundImage = getShellBackgroundImage(colorScheme?.resolvedTheme ?? 'light');
-  const openAssistantWorkspace = useOpenAssistantWorkspace();
 
   const workspaceContent = (
     <WorkspaceContent
@@ -224,32 +225,14 @@ export function Shell({ colorScheme }: ShellProps = {}) {
         onOpenMetadata={() => setShowSettings(true)}
         onToggleAccountMenu={() => setShowAppSettings(true)}
         onToggleMenu={compactLayout ? () => setShowBlueprintDrawer(true) : undefined}
-        assistantMenu={
-          openAssistantWorkspace
-            ? {
-                compactLayout,
-                onOpenFullWorkspace: openAssistantWorkspace,
-                sideChatOpen: showChatPanel && !primaryAssistantOpen,
-                overlayChatOpen: primaryAssistantOpen,
-                onOpenSideChat: () => {
-                  setPrimaryAssistantOpen(false);
-                  setShowChatPanel(true);
-                },
-                onCloseAllChat: () => {
-                  setShowChatPanel(false);
-                  setPrimaryAssistantOpen(false);
-                  setChatPrompt(null);
-                },
-                onOpenOverlayChat: () => {
-                  setPrimaryAssistantOpen(true);
-                  setShowChatPanel(false);
-                  queueMicrotask(() => {
-                    document.querySelector<HTMLTextAreaElement>(`[data-testid="${ASSISTANT_COMPOSER_INPUT_TEST_ID}"]`)?.focus();
-                  });
-                },
-              }
-            : null
-        }
+        assistantMenu={{
+          compactLayout,
+          sideChatOpen: assistantOpen,
+          overlayChatOpen: false,
+          onOpenSideChat: () => setAssistantOpen(true),
+          onCloseAllChat: () => setAssistantOpen(false),
+          onOpenOverlayChat: () => setAssistantOpen(true),
+        }}
         isCompact={compactLayout}
         colorScheme={colorScheme}
       />
@@ -334,7 +317,7 @@ export function Shell({ colorScheme }: ShellProps = {}) {
               </div>
             </div>
           </main>
-          {activeTab === 'Editor' && !compactLayout && !assistantDocked && (
+          {activeTab === 'Editor' && !compactLayout && !assistantOpen && (
             showRightPanel ? (
               <>
                 <ResizeHandle side="right" onResize={onResizeRight} />
@@ -370,7 +353,7 @@ export function Shell({ colorScheme }: ShellProps = {}) {
               </button>
             )
           )}
-          {activeTab === 'Layout' && !compactLayout && !assistantDocked && (
+          {activeTab === 'Layout' && !compactLayout && !assistantOpen && (
             showLayoutPreviewPanel ? (
               <>
                 <ResizeHandle side="right" onResize={onResizeRight} />
@@ -412,32 +395,21 @@ export function Shell({ colorScheme }: ShellProps = {}) {
               </button>
             )
           )}
-          {assistantDocked && (
+          {assistantOpen && (
             <div
               id="chat-panel-container"
               data-testid="chat-panel-container"
-              aria-label={assistantPrimaryOpen ? 'AI assistant — full view' : 'AI assistant'}
-              className={
-                assistantPrimaryOpen
-                  ? compactLayout
-                    ? 'fixed inset-0 z-50 flex min-h-0 flex-col bg-surface'
-                    : 'absolute inset-0 z-[38] m-2 flex min-h-0 flex-col overflow-hidden rounded-2xl border border-border/70 bg-surface shadow-[0_24px_80px_rgba(23,32,51,0.16)] dark:border-border/50 dark:shadow-[0_24px_80px_rgba(0,0,0,0.45)]'
-                  : 'flex w-[360px] shrink-0 min-h-0 flex-col border-l border-border/70 bg-surface'
-              }
+              aria-label="AI assistant"
+              className="flex w-[360px] shrink-0 min-h-0 flex-col border-l border-border/70 bg-surface"
             >
               <ChatPanel
                 project={project}
-                surfaceLayout={assistantPrimaryOpen ? 'primary' : 'rail'}
+                surfaceLayout="rail"
                 chatThreadRepository={shellChatThreadRepository}
                 chatProjectScope={shellAssistantPersistenceScope}
                 versionRepository={shellVersionRepository}
                 versionScope={shellAssistantPersistenceScope}
-                onClose={() => {
-                  setShowChatPanel(false);
-                  setPrimaryAssistantOpen(false);
-                  setChatPrompt(null);
-                }}
-                initialPrompt={chatPrompt}
+                onClose={() => setAssistantOpen(false)}
               />
             </div>
           )}

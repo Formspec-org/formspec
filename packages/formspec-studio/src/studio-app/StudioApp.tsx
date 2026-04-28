@@ -1,5 +1,5 @@
 /** @filedesc Bootstraps a Studio project and wires context providers around the Shell. */
-import { useState, useEffect, useCallback, type ReactElement } from 'react';
+import { useState, useEffect, useCallback, useMemo, type ReactElement } from 'react';
 import { createProject, type CreateProjectOptions, type Project, type FormDefinition, type ProjectBundle } from '@formspec-org/studio-core';
 import commonRegistry from '../../../../registries/formspec-common.registry.json';
 
@@ -10,7 +10,18 @@ import { ActiveGroupProvider } from '../state/useActiveGroup';
 import { Shell } from '../components/Shell';
 import { blankDefinition } from '../fixtures/blank-definition';
 import { useColorScheme } from '../hooks/useColorScheme';
+import { useChatSessionController } from '../hooks/useChatSessionController';
+import { ChatSessionControllerProvider } from '../state/ChatSessionControllerContext';
 import { AssistantWorkspace } from '../onboarding/AssistantWorkspace';
+import {
+  createLocalChatThreadRepository,
+  deriveChatProjectScope,
+  type ChatThreadRepository,
+} from '../components/chat/chat-thread-repository';
+import {
+  createLocalVersionRepository,
+  type VersionRepository,
+} from '../components/chat/version-repository';
 import {
   getInitialStudioWorkspaceView,
   markOnboardingCompleted,
@@ -18,11 +29,8 @@ import {
   setPersistedStudioView,
 } from '../onboarding/onboarding-storage';
 import { emitOnboardingTelemetry } from '../onboarding/onboarding-telemetry';
-import {
-  OPEN_ASSISTANT_WORKSPACE_EVENT,
-  type OpenAssistantWorkspaceEventDetail,
-  StudioWorkspaceViewProvider,
-} from './StudioWorkspaceViewContext';
+
+const OPEN_ASSISTANT_WORKSPACE_EVENT = 'formspec:open-assistant-workspace';
 
 /**
  * Check for a handoff bundle in localStorage (from Chat or Inquest).
@@ -76,6 +84,11 @@ export function StudioApp({ project }: StudioAppProps = {}): ReactElement {
   });
   const colorScheme = useColorScheme();
 
+  // Repositories constructed once at app level — converges Shell + AssistantWorkspace duplicates
+  const chatThreadRepository = useMemo(() => createLocalChatThreadRepository(), []);
+  const versionRepository = useMemo(() => createLocalVersionRepository(), []);
+  const chatProjectScope = useMemo(() => deriveChatProjectScope(activeProject), [activeProject]);
+
   const openAssistantWorkspace = useCallback(() => {
     setPersistedStudioView('assistant');
     setStudioView('assistant');
@@ -94,7 +107,7 @@ export function StudioApp({ project }: StudioAppProps = {}): ReactElement {
 
   useEffect(() => {
     const onOpenAssistant = (event: Event) => {
-      const detail = (event as CustomEvent<OpenAssistantWorkspaceEventDetail>).detail;
+      const detail = (event as CustomEvent<{ resetFirstRun?: boolean }>).detail;
       if (detail?.resetFirstRun) {
         resetOnboardingPreferences();
       }
@@ -125,21 +138,31 @@ export function StudioApp({ project }: StudioAppProps = {}): ReactElement {
     setStudioView('workspace');
   };
 
+  const controller = useChatSessionController({
+    project: activeProject,
+    chatThreadRepository,
+    chatProjectScope,
+    versionRepository,
+  });
+
   return (
     <ProjectProvider project={activeProject}>
-      <SelectionProvider>
+      <SelectionProvider project={activeProject}>
         <ActiveGroupProvider>
-          {studioView === 'assistant' ? (
-            <AssistantWorkspace
+          <ChatSessionControllerProvider controller={controller}>
+            {studioView === 'assistant' ? (
+              <AssistantWorkspace
               project={activeProject}
               onEnterStudio={enterWorkspaceFromAssistant}
               colorScheme={colorScheme}
+              chatThreadRepository={chatThreadRepository}
+              versionRepository={versionRepository}
+              chatProjectScope={chatProjectScope}
             />
           ) : (
-            <StudioWorkspaceViewProvider openAssistantWorkspace={openAssistantWorkspace}>
-              <Shell colorScheme={colorScheme} />
-            </StudioWorkspaceViewProvider>
+              <Shell colorScheme={colorScheme} chatThreadRepository={chatThreadRepository} versionRepository={versionRepository} chatProjectScope={chatProjectScope} />
           )}
+          </ChatSessionControllerProvider>
         </ActiveGroupProvider>
       </SelectionProvider>
     </ProjectProvider>

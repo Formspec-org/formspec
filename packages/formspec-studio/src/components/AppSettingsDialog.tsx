@@ -7,7 +7,6 @@ import {
   saveProviderConfig,
   clearProviderConfig,
 } from '../lib/provider-config-storage.js';
-import { OPEN_ASSISTANT_WORKSPACE_EVENT, type OpenAssistantWorkspaceEventDetail } from '../studio-app/StudioWorkspaceViewContext.js';
 import { useEscapeKey } from '../hooks/useEscapeKey';
 
 interface AppSettingsDialogProps {
@@ -15,8 +14,8 @@ interface AppSettingsDialogProps {
   onClose: () => void;
 }
 
-function dispatchOpenAssistantWorkspace(detail: OpenAssistantWorkspaceEventDetail): void {
-  window.dispatchEvent(new CustomEvent(OPEN_ASSISTANT_WORKSPACE_EVENT, { detail }));
+function dispatchOpenAssistantWorkspace(detail: { resetFirstRun?: boolean } = {}): void {
+  window.dispatchEvent(new CustomEvent('formspec:open-assistant-workspace', { detail }));
 }
 
 /** Returns the currently saved provider config, or null. */

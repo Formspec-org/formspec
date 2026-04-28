@@ -25,8 +25,8 @@ describe('Blueprint', () => {
   it('renders all 9 section names', () => {
     renderBlueprint();
     const sections = [
-      'Structure', 'Component Tree', 'Theme', 'Screener', 'Variables',
-      'Data Sources', 'Option Sets', 'Mappings', 'Settings'
+      'Structure', 'Component Tree', 'Theme', 'Screener', 'Calculations',
+      'External data', 'Option Sets', 'Mappings', 'Settings'
     ];
     for (const name of sections) {
       expect(screen.getByText(name)).toBeInTheDocument();
@@ -45,7 +45,7 @@ describe('Blueprint', () => {
     const onSectionChange = vi.fn();
     renderBlueprint(onSectionChange);
     await act(async () => {
-      screen.getByText('Variables').click();
+      screen.getByText('Calculations').click();
     });
     expect(onSectionChange).toHaveBeenCalledWith('Variables');
   });
@@ -130,7 +130,7 @@ describe('Blueprint', () => {
 
     // Click "Variables" — a Manage concern — while in Build view
     await act(async () => {
-      screen.getByText('Variables').click();
+      screen.getByText('Calculations').click();
     });
 
     // Should still call onSectionChange
@@ -195,7 +195,7 @@ describe('Blueprint', () => {
 
     // Click "Variables" while already in Manage view
     await act(async () => {
-      screen.getByText('Variables').click();
+      screen.getByText('Calculations').click();
     });
 
     expect(onSectionChange).toHaveBeenCalledWith('Variables');

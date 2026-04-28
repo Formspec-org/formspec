@@ -7,6 +7,8 @@ import { ProjectProvider } from '../../src/state/ProjectContext';
 import { SelectionProvider } from '../../src/state/useSelection';
 import { ActiveGroupProvider } from '../../src/state/useActiveGroup';
 import { Shell } from '../../src/components/Shell';
+import { createLocalChatThreadRepository } from '../../src/components/chat/chat-thread-repository';
+import { createLocalVersionRepository } from '../../src/components/chat/version-repository';
 
 const seededDefinition = {
   $formspec: '1.0' as const,
@@ -44,6 +46,37 @@ function renderShell(definition?: FormDefinition, width = 1440, screener?: unkno
 }
 
 describe('Shell', () => {
+  it('supports toggling injected chat repositories across rerenders', () => {
+    const project = createProject();
+    const threadRepository = createLocalChatThreadRepository(localStorage);
+    const versionRepository = createLocalVersionRepository(localStorage);
+    const { rerender } = render(
+      <ProjectProvider project={project}>
+        <SelectionProvider>
+          <ActiveGroupProvider>
+            <Shell />
+          </ActiveGroupProvider>
+        </SelectionProvider>
+      </ProjectProvider>
+    );
+
+    rerender(
+      <ProjectProvider project={project}>
+        <SelectionProvider>
+          <ActiveGroupProvider>
+            <Shell
+              chatThreadRepository={threadRepository}
+              versionRepository={versionRepository}
+              chatProjectScope="shell-test-scope"
+            />
+          </ActiveGroupProvider>
+        </SelectionProvider>
+      </ProjectProvider>
+    );
+
+    expect(screen.getByRole('button', { name: /the stack home/i })).toBeInTheDocument();
+  });
+
   it('renders header with app title', () => {
     renderShell();
     expect(screen.getByRole('button', { name: /the stack home/i })).toBeInTheDocument();

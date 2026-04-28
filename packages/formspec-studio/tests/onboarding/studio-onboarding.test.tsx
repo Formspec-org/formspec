@@ -7,6 +7,8 @@ import { AssistantWorkspace } from '../../src/onboarding/AssistantWorkspace';
 import { ProjectProvider } from '../../src/state/ProjectContext';
 import { SelectionProvider } from '../../src/state/useSelection';
 import { ActiveGroupProvider } from '../../src/state/useActiveGroup';
+import { createLocalChatThreadRepository } from '../../src/components/chat/chat-thread-repository';
+import { createLocalVersionRepository } from '../../src/components/chat/version-repository';
 
 vi.mock('@formspec-org/chat', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@formspec-org/chat')>();
@@ -35,6 +37,40 @@ function renderOnboarding(project: Project = createProject()) {
 describe('AssistantWorkspace', () => {
   beforeEach(() => {
     localStorage.clear();
+  });
+
+  it('supports toggling injected chat repositories across rerenders', () => {
+    const project = createProject();
+    const onEnterStudio = vi.fn();
+    const threadRepository = createLocalChatThreadRepository(localStorage);
+    const versionRepository = createLocalVersionRepository(localStorage);
+    const { rerender } = render(
+      <ProjectProvider project={project}>
+        <SelectionProvider>
+          <ActiveGroupProvider>
+            <AssistantWorkspace project={project} onEnterStudio={onEnterStudio} />
+          </ActiveGroupProvider>
+        </SelectionProvider>
+      </ProjectProvider>
+    );
+
+    rerender(
+      <ProjectProvider project={project}>
+        <SelectionProvider>
+          <ActiveGroupProvider>
+            <AssistantWorkspace
+              project={project}
+              onEnterStudio={onEnterStudio}
+              chatThreadRepository={threadRepository}
+              versionRepository={versionRepository}
+              chatProjectScope="assistant-test-scope"
+            />
+          </ActiveGroupProvider>
+        </SelectionProvider>
+      </ProjectProvider>
+    );
+
+    expect(screen.getByText(/Describe the form once. Iterate quickly./i)).toBeInTheDocument();
   });
 
   it('loads the selected starter into the same project', async () => {
