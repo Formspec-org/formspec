@@ -4,3 +4,6 @@
 [submodule "trellis"]
 	path = trellis
 	url = https://github.com/Formspec-org/trellis
+[submodule "formspec-internal"]
+	path = formspec-internal
+	url = https://github.com/Formspec-org/formspec-internal
