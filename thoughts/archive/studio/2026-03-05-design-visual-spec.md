@@ -1,5 +1,7 @@
 # Formspec Studio — Visual Design Specification
 
+> **Archived 2026-04-28.** Stale — the amber `#D4A34A` accent and `Plus Jakarta Sans` UI font specified here have been superseded by the current token system in [`packages/formspec-studio/src/index.css`](../../../packages/formspec-studio/src/index.css) (blue `--studio-color-accent: #3759c8`, `Space Grotesk` UI font). `Fraunces` and `JetBrains Mono` did land. Live visual direction follows the user's frontend design hard-rules memory + current CSS tokens, not this doc.
+
 ## Audience & Context
 
 Primary users are **federal government employees** — grants program officers, compliance staff, and agency IT teams — who configure forms for public-facing programs. They work in institutional environments with mandated accessibility, often on standard-issue laptops with 1920×1080 displays.

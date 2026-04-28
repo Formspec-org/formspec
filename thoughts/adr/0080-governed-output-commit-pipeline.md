@@ -1,4 +1,4 @@
-# ADR 0074: Governed Output-Commit Pipeline
+# ADR 0080: Governed Output-Commit Pipeline
 
 **Status:** Proposed
 **Date:** 2026-04-25

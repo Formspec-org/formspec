@@ -1,5 +1,7 @@
 # PRD: Formspec Studio v2
 
+> **Archived 2026-04-28.** Superseded by [`thoughts/studio/2026-04-28-prd-chatgpt-forms-ide.md`](../../studio/2026-04-28-prd-chatgpt-forms-ide.md), itself decomposed into ADRs [0082](../../adr/0082-lift-chat-session-above-studio.md)–[0087](../../adr/0087-ai-mutation-provenance-surface.md). Two specific posture inversions vs this PRD: (a) the proposed `Simple / Advanced` inspector toggle is replaced by ADR 0084's rename-without-hiding (the `advanced` boolean controls *depth*, not artifact visibility); (b) the implied `Chat | Edit | Preview` mode framing is replaced by ADR 0083's layout knobs (no top-level mode enum). Kept for historical context — do not cite as current direction.
+
 > **This is a greenfield rewrite.** The previous form-builder (`feat/unified-component-tree-editor`) was a learning exercise. We are throwing away all of its code and starting from scratch. Nothing is carried forward — no components, no state management, no CSS, no file structure. What *is* carried forward: every lesson learned about what worked, what didn't, where the abstractions were wrong, and where the spec's complexity actually lives. This PRD encodes those lessons into a new design.
 
 ## 1. Vision

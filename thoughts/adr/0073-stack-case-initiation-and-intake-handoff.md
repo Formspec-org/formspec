@@ -44,7 +44,7 @@ Formspec may say "this intake is ready to start a case." It does not decide that
 
 ### D-3. The cross-layer seam is an `IntakeHandoff`
 
-The seam between Formspec and WOS is a named handoff artifact. Working name: `IntakeHandoff`. Alternate working name: `CaseInitiationRequest`.
+The seam between Formspec and WOS is a named handoff artifact: `IntakeHandoff` (formerly drafted as `CaseInitiationRequest`; the working alternate is retired as of this ADR's acceptance to keep one canonical name in downstream code, schemas, and exports).
 
 The handoff is not an adapter convention. It is a center-declared stack contract with schema, fixtures, and verifier-visible references. It is the WOS-facing acknowledgment artifact for the intake record; raw submission remains Formspec-side. It carries the response and evidence pointers WOS needs to either attach intake to an existing case or create a new governed case.
 

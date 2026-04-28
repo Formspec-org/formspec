@@ -631,7 +631,7 @@ Use Hyperledger Fabric, Ethereum L2, or similar for immutability and distributed
 
 ### Formspec Coprocessor spec
 
-1. The `IntakeHandoff` / `CaseInitiationRequest` structure: submission reference, response hash, validation report, case file mapping, contract validation result, and kernel document reference.
+1. The `IntakeHandoff` structure (formerly `CaseInitiationRequest`; renamed via ADR 0073): submission reference, response hash, validation report, case file mapping, contract validation result, and kernel document reference.
 2. How `response.completed` produces an intake handoff, and how WOS acceptance produces `case.created` -- the phase transition.
 3. How subsequent Formspec events (RFI responses) append to the same ledger.
 4. The checkpoint hash at case creation, linking the intake chain to the governance chain.

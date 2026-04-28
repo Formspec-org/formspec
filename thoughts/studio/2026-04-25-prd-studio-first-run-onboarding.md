@@ -4,7 +4,7 @@
 | --- | --- |
 | **Status** | In progress |
 | **Product** | Formspec Studio (`packages/formspec-studio`) |
-| **Related** | [Formspec Studio PRD](./2026-03-05-product-requirements-v2.md) (vision and editing model; onboarding implements a concrete first-run path) |
+| **Related** | [Formspec Studio PRD (archived)](../archive/studio/2026-03-05-product-requirements-v2.md) (vision and editing model; onboarding implements a concrete first-run path) |
 
 ### Implementation alignment (codebase, 2026-04)
 

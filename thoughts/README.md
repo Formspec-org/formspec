@@ -28,7 +28,10 @@ All internal planning, research, decisions, and reviews live here. `docs/` is fo
 
 ## Active ADRs (open / in-flight)
 
-Next free id: **0074** (duplicate `0047` / `0048` / `0053` / `0061` filenames remain on disk — disambiguate by slug when linking).
+Next free id: **0081**. Disambiguate-by-slug required for the following id collisions on disk:
+
+- `0061` — primary ADR + Sidecar (`-tasks.md`); both active and intentional.
+- `0047` / `0048` / `0053` — historical cross-active/archive overlap; link by slug.
 
 | ADR | File | Status (from doc) | Notes |
 |-----|------|-------------------|-------|
@@ -50,6 +53,12 @@ Next free id: **0074** (duplicate `0047` / `0048` / `0053` / `0061` filenames re
 | 0055 | [studio-semantic-workspace-consolidation](adr/0055-studio-semantic-workspace-consolidation.md) | Proposed | Editor-centric semantic UX |
 | 0056 | [click-to-sign-attestation](adr/0056-click-to-sign-attestation-component.md) | Proposed | Click-to-sign component |
 | 0059 | [unified-ledger-canonical-event-store](adr/0059-unified-ledger-as-canonical-event-store.md) | Narrative locked 2026-04-22 | Phase 3+ target; program summary [wos-spec/thoughts/plans/0059-unified-ledger-as-canonical-event-store.md](../wos-spec/thoughts/plans/0059-unified-ledger-as-canonical-event-store.md) |
+| 0061 | [current-state-authoring-runtime](adr/0061-current-state-authoring-runtime.md) | Proposed | Tighten `formspec-studio-core` around a headless authoring runtime |
+| 0061-sidecar | [current-state-authoring-runtime-tasks](adr/0061-current-state-authoring-runtime-tasks.md) | Proposed | Implementation task list for ADR 0061 |
+| 0062 | [post-split-follow-ups](adr/0062-post-split-follow-ups.md) | Proposed | Unresolved items from ADR 0001 |
+| 0063 | [release-trains-by-tier](adr/0063-release-trains-by-tier.md) | Proposed | Release-train cadence by velocity tier |
+| 0064 | [wos-granularity-and-ai-native-positioning](adr/0064-wos-granularity-and-ai-native-positioning.md) | Proposed | WOS granularity / AI-native positioning |
+| 0065 | [wos-authoring-stack-mirrors-formspec](adr/0065-wos-authoring-stack-mirrors-formspec.md) | Proposed | WOS authoring stack mirrors Formspec |
 | 0066 | [stack-amendment-and-supersession](adr/0066-stack-amendment-and-supersession.md) | Proposed | Cross-layer correction / amendment / supersession / rescission |
 | 0067 | [stack-statutory-clocks](adr/0067-stack-statutory-clocks.md) | Proposed | Cross-layer clock event semantics |
 | 0068 | [stack-tenant-and-scope-composition](adr/0068-stack-tenant-and-scope-composition.md) | Proposed | Tenant, definition, kernel, and ledger scope bundle |
@@ -58,6 +67,13 @@ Next free id: **0074** (duplicate `0047` / `0048` / `0053` / `0061` filenames re
 | 0071 | [stack-cross-layer-migration-and-versioning](adr/0071-stack-cross-layer-migration-and-versioning.md) | Proposed | Version pins and verifier bundle semantics |
 | 0072 | [stack-evidence-integrity-and-attachment-binding](adr/0072-stack-evidence-integrity-and-attachment-binding.md) | Accepted | Attachment binding across intake, custody, export, verify |
 | 0073 | [stack-case-initiation-and-intake-handoff](adr/0073-stack-case-initiation-and-intake-handoff.md) | Accepted | WOS-owned case creation; Formspec intake handoff routes |
+| 0074 | [formspec-native-field-level-transparency](adr/0074-formspec-native-field-level-transparency.md) | Proposed | Class-Aware Response and Bucketed Encryption (Core); authoritative for `accessControl` / bucketed Response / Privacy Profile |
+| 0075 | [rejection-register](adr/0075-rejection-register.md) | Proposed | WOS rejection register (workflow-consolidation cluster) |
+| 0076 | [product-tier-consolidation](adr/0076-product-tier-consolidation.md) | Proposed | Product-tier workflow schema consolidation (workflow-consolidation cluster) |
+| 0077 | [canonical-kernel-extension-seams](adr/0077-canonical-kernel-extension-seams.md) | Proposed | Canonical kernel extension seams (workflow-consolidation cluster) |
+| 0078 | [foreach-topology](adr/0078-foreach-topology.md) | Proposed | WOS kernel `foreach` topology (workflow-consolidation cluster) |
+| 0079 | [formspec-native-intake-handoff-emission](adr/0079-formspec-native-intake-handoff-emission.md) | Proposed | Formspec native IntakeHandoff emission for WOS targets (workflow-consolidation cluster) |
+| 0080 | [governed-output-commit-pipeline](adr/0080-governed-output-commit-pipeline.md) | Proposed | Governed output-commit pipeline (workflow-consolidation cluster) |
 
 **Implemented / accepted / historical ADRs:** [`archive/adr/`](archive/adr/) (tier plans, WASM split, WOS boundary, grant design, etc.).
 
@@ -69,6 +85,7 @@ Next free id: **0074** (duplicate `0047` / `0048` / `0053` / `0061` filenames re
 |------|---------|
 | [self-contained-grant-app](plans/2026-02-27-self-contained-grant-app.md) | Vite example under `examples/grant-application` (not done) |
 | [ralph-loop-execution](plans/2026-02-28-ralph-loop-execution.md) | Parity / iteration harness (Proposed) |
+| [editor-canvas-audit](plans/2026-03-13-editor-canvas-audit.md) | Editor canvas audit |
 | [u1-u4-mcp-ux-fixes](plans/2026-03-16-u1-u4-mcp-ux-fixes.md) | MCP UX fixes |
 | [cloudflare-form-deploy](plans/2026-03-17-cloudflare-form-deploy.md) | Deploy scaffold |
 | [pages-behavioral-api](plans/2026-03-17-pages-behavioral-api.md) | Pages behavioral API (Draft) |
@@ -81,6 +98,8 @@ Next free id: **0074** (duplicate `0047` / `0048` / `0053` / `0061` filenames re
 | [layout-workspace-completion](plans/2026-04-01-layout-workspace-completion.md) | Layout workspace follow-ups |
 | [phase11-coprocessor-fel](plans/2026-04-11-phase11-coprocessor-fel.md) | Phase 11 FEL / coprocessor execution |
 | [phase11-coprocessor-open-backlog](plans/2026-04-11-phase11-coprocessor-open-backlog.md) | Phase 11 closure / collateral |
+| [trellis-trim-and-dedup](plans/2026-04-15-trellis-trim-and-dedup.md) | Trellis crate trim + deduplication |
+| [changelog-generation-fails-doctype-detection](plans/2026-04-17-changelog-generation-fails-doctype-detection.md) | Changelog generator doctype-detection bug fix |
 
 **Completed plans:** [`archive/plans/`](archive/plans/).
 
@@ -110,6 +129,8 @@ Next free id: **0074** (duplicate `0047` / `0048` / `0053` / `0061` filenames re
 | [formspec-brand-guidelines](specs/2026-04-06-formspec-brand-guidelines.md) | Brand voice / visual |
 | [phase4-follow-up-design-decisions](specs/2026-04-07-phase4-follow-up-design-decisions.md) | Repeat-target FEL / tree paths |
 | [formspec-wos-phase11-integration-master](../wos-spec/thoughts/specs/2026-04-11-formspec-wos-phase11-integration-master.md) | **WOS ↔ Formspec Phase 11 index** *(in `wos-spec/` submodule)* |
+| [platform-decisioning-forks-and-options](specs/2026-04-22-platform-decisioning-forks-and-options.md) | **Platform decision register** — end-state commitments, leans, forks, kill criteria (cited by CLAUDE.md Operating Context) |
+| [shared-cross-seam-fixture-bundle-design](specs/2026-04-24-shared-cross-seam-fixture-bundle-design.md) | Shared cross-seam fixture bundle design |
 
 **Delivered / merged design specs (historical):** [`archive/specs/`](archive/specs/) (MCP, core split, assist interop, layout workspace DnD, Astro site, etc.).
 

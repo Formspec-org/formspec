@@ -41,7 +41,7 @@ Seven commitments follow from that target:
 4. **Ledger-visible workflow truth.** Durable engines may orchestrate and retry, but decisions, stalls, resumes, compensation, overrides, and policy-relevant transitions must be visible in exported evidence when they affect the case.
 5. **Custody-honest privacy.** Encryption, key destruction, selective disclosure, metadata minimization, and identity separation must match what operators can decrypt and what verifiers can still prove.
 6. **Product sequencing cannot weaken the center.** Demos, SaaS onboarding, and procurement packages may ship in practical order, but they cannot introduce rival semantics for proof, signing, custody, or governance.
-7. **Data-and-workflow zero trust is the architectural posture.** Server processes never hold case content plaintext at rest; per-class encryption keyed to client-held authenticators (WebAuthn PRF for respondents, hardware tokens / OIDC-mediated wrapped keys for staff); two-layer access (relationship-based authorization gates the metadata, key-bag membership gates the content). Three deployment modes — SBA (audited server-side decryption fallback), Federal (TEE-attested processing), Sovereign (respondent client-origin keys) — declared per deployment, with declaration matching observable behavior. NIST SP 800-207, CISA ZTMM v2.0 Data pillar, OMB M-22-09, FedRAMP rev5 cross-reference cleanly.
+7. **Data-and-workflow zero trust is the architectural posture.** Server processes never hold case content plaintext at rest; per-class encryption keyed to client-held authenticators (WebAuthn PRF for respondents, hardware tokens / OIDC-mediated wrapped keys for staff); two-layer access (relationship-based authorization gates the metadata, key-bag membership gates the content). Three deployment modes — SBA (audited server-side decryption, KMS-logged, plaintext never at rest), Federal (platform cannot reconstruct plaintext outside an attested or math-bound boundary — TEE / FHE / MPC adapters), Sovereign (as Federal, plus respondent's content uses client-origin keys) — declared per deployment, with declaration matching observable behavior. NIST SP 800-207, CISA ZTMM v2.0 Data pillar, OMB M-22-09, FedRAMP rev5 cross-reference cleanly.
 
 These commitments are architectural. Concrete storage engines, witness services, identity providers, workflow engines, and legal postures remain adapters unless a spec promotes them with vectors and conformance behavior.
 
@@ -69,7 +69,7 @@ A specification for the governance layer of rights-impacting workflows — benef
 
 A cryptographic specification for making the record portable and durable. Content-addressed, signed events; sealed checkpoints; export bundles that verify offline without access to the original system. Identity-decoupled: pseudonymous continuity references carry the audit chain while identity proofing attaches separately through provider-neutral adapters. The audit chain tracks continuity and integrity of respondent activity; it does not require every event to embed legal identity directly, and it does not collapse explicit signing attestation into ordinary event continuity. Anchoring to external trust substrates is pluggable.
 
-**Phased arc (conceptual).** Near term, the integrity story is **attested exports** — a signed bundle and a verifier that do not depend on the vendor runtime. Later phases add **runtime-time attestation** on every write, a **portable case ledger** that composes sealed intake heads with governance events, and optional **federation / witness** tiers (transparency-log-class anchors such as OpenTimestamps, Sigstore Rekor, or tile-based logs) for third-party consistency — without replacing the three-layer separation above. The envelope is designed so later phases are **strict supersets** of the export shape, not parallel byte religions. Detail and gate vocabulary live in [Trellis product vision](trellis/thoughts/product-vision.md) and the [stack-wide vision model](.claude/vision-model.md).
+**Phased arc (conceptual).** Near term, the integrity story is **attested exports** — a signed bundle and a verifier that do not depend on the vendor runtime. Later phases add **runtime-time attestation** on every write, a **portable case ledger** that composes sealed intake heads with governance events, and optional **federation / witness** tiers (transparency-log-class anchors such as OpenTimestamps, Sigstore Rekor, or tile-based logs) for third-party consistency — without replacing the three-layer separation above. The envelope is designed so later phases are **strict supersets** of the export shape, not parallel byte religions. Detail and gate vocabulary live in [Trellis product vision](trellis/thoughts/product-vision.md) and the [stack-wide vision](VISION.md).
 
 ### The Respondent Ledger bridge
 
@@ -205,11 +205,13 @@ Everything in the stack composes through these five seams. Their specific shapes
 
 The five contracts are the baseline, not the full end state. The stack needs additional contracts before it can make serious full-stack product claims. Naming them honestly matters more than pretending the seam list is complete. Open contracts come in two shapes: event-shape gaps (*what lands in the record*) and integration primitives (*how the three layers compose*). The services underneath the event-shape gaps typically exist as adapters already; the integration primitives are fully center work.
 
+**Closure discipline.** Each open contract decomposes into a **center commitment** (semantic byte/wire shape that must settle now to prevent drift across implementations) and **profile-specific extensions** (jurisdiction-specific calendars, cross-jurisdiction reversal, mid-flight migration policies — depend on a specific deployment posture or use case). Center commitments close before any deployment can rely on the contract; profile-specific extensions are trigger-gated by deployment need. This is an architectural-vs-profile distinction, not phased delivery.
+
 **Event-shape gaps.**
 
 - **Evidence integrity.** Files attached during intake — pay stubs, ID photos, supporting documents — are load-bearing for rights-impacting decisions. A contract declaring how their content hashes bind into the chain and travel in the export bundle is missing. Full proposal at [ADR 0072](thoughts/adr/0072-stack-evidence-integrity-and-attachment-binding.md). Storage is an adapter; the binding is center.
 - **Identity attestation shape.** Identity proofing is an adapter slot. The normalized attestation that lands in the ledger is a center concern, currently described in prose rather than contracted.
-- **Signature attestation shape.** Signing workflows — multi-party signatures, countersignatures, consent capture under ESIGN, UETA, or eIDAS — are load-bearing for any rights-impacting use case that needs legal weight. The **machine-verifiable** slice is now wired end-to-end in reference form: canonical intake fields, WOS `SignatureAffirmation` provenance, `custodyHook` append, and Trellis export catalog rows that verifiers check against payloads. What remains center-shaped is **human-facing completion** (certificate-of-completion composition), **shared cross-repo fixtures** that pin one byte story across all three layers, and any further normative tightening of the claim graph — not greenfield invention of the seam.
+- **Signature attestation shape.** Signing workflows — multi-party signatures, countersignatures, consent capture under ESIGN, UETA, or eIDAS — are load-bearing for any rights-impacting use case that needs legal weight. The **machine-verifiable** slice is wired end-to-end in reference form: canonical intake fields, WOS `SignatureAffirmation` provenance, `custodyHook` append, and Trellis export catalog rows that verifiers check against payloads. **Certificate-of-completion composition is specified** by Trellis ADR 0007 (`trellis.certificate-of-completion.v1`, Accepted 2026-04-24). What remains is **shared cross-repo fixtures** that pin one byte story across all three layers, **claim-graph tightening** (signing-intent URI registry; signer-authority claim shape distinct from authentication-method strength), and **scope reopening of `signature.md` §1.3** to admit ESIGN/UETA/eIDAS posture mapping (currently carved out as out-of-scope) — not greenfield invention of the seam.
 - **Actor authorization.** Governance constrains AI agents through deontic modalities and structures human review. A parallel shape for *human* authorization — actor acted under which policy at which moment, attested into the chain — is implicit. IAM is an adapter; the claim shape is center.
 - **Per-field access classification.** Whether a given field is PII, financial, medical, or routine procedural metadata is left to downstream consumers; the encryption boundary arrives too late for the browser to gate plaintext at the keystroke. Closed by [ADR-0074](thoughts/adr/0074-formspec-native-field-level-transparency.md) — `accessControl` as a normative Formspec item property; class taxonomy in an Access-Class Registry companion (registry-tier infrastructure); per-deployment audience policy in a Privacy Profile sidecar; bucketed Response wire shape with per-class DEKs in the key bag; cross-class FEL is a definition error at Core. Companion specs and reference implementation pending.
 - **Amendment and supersession.** Append-only is correct until a decision is wrong. Cross-layer semantics for one decision superseding another — new chain, linked chain, governance event shape — are undefined. Full proposal drafted at [ADR 0066](thoughts/adr/0066-stack-amendment-and-supersession.md); no adapter supplies this — fully center work.
@@ -292,6 +294,21 @@ The **buyer proof package** is procurement-facing: accessibility conformance, op
 
 Product demos sit outside both packages unless they run the same verifier path. An online trust surface may help users understand the record, but it cannot stand in for offline verification or introduce a second proof story.
 
+### Compliance framework mapping (buyer proof package)
+
+How the stack maps onto procurement-relevant compliance frameworks. Architecture-constraining frameworks (NIST 800-207, GDPR Art. 17/20, HIPAA mechanism, FRE 803(6)) live in each layer's own architectural docs because they constrain mechanism choice; the rows below are buyer-facing positioning where the deployment posture and the framework target line up.
+
+| Framework | Mapping |
+|---|---|
+| CISA ZTMM v2.0 — Data pillar | Maturity Level 4–5 (Optimal): customer-managed keys, granular per-resource access, encrypted in transit + at rest |
+| OMB M-22-09 (Federal Zero Trust Strategy) | Data-layer requirements satisfied via per-class DEKs + KMS audit + ledger integrity |
+| OMB M-24-10 (AI in Federal Government) | Agent governance via WOS deontic constraints + Trellis attestation; per-class agent access boundaries |
+| FedRAMP rev5 | Federal-mode target: platform cannot reconstruct plaintext outside an attested or math-bound boundary, with customer-managed keys and audit-log integrity. Audited-decryption posture does not satisfy this claim by itself; an attested or math-bound processing adapter (TEE / FHE / MPC) must deliver the boundary. |
+| Title VI / disparate-impact analysis | Demographic class accessible to equity service; aggregates published as signed ledger events. Verification surface depends on the deployed processing adapter — KMS log entry (audited), TEE attestation, or FHE proof. |
+| NIST SP 800-63 (Digital Identity Guidelines) | IAL2/IAL3 supported via OIDC + Verifiable Credentials |
+
+Each mapping is a *claim shape*; concrete attestation evidence (audit reports, ATO packages, schedule listings) is per-deployment and lives outside the open spec. Architectural constraints behind these mappings: see [`VISION.md`](VISION.md) §VII.
+
 ---
 
 ## Positioning
@@ -329,7 +346,7 @@ Numbers, ratification status, technical surfaces, and open decisions live in the
 First time here:
 
 1. This document.
-2. [Stack-wide vision model](.claude/vision-model.md) — foundational Q1–Q4 answers and per-spec commitments; update there when cross-layer posture changes.
+2. [Stack-wide VISION](VISION.md) — internal companion to this doc: foundational Q1–Q4 answers, platform end-state commitments, trust postures, cross-spec bindings, per-spec commitments, the rejection list. Update there when cross-layer posture changes.
 3. [Platform decisioning register](thoughts/specs/2026-04-22-platform-decisioning-forks-and-options.md) — end-state commitments, implementation leans, open forks, kill criteria, and product constraints.
 4. [Formspec root README](README.md) — intake depth.
 5. [WOS root README](wos-spec/README.md) — governance depth.

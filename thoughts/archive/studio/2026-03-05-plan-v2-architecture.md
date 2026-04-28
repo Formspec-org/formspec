@@ -1,5 +1,7 @@
 # Formspec Studio V2 Core Plan — Definition + Presentation + Extensions
 
+> **Archived 2026-04-28.** Architecture landed (Shell, BlueprintSidebar, FormspecPreviewHost, AssistantWorkspace all exist). Live decisions now governed by ADRs [0082](../../adr/0082-lift-chat-session-above-studio.md)–[0087](../../adr/0087-ai-mutation-provenance-surface.md). The `form-builder/` path references throughout are stale (code lives in `packages/formspec-studio/`). Kept for historical context.
+
 V1 treated `definition`, `component`, `theme`, `mapping`, `registry`, `changelog` as peer "tabs". That was the wrong mental model: authors experience a *single form* whose structure, presentation, mappings, and provenance are interdependent.
 
 V2 keeps the same four-zone workspace (sidebar, tree, preview, properties/diagnostics) but changes what the sidebar means and where the "other artifacts" live:

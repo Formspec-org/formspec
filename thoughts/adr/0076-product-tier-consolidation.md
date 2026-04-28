@@ -3,7 +3,7 @@
 **Status:** Proposed
 **Date:** 2026-04-25
 **Scope:** WOS — schema family, release streams, spec organization
-**Related:** [ADR 0073 (case initiation and intake handoff)](./0073-stack-case-initiation-and-intake-handoff.md); [ADR 0074 (governed output-commit pipeline)](./0074-governed-output-commit-pipeline.md); [ADR 0075 (rejection register)](./0075-rejection-register.md); [ADR 0077 (canonical kernel extension seams)](./0077-canonical-kernel-extension-seams.md); [ADR 0078 (foreach topology)](./0078-foreach-topology.md); [`wos-spec/schemas/wos-workflow.schema.json`](../../wos-spec/schemas/wos-workflow.schema.json); [`wos-spec/examples/`](../../wos-spec/examples/); [`wos-spec/counter-proposal-disposition.md`](../../wos-spec/counter-proposal-disposition.md); [`wos-spec/thoughts/2026-04-24-standards-absorption-gap-analysis.md`](../../wos-spec/thoughts/2026-04-24-standards-absorption-gap-analysis.md)
+**Related:** [ADR 0073 (case initiation and intake handoff)](./0073-stack-case-initiation-and-intake-handoff.md); [ADR 0080 (governed output-commit pipeline)](./0080-governed-output-commit-pipeline.md); [ADR 0075 (rejection register)](./0075-rejection-register.md); [ADR 0077 (canonical kernel extension seams)](./0077-canonical-kernel-extension-seams.md); [ADR 0078 (foreach topology)](./0078-foreach-topology.md); [`wos-spec/schemas/wos-workflow.schema.json`](../../wos-spec/schemas/wos-workflow.schema.json); [`wos-spec/examples/`](../../wos-spec/examples/); [`wos-spec/counter-proposal-disposition.md`](../../wos-spec/counter-proposal-disposition.md); [`wos-spec/thoughts/2026-04-24-standards-absorption-gap-analysis.md`](../../wos-spec/thoughts/2026-04-24-standards-absorption-gap-analysis.md)
 
 ## Context
 
@@ -84,7 +84,7 @@ Test for inclusion: *if removing this document changes what the workflow does to
 Two runtime schemas survive. Both describe artifacts produced by processors, not authored by workflow designers.
 
 - `wos-case-instance.schema.json` — running-instance state: active tasks, case state, timers, pending events, governance state, volume counters. Moves to `schemas/kernel/` (the `companions/` directory disappears).
-- `wos-provenance-log.schema.json` — append-only audit log, wrapping all record kinds: state-transition records, case-file snapshots, capability invocation records, signature affirmation records, mutation records (with `mutationSource` / `verificationLevel` per ADR 0074), iteration records (per ADR 0078), verification certificates (formerly `wos-verification-report` runtime half).
+- `wos-provenance-log.schema.json` — append-only audit log, wrapping all record kinds: state-transition records, case-file snapshots, capability invocation records, signature affirmation records, mutation records (with `mutationSource` / `verificationLevel` per ADR 0080), iteration records (per ADR 0078), verification certificates (formerly `wos-verification-report` runtime half).
 
 `FactsTierRecord`, `MutationSource`, `VerificationLevel`, `CaseFileSnapshot`, `CapabilityInvocationRecord` `$defs` move from the standalone `wos-provenance-record.schema.json` into the core `wos-workflow.schema.json` (the kernel owns their normative definition); the runtime log schema imports them via `$ref`. Higher-tier records (Reasoning, Counterfactual, Narrative) attach via the `provenanceLayer` seam (ADR 0077 §10.3) and live alongside whichever embedded block emits them.
 
@@ -123,9 +123,11 @@ Schema merge is in-scope. Spec merge is **not**. `kernel/spec.md`, `governance/s
 
 What moves at the spec layer:
 
-- Existing Kernel §11 (Contract Validation) → §6 of `kernel/spec.md` (adjacent to Case State within the same document).
-- Existing Kernel §12 (Separation Principles) → §2 of `kernel/spec.md`.
+- Existing Kernel §11 (Contract Validation) → **new §15** of `kernel/spec.md` (append at end after the new chapters §11–§13 absorb runtime-companion content).
+- Existing Kernel §12 (Separation Principles) → **new §14** of `kernel/spec.md` (same — append at end).
 - Existing Kernel §13 (Conformance Fixtures) → out of normative spec, into `crates/wos-conformance/README.md`.
+
+> **Amendment 2026-04-28 (post-implementation review):** the original D-8 list said "§11→§6" and "§12→§2." That cut silently displaced existing §2 (Conformance Classes) and §6 (Impact Level Classification) — both load-bearing externally-cited anchors (§6 alone has 12+ external citations from governance and AI specs). The corrected cut appends at the end, leaving §2 and §6 untouched. The wos-expert review (2026-04-28) surfaced this; rationale: D-8's renumber list was written against the current `kernel/spec.md` section count, not against what the document looks like after the runtime-companion + lifecycle-detail + integration-profile content adds new chapters §11–§13. Append-at-end preserves every existing anchor.
 - Runtime Companion content (CaseInstance serialization, evaluation modes, Formspec coprocessor protocol, durability guarantees, timer precision, multi-version coexistence, action execution) → kernel chapters §11–§13 and §9.x expansions **within `kernel/spec.md`**.
 - Lifecycle Detail Companion content (transition evaluation pseudocode, history states, parallel execution, compensation, timer lifecycle) → kernel §4.6/§4.7/§4.8/§4.14, §9.5, §9.7 **within `kernel/spec.md`**.
 - Integration Profile normative content (`invokeService` binding surface, CloudEvents extension attributes, correlation rules, idempotency, execution ordering) → kernel §9.2 **within `kernel/spec.md`**.
@@ -207,4 +209,4 @@ Sequencing: 1 lands now (this ADR + sketch + examples). 2–8 land on the consol
 None outstanding for this ADR. Cross-cutting follow-ups tracked separately:
 
 - **Formspec ↔ WOS native intake handoff.** Q10 owner decision 2026-04-25 — Formspec emits `IntakeHandoff` natively when targeting a WOS workflow. Formalized in [ADR 0079 (Formspec native IntakeHandoff emission)](./0079-formspec-native-intake-handoff-emission.md). Tracked in PLANNING.md PLN-0323.
-- **Shared coercion library across all six surfaces.** Q5 owner decision 2026-04-25 — `fel-core::coerce` used by `commit_external_output`. Tracked in ADR 0074 implementation plan + PLANNING.md.
+- **Shared coercion library across all six surfaces.** Q5 owner decision 2026-04-25 — `fel-core::coerce` used by `commit_external_output`. Tracked in ADR 0080 implementation plan + PLANNING.md.

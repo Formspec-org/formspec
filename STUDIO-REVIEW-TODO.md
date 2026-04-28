@@ -2,7 +2,7 @@
 
 **Scope:** `packages/formspec-studio/`, `packages/formspec-studio-core/`
 **Goal:** Remove dead code, document real gaps, cut correctness and dependency risk, ship PRD-aligned features.
-**Last validated:** 2026-04-23 (formspec-scout cross-check of all `- [x]` items vs repo; line refs and test counts refreshed).
+**Last validated:** 2026-04-28 (P7.1 D-3 partial — dual-toggle simplified; P5.2 test routing panel shipped; 1134/1134 Vitest green) (PRD `2026-04-28-prd-chatgpt-forms-ide.md` decomposed into ADRs 0082–0087 after 6-agent audit + 4-agent Sonnet review; three superseded `2026-03-05-*` Studio docs moved to `thoughts/archive/studio/`).
 
 Use this file as a **backlog**: each `- [ ]` is one shippable task unless noted as a multi-step epic.
 
@@ -53,7 +53,7 @@ Shipped. The ConditionBuilder component provides guided/advanced FEL editing for
 Screener CRUD works with raw FEL. Steps 3–5 of `thoughts/studio/2026-03-30-screener-authoring-design.md` remain.
 
 - [x] **Condition builder** for route conditions (visual field/operator/value rows generating FEL)
-- [ ] **Test routing panel** — interactive verifier that evaluates routes against sample answers
+- [x] **Test routing panel** — interactive verifier that evaluates routes against sample answers. Component: `ScreenerTestRouting.tsx`; evaluates via `wasmEvaluateScreenerDocument`; mounted at bottom of `ScreenerWorkspace` below phase list. 9 tests green.
 - [x] **Blueprint summary** — already exists as `ScreenerSummary`; verify completeness
 
 #### 5.3 Definition assembler FEL rewriting
@@ -168,6 +168,88 @@ Items already tracked in P4 are cross-referenced, not duplicated.
 - [ ] **`handleResend`/`handleEdit` near-duplicate** — (SKIPPED per user request)
 - [x] **`useWorkspaceRouter` unsafe casts** — Fixed via validation.
 - [x] **`<span onClick>` a11y** — Replaced with `<button>`.
+
+---
+
+### P7 — Studio surface unification (ADRs 0082–0087)
+
+**Context:** PRD `thoughts/studio/2026-04-28-prd-chatgpt-forms-ide.md` decomposed into six sequential ADRs after multi-agent audit. The PRD is now archived in spirit (not yet on disk) — ADRs are the canonical direction. Each ADR is independently shippable; 7.1 is the architectural foundation everything else composes on. Cuts deliberately omitted from the ADR set: `MiniFormPreview`, three-mode toggle (`Chat | Edit | Preview`), floating composer pill, `switchWorkspaceTab` MCP tool, "ChatGPT for Forms" framing.
+
+#### 7.1 ADR 0082 — Lift `ChatSession` above `StudioApp`
+
+[`thoughts/studio/adr/0082-lift-chat-session-above-studio.md`](thoughts/studio/adr/0082-lift-chat-session-above-studio.md). Foundation — every other 7.x ADR depends on this.
+
+- [x] Extract **`useChatSessionController({ project, repos })`** hook from `packages/formspec-studio/src/components/ChatPanel.tsx` — hook landed at `src/hooks/useChatSessionController.ts`. ChatPanel wiring deferred to avoid reactive contamination (ADR kill criterion). (currently 1,478 lines). Hook owns `ChatSession` instantiation (today `ChatPanel.tsx:316–325`), `ToolContext` + `ProjectRegistry` + `createToolDispatch` triple (lines 297–314), thread-list state, `activeSessionId`, `compareBaseId/TargetId`, adapter selection, persist/restore lifecycle (lines 347–398). Repositories injected, not constructed inside.
+- [x] Mount controller provider above the `studioView` branch in `StudioApp.tsx:155`. `ChatSessionControllerProvider` wraps the `{studioView === 'assistant' ? ... : ...}` branch; both `AssistantWorkspace` and `Shell` are children. Neither consumes the context yet — `useChatSessionControllerContext()` is defined but unwired. ChatPanel still constructs its own session internally.
+- [ ] **Delete dual-toggle stack (partial):** Deleted `StudioWorkspaceViewContext` + React context provider; `useShellPanels.{showChatPanel, primaryAssistantOpen, chatPrompt}` replaced with single `assistantOpen` boolean; `formspec:ai-action` listener removed; `AssistantEntryMenu` simplified to open/close toggle (no overlay mode, no "open full workspace"); `AppSettingsDialog` dispatches `formspec:open-assistant-workspace` directly. **Remaining:** `studioView` enum retained (onboarding flow depends on it — new users see `AssistantWorkspace`, existing users see `Shell`); ChatPanel still constructs its own session internally (ADR kill criterion — reactive contamination risk in `initNotice`/`readyToScaffold`/`initializingRef`). Session persists across `studioView` switches because `ChatSessionControllerProvider` is above the branch.
+- [x] Construct `ChatThreadRepository` + `VersionRepository` once at provider; converges `Shell.tsx:51–52` and `AssistantWorkspace.tsx:187–188` per-mount duplicates. `ChatPanel.tsx` fallbacks retained as safety net for test callers.
+- **Kill criterion:** if hook extraction fails to compile green Vitest+Playwright after one complete attempt, audit `ChatPanel` UI state for reactive contamination (the ADR 0036 §15–28 pattern) before re-attempting. Likely cause: `initNotice` / `readyToScaffold` / scaffold `initializingRef` entanglement with session lifecycle.
+
+#### 7.2 ADR 0083 — Right-panel live preview companion
+
+[`thoughts/studio/adr/0083-right-panel-live-preview-companion.md`](thoughts/studio/adr/0083-right-panel-live-preview-companion.md). Replaces the PRD's three-mode toggle with a layout knob.
+
+- [ ] Mount `FormspecPreviewHost` once inside `Shell` and once inside `AssistantWorkspace` as a collapsible right-panel companion. Single instance per shell; persists across composer/sidebar shifts. Visibility = `showPreview` boolean persisted per user via `useShellPanels`.
+- [ ] Reuse the existing right-rail container shape at `Shell.tsx:373–414` (today wraps in `LayoutLivePreviewSection`).
+- [ ] **`ChangesetReviewSection` width-aware compact mode:** at narrow widths (e.g., 360px rail) collapses to `Accept · Reject · View →` affordance opening a drawer with the full review. CSS container query + Vitest snapshot.
+- [ ] **Bidirectional selection bridge:** delegated click handler on host's `data-name` attribute → `useSelection.select()`. New wiring: `<formspec-render>` does not emit field-selected events into React today (only `ThemeAuthoringOverlay` wrapper does).
+- [ ] **Mock-data strategy** for empty / conditionally-hidden elements: source `example` value if present, else type-derived placeholder. Conditionally-hidden elements render dimmed in a "would appear when …" state.
+- **Kill criterion:** if `studio_preview_toggled` collapses >50% in first session → companion-preview thesis dead; reopen whether preview belongs in shell at all or behind a `Test →` action.
+
+#### 7.3 ADR 0084 — Studio chrome rename, not hide
+
+[`thoughts/studio/adr/0084-studio-chrome-rename-not-hide.md`](thoughts/studio/adr/0084-studio-chrome-rename-not-hide.md). Pure UX/labels work — no architectural prerequisites.
+
+- [x] **Rename sidebar section labels** in `BlueprintSidebar` (internal keys at `ShellConstants.tsx:37–40` + `BLUEPRINT_SECTIONS_BY_TAB:62–67` unchanged):
+    - `Variables` → "Calculations"
+    - `Data Sources` → "External data"
+    - `Mappings` → "Field mappings"
+    - `Option Sets` → "Reusable choices"
+  Each section always visible. Zero-count → empty-state line ("No calculations yet"), collapsible. Non-zero → count badge inline (`Calculations ●3`).
+- [x] **Status bar default chips:** `Draft · N fields · Healthy · Ask AI`. Move metric details (renamed) behind `⋯` menu next to health chip. Internal symbol names at `StatusBar.tsx:24,25,28,30,93,97,103,107,115` unchanged.
+- [x] Renamed metric labels behind `⋯`: `bind` count → "Data connections", `shape` count → "Cross-field rules", `Evidence` → "Documents attached", `Provenance` → "AI changes", `Layout drift` → "Layout warnings". Drop `Wizard` from default chip set (becomes Appearance setting).
+- [x] **`Healthy` chip:** computes from union of validation errors, layout drift, open patches, evidence gaps. Display: `Healthy` / `2 warnings` / `1 error`. Click opens issue panel using renamed labels.
+- [x] **`advanced` boolean** (persisted per user) controls *depth* (raw JSON, FEL expressions, internal symbol names alongside renamed labels) — MUST NOT control artifact-section visibility.
+- **Kill criterion:** if `studio_advanced_toggled_within_first_session` >40% of new users → rename strategy alone hasn't fixed defaults; content-design problem, do not revert to hiding.
+
+#### 7.4 ADR 0085 — `ToolContext` workspace selection
+
+[`thoughts/studio/adr/0085-toolcontext-workspace-selection.md`](thoughts/studio/adr/0085-toolcontext-workspace-selection.md). L5 interface change with L6 implementation.
+
+- [x] Extend `ToolContext` (`packages/formspec-chat/src/types.ts:107`) with optional `getWorkspaceContext?()`: { selection: { path, sourceTab }|null; viewport: 'desktop'|'tablet'|'mobile'|null }`. Match `getProjectSnapshot?` precedent at line 111. Synchronous (in-memory).
+- [x] Implement at the controller from 7.1, reading from `useSelection`. `sourceTab` mirrors per-tab keying at `useSelection.tsx:38`.
+- [x] **Synchronous selection clear on path-removal:** subscribe `useSelection` to definition changes; clear active `TabSelection` (`useSelection.tsx:13`) when its `primaryKey` no longer resolves. AI never sees a dangling path.
+- [ ] Only `useSelection.select()` (line 82) propagates — scroll, hover, structure-tree keyboard arrow-nav do NOT. (Blocked until ChatPanel fully consumes controller.)
+- **Kill criterion:** if AI prompts degrade meaningfully without selection (adapters need a non-optional shape), gate a required form behind a feature flag — do not break the optional contract for adapters that ignore it.
+
+#### 7.5 ADR 0086 — Studio-local UI tool injection
+
+[`thoughts/studio/adr/0086-studio-local-ui-tool-injection.md`](thoughts/studio/adr/0086-studio-local-ui-tool-injection.md). Keeps `formspec-mcp` (L4) UI-blind.
+
+- [x] New module `packages/formspec-studio/src/chat/studio-ui-tools.ts` exporting `{ declarations, handlers }`. **Closed taxonomy** of two tools:
+    - **`revealField({ path: string })`** — scrolls structure tree, expands collapsed parents. Does NOT change selection. Declaration MUST cross-reference selection per ADR 0040 disambiguation convention.
+    - **`setRightPanelOpen({ open: boolean })`** — toggles preview companion (7.2) via `showPreview` signal in `useShellPanels`.
+  New tools require a new ADR slot.
+- [x] Add **`reveal(path)`** method to `packages/formspec-studio/src/state/useSelection.tsx` — emits scroll-and-expand intent without touching `select`/`deselect` state. Structure tree subscribes and scrolls into view.
+- [ ] At `ChatPanel.tsx:303`, compose `[...mcpDispatch.declarations, ...studioUITools.declarations]` — blocked until ChatPanel consumes controller.; merge `callTool` to try studio handlers first, fall through to MCP. Studio UI tools never enter `formspec-mcp`.
+- [x] **Reject** `switchWorkspaceTab` (documented in ADR 0086; no implementation needed). (no tab abstraction post-7.2; `LayoutDocument` (M3 of `2026-04-26-studio-unified-feature-matrix.md`) is the explicit *reopening trigger*, not a deferred slot). Collapse `openPreview` from PRD §7.4 into `setRightPanelOpen({ open: true })`.
+- [x] Handlers: structured-response recovery, never silent no-op (implemented in `studio-ui-tools.ts`). `revealField` with collapsed sidebar → expand sidebar first, return `{ ok: true, recovered: "sidebar collapsed; expanded it before revealing" }`. Stale path → `{ ok: false, reason: "path not found" }`.
+- **Kill criterion:** if >5 UI tools accumulate without ADRs, taxonomy is open — either ADR-gate retroactively or move to registry-with-policy.
+
+#### 7.6 ADR 0087 — AI mutation provenance surface
+
+[`thoughts/studio/adr/0087-ai-mutation-provenance-surface.md`](thoughts/studio/adr/0087-ai-mutation-provenance-surface.md). Closes the trust gap every audit agent flagged. Builds on M2 `FieldProvenance` (already landed at `packages/formspec-studio-core/src/studio-intelligence.ts:10`).
+
+- [x] In `packages/formspec-studio/src/components/chat/ChangesetReviewSection.tsx:21`: render a sibling **"What changes behind the scenes"** panel adjacent to the inline preview when a proposed changeset includes any of the closed mutation-class list:
+    - `bind` (`required`, `constraint`, `readonly`, `calculate`)
+    - `shape` (cross-field validation rules)
+    - `Variable` (add/edit/remove — top-level computed value, distinct from `bind.calculate`)
+    - `Mapping` (add/edit/remove)
+    - `OptionSet` (content change, not reference swap)
+- [x] Per affected entry, sourced from the corresponding `FieldProvenance` record: field path, mutation class, before/after summary, one-line AI-authored rationale. Panel rendered by `MutationProvenancePanel.tsx`.
+- [ ] **Accept-gate:** `Accept this proposal` does NOT commit until the provenance panel has scrolled into view at least once OR has been explicitly dismissed. (Deferred — needs telemetry infra + scroll tracking.)
+- [ ] **Telemetry pair:** `studio_provenance_panel_viewed` and `studio_provenance_panel_dismissed_unread`. (Deferred — needs telemetry infra.)
+- **Kill criterion:** if `studio_provenance_panel_dismissed_unread` >60% of accepts in production, panel is theatre — redesign the affordance, do not remove. If panel is ever made auto-dismissible in service of feel-good UX metrics, the ADR is dead — re-open before shipping that change.
 
 ---
 

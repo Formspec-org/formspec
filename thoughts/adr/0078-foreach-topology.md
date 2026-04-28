@@ -3,7 +3,7 @@
 **Status:** Proposed
 **Date:** 2026-04-24
 **Scope:** WOS Kernel
-**Related:** [ADR 0073 (case initiation and intake handoff)](./0073-stack-case-initiation-and-intake-handoff.md); [ADR 0074 (governed output-commit pipeline)](./0074-governed-output-commit-pipeline.md); [ADR 0076 (product-tier consolidation)](./0076-product-tier-consolidation.md); [ADR 0077 (canonical kernel extension seams)](./0077-canonical-kernel-extension-seams.md); [`wos-spec/specs/kernel/spec.md`](../../wos-spec/specs/kernel/spec.md) §4.3, §4.4, §4.8; [`wos-spec/counter-proposal-disposition.md`](../../wos-spec/counter-proposal-disposition.md) Wave 5 / FlowSpec §3.9 absorption; [`wos-spec/schemas/kernel/wos-kernel.schema.json`](../../wos-spec/schemas/kernel/wos-kernel.schema.json) `$defs/State`
+**Related:** [ADR 0073 (case initiation and intake handoff)](./0073-stack-case-initiation-and-intake-handoff.md); [ADR 0080 (governed output-commit pipeline)](./0080-governed-output-commit-pipeline.md); [ADR 0076 (product-tier consolidation)](./0076-product-tier-consolidation.md); [ADR 0077 (canonical kernel extension seams)](./0077-canonical-kernel-extension-seams.md); [`wos-spec/specs/kernel/spec.md`](../../wos-spec/specs/kernel/spec.md) §4.3, §4.4, §4.8; [`wos-spec/counter-proposal-disposition.md`](../../wos-spec/counter-proposal-disposition.md) Wave 5 / FlowSpec §3.9 absorption; [`wos-spec/schemas/kernel/wos-kernel.schema.json`](../../wos-spec/schemas/kernel/wos-kernel.schema.json) `$defs/State`
 
 ## Context
 
@@ -18,7 +18,7 @@ FlowSpec §3.9 names this primitive directly. BPMN multi-instance activities and
 
 ## Decision
 
-Add `foreach` as a fifth state topology kind. Final remains terminal, not composite — the enumeration becomes `atomic`, `compound`, `parallel`, `foreach`, `final`. `foreach` iterates over a bounded collection, applies a sub-state's lifecycle per item, and aggregates results to the case file through the governed output-commit pipeline (ADR 0074).
+Add `foreach` as a fifth state topology kind. Final remains terminal, not composite — the enumeration becomes `atomic`, `compound`, `parallel`, `foreach`, `final`. `foreach` iterates over a bounded collection, applies a sub-state's lifecycle per item, and aggregates results to the case file through the governed output-commit pipeline (ADR 0080).
 
 ### D-1. Schema additions
 
@@ -59,7 +59,7 @@ One provenance record per iteration boundary, emitted on the kernel's existing `
 
 `iterationStarted` / `iterationCompleted` are paired per iteration — emitting the start record without the completion record is a processor invariant violation. Inner-state transitions emit standard kernel provenance under their own state ids; iteration boundary records do not duplicate inner-state transition records.
 
-### D-4. Pipeline reuse (ADR 0074)
+### D-4. Pipeline reuse (ADR 0080)
 
 Per-iteration writes to `outputPath` route through the governed output-commit pipeline. Bindings: `mutationSource = computed` (the parallel-merge-derived value default reused for foreach aggregation). `verificationLevel` per surface policy attached at the existing `lifecycleHook` seam (ADR 0077 §10.4) — governance profiles MAY require a minimum level on `determination`-tagged transitions inside iteration bodies.
 
@@ -68,7 +68,7 @@ Aggregation across iterations reuses the parallel-state `mergeStrategy` shape:
 - `deep` — iteration outputs deep-merge into `outputPath`.
 - `collect` — iteration outputs append to an array at `outputPath`. Order under `collect` is the iteration order at sequential `concurrency: null`; under positive `concurrency`, order is non-deterministic and readers MUST NOT depend on it.
 
-The pipeline's write-scope rule (ADR 0074 §D-1.4) applies per iteration: an iteration body's writes MUST fall within the foreach state's declared `outputPath` scope plus paths the body's nested governance permits. Out-of-scope writes are a lint failure at authoring time and a processor rejection at runtime.
+The pipeline's write-scope rule (ADR 0080 §D-1.4) applies per iteration: an iteration body's writes MUST fall within the foreach state's declared `outputPath` scope plus paths the body's nested governance permits. Out-of-scope writes are a lint failure at authoring time and a processor rejection at runtime.
 
 ### D-5. Concurrency
 
@@ -90,7 +90,7 @@ A foreach state with `concurrency: N` and inner-body events that arrive concurre
 
 - **L-foreach-001 — bounded collection.** `foreach.collection` MUST evaluate to a statically-analyzable bounded array. Unbounded or unanalyzable expressions (e.g., FEL referencing a recursive case-state path with no terminating clause) fail. Conformance class: **Kernel Complete** (FEL semantic interpretation required).
 - **L-foreach-002 — outputPath requires mergeStrategy.** When `outputPath` is set, `mergeStrategy` MUST also be set. Conformance class: **Kernel Structural** (schema-checkable conditional).
-- **L-foreach-003 — iteration write scope.** Iteration body writes MUST fall within `outputPath` scope plus governance-permitted paths. Out-of-scope writes fail. Conformance class: **Kernel Complete** (binding-target analysis required). Consistent with the governed output-commit pipeline's write-scope rule (ADR 0074 §D-1.4).
+- **L-foreach-003 — iteration write scope.** Iteration body writes MUST fall within `outputPath` scope plus governance-permitted paths. Out-of-scope writes fail. Conformance class: **Kernel Complete** (binding-target analysis required). Consistent with the governed output-commit pipeline's write-scope rule (ADR 0080 §D-1.4).
 - **L-foreach-004 — concurrency value.** `concurrency` MUST be `null` or a positive integer. Conformance class: **Kernel Structural**.
 
 ### D-8. Conformance fixtures
@@ -110,13 +110,13 @@ A foreach state with `concurrency: N` and inner-body events that arrive concurre
 - Closes the FlowSpec §3.9 / BPMN multi-instance / CMMN repetition rule absorption gap named in counter-proposal disposition Wave 5.
 - Reduces fan-out-via-correlation pattern complexity for collection-driven workflows. Each line item, license, or respondent runs as a governed substate inside one foreach state, not as a pile of correlation events.
 - Each iteration is a governed substate. Full kernel statechart semantics inside `body`. The deterministic replay invariant (Kernel §4.2) holds within each iteration; the iteration scheduler under `concurrency: N` is non-deterministic across iterations, which matches the parallel-state posture and is a kernel-known shape.
-- The pipeline reuse (ADR 0074) means foreach aggregation does not introduce a separate write surface. Governance profiles attaching write policy at `lifecycleHook` apply inside iteration bodies without modification.
+- The pipeline reuse (ADR 0080) means foreach aggregation does not introduce a separate write surface. Governance profiles attaching write policy at `lifecycleHook` apply inside iteration bodies without modification.
 
 **Negative.**
 
 - Adds a fifth topology kind. Authors must learn one more state shape, and the kernel-spec §4.3 table grows. Mitigation: foreach is opt-in; existing kernel documents without foreach states are unchanged. Schema's existing four-kind conditional `allOf` blocks pattern-match cleanly to a fifth.
 - Static analysis for `collection` boundedness adds lint complexity. L-foreach-001 requires interpreting FEL expression shape to determine boundedness — a Kernel Complete capability, not a Structural one. Authors writing collections that draw from external sources or that depend on runtime state require explicit boundedness declarations or fail lint.
-- Provenance volume scales with iteration count. A foreach over 1000 items emits at least 2000 iteration boundary records plus inner-body transition records. Trellis custody anchoring posture (ADR 0074 §D-2.5) handles this — records flow through the standard exporter — but storage and review cost grow linearly.
+- Provenance volume scales with iteration count. A foreach over 1000 items emits at least 2000 iteration boundary records plus inner-body transition records. Trellis custody anchoring posture (ADR 0080 §D-2.5) handles this — records flow through the standard exporter — but storage and review cost grow linearly.
 
 **Neutral.**
 
@@ -132,7 +132,7 @@ A foreach state with `concurrency: N` and inner-body events that arrive concurre
 3. **Kernel §4.8 fork and join.** No change. foreach aggregation is not a parallel join; it does not use the synthetic `$join` event. Add a cross-reference noting that foreach uses `mergeStrategy` for output aggregation, distinct from parallel-state region join.
 4. **Kernel §5.4 mutation history.** No change. Per-iteration writes emit standard mutation records under `mutationSource: computed` (the existing reserved literal).
 5. **Schema additions.** Extend `$defs/State.type` enum to include `foreach`. Add a sixth conditional `allOf` block requiring `collection` and `body` when `type === "foreach"` and forbidding `initialState`, `states`, `regions`, `cancellationPolicy`, `historyState`. Add `collection`, `itemVariable`, `indexVariable`, `concurrency`, `breakCondition`, `outputPath`, `mergeStrategy`, `body` to the State property set with appropriate types and `x-lm.critical` annotations on `collection` and `body`.
-6. **Provenance schema additions.** Reserve `iterationStarted`, `iterationCompleted`, `iterationFailed`, `iterationSkipped` literals on the `recordKind` discriminator in `wos-spec/schemas/kernel/wos-provenance-record.schema.json` (consistent with ADR 0074's literal-reservation pattern: normative prose reservation, no enum extension on the discriminator). Define the shape constraint per literal in Kernel §8 prose alongside the existing kernel record kinds.
+6. **Provenance schema additions.** Reserve `iterationStarted`, `iterationCompleted`, `iterationFailed`, `iterationSkipped` literals on the `recordKind` discriminator in `wos-spec/schemas/kernel/wos-provenance-record.schema.json` (consistent with ADR 0080's literal-reservation pattern: normative prose reservation, no enum extension on the discriminator). Define the shape constraint per literal in Kernel §8 prose alongside the existing kernel record kinds.
 7. **Lint rule landing.** Add L-foreach-001 through L-foreach-004 to `wos-lint`. Update `wos-spec/LINT-MATRIX.md` accordingly. L-foreach-001 requires Kernel Complete capability; L-foreach-002 / L-foreach-004 are Kernel Structural; L-foreach-003 is Kernel Complete (binding-target write-scope analysis).
 8. **Conformance fixtures.** Author the seven fixtures in D-8 under `wos-conformance` (positive cases) and at least one negative fixture per lint rule.
 9. **Three-way agreement.** Per WOS `CLAUDE.md` posture, the in-memory adapter and the production adapter (Restate) MUST both pass the foreach fixture set. The reference deserializer extends to the new topology kind without breaking existing four-kind documents.
