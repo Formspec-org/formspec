@@ -54,7 +54,7 @@ export function ChatSelectionFocusStrip({ project }: { project: Project }) {
 
   const lookup = useMemo(() => buildDefLookup(items), [items]);
 
-  const selectedKey = selection?.selectedKeyForTab('editor') ?? null;
+  const selectedKey = selection?.primaryKeyForTab('editor') ?? null;
   const select = selection?.select;
   const deselect = selection?.deselect;
 

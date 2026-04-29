@@ -18,8 +18,8 @@ const paletteDef = {
 };
 
 function SelectionProbe() {
-  const { selectedKey } = useSelection();
-  return <div data-testid="selected-key">{selectedKey || ''}</div>;
+  const { primaryKey } = useSelection();
+  return <div data-testid="selected-key">{primaryKey || ''}</div>;
 }
 
 function renderPalette(open = true) {

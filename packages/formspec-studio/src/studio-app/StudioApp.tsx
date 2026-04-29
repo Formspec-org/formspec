@@ -152,9 +152,9 @@ function StudioAppInner({
   enterWorkspaceFromAssistant: () => void;
   onSwitchToAssistant: () => void;
 }) {
-  const { reveal, selectedKeyForTab, selectionScopeTab } = useSelection();
+  const { reveal, primaryKeyForTab, selectionScopeTab } = useSelection();
   const getWorkspaceContext = useCallback(() => {
-    const path = selectedKeyForTab(selectionScopeTab);
+    const path = primaryKeyForTab(selectionScopeTab);
     return {
       selection: path ? { path, sourceTab: selectionScopeTab } : null,
       // Viewport is not yet plumbed from Shell.previewViewport; surface deliberately reports null
@@ -162,7 +162,7 @@ function StudioAppInner({
       // device hints should treat null as "unknown" not "desktop".
       viewport: null as ('desktop' | 'tablet' | 'mobile' | null),
     };
-  }, [selectionScopeTab, selectedKeyForTab]);
+  }, [selectionScopeTab, primaryKeyForTab]);
   const studioUIHandlers = useMemo(() => ({
     revealField: (path: string) => {
       if (!activeProject.itemAt(path)) {

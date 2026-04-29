@@ -25,10 +25,6 @@ interface SelectionState {
   primaryType: string | null;
   selectionCount: number;
 
-  // Backwards-compat aliases
-  selectedKey: string | null;
-  selectedType: string | null;
-
   // Actions
   select: (key: string, type: string, opts?: SelectionOptions) => void;
   toggleSelect: (key: string, type: string, opts?: SelectionOptions) => void;
@@ -37,8 +33,8 @@ interface SelectionState {
   isSelected: (key: string) => boolean;
 
   // Per-tab queries
-  selectedKeyForTab: (tab: string) => string | null;
-  selectedTypeForTab: (tab: string) => string | null;
+  primaryKeyForTab: (tab: string) => string | null;
+  primaryTypeForTab: (tab: string) => string | null;
   /** Keys selected in `tab` — use on canvases that are not the selection provider's active tab. */
   selectedKeysForTab: (tab: string) => Set<string>;
   isSelectedForTab: (tab: string, key: string) => boolean;
@@ -169,11 +165,11 @@ export function SelectionProvider({ children, project }: { children: ReactNode; 
     return activeKeysRef.current.has(key);
   }, []);
 
-  const selectedKeyForTab = useCallback((tab: string): string | null => {
+  const primaryKeyForTab = useCallback((tab: string): string | null => {
     return getTabState(tab).primaryKey;
   }, [getTabState]);
 
-  const selectedTypeForTab = useCallback((tab: string): string | null => {
+  const primaryTypeForTab = useCallback((tab: string): string | null => {
     return getTabState(tab).primaryType;
   }, [getTabState]);
 
@@ -229,9 +225,6 @@ export function SelectionProvider({ children, project }: { children: ReactNode; 
     primaryKey: active.primaryKey,
     primaryType: active.primaryType,
     selectionCount: active.selectedKeys.size,
-    // Backwards-compat
-    selectedKey: active.primaryKey,
-    selectedType: active.primaryType,
     // Actions
     select,
     toggleSelect,
@@ -239,8 +232,8 @@ export function SelectionProvider({ children, project }: { children: ReactNode; 
     deselect,
     isSelected,
     // Per-tab queries
-    selectedKeyForTab,
-    selectedTypeForTab,
+    primaryKeyForTab,
+    primaryTypeForTab,
     selectedKeysForTab,
     isSelectedForTab,
     // Inspector focus
@@ -254,7 +247,7 @@ export function SelectionProvider({ children, project }: { children: ReactNode; 
     selectionScopeTab,
     active.selectedKeys, active.primaryKey, active.primaryType,
     select, toggleSelect, rangeSelect,
-    deselect, isSelected, selectedKeyForTab, selectedTypeForTab,
+    deselect, isSelected, primaryKeyForTab, primaryTypeForTab,
     selectedKeysForTab, isSelectedForTab,
     focusInspector, consumeFocusInspector,
     revealPath, reveal, consumeRevealedPath,

@@ -209,7 +209,7 @@ export function ItemListEditor({ config }: { config: ItemListEditorConfig }) {
   } = config;
 
   const {
-    selectedKeys, selectedKeyForTab, select, toggleSelect, rangeSelect,
+    selectedKeys, primaryKeyForTab, select, toggleSelect, rangeSelect,
     deselect, isSelected,
   } = useSelection();
   const [showPicker, setShowPicker] = useState(false);
@@ -219,7 +219,7 @@ export function ItemListEditor({ config }: { config: ItemListEditorConfig }) {
   const [wrapGroupDraft, setWrapGroupDraft] = useState<WrapGroupDraft | null>(null);
   const surfaceRef = useRef<HTMLDivElement | null>(null);
 
-  const selectedKey = selectedKeyForTab(selectionTab);
+  const selectedKey = primaryKeyForTab(selectionTab);
   const flatOrder = useMemo(() => collectFlatOrder(items, ''), [items]);
 
   // Build context menu items based on feature flags

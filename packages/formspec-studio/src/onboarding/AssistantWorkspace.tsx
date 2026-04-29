@@ -64,8 +64,8 @@ interface SourceState {
 export function AssistantWorkspace({ project, onEnterStudio, colorScheme }: AssistantWorkspaceProps) {
   const { compactLayout, leftWidth } = useShellLayout();
   const projectFromContext = useProject();
-  const { selectedKeyForTab, deselect, select } = useSelection();
-  const scopedEditorSelection = selectedKeyForTab('editor');
+  const { primaryKeyForTab, deselect, select } = useSelection();
+  const scopedEditorSelection = primaryKeyForTab('editor');
   const shellBackgroundImage = getShellBackgroundImage(colorScheme?.resolvedTheme ?? 'light');
   const [selectedStarterId, setSelectedStarterId] = useState(starterCatalog[0]?.id ?? '');
   const [showImport, setShowImport] = useState(false);

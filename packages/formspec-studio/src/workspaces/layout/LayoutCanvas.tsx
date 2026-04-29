@@ -45,8 +45,8 @@ export function LayoutCanvas() {
     rangeSelect,
     isSelectedForTab,
     selectedKeysForTab,
-    selectedKeyForTab,
-    selectedTypeForTab,
+    primaryKeyForTab,
+    primaryTypeForTab,
   } = useSelection();
   const structure = useLayoutPageStructure();
 
@@ -74,8 +74,8 @@ export function LayoutCanvas() {
 
   const hasPages = pagedTreeChildren.some((node) => node.component === 'Page');
   const isMultiPage = structure.mode !== 'single' && hasPages;
-  const layoutPrimaryKey = selectedKeyForTab('layout');
-  const layoutPrimaryType = selectedTypeForTab('layout');
+  const layoutPrimaryKey = primaryKeyForTab('layout');
+  const layoutPrimaryType = primaryTypeForTab('layout');
   const layoutSelectedKeys = selectedKeysForTab('layout');
 
   const pageNavItems = useMemo(

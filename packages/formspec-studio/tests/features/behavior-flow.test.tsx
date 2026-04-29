@@ -19,10 +19,10 @@ const testDef = {
 };
 
 function SelectionProbe() {
-  const { selectedKey, select } = useSelection();
+  const { primaryKey, select } = useSelection();
   return (
     <>
-      <div data-testid="selected-key">{selectedKey || ''}</div>
+      <div data-testid="selected-key">{primaryKey || ''}</div>
       <button data-testid="select-age" onClick={() => select('age', 'field', { tab: 'editor' })}>Select Age</button>
       <button data-testid="select-name" onClick={() => select('name', 'field', { tab: 'editor' })}>Select Name</button>
     </>

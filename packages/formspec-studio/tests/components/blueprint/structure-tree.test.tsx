@@ -134,8 +134,8 @@ describe('StructureTree', () => {
 
     let capturedSelectedKey: string | null = null;
     function SelectionCapture() {
-      const { selectedKey } = useSelection();
-      capturedSelectedKey = selectedKey;
+      const { primaryKey } = useSelection();
+      capturedSelectedKey = primaryKey;
       return null;
     }
 

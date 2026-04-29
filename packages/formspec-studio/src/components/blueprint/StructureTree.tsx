@@ -65,10 +65,10 @@ function TreeNode({
   pathPrefix: string;
   onItemContextMenu: (e: ReactMouseEvent, fullPath: string, itemType: string) => void;
 }) {
-  const { selectedKeyForTab, select } = useSelection();
+  const { primaryKeyForTab, select } = useSelection();
   const { scrollToTarget } = useCanvasTargets();
   const fullPath = pathPrefix ? `${pathPrefix}.${item.key}` : item.key;
-  const isSelected = selectedKeyForTab('editor') === fullPath;
+  const isSelected = primaryKeyForTab('editor') === fullPath;
 
   const icon = item.type === 'field' ? (
     <FieldIcon dataType={item.dataType || 'string'} className="text-[10px]" />
@@ -158,7 +158,7 @@ interface RowContextMenu {
 export function StructureTree() {
   const definition = useDefinition();
   const project = useProject();
-  const { selectedKeyForTab, select, selectedKeysForTab, deselect, revealedPath, consumeRevealedPath } = useSelection();
+  const { primaryKeyForTab, select, selectedKeysForTab, deselect, revealedPath, consumeRevealedPath } = useSelection();
   const { scrollToTarget } = useCanvasTargets();
   const items = (definition.items ?? []);
 
@@ -171,7 +171,7 @@ export function StructureTree() {
   const [rowMenu, setRowMenu] = useState<RowContextMenu | null>(null);
   const [pendingDeletePath, setPendingDeletePath] = useState<string | null>(null);
   const [wrapGroupDraft, setWrapGroupDraft] = useState<WrapGroupDraft | null>(null);
-  const selectedKey = selectedKeyForTab('editor');
+  const selectedKey = primaryKeyForTab('editor');
   const pointerRef = useRef({ x: 0, y: 0 });
 
   const menuOpen = rowMenu !== null;

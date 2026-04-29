@@ -23,15 +23,15 @@ export function EditorPropertiesPanel({ showActions = true }: { showActions?: bo
   const {
     selectedKeys,
     selectionCount,
-    selectedKeyForTab,
-    selectedTypeForTab,
+    primaryKeyForTab,
+    primaryTypeForTab,
     select,
     deselect,
     shouldFocusInspector,
     consumeFocusInspector,
   } = useSelection();
-  const selectedKey = selectedKeyForTab('editor');
-  const selectedType = selectedTypeForTab('editor');
+  const selectedKey = primaryKeyForTab('editor');
+  const selectedType = primaryTypeForTab('editor');
   const definition = useDefinition();
   const project = useProject();
   const keyInputRef = useRef<HTMLInputElement>(null);

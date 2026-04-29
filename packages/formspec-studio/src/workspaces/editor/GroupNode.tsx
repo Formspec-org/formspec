@@ -83,21 +83,21 @@ export function GroupNode({
   // Collapse expanded content while being dragged to avoid layout disruption
   const effectiveSelected = selected && !isDragSource;
   const [expanded, setExpanded] = useState(false);
-  const { selectedKey } = useSelection();
+  const { primaryKey } = useSelection();
   // Auto-expand when a descendant becomes selected.
-  const prevSelectedKeyRef = useRef(selectedKey);
+  const prevSelectedKeyRef = useRef(primaryKey);
   useEffect(() => {
     const prev = prevSelectedKeyRef.current;
-    prevSelectedKeyRef.current = selectedKey;
+    prevSelectedKeyRef.current = primaryKey;
     if (
-      selectedKey &&
-      selectedKey !== prev &&
-      selectedKey !== itemPath &&
-      selectedKey.startsWith(itemPath + '.')
+      primaryKey &&
+      primaryKey !== prev &&
+      primaryKey !== itemPath &&
+      primaryKey.startsWith(itemPath + '.')
     ) {
       setExpanded(true);
     }
-  }, [selectedKey, itemPath]);
+  }, [primaryKey, itemPath]);
   const [editingContent, setEditingContent] = useState<'description' | 'hint' | 'both' | null>(null);
   const [editingBehavior, setEditingBehavior] = useState(false);
   const [editingRepeats, setEditingRepeats] = useState(false);

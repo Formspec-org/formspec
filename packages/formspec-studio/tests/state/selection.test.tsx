@@ -5,11 +5,11 @@ import { ProjectProvider } from '../../src/state/ProjectContext';
 import { SelectionProvider, useSelection, selectionPrimaryKeyRetainedAfterDefinitionChange } from '../../src/state/useSelection';
 
 function SelectionDisplay() {
-  const { selectedKey, selectedType, revealedPath, select, deselect, reveal, consumeRevealedPath } = useSelection();
+  const { primaryKey, primaryType, revealedPath, select, deselect, reveal, consumeRevealedPath } = useSelection();
   return (
     <div>
-      <span data-testid="key">{selectedKey ?? 'none'}</span>
-      <span data-testid="type">{selectedType ?? 'none'}</span>
+      <span data-testid="key">{primaryKey ?? 'none'}</span>
+      <span data-testid="type">{primaryType ?? 'none'}</span>
       <span data-testid="revealed">{revealedPath ?? 'none'}</span>
       <button onClick={() => select('myField', 'field')}>Select</button>
       <button onClick={() => deselect()}>Deselect</button>
@@ -21,10 +21,10 @@ function SelectionDisplay() {
 }
 
 function SelectionCleanupDisplay({ keyToSelect }: { keyToSelect: string }) {
-  const { selectedKey, select } = useSelection();
+  const { primaryKey, select } = useSelection();
   return (
     <div>
-      <span data-testid="cleanup-key">{selectedKey ?? 'none'}</span>
+      <span data-testid="cleanup-key">{primaryKey ?? 'none'}</span>
       <button onClick={() => select(keyToSelect, 'field')}>SelectExisting</button>
     </div>
   );

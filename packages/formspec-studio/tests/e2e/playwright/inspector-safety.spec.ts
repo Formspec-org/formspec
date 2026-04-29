@@ -60,7 +60,7 @@ test.describe('Inspector Panel — Bug Cluster A', () => {
   });
 
   // #25 Rename breaks inspector
-  // After renaming a field via Tab-commit, the selectedKey still holds the old
+  // After renaming a field via Tab-commit, the primaryKey still holds the old
   // path. flatItems won't find it, so the inspector shows "Item not found".
   test('#25 inline rename updates the field testid correctly', async ({ page }) => {
     await waitForApp(page);

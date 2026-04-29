@@ -39,8 +39,8 @@ function renderLogic(def?: any) {
 }
 
 function SelectionProbe() {
-  const { selectedKey } = useSelection();
-  return <div data-testid="selected-key">{selectedKey || ''}</div>;
+  const { primaryKey } = useSelection();
+  return <div data-testid="selected-key">{primaryKey || ''}</div>;
 }
 
 describe('LogicTab', () => {

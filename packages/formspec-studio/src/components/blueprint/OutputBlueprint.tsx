@@ -355,7 +355,7 @@ export function OutputBlueprint() {
                     key={item.key}
                     item={item}
                     path={item.key}
-                    isSelected={(selection?.selectedKey ?? localSelected) === item.key}
+                    isSelected={(selection?.primaryKey ?? localSelected) === item.key}
                     onSelect={selectPath}
                     isLast={i === items.length - 1}
                     values={values}

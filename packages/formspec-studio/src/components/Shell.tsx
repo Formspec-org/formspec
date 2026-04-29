@@ -48,7 +48,7 @@ interface ShellProps {
 
 export function Shell({ colorScheme, onSwitchToAssistant }: ShellProps = {}) {
   const project = useProject();
-  const { selectedKey, selectedKeyForTab, deselect, select } = useSelection();
+  const { primaryKey, primaryKeyForTab, deselect, select } = useSelection();
 
   const router = useWorkspaceRouter();
   const {
@@ -109,7 +109,7 @@ export function Shell({ colorScheme, onSwitchToAssistant }: ShellProps = {}) {
   } = panels;
 
   const activeTabScope = activeTab.toLowerCase();
-  const scopedSelectedKey = selectedKeyForTab(activeTabScope);
+  const scopedSelectedKey = primaryKeyForTab(activeTabScope);
 
   useKeyboardShortcuts(activeTab, project, scopedSelectedKey, setShowPalette);
 
@@ -148,8 +148,8 @@ export function Shell({ colorScheme, onSwitchToAssistant }: ShellProps = {}) {
   
   const { visibleSections, resolvedSection, SidebarComponent } = useBlueprintSectionResolution(activeTab, activeSection);
 
-  const selectedItemLabel = selectedKey
-    ? ((definitionLookup.get(selectedKey)?.item?.label as string | undefined) || selectedKey.split('.').pop() || selectedKey)
+  const selectedItemLabel = primaryKey
+    ? ((definitionLookup.get(primaryKey)?.item?.label as string | undefined) || primaryKey.split('.').pop() || primaryKey)
     : null;
 
   useEffect(() => {
@@ -400,7 +400,7 @@ export function Shell({ colorScheme, onSwitchToAssistant }: ShellProps = {}) {
               <PreviewCompanionPanel
                 width={rightWidth}
                 appearance={colorScheme?.resolvedTheme ?? 'light'}
-                highlightFieldPath={selectedKey}
+                highlightFieldPath={primaryKey}
                 onClose={() => setShowPreview(false)}
                 onFieldClick={handlePreviewFieldClick}
               />
