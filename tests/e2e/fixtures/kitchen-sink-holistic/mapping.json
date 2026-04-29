@@ -26,14 +26,9 @@
       "targetPath": "subject.mode",
       "transform": "valueMap",
       "valueMap": {
-        "advanced": "ADV",
-        "basic": "BSC"
-      },
-      "reverse": {
-        "transform": "valueMap",
-        "valueMap": {
-          "ADV": "advanced",
-          "BSC": "basic"
+        "forward": {
+          "advanced": "ADV",
+          "basic": "BSC"
         }
       },
       "priority": 15,

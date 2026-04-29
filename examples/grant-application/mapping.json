@@ -54,15 +54,6 @@
         "unmapped": "passthrough",
         "default": "unknown"
       },
-      "reverse": {
-        "transform": "valueMap",
-        "valueMap": {
-          "NPO": "nonprofit",
-          "EDU": "university",
-          "GOV": "government",
-          "FP": "forprofit"
-        }
-      },
       "description": "Translate organization type codes bidirectionally between Formspec and external enum values.",
       "priority": 116,
       "reversePriority": 200

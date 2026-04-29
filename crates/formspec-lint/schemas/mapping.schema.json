@@ -281,11 +281,8 @@
           ]
         },
         "valueMap": {
-          "oneOf": [
-            { "$ref": "#/$defs/ValueMap" },
-            { "type": "object", "not": { "required": ["forward"] }, "description": "Legacy shorthand: flat object keys are forward lookup entries; unmapped strategy is 'passthrough' (explicit structured form defaults unmapped to 'error' when 'forward' is used). Prefer the structured ValueMap with 'forward' and optional 'unmapped' for new documents." }
-          ],
-          "description": "Lookup table for value substitution. Full form has 'forward', optional 'reverse', 'unmapped' strategy, and 'default'. Shorthand form is a flat object treated as the forward map. REQUIRED when transform is 'valueMap'. Auto-reversible only when the forward map is bijective (every value is unique); non-injective maps require an explicit reverse.valueMap.",
+          "$ref": "#/$defs/ValueMap",
+          "description": "Lookup table for value substitution. REQUIRED when transform is 'valueMap'. Auto-reversible only when the forward map is bijective (every value is unique); non-injective maps require an explicit reverse.valueMap.",
           "examples": [
             { "low": 1, "medium": 2, "high": 3 },
             {
@@ -512,7 +509,7 @@
           "innerRules": [
             { "sourcePath": "description", "targetPath": "label", "transform": "preserve" },
             { "sourcePath": "amount", "targetPath": "value", "transform": "coerce", "coerce": "string" },
-            { "sourcePath": "category", "targetPath": "type", "transform": "valueMap", "valueMap": { "travel": "TRAVEL", "supplies": "EQUIP" } }
+            { "sourcePath": "category", "targetPath": "type", "transform": "valueMap", "valueMap": { "forward": { "travel": "TRAVEL", "supplies": "EQUIP" } } }
           ]
         },
         {
@@ -565,11 +562,8 @@
           "description": "Type conversion descriptor or shorthand target-type string."
         },
         "valueMap": {
-          "oneOf": [
-            { "$ref": "#/$defs/ValueMap" },
-            { "type": "object", "not": { "required": ["forward"] } }
-          ],
-          "description": "Lookup table (full or shorthand form)."
+          "$ref": "#/$defs/ValueMap",
+          "description": "Lookup table for value substitution."
         },
         "reverse": {
           "$ref": "#/$defs/ReverseOverride",
@@ -664,10 +658,7 @@
           "description": "Reverse coercion descriptor (from/to types for the reverse direction)."
         },
         "valueMap": {
-          "oneOf": [
-            { "$ref": "#/$defs/ValueMap" },
-            { "type": "object" }
-          ],
+          "$ref": "#/$defs/ValueMap",
           "description": "Reverse value map overriding auto-derived inverse."
         },
         "condition": {

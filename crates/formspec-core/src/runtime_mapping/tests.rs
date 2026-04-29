@@ -656,6 +656,18 @@ fn parse_value_map_new_shape_defaults_unmapped_to_error() {
     assert_eq!(*unmapped, UnmappedStrategy::Error);
 }
 
+#[test]
+fn parse_value_map_shorthand_is_rejected() {
+    let v = json!([{
+        "sourcePath": "status",
+        "targetPath": "out.status",
+        "transform": "valueMap",
+        "valueMap": { "active": "A" }
+    }]);
+    let err = parse_mapping_rules_from_value(&v).expect_err("shorthand valueMap should fail");
+    assert!(err.contains("valueMap.forward"));
+}
+
 // ── CoerceType::Date and DateTime — mapping-spec.md §4.6 ────
 
 /// Spec: mapping-spec.md §4.6 — "CoerceType::Date passes through string values"

@@ -127,8 +127,10 @@
             "targetPath": "AdministrationCosts.HasAdmin",
             "transform": "valueMap",
             "valueMap": {
-                "true": "Y",
-                "false": "N"
+                "forward": {
+                    "true": "Y",
+                    "false": "N"
+                }
             },
             "priority": 70
         },

@@ -413,8 +413,10 @@ mod tests {
             "targetPath": "code",
             "transform": "valueMap",
             "valueMap": {
-                "active": "A",
-                "inactive": "I"
+                "forward": {
+                    "active": "A",
+                    "inactive": "I"
+                }
             }
         }]);
         let rules = parse_mapping_rules_inner(&rules_json).unwrap();
@@ -423,7 +425,7 @@ mod tests {
                 assert_eq!(forward.len(), 2);
                 assert!(matches!(
                     unmapped,
-                    runtime_mapping::UnmappedStrategy::PassThrough
+                    runtime_mapping::UnmappedStrategy::Error
                 ));
             }
             other => panic!("expected ValueMap, got {:?}", other),

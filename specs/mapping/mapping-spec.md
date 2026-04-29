@@ -275,7 +275,6 @@ plus:
 A processor claiming Mapping Extended conformance implicitly claims Mapping
 Bidirectional conformance.
 
-
 ### 1.6 Notational Conventions
 
 All normative JSON examples in this specification use the following
@@ -821,7 +820,7 @@ Implementations MUST raise an error when the `from`/`to` combination is not supp
 | `unmapped` | `string` | OPTIONAL | `"error"` | Strategy when a source value has no matching key. One of `"error"` (raise), `"drop"` (omit field), `"passthrough"` (copy value unchanged), or `"default"` (use the rule `default` property; see §4.6). |
 | `default` | *any* | OPTIONAL | — | Value to emit when `unmapped` is `"drop"` and a fallback is desired, or when the source value is `null`. |
 
-The JSON Schema also allows a **legacy shorthand**: `valueMap` is a flat object of forward lookup entries (no nested `forward` property). For that shorthand, implementations SHOULD treat omitted `unmapped` as **`"passthrough"`** so older documents retain lenient behavior. For the **structured** shape with an explicit `forward` object, omitted `unmapped` defaults to **`"error"`** (§4.6).
+`valueMap` MUST use the structured object shape with a `forward` map. Omitted `unmapped` defaults to **`"error"`** (§4.6).
 
 #### 3.3.4 Array Object
 
@@ -1390,7 +1389,7 @@ Apply `innerRules` by positional index. Each inner rule MUST include an
       { "sourcePath": "description", "targetPath": "label",  "transform": "preserve" },
       { "sourcePath": "amount",      "targetPath": "value",  "transform": "coerce", "coerce": "string" },
       { "sourcePath": "category",    "targetPath": "type",   "transform": "valueMap",
-        "valueMap": { "travel": "TRAVEL", "supplies": "EQUIP", "personnel": "PERS" } }
+        "valueMap": { "forward": { "travel": "TRAVEL", "supplies": "EQUIP", "personnel": "PERS" } } }
     ]
   }
 }
@@ -1855,8 +1854,8 @@ Maps a Formspec grant form (`applicant_name`, `ein`, `budget_total`,
         { "sourcePath": "description", "targetPath": "label",  "transform": "preserve" },
         { "sourcePath": "amount",      "targetPath": "value",  "transform": "coerce", "coerce": "string" },
         { "sourcePath": "category",    "targetPath": "type",   "transform": "valueMap",
-          "valueMap": { "travel": "TRAVEL", "supplies": "EQUIP",
-                        "personnel": "PERS", "other": "MISC" } }
+          "valueMap": { "forward": { "travel": "TRAVEL", "supplies": "EQUIP",
+                        "personnel": "PERS", "other": "MISC" } } }
       ] } },
     { "sourcePath": "narrative",
       "targetPath": "projectDescription", "transform": "preserve" }

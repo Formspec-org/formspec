@@ -925,13 +925,12 @@ class TestConditionalInteractions:
         with pytest.raises(ValidationError):
             _validator_for_def(REGISTRY_SCHEMA, "RegistryEntry").validate(entry)
 
-    # -- ValueMap oneOf edge case --
+    # -- ValueMap strict object edge case --
 
     @SETTINGS_MUTATION
     @given(data=st.data())
-    def test_valuemap_flat_with_forward_key_fails_oneof(self, data):
-        """A flat valueMap that accidentally includes 'forward' key matches
-        neither oneOf branch."""
+    def test_valuemap_with_extra_key_fails_schema(self, data):
+        """A structured valueMap with an unknown key fails additionalProperties."""
         rule = {
             "sourcePath": data.draw(non_empty_str),
             "targetPath": data.draw(non_empty_str),

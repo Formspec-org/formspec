@@ -187,34 +187,31 @@ fn parse_reverse_override(
         "valueMap" => {
             let vm = rev_obj.get("valueMap").and_then(|v| v.as_object());
             let (forward, unmapped_strategy) = if let Some(m) = vm {
-                if let Some(fwd_val) = m.get("forward") {
-                    let fwd: Vec<(Value, Value)> = fwd_val
-                        .as_object()
-                        .map(|fwd_map| {
-                            fwd_map
-                                .iter()
-                                .map(|(k, v)| (Value::String(k.clone()), v.clone()))
-                                .collect()
-                        })
-                        .unwrap_or_default();
-                    let strategy = match m.get("unmapped").and_then(|v| v.as_str()) {
-                        Some("error") => UnmappedStrategy::Error,
-                        Some("drop") => UnmappedStrategy::Drop,
-                        Some("default") => UnmappedStrategy::Default,
-                        Some("passthrough") => UnmappedStrategy::PassThrough,
-                        None => UnmappedStrategy::Error,
-                        _ => UnmappedStrategy::PassThrough,
-                    };
-                    (fwd, strategy)
-                } else {
-                    let fwd: Vec<(Value, Value)> = m
-                        .iter()
-                        .map(|(k, v)| (Value::String(k.clone()), v.clone()))
-                        .collect();
-                    (fwd, UnmappedStrategy::PassThrough)
-                }
+                let fwd_val = m.get("forward").ok_or_else(|| {
+                    format!("rule[{rule_idx}]: reverse valueMap requires 'valueMap.forward'")
+                })?;
+                let fwd: Vec<(Value, Value)> = fwd_val
+                    .as_object()
+                    .map(|fwd_map| {
+                        fwd_map
+                            .iter()
+                            .map(|(k, v)| (Value::String(k.clone()), v.clone()))
+                            .collect()
+                    })
+                    .unwrap_or_default();
+                let strategy = match m.get("unmapped").and_then(|v| v.as_str()) {
+                    Some("error") => UnmappedStrategy::Error,
+                    Some("drop") => UnmappedStrategy::Drop,
+                    Some("default") => UnmappedStrategy::Default,
+                    Some("passthrough") => UnmappedStrategy::PassThrough,
+                    None => UnmappedStrategy::Error,
+                    _ => UnmappedStrategy::PassThrough,
+                };
+                (fwd, strategy)
             } else {
-                (vec![], UnmappedStrategy::PassThrough)
+                return Err(format!(
+                    "rule[{rule_idx}]: reverse transform 'valueMap' requires 'valueMap'"
+                ));
             };
             TransformType::ValueMap {
                 forward,
@@ -326,34 +323,31 @@ pub fn parse_mapping_rules_from_value(val: &Value) -> Result<Vec<MappingRule>, S
             "valueMap" => {
                 let vm = obj.get("valueMap").and_then(|v| v.as_object());
                 let (forward, unmapped_strategy) = if let Some(m) = vm {
-                    if let Some(fwd_val) = m.get("forward") {
-                        let fwd: Vec<(Value, Value)> = fwd_val
-                            .as_object()
-                            .map(|fwd_map| {
-                                fwd_map
-                                    .iter()
-                                    .map(|(k, v)| (Value::String(k.clone()), v.clone()))
-                                    .collect()
-                            })
-                            .unwrap_or_default();
-                        let strategy = match m.get("unmapped").and_then(|v| v.as_str()) {
-                            Some("error") => UnmappedStrategy::Error,
-                            Some("drop") => UnmappedStrategy::Drop,
-                            Some("default") => UnmappedStrategy::Default,
-                            Some("passthrough") => UnmappedStrategy::PassThrough,
-                            None => UnmappedStrategy::Error,
-                            _ => UnmappedStrategy::PassThrough,
-                        };
-                        (fwd, strategy)
-                    } else {
-                        let fwd: Vec<(Value, Value)> = m
-                            .iter()
-                            .map(|(k, v)| (Value::String(k.clone()), v.clone()))
-                            .collect();
-                        (fwd, UnmappedStrategy::PassThrough)
-                    }
+                    let fwd_val = m.get("forward").ok_or_else(|| {
+                        format!("rule[{i}]: transform 'valueMap' requires 'valueMap.forward'")
+                    })?;
+                    let fwd: Vec<(Value, Value)> = fwd_val
+                        .as_object()
+                        .map(|fwd_map| {
+                            fwd_map
+                                .iter()
+                                .map(|(k, v)| (Value::String(k.clone()), v.clone()))
+                                .collect()
+                        })
+                        .unwrap_or_default();
+                    let strategy = match m.get("unmapped").and_then(|v| v.as_str()) {
+                        Some("error") => UnmappedStrategy::Error,
+                        Some("drop") => UnmappedStrategy::Drop,
+                        Some("default") => UnmappedStrategy::Default,
+                        Some("passthrough") => UnmappedStrategy::PassThrough,
+                        None => UnmappedStrategy::Error,
+                        _ => UnmappedStrategy::PassThrough,
+                    };
+                    (fwd, strategy)
                 } else {
-                    (vec![], UnmappedStrategy::PassThrough)
+                    return Err(format!(
+                        "rule[{i}]: transform 'valueMap' requires 'valueMap'"
+                    ));
                 };
                 vm_default = vm.and_then(|m| m.get("default")).cloned();
                 TransformType::ValueMap {

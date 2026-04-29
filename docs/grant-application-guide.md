@@ -26,7 +26,6 @@ by a bind in `definition.json` and backed by `nonRelevantBehavior: "remove"`, wh
 data on submission. The final Review & Submit page collects supporting documents and presents a
 read-back summary of all prior answers before the applicant commits.
 
-
 ## 2. Form Definition Structure
 
 The definition lives at `examples/grant-application/definition.json`. Every Formspec definition
@@ -62,7 +61,6 @@ The `items` array encodes the field hierarchy. Top-level groups carry a `"presen
 is the dot-joined sequence of its ancestor group keys plus its own key — so `applicantInfo.ein`
 lives inside the `applicantInfo` group. Nested groups (like `lineItems` inside `budget`) simply
 extend the path further.
-
 
 ## 3. FEL in Practice
 
@@ -113,7 +111,6 @@ Variables are evaluated lazily and cached reactively. `@grandTotal` depends on `
 which depends on `@totalDirect` — the engine wires these dependencies automatically via Preact
 Signals, so any line-item edit propagates through the whole chain.
 
-
 ## 4. Binds and Conditional Logic
 
 Binds are the per-field policy layer. Each bind targets a path (or a wildcard path like
@@ -146,7 +143,6 @@ When `usesSubcontractors` is false, the group is non-relevant. Because the form 
 `nonRelevantBehavior: "remove"`, the subcontractor data is stripped from `getResponse()` output.
 The page never appears in the wizard navigation and its data is never submitted — both the UI
 and the data contract enforce the same invariant.
-
 
 ## 5. Validation Shapes
 
@@ -194,7 +190,6 @@ false positives when the condition is irrelevant:
 Each shape that fires produces a `ValidationResult` object in the report. The report is what the
 server receives and re-evaluates independently.
 
-
 ## 6. Server-Side Re-Validation
 
 Client-side FEL evaluation is a user-experience feature, not a security boundary. A determined
@@ -226,7 +221,6 @@ looking total will be caught by the `budgetMatch` re-check. After validation, th
 `MappingEngine.forward(data)` to produce the grants-management output, and returns both the
 validation report and the mapped payload.
 
-
 ## 7. The Mapping Document
 
 `examples/grant-application/mapping.json` describes how a validated Formspec response is
@@ -248,7 +242,7 @@ Three transform types appear in this example:
 ```json
 { "sourcePath": "applicantInfo.orgType", "targetPath": "organization.type_code",
   "transform": "valueMap",
-  "valueMap": { "nonprofit": "NPO", "university": "EDU", "government": "GOV" } }
+  "valueMap": { "forward": { "nonprofit": "NPO", "university": "EDU", "government": "GOV" } } }
 ```
 
 **`expression`** applies a FEL snippet to extract or derive a value. Money fields in Formspec
@@ -310,7 +304,6 @@ The contact display name is synthesised from two fields:
   "expression": "$applicantInfo.contactName & ' <' & $applicantInfo.contactEmail & '>'"
 }
 ```
-
 
 ## 8. Bind Completeness — Required, Readonly, Default, and Whitespace
 
@@ -384,7 +377,6 @@ This is appropriate for identifiers where the user might type spaces around the 
 Whitespace normalisation happens before constraint evaluation, so the EIN regex check sees the
 cleaned value.
 
-
 ## 9. Shapes in Depth — Severity, Timing, and Context
 
 Shape rules differ from bind constraints in scope: a bind constraint tests a single field
@@ -452,7 +444,6 @@ Each key in `context` is a FEL expression evaluated at the time the shape fires.
 `ValidationResult` object carries a `context` map that the UI can destructure to show: "Grand
 total is $12,500.00 but you entered $12,000.00 — difference: $500.00." This keeps diagnostic
 intelligence in the definition rather than duplicated across every consumer.
-
 
 ## 10. Review & Submit — Summary, Collapsible, Alert, and FileUpload
 
@@ -527,7 +518,6 @@ implementation concern handled outside the form spec itself.
 This connects the `FileUpload` component bindings to the definition's field schema, ensuring that
 the attachments go through the same relevance, required, and response-collection machinery as
 every other field.
-
 
 ## 11. What This Example Does Not Cover
 

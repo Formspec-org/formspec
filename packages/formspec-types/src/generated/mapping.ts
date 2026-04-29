@@ -87,10 +87,7 @@ export type FieldRule = {
     coerce?:
       | Coerce
       | ('string' | 'number' | 'boolean' | 'date' | 'datetime' | 'integer' | 'array' | 'object' | 'money');
-    /**
-     * Lookup table for value substitution. Full form has 'forward', optional 'reverse', 'unmapped' strategy, and 'default'. Shorthand form is a flat object treated as the forward map. REQUIRED when transform is 'valueMap'. Auto-reversible only when the forward map is bijective (every value is unique); non-injective maps require an explicit reverse.valueMap.
-     */
-    valueMap?: ValueMap | {};
+    valueMap?: ValueMap;
     reverse?: ReverseOverride;
     /**
      * Controls whether this rule participates in reverse execution. If false, the rule is skipped during reverse mapping (even when document direction is 'both'). MUST be false (or omitted) for inherently lossy transforms: 'drop', and 'expression'/'constant'/'concat'/'split' without an explicit reverse block. 'preserve' is always auto-reversible. Setting true on a lossy rule without a reverse block MUST produce a validation error.
@@ -173,10 +170,7 @@ export type InnerRule = {
     coerce?:
       | Coerce
       | ('string' | 'number' | 'boolean' | 'date' | 'datetime' | 'integer' | 'array' | 'object' | 'money');
-    /**
-     * Lookup table (full or shorthand form).
-     */
-    valueMap?: ValueMap | {};
+    valueMap?: ValueMap;
     reverse?: ReverseOverride;
     /**
      * If false, this inner rule is skipped during reverse execution.
@@ -313,10 +307,7 @@ export interface Coerce {
   format?: string;
 }
 /**
- * Lookup table for value translation between source and target code systems. The forward map is always required. The reverse map is auto-derived by inverting forward when the forward map is bijective (every value is unique). If forward contains duplicate values (many-to-one), auto-reversal is impossible and an explicit reverse map MUST be provided for bidirectional rules. The unmapped strategy controls behavior when a source value has no matching key.
- *
- * This interface was referenced by `MappingDocument`'s JSON-Schema
- * via the `definition` "ValueMap".
+ * Lookup table for value substitution. REQUIRED when transform is 'valueMap'. Auto-reversible only when the forward map is bijective (every value is unique); non-injective maps require an explicit reverse.valueMap.
  */
 export interface ValueMap {
   /**
@@ -364,10 +355,7 @@ export interface ReverseOverride {
    * Reverse coercion descriptor (from/to types for the reverse direction).
    */
   coerce?: Coerce | ('string' | 'number' | 'boolean' | 'date' | 'datetime' | 'integer' | 'array' | 'object' | 'money');
-  /**
-   * Reverse value map overriding auto-derived inverse.
-   */
-  valueMap?: ValueMap | {};
+  valueMap?: ValueMap;
   /**
    * FEL boolean guard for the reverse direction. Overrides the forward condition.
    */
