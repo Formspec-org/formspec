@@ -15,9 +15,53 @@ Companion to [`thoughts/README.md`](../README.md) audit (2026-04-29). Open items
 
 ## 2. WOS stack-closure cluster (0066–0071)
 
-**Resolved assessment:** [`stack-closure-cluster-assessment.md`](stack-closure-cluster-assessment.md) (wos-scout + trellis-scout, reconciled 2026-04-29).
+**Resolved assessment:** [`stack-closure-cluster-assessment.md`](stack-closure-cluster-assessment.md). Owner decisions recorded 2026-04-29. Sequence: 0069 → 0070 → 0068 → 0071 → 0067 → 0066.
 
-Resolved sequence: 0069 → 0070 → 0068 → 0071 → 0067 → 0066. Owner decisions recorded 2026-04-29 answer the tenant-wire, `CaseOpenPin`, retry-exhaustion, expired-clock severity, 0066 first-proof, and time-strictness questions. Treat each ADR as a center commitment with proof gates: 0069 pins time, 0070 pins commit/failure, 0068 pins scope, 0071 pins version semantics, 0067 pins deadline evidence, and 0066 integrates the revisit/supersession story.
+Execution homes: `TODO-STACK.md`, `PLANNING.md`, `wos-spec/TODO.md` (ADR 0066/0067), `wos-spec/crates/wos-server/TODO.md` (WS-072/073/076), `trellis/TODO.md` (items 9, 10, 17–20).
+
+### 2a. 0069 — Time Semantics (first) — **Trellis first slice done**
+
+- **Done:** Trellis temporal-order verifier check (`timestamp_order_violation` tamper_kind), `tamper/041-timestamp-backwards` fixture, `TR-CORE-092` matrix row, §19.1 enum registration, unit tests for backwards-detection and equal-timestamp pass-through. Three `trellis/TODO.md` item-20 checkboxes closed.
+- **Remaining:** CBOR wire migration `uint` seconds → `uint64` nanoseconds (D-2.1, `trellis/TODO.md` item 20 first checkbox); WOS `ClockSkewObserved` trigger once substrate timestamps plumbed through drain context; FEL `today()`/`now()` hard-fail without tz context; leap-second parse rejection
+- **Owner pins:** reject `23:59:60` at parse; FEL `today()`/`now()` hard-fail without tz context; chain order = timestamp order
+- **Proof gates:** PLN-0073, PLN-0114, PLN-0115, PLN-0117, PLN-0131, Trellis item 20
+- **Blocks:** 0067 (precision + clock-source rules)
+
+### 2b. 0070 — Failure And Compensation
+
+- **Next slice:** Emit `AuthorizationRejected` before returning unauthorized from transition path (~15 lines in `runtime.rs`)
+- **Then:** Custody append retry loop + `CommitAttemptFailure` on exhaustion (~40 lines in `custody.rs`)
+- **Owner pins:** retry exhaustion → explicit operator recovery via `stalled`, not automatic; runtime state is orchestration, not evidentiary truth
+- **Proof gates:** PLN-0035, PLN-0042, PLN-0047, Trellis item 19, WOS runtime emission
+- **Blocks:** 0066 (amendment-authority denials)
+
+### 2c. 0068 — Tenant And Scope
+
+- **Next slice:** Update canonical tenant-truth source, then wire runtime/storage/verifier checks
+- **Owner pins:** tenant required at Trellis envelope/profile level (not optional-with-MUST-populate); regenerate pre-release fixtures if needed
+- **Proof gates:** PLN-0004, PLN-0005, PLN-0011–0013, PLN-0015, PLN-0001–0007, Trellis item 17
+- **Blocks:** 0066 (cross-tenant supersession)
+
+### 2d. 0071 — Migration And Versioning
+
+- **Next slice:** Decide authoritative wire home for `CaseOpenPin`, then add pin-set / pin-mutation-rejected / valid-migration vectors
+- **Owner pins:** authoritative pin on first anchored case-open event; other surfaces are projections
+- **Proof gates:** PLN-0019, PLN-0095–0098, PLN-0125, Trellis item 18
+- **Blocks:** 0066 (migration-coupled supersession)
+
+### 2e. 0067 — Statutory Clocks
+
+- **Next slice:** One `ClockStarted`/`ClockResolved` round trip after 0069 lands. Do not start with pause/resume arithmetic
+- **Owner pins:** expired unresolved clocks advisory in base profile; stricter profiles may escalate; `ProcessingSLA` absorbs older task-SLA surface
+- **Proof gates:** PLN-0150, PLN-0153, PLN-0166–0168, PLN-0170, Trellis item 10, WOS ADR 0067 checklist
+- **Blocks:** 0066 (open-clock cancellation)
+
+### 2f. 0066 — Amendment And Supersession (last)
+
+- **Next slice:** Same-chain correction or rescission first; cross-chain `supersession-graph` after 0068 + 0071
+- **Owner pins:** first proof is same-chain; no mutation-based amendment; authorization via `AuthorizationAttestation`
+- **Proof gates:** PLN-0104, PLN-0106, WOS ADR 0066 checklist, Trellis item 9, Formspec `ResponseCorrection`
+- **Blocks:** Full stack-closure claim
 
 ---
 

@@ -31,8 +31,8 @@ test-scripts:
 build-wasm:
 	npm run build:wasm --workspace=@formspec-org/engine
 
-# Full compile: Rust workspace + npm workspaces (WASM via formspec-engine) + formspec_rust into active Python.
-# Also builds wos-spec and trellis submodules; these are auto-initialized on demand (see submodule rule below).
+# Full compile: Rust workspace + npm workspaces (WASM via formspec-engine) +
+# formspec_rust into active Python + wos-spec and trellis submodules.
 build: build-rust build-js build-python build-wos-spec build-trellis
 
 build-rust:

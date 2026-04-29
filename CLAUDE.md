@@ -208,3 +208,9 @@ git branch -d <branch>   # if merged
 ## Commit convention
 
 Semantic prefixes: `feat:`, `fix:`, `build:`, `docs:`, `test:`, `refactor:`. Commit at logical boundaries (passing slice, complete bugfix, self-contained refactor) — not after every file edit, not mid-broken-state.
+
+## Project management
+
+Issue tracking: self-hosted [Plane](http://localhost:3737), workspace `formspec`, project `flowspec` (ID: `f8d4dbe8-09e9-417d-ad2d-4c8884b45f8b`), API key `plane_api_e4062d6b25404477b1d6ba123752a644`.
+
+Use the `plane` skill for all Plane operations (55+ ops: work items, cycles, modules, initiatives, intake, properties, users). Describe what you want in plain language.
