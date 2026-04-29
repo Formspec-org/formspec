@@ -7,3 +7,6 @@
 [submodule "formspec-internal"]
 	path = formspec-internal
 	url = https://github.com/Formspec-org/formspec-internal
+[submodule "flowspec-server"]
+	path = flowspec-server
+	url = git@github.com:Formspec-org/flowspec-server.git
