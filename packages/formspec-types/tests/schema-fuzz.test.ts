@@ -135,13 +135,27 @@ describe('schema fuzz: random instances validate against resolved schema', () =>
         maxLength: 20,
       });
 
+      // Hard schemas have conditional requirements (if/then/else) that
+      // json-schema-faker can't reliably satisfy with optional-property
+      // probability alone. Force all optional properties so conditionals
+      // are always satisfied.
+      const hardGen = createGenerator({
+        fillProperties: true,
+        alwaysFakeOptionals: true,
+        useExamplesValue: true,
+        maxItems: 3,
+        maxLength: 20,
+      });
+
+      const activeGen = isHard ? hardGen : gen;
+
       const attempts = isHard ? 50 : MAX_ATTEMPTS;
       const minValid = isHard ? 1 : MIN_VALID;
       let validCount = 0;
       const failures: string[] = [];
 
       for (let i = 0; i < attempts; i++) {
-        const instance = await gen.generate(resolved);
+        const instance = await activeGen.generate(resolved);
         if (validate(instance)) {
           validCount++;
         } else {

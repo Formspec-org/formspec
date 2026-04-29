@@ -304,7 +304,7 @@ the target system’s vocabulary:</p>
 <div class="sourceCode" id="cb13"><pre
 class="sourceCode json"><code class="sourceCode json"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span> <span class="dt">&quot;sourcePath&quot;</span><span class="fu">:</span> <span class="st">&quot;applicantInfo.orgType&quot;</span><span class="fu">,</span> <span class="dt">&quot;targetPath&quot;</span><span class="fu">:</span> <span class="st">&quot;organization.type_code&quot;</span><span class="fu">,</span></span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;transform&quot;</span><span class="fu">:</span> <span class="st">&quot;valueMap&quot;</span><span class="fu">,</span></span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;valueMap&quot;</span><span class="fu">:</span> <span class="fu">{</span> <span class="dt">&quot;nonprofit&quot;</span><span class="fu">:</span> <span class="st">&quot;NPO&quot;</span><span class="fu">,</span> <span class="dt">&quot;university&quot;</span><span class="fu">:</span> <span class="st">&quot;EDU&quot;</span><span class="fu">,</span> <span class="dt">&quot;government&quot;</span><span class="fu">:</span> <span class="st">&quot;GOV&quot;</span> <span class="fu">}</span> <span class="fu">}</span></span></code></pre></div>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;valueMap&quot;</span><span class="fu">:</span> <span class="fu">{</span> <span class="dt">&quot;forward&quot;</span><span class="fu">:</span> <span class="fu">{</span> <span class="dt">&quot;nonprofit&quot;</span><span class="fu">:</span> <span class="st">&quot;NPO&quot;</span><span class="fu">,</span> <span class="dt">&quot;university&quot;</span><span class="fu">:</span> <span class="st">&quot;EDU&quot;</span><span class="fu">,</span> <span class="dt">&quot;government&quot;</span><span class="fu">:</span> <span class="st">&quot;GOV&quot;</span> <span class="fu">}</span> <span class="fu">}</span> <span class="fu">}</span></span></code></pre></div>
 <p><strong><code>expression</code></strong> applies a FEL snippet to
 extract or derive a value. Money fields in Formspec are structured
 objects <code>{amount, currency}</code>. The grants-management API
@@ -436,21 +436,21 @@ acknowledgment but the spec does not mandate it. <code>"info"</code>
 provides real-time guidance:</p>
 <table>
 <thead>
-<tr class="header">
+<tr>
 <th>Severity</th>
 <th>Effect</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>error</code></td>
 <td>Blocks submission; <code>valid: false</code> in report</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>warning</code></td>
 <td>Appears in report; does not block submission by default</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>info</code></td>
 <td>Informational only; useful for character counts, guidance</td>
 </tr>

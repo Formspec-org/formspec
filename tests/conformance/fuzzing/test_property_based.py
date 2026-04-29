@@ -433,27 +433,20 @@ def gen_coerce(draw):
 
 @st.composite
 def gen_value_map(draw):
-    """Generate valid valueMap: full form OR flat shorthand."""
-    branch = draw(st.sampled_from(["full", "flat"]))
-    if branch == "full":
-        vm = {
-            "forward": draw(st.fixed_dictionaries(
-                {"a": st.just("A")},
-                optional={"b": st.just("B"), "c": st.just("C")},
-            )),
-        }
-        if draw(st.booleans()):
-            vm["unmapped"] = draw(
-                st.sampled_from(["error", "drop", "passthrough", "default"])
-            )
-        return vm
-    else:
-        # Flat shorthand: any object WITHOUT a "forward" key
-        keys = draw(st.lists(
-            st.from_regex(r"\A[a-z]{1,5}\Z").filter(lambda k: k != "forward"),
-            min_size=1, max_size=4, unique=True,
-        ))
-        return {k: k.upper() for k in keys}
+    """Generate valid structured valueMap with required forward map."""
+    vm = {
+        "forward": draw(st.fixed_dictionaries(
+            {"a": st.just("A")},
+            optional={"b": st.just("B"), "c": st.just("C")},
+        )),
+    }
+    if draw(st.booleans()):
+        vm["unmapped"] = draw(
+            st.sampled_from(["error", "drop", "passthrough", "default"])
+        )
+    if draw(st.booleans()):
+        vm["default"] = draw(non_empty_str)
+    return vm
 
 
 @st.composite

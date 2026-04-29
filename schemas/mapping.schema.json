@@ -287,7 +287,9 @@
           "$ref": "#/$defs/ValueMap",
           "description": "Lookup table for value substitution. REQUIRED when transform is 'valueMap'. Auto-reversible only when the forward map is bijective (every value is unique); non-injective maps require an explicit reverse.valueMap.",
           "examples": [
-            { "low": 1, "medium": 2, "high": 3 },
+            {
+              "forward": { "low": 1, "medium": 2, "high": 3 }
+            },
             {
               "forward": { "male": "M", "female": "F", "other": "O" },
               "unmapped": "passthrough"

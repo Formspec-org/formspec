@@ -141,14 +141,14 @@ test('Phase 1.1 — valueMap non-bijective forward auto-inverts on reverse (last
   assert.ok(result.output.mode === 'a' || result.output.mode === 'b');
 });
 
-// Legacy flat valueMap still works (backward compat)
-test('Phase 1.1 — legacy flat valueMap still works', () => {
+// Structured valueMap forward map
+test('Phase 1.1 — structured valueMap forward map', () => {
   const engine = new RuntimeMappingEngine({
     rules: [{
       sourcePath: 'mode',
       targetPath: 'out.mode',
       transform: 'valueMap',
-      valueMap: { advanced: 'ADV', basic: 'BSC' }
+      valueMap: { forward: { advanced: 'ADV', basic: 'BSC' } }
     }]
   });
   const result = engine.forward({ mode: 'advanced' });
@@ -749,8 +749,8 @@ test('Backward compat — original mapping document with new structured diagnost
       { sourcePath: 'fullName', targetPath: 'subject.name', transform: 'preserve', priority: 20 },
       {
         sourcePath: 'profileMode', targetPath: 'subject.mode', transform: 'valueMap',
-        valueMap: { advanced: 'ADV', basic: 'BSC' },
-        reverse: { transform: 'valueMap', valueMap: { ADV: 'advanced', BSC: 'basic' } },
+        valueMap: { forward: { advanced: 'ADV', basic: 'BSC' } },
+        reverse: { transform: 'valueMap', valueMap: { forward: { ADV: 'advanced', BSC: 'basic' } } },
         priority: 15, reversePriority: 15
       },
       { sourcePath: 'budget', targetPath: 'finance.budget', transform: 'coerce', coerce: 'number', priority: 10 },
@@ -799,14 +799,13 @@ test('Fix 1 — new-shape valueMap with no unmapped property defaults to "error"
   assert.equal(result.output.out, undefined); // skipped, not written
 });
 
-test('Fix 1 — legacy flat valueMap keeps passthrough default', () => {
+test('Fix 1 — structured valueMap with explicit passthrough default', () => {
   const engine = new RuntimeMappingEngine({
     rules: [{
       sourcePath: 'status',
       targetPath: 'out.status',
       transform: 'valueMap',
-      valueMap: { active: 'A', inactive: 'I' }
-      // legacy flat map — default unmapped stays passthrough for backwards compat
+      valueMap: { forward: { active: 'A', inactive: 'I' }, unmapped: 'passthrough' }
     }]
   });
   const result = engine.forward({ status: 'pending' });
@@ -876,7 +875,7 @@ test('Fix 4 — valueMap with null source: WASM passes through null', () => {
       sourcePath: 'status',
       targetPath: 'out.status',
       transform: 'valueMap',
-      valueMap: { 'null': 'missing' }
+      valueMap: { forward: { 'null': 'missing' }, unmapped: 'passthrough' }
     }]
   });
   const result = engine.forward({ status: null });

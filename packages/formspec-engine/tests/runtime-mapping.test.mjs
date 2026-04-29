@@ -18,10 +18,10 @@ const mappingDocument = {
       sourcePath: 'profileMode',
       targetPath: 'subject.mode',
       transform: 'valueMap',
-      valueMap: { advanced: 'ADV', basic: 'BSC' },
+      valueMap: { forward: { advanced: 'ADV', basic: 'BSC' } },
       reverse: {
         transform: 'valueMap',
-        valueMap: { ADV: 'advanced', BSC: 'basic' }
+        valueMap: { forward: { ADV: 'advanced', BSC: 'basic' } }
       },
       priority: 15,
       reversePriority: 15

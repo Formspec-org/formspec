@@ -197,7 +197,7 @@ class TestFieldRule:
         elif transform == "coerce":
             rule["coerce"] = {"from": "string", "to": "integer"}
         elif transform == "valueMap":
-            rule["valueMap"] = {"yes": "true", "no": "false"}
+            rule["valueMap"] = {"forward": {"yes": "true", "no": "false"}}
         _validate(_minimal_mapping(rules=[rule]))
 
     def test_invalid_transform(self):
@@ -295,10 +295,11 @@ class TestValueMap:
         rule = _minimal_rule(transform="valueMap", valueMap=vm)
         _validate(_minimal_mapping(rules=[rule]))
 
-    def test_flat_valuemap_shorthand(self):
+    def test_flat_valuemap_shorthand_rejected(self):
         vm = {"yes": "true", "no": "false"}
         rule = _minimal_rule(transform="valueMap", valueMap=vm)
-        _validate(_minimal_mapping(rules=[rule]))
+        with pytest.raises(ValidationError):
+            _validate(_minimal_mapping(rules=[rule]))
 
     @pytest.mark.parametrize("unmapped", ["error", "drop", "passthrough", "default"])
     def test_valuemap_unmapped_enum(self, unmapped):
