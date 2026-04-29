@@ -118,13 +118,10 @@ function normalizeWidgetToken(widget: string): string {
 /**
  * Convert a Tier 1 / theme widget token into a concrete component type.
  *
- * Accepts both spec vocabulary (`radio`, `dropdown`) and legacy component ids
- * (`RadioGroup`, `Select`) so authored documents remain readable while the
- * renderer stays backwards-tolerant.
+ * Accepts spec vocabulary (`radio`, `dropdown`) and extension ids (`x-*`).
  */
 export function widgetTokenToComponent(widget: string | null | undefined): string | null {
     if (!widget) return null;
     if (widget.startsWith('x-')) return widget;
-    if (KNOWN_COMPONENT_TYPES.has(widget)) return widget;
     return SPEC_WIDGET_TO_COMPONENT[normalizeWidgetToken(widget)] ?? null;
 }

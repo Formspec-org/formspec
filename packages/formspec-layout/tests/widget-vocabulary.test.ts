@@ -18,9 +18,10 @@ describe('widgetTokenToComponent', () => {
     expect(widgetTokenToComponent('dropdown')).toBe('Select');
   });
 
-  it('passes through PascalCase component names', () => {
+  it('does not accept raw PascalCase component names that are not widget tokens', () => {
+    // "Toggle" still normalizes to the canonical "toggle" widget token.
     expect(widgetTokenToComponent('Toggle')).toBe('Toggle');
-    expect(widgetTokenToComponent('RadioGroup')).toBe('RadioGroup');
+    expect(widgetTokenToComponent('RadioGroup')).toBeNull();
   });
 
   it('normalizes Checkbox to checkbox hint and resolves to Toggle', () => {
