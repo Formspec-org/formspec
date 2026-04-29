@@ -20,8 +20,25 @@ Navigate the Trellis cryptographic integrity substrate spec suite under `trellis
 
 High-signal drift noted while reconciling crate reference maps with normative prose (implementation honesty, not spec rewrites):
 
-1. **`LedgerStore` vs Core §17 (idempotency):** The `trellis-core` crate map records the public `LedgerStore` trait as **`append_event(StoredEvent) -> Result<(), Error>` only** — no idempotency key, dedupe window, or retry token on the seam. Core §17’s append-idempotency expectations are **not yet modeled as an explicit trait-level surface** in Rust; treat as a documented **Rust-vs-prose gap** until the seam or store adapters evolve.
-2. **`trellis-verify` → `trellis-cddl` dev-dependency:** The `trellis-cddl` crate map notes **`trellis-verify` declares `trellis-cddl` under `dev-dependencies`** (cross-check intent), but **there is no in-source usage in `trellis-verify` yet** — the dependency is ahead of wiring; do not assume CDDL helpers participate in verifier behavior until imports/usages appear.
+1. **`LedgerStore` vs Core §17 (idempotency) — RESOLVED Wave 24.** The trait
+   surface stays narrow (`append_event(StoredEvent) -> Result<(), Error>`)
+   but `StoredEvent` now carries the parsed `idempotency_key` via
+   `with_idempotency_key`; both adapters (`trellis-store-memory` and
+   `trellis-store-postgres`) read the threaded key and enforce the §17.3
+   unique-`(scope, key)` invariant — the Postgres side via partial unique
+   index `trellis_events_scope_idempotency_uidx`, the memory side via an
+   in-process collision check across committed + buffered events. The
+   verifier (`trellis-verify::verify_event_set_with_classes`) holds the
+   offline (Core §16) detection path with a per-event-set
+   `idempotency_index` BTreeMap. Idempotency travels in the data, not on
+   the trait API; that is now a conscious design choice rather than a
+   gap. Cross-check: `trellis-py` mirrors the same shape (`EventDetails`
+   carries `idempotency_key`; `_verify_event_set` builds the same index).
+2. **`trellis-verify` → `trellis-cddl` dev-dependency — RESOLVED Wave 22+.**
+   The dep IS used: `trellis-verify/src/lib.rs:6090` consumes
+   `parse_ed25519_cose_key` from a test module. Keep as dev-dep; do not
+   drop. (The "ahead of wiring" framing in earlier syncs predated the
+   wave-22 export-bundle test additions.)
 
 ---
 
