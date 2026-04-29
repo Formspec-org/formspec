@@ -1,6 +1,6 @@
 {
   "name": "@formspec-org/core",
-  "description": "Core project model, handlers, and normalization layer for Formspec documents",
+  "description": "Core project model, handlers, and invariant layer for Formspec documents",
   "version": "0.1.0",
   "type": "module",
   "license": "BUSL-1.1",

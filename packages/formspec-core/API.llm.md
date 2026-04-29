@@ -69,6 +69,7 @@ definition items are laid out and rendered.
 **Node referencing (NodeRef):**
 Every tree node is addressed by a `NodeRef`, which is an object carrying
 exactly one of:
+
 - `{ bind: string }` -- for nodes bound to a definition item key (Input,
   Display, and some Special components).
 - `{ nodeId: string }` -- for unbound layout/container nodes that receive a
@@ -159,6 +160,7 @@ distinct from `name` (a machine-readable identifier) and `description` (a
 longer explanatory text).
 
 **Payload:**
+
 - `title` -- The new title string for the form. An empty string is valid
   (clears the title display).
 
@@ -190,6 +192,7 @@ field that needs them, authors declare a named option set once in
 `optionSet` property.
 
 An option set can be defined in two forms:
+
 - **Inline**: an array of `Option` objects (each with at least `value` and `label`),
   optionally including FEL-based visibility conditions per option.
 - **External source**: a URI string pointing to a remote option list, with optional
@@ -205,6 +208,7 @@ This module is intentionally narrow: it only mutates Tier 1 authoring state
 that belongs on the definition itself.
 
 That includes:
+
 - top-level definition metadata (`definition.setDefinitionProperty`)
 - form presentation behavior such as `pageMode` (`definition.setFormPresentation`)
 - group `$ref` composition (`definition.setGroupRef`)
@@ -256,6 +260,7 @@ definition-variables
 ## `definitionVariablesHandlers: Record<string, CommandHandler>`
 
 ## `resolveItemLocation(state: ProjectState, path: string): {
+
     parent: FormItem[];
     index: number;
     item: FormItem;
@@ -296,21 +301,6 @@ handlers/mapping
 
 ## `mappingHandlers: Record<string, CommandHandler>`
 
-## `migrateWizardRoot(tree: Record<string, unknown> | null | undefined): WizardRootMigrationResult | null`
-
-Migrate a deprecated Wizard or Tabs root to a Stack root.
-
-Returns null when no migration is needed (root is already Stack or another type).
-Only migrates top-level Wizard/Tabs — nested Tabs inside Pages are untouched.
-
-#### interface `WizardRootMigrationResult`
-
-@filedesc Migrates deprecated Wizard/Tabs root component trees to Stack roots on project load.
-
-- **tree** (`Record<string, unknown>`): The rewritten component tree with Stack as root.
-- **migratedProps** (`Record<string, unknown>`): Props extracted from the old root to be applied to formPresentation.
-- **migratedMode** (`'wizard' | 'tabs'`): The presentation mode implied by the old root type.
-
 @filedesc Page handlers that manipulate Page nodes in the component tree.
 
 Page nodes live as direct children of the root Stack with
@@ -340,9 +330,9 @@ Theme command handlers.
 The Formspec theme document controls visual presentation through a three-level
 cascade that determines how each form item is rendered:
 
-  - **Cascade Level 1 (Defaults)** -- Form-wide presentation baseline.
-  - **Cascade Level 2 (Selectors)** -- Pattern-based overrides.
-  - **Cascade Level 3 (Per-Item Overrides)** -- Highest-specificity level.
+- **Cascade Level 1 (Defaults)** -- Form-wide presentation baseline.
+- **Cascade Level 2 (Selectors)** -- Pattern-based overrides.
+- **Cascade Level 3 (Per-Item Overrides)** -- Highest-specificity level.
 
 Also manages design tokens, breakpoints, and stylesheets.
 Page layout lives in the component tree; theme handlers no longer own page authoring.
@@ -412,30 +402,6 @@ Pure data structure — no knowledge of commands or state shape.
 
 Normalize BCP 47: lowercase language, title-case script, uppercase region.
 
-Definition normalization utilities.
-
-Converts legacy/alternative serialization shapes into the canonical forms
-expected by the studio engine:
-
-- `instances[]` (array with `name` property) → `instances{}` (object keyed by name)
-- `binds{}` (object keyed by path) → `binds[]` (array with `path` property)
-
-Safe to call on already-normalized definitions (idempotent).
-
-normalization
-
-## `normalizeDefinition(definition: FormDefinition): FormDefinition`
-
-Normalize a definition by converting legacy shape forms to canonical forms.
-
-Conversions applied:
-- If `definition.instances` is an array, converts to object keyed by each
-  item's `name` property. The `name` property is stripped from each value.
-- If `definition.binds` is a non-array object, converts to array of
-  `{ path, ...config }` entries where each key becomes the `path`.
-
-Both conversions are idempotent: calling on already-normalized data is safe.
-
 ## `resolvePageStructure(state: PageStructureInput, definitionItemKeys: string[]): ResolvedPageStructure`
 
 Resolves the current page structure from the component tree.
@@ -504,6 +470,7 @@ returns the new state plus all results. Middleware wraps the full plan.
 ##### `constructor(handlers: Readonly<Record<string, CommandHandler>>, middleware: Middleware[])`
 
 ##### `execute(state: ProjectState, phases: AnyCommand[][], reconcile: (clone: ProjectState) => void): {
+
         newState: ProjectState;
         results: CommandResult[];
     }`
@@ -1040,15 +1007,16 @@ command-dispatch pipeline. Queries are delegated to pure functions in `queries/`
 Wholesale replace project state with a prior snapshot.
 
 CONTRACT — the snapshot is held BY REFERENCE:
-  - Callers MUST NOT mutate `snapshot` after this call. The project will
+
+- Callers MUST NOT mutate `snapshot` after this call. The project will
     observe those mutations as corruption of its internal state.
-  - Callers who intend to keep using their own copy MUST clone before
+- Callers who intend to keep using their own copy MUST clone before
     passing (see ProposalManager — every call site wraps with
     `structuredClone`).
 
 Why by-reference rather than cloning inside?  Snapshots are already full
 `ProjectState` graphs (definition + component + theme + mappings + locales
-+ baseline). In snapshot-and-replay flows (reject / partial-merge) the
+- baseline). In snapshot-and-replay flows (reject / partial-merge) the
 caller clones once from the stored `snapshotBefore`; cloning again here
 would double the cost of every replay for a guarantee the caller already
 provides.  In dev builds we deep-freeze the snapshot after assignment so
@@ -1120,6 +1088,7 @@ Preserves existing bound node properties (widget overrides, styles) and
 unbound layout nodes (re-inserted at original positions).
 
 The algorithm:
+
   1. Snapshot layout wrappers (_layout: true) with their full subtrees.
   2. Collect existing bound/display nodes by path, rebuild from definition.
   3. Build a flat Stack root with all definition-derived nodes.
@@ -1428,8 +1397,8 @@ context refs (`@source`, `@target`) when inside a mapping expression.
         label?: string;
         /**
          * Present only when contextPath is inside a repeatable group.
-         * - `'local'` — field is inside the same innermost repeat group as contextPath.
-         * - `'global'` — field is outside that repeat group.
+         * -`'local'` — field is inside the same innermost repeat group as contextPath.
+         * - `'global'`— field is outside that repeat group.
          */
         scope?: 'local' | 'global';
     }[]`): Fields that can be referenced, with their data type and optional label.
@@ -1615,4 +1584,3 @@ Callback invoked after every state change (dispatch, undo, redo, batch).
 ```ts
 type ChangeListener = (state: Readonly<ProjectState>, event: ChangeEvent) => void;
 ```
-

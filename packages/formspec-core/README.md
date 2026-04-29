@@ -1,6 +1,6 @@
 # formspec-core
 
-Raw project state management for Formspec. Command dispatch, handler pipeline, undo/redo, cross-artifact normalization, and diagnostics.
+Raw project state management for Formspec. Command dispatch, handler pipeline, undo/redo, cross-artifact invariants, and diagnostics.
 
 This package owns the `RawProject` class (implementing `IProjectCore`) and the full handler table — 130 commands across definition, component, theme, mapping, pages, and project areas. It is the foundation that `formspec-studio-core` composes over.
 
@@ -79,7 +79,7 @@ RawProject (facade)
 | `history.ts` | `HistoryManager<T>`: generic undo/redo stacks with depth cap, command log, push/pop/clear operations |
 | `tree-reconciler.ts` | `reconcileComponentTree()`: pure function — takes definition + existing tree + theme, returns a new component tree preserving bound node properties |
 | `state-normalizer.ts` | `normalizeState()`: pure function enforcing cross-artifact invariants (URL sync, breakpoint sort, breakpoint inheritance) |
-| `normalization.ts` | `normalizeDefinition()`: converts legacy serialization shapes to canonical forms (instances array → object, binds object → array); idempotent |
+| `definition` payloads | Must already match the canonical Formspec definition shape (object `instances`, array `binds`, `formPresentation`); core does not rewrite alternate serializations. |
 | `theme-cascade.ts` | `resolveThemeCascade()`: resolves effective presentation properties for an item across defaults → selectors → item-overrides |
 | `page-resolution.ts` | `resolvePageStructure()`: resolves component-tree pages into enriched `ResolvedPageStructure` with diagnostics |
 | `component-documents.ts` | Helpers for component document detection, normalization, and artifact envelopes |
@@ -192,7 +192,6 @@ These functions are exported for use outside `RawProject`:
 
 | Export | Description |
 |--------|-------------|
-| `normalizeDefinition(def)` | Converts legacy `instances[]` → object and `binds{}` → array. Idempotent. |
 | `resolveThemeCascade(theme, key, type, dataType?)` | Resolves effective presentation properties for one item via the three-level cascade. |
 | `resolvePageStructure(state, itemKeys)` | Resolves page structure from the component tree with region existence checks. |
 | `resolveItemLocation(state, path)` | Resolves a dot-path to the item and its parent in the definition tree. |
