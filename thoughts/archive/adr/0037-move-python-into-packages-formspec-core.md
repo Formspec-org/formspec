@@ -1,5 +1,9 @@
 # ADR 0037: Move `src/formspec/` into `packages/formspec-core/`
 
+## Status
+
+Superseded — the package name `packages/formspec-core/` was claimed by `@formspec-org/core` (TypeScript), a different package providing the core project model and command-dispatch layer. Python remains at `src/formspec/`. If this migration is still desired, a different package name is needed (e.g. `packages/formspec-python/` or `packages/formspec-py/`).
+
 ## Context
 
 The Python implementation lives in `src/formspec/` while all TypeScript packages live under `packages/`. This creates an inconsistent monorepo layout and the Python code lacks proper packaging (no `pyproject.toml` with metadata, deps, or entry points). Moving it into `packages/formspec-core/` with a proper `pyproject.toml` unifies the layout and makes the package pip-installable.

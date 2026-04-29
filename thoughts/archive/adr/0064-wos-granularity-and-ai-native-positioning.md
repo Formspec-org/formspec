@@ -1,6 +1,6 @@
 # ADR 0064: WOS Granularity and AI-Native Positioning
 
-**Status:** Accepted
+**Status:** Superseded by [ADR 0076](0076-product-tier-consolidation.md) — D-1 (18 fine-grained schemas) collapsed to 1 core + 2 sidecars; D-3 (named sidecars) restructured into embedded blocks; D-4 (companion split) absorbed into single `kernel/spec.md` (grew 741 → 2196 lines). D-2 (AI normative layer) survives structurally intact: `actorExtension` seam, `agents[]` block, 53 codebase references.
 **Date:** 2026-04-16
 **Scope:** `wos-spec/` submodule
 **Supersedes:** prior-reviewer recommendations to collapse schemas and demote the AI layer (see §7 of the handoff reference below)

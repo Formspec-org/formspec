@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Superseded — the signal-free reusable package goal was met, but via a command-dispatch architecture (`@formspec-org/core` + `@formspec-org/studio-core`), not the ADR's `MutationResult`/`wrapMutation` pattern. No `mutations/` directory, no `MutationResult` interface, no `normalize.ts`. `formspec-studio-core` exists as a `Project` facade over `@formspec-org/core` with ~50 behavior-driven helper methods delegating to command-dispatch internally.
 
 ## Context
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Implemented — all 10 architectural changes and 6 implementation slices complete. `builtinHandlers` frozen static map, JSON-native state (`Record<string, unknown>`), `RawProject` decomposed (682 lines from 2,346), `CommandPipeline` extracted, batch/middleware unified, registry loading seam (`indexRegistryPayload`). See sidecar for per-slice evidence.
 
 ## Date
 

@@ -1,6 +1,6 @@
 # ADR 0077: Canonical Kernel Extension Seams
 
-**Status:** Proposed
+**Status:** Implemented — all 5 decisions landed. Six canonical seams enumerated in Kernel §10 (`actorExtension`, `contractHook`, `provenanceLayer`, `lifecycleHook`, `custodyHook`, `extensions`/`x-`). Five invented seam names retired. CI lint gate (`check-canonical-seams.py`) wired into `.github/workflows/schema-regression.yml`. `wos-spec/TODO.md` confirms "fully implemented."
 **Date:** 2026-04-24
 **Scope:** WOS Kernel
 **Related:** [`wos-spec/specs/kernel/spec.md`](../../wos-spec/specs/kernel/spec.md) §10; [`wos-spec/CLAUDE.md`](../../wos-spec/CLAUDE.md) Q3 heuristic; [`wos-spec/counter-proposal-disposition.md`](../../wos-spec/counter-proposal-disposition.md) rows FP-02, E1, E7, architectural-posture on `formRef`; [`wos-spec/thoughts/2026-04-24-standards-absorption-gap-analysis.md`](../../wos-spec/thoughts/2026-04-24-standards-absorption-gap-analysis.md) §Refactor Target; [`wos-spec/schemas/kernel/wos-kernel.schema.json`](../../wos-spec/schemas/kernel/wos-kernel.schema.json)

@@ -1,7 +1,7 @@
 # ADR 0041: Marketing Site Rebuild — Implementation Plan
 
 **Date**: 2026-03-15
-**Status:** Proposed
+**Status:** Superseded — single-file `site/index.html` approach replaced by a full Astro site (`site/` workspace) with 6 pages, 13 blog posts, componentized architecture, Tailwind CSS, and light theme. Messaging strategy reversed (now AI-forward, not anti-AI-headline as this ADR argued). Old `site/index.html` (3009 lines) coexists but is no longer maintained.
 **Branch**: `marketing`
 **File**: `site/index.html` (single-file rebuild, inline CSS/JS)
 **Working directory**: `/Users/mikewolfd/Work/formspec/.claude/worktrees/marketing/`

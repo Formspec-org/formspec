@@ -1,7 +1,7 @@
 # ADR 0014: Schema-Centric Spec Compilation Workflow
 
 ## Status
-Proposed - replaces the prior markdown-only LLM extraction approach previously captured under ADR 0014.
+Implemented — all 6 rollout phases complete. Generator (`scripts/generate-spec-artifacts.mjs`), CI enforcement, 13 `*.llm.md` artifacts, 9 semantic capsules shipped. CI gate (`npm run docs:check`) enforces freshness.
 
 ## Objective
 Eliminate schema/spec drift while improving LLM structured-output quality by making each JSON Schema file a rich, canonical source for structural truth and generation guidance.

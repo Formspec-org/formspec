@@ -1,6 +1,6 @@
 # ADR 0065: WOS Authoring Stack Mirrors Formspec
 
-**Status:** Accepted
+**Status:** Implemented — all 4 crates shipped with 1:1 Formspec layering. `wos-authoring` (25+ intent helpers, `WosProject` facade), `wos-mcp` (22 tools, dual-entry dispatch), `wos-synth-core` (synthesis loop + `Prompter` trait), `wos-synth-cli` (binary wiring). Minor: `McpToolContext` wiring and `wos-synth-spike` vestige remain.
 **Date:** 2026-04-17
 **Scope:** `wos-spec/` submodule — crate architecture for authoring and AI integration
 **Related:** [ADR 0064 (WOS granularity + AI-native positioning)](./0064-wos-granularity-and-ai-native-positioning.md), [ADR 0063 (Release trains by tier)](./0063-release-trains-by-tier.md)
