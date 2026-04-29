@@ -6,11 +6,7 @@ members = [
     "crates/formspec-eval",
     "crates/formspec-lint",
     "crates/formspec-py",
-    "crates/formspec-wasm", "trellis/crates/trellis-cddl", "trellis/crates/trellis-hpke", "trellis/crates/trellis-cli", "trellis/crates/trellis-conformance", "trellis/crates/trellis-core", "trellis/crates/trellis-cose", "trellis/crates/trellis-export", "trellis/crates/trellis-store-memory", "trellis/crates/trellis-store-postgres", "trellis/crates/trellis-types", "trellis/crates/trellis-verify",
-    "trellis/crates/trellis-interop-scitt",
-    "trellis/crates/trellis-interop-vc",
-    "trellis/crates/trellis-interop-c2pa",
-    "trellis/crates/trellis-interop-did",
+    "crates/formspec-wasm",
 ]
 resolver = "2"
 
