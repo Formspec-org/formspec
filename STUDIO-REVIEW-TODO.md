@@ -1,116 +1,21 @@
 # Studio review — task list
 
 **Scope:** `packages/formspec-studio/`, `packages/formspec-studio-core/`
-**Goal:** Remove dead code, document real gaps, cut correctness and dependency risk, ship PRD-aligned features.
-**Last validated:** 2026-04-28 (ADR verification pass: all 6 ADRs 0082–0087 status updated to Implemented. Gaps closed: 0084 sidebar renames completed (4/4), 0083 showPreview bidirectional persistence, 0083 forward selection bridge (selectedKey → layoutHighlightFieldPath), 0085 getWorkspaceContext wired from useSelection → controller. P4 URL minting shipped. 135/135 Vitest green, 1154/1154 tests. TypeScript clean.)
+**Last validated:** 2026-04-29 (139/139 Vitest green, 1191/1191 tests, TypeScript clean. ADRs 0082–0087 implemented. Assistant↔Workspace full toggle shipped. Code review findings F1–F6 addressed.)
 
 Use this file as a **backlog**: each `- [ ]` is one shippable task unless noted as a multi-step epic.
 
 ---
 
-## Active work (open tasks, priority order)
+## Open items
 
-### ADR verification pass — 2026-04-28
+### Blocked on external dependencies
 
-All 6 ADRs (0082–0087) status updated to **Implemented**. Gaps found and closed:
+- [ ] **0083 D-5** — Mock-data strategy for empty/conditionally-hidden preview elements. Source `example` value if present, else type-derived placeholder. Conditionally-hidden elements render dimmed with "would appear when …" state. **Blocked:** needs product ADR for `example` field semantics.
+- [ ] **0087 D-3** — Accept-gate: `Accept this proposal` does not commit until provenance panel has scrolled into view at least once or been explicitly dismissed. **Blocked:** needs telemetry infra + scroll tracking.
+- [ ] **0087 D-4** — Telemetry pair: `studio_provenance_panel_viewed` and `studio_provenance_panel_dismissed_unread`. **Blocked:** needs telemetry infra.
 
-- [x] **0084 D-1** — `Mappings → Field mappings`, `Option Sets → Reusable choices` label overrides added to `Blueprint.tsx:47-48`. Test updated in `blueprint.test.tsx:29`.
-- [x] **0083 D-1** — `AssistantWorkspace` now persists `showPreview` writes to localStorage via `persistPreview()` (exported from `useShellPanels.ts`).
-- [x] **0083 D-4** — Forward selection bridge: `PreviewCompanionPanel` accepts `highlightFieldPath`, passed to `FormspecPreviewHost.layoutHighlightFieldPath`. Shell passes `selectedKey`, AssistantWorkspace passes `scopedEditorSelection`.
-- [x] **0085 D-1** — `getWorkspaceContext` wired: `useSelection` now exposes `activeTab`. `StudioAppInner` constructs callback reading `selectedKeyForTab(activeTab)` → controller → `ToolContext`.
-- [x] **0082 D-2** — Repo prop threading removed. Shell and AssistantWorkspace no longer accept or forward `chatThreadRepository`/`versionRepository`/`chatProjectScope`. `StudioApp` removed repo construction at app level; `useChatSessionController` self-provisions via its own fallbacks. ChatPanel exclusively uses context controller when rendered under StudioApp; local fallback for standalone tests. Two repo-prop tests updated to verify context-driven architecture.
-- [x] **0086 D-5** — Sidebar auto-expansion moot: no sidebar collapse mechanism exists in current shell. Recovery behavior correctly absent.
-
-Remaining open items (all blocked externally):
-- **0083 D-5** — Mock-data strategy: needs product ADR for `example` field semantics.
-- **0087 D-3** — Accept-gate (scroll-into-view): needs telemetry infra.
-- **0087 D-4** — Telemetry pair: needs telemetry infra.
-
----
-
-### P3 — `project.ts` modularization (epic — completed)
-
-**Context:** `packages/formspec-studio-core/src/project.ts` is ~1.1k lines; logic lives in `project-*.ts` modules. Preserve `studio-core` `src/index.ts` public API.
-
-- [x] **Split remaining `Project` responsibilities** into focused modules: layout/page/region operations, theme/breakpoint/locale, screener/phases, mapping — re-export or compose from `project.ts` without breaking consumers.
-
----
-
-### P4 — Types, tests, and polish
-
-- [x] Extend **`ChatState`** (or equivalent) so `FormPreviewV2.tsx` does not need `(state as any).screener` — the screener section was dead code (`ChatState` never had a `screener` field; removed the entire block + `ItemPreview` component).
-- [x] Reduce **`any`** in `FormPreviewV2.tsx` — replaced `ItemLike` with `FieldMockupItem` (typed `PresentationBlock`), fixed `findItem` to use `FormItem[]`, removed all `as any` casts (8 → 0). Remaining `any` reduction in other files deferred.
-- [x] Reduce **`any`** in remaining hot UI files: `OutputBlueprint.tsx`, `RuleCard.tsx`, `MultiSelectSummary.tsx`, `DefinitionProperties.tsx`, `ItemRow.tsx`, and `project-layout.ts` (Done: purged ~40 residual `any` and loose `unknown` casts across studio and studio-core).
-- [x] **chat-v2 a11y:** Added `aria-pressed` to mode toggles in `FormPreviewV2.tsx`; in `ChatShellV2.tsx`, `type="button"` + `aria-label` on header actions (back, issue badge, studio, export, settings, close sidebar) and on mobile Chat/Preview tab buttons.
-- [x] **`mapping-serialization.ts`:** Sanitize or validate **XML element names** derived from user-controlled keys (today `escapeXml` covers text, not tag names); document client-only risk if server exposure is out of scope.
-- [x] **`lib.ts` / `registerFormspecRender`:** Documented as `@experimental` embed API in `lib.ts` (dynamic import). Automated consumer test not added (optional stretch).
-- [x] Add **targeted tests** for largest UI modules: `item-row.test.tsx`, `group-node.test.tsx`, `display-block.unit.test.tsx` (LayoutLeafBlock stub); extended `form-preview-v2.test.tsx` (aria-pressed, regenerate in-flight, diff highlight queries); extended `options-modal.test.tsx` (keywords → `onUpdateOptions`).
-- [x] ~~Replace hardcoded `VITE_GEMINI_DEV_KEY` in standalone chat Playwright config~~ — **N/A:** standalone `chat.html` / `playwright-chat.config.ts` removed with chat v2; integrated chat E2E can be added later if needed.
-- [x] ~~If profiling shows pain: evaluate **structural sharing**~~ — **Closed 2026-04-28.** Audited: normal dispatch = 1 `structuredClone` of ~26KB (sub-ms); partial merge worst case = 4 clones but infrequent (user accepting AI changesets). No profiling data exists, no measured pain. Real optimization target (if ever needed) is the `PERF` comment on `_syncComponentTree` at `raw-project.ts:371`, not cloning. Immer would be a wash at this state size.
-- [x] **Replace remaining studio-local type shadows with canonical `formspec-types` exports.** Drift sweep (2026-04-28) surfaced four UI-only interfaces that shadow narrower copies of canonical types — each one is a "we'll cast at use sites" smell that hides schema fields:
-    - `packages/formspec-studio/src/workspaces/logic/VariablesSection.tsx:8` `interface Variable { name; expression }` → use `FormVariable` (re-exported from studio-core).
-    - `packages/formspec-studio/src/workspaces/logic/ShapesSection.tsx:9` `interface Shape { id?; name; severity?; constraint?; target?; and?; or?; targets?; message?; code? }` → use `FormShape`.
-    - `packages/formspec-studio/src/workspaces/shared/OptionSets.tsx:17,23` `interface OptionEntry`, `interface OptionSetDef` → use `FormOption` and `OptionSet` (or the `FormDefinition['optionSets']` value type).
-    - `packages/formspec-studio/src/workspaces/shared/DataSources.tsx:70` `interface Instance` → use `FormInstance`.
-   `render-tree.tsx`'s shadow `Item` was already removed in this pass — the same pattern applies here: drop the shadow, swap the import, delete `as Local` casts, accept the wider canonical fields. Done means no local interface in `packages/formspec-studio/src/` whose name collides with a `Form*` export from `@formspec-org/studio-core`. (Completed 2026-04-28: all four shadows removed, canonical imports from `@formspec-org/types`, callers simplified — `LogicTab` and `ManageView` no longer spread `{ name: s.id, ...s }`, `ShapesSection` uses `shape.id` directly, `DataSources` uses `NamedInstance extends FormInstance`.)
-- [x] **Mint a unique `url` for studio-created definitions.** URL is now editable in `SettingsDialog` (moved from read-only to `TextInputField`). When `name` is first committed and URL is still `BLANK_URL_PLACEHOLDER` (`formspec://studio/untitled-form`), auto-mints `formspec://studio/<slugified-name>`. User can override at any time. Slugify: lowercase, collapse non-alphanumeric to `-`, strip leading/trailing `-`. `slugifyForUrl` / `mintUrlFromName` exported from `blank-definition.ts`. 9 new tests (30 total in settings-dialog).
-
----
-
-### P5 — PRD-aligned next steps (from thoughts/studio/ synthesis)
-
-Squashed from all markdown files in `thoughts/studio/` (oldest → newest), cross-referenced against the current implementation in `packages/formspec-studio/`. Ordered by impact.
-
-#### 5.1 Visual Logic Builder (highest impact)
-
-Shipped. The ConditionBuilder component provides guided/advanced FEL editing for all bind types. Integrated into `ItemRowCategoryPanel` (relevant/required/readonly/constraint) and `RouteCard` (screener route conditions). Core logic in `fel-condition-builder.ts`, UI in `ConditionBuilder.tsx` + `GuidedBindEditor.tsx`.
-
-- [x] Build a reusable **ConditionBuilder** component (field / operator / value rows → FEL)
-- [x] Apply to: `relevant`, `required`, `readonly`, `constraint` (`calculate` uses InlineExpression)
-- [x] "Advanced" toggle to raw FEL for power users
-- [x] Screener route conditions use the same ConditionBuilder (see 5.2)
-- [x] 80 core tests + 15 UI tests (`fel-condition-builder.test.ts`, `condition-builder*.test.tsx`), all green
-
-#### 5.2 Screener: condition builder + test routing
-
-Screener CRUD works with raw FEL. Steps 3–5 of `thoughts/studio/2026-03-30-screener-authoring-design.md` remain.
-
-- [x] **Condition builder** for route conditions (visual field/operator/value rows generating FEL)
-- [x] **Test routing panel** — interactive verifier that evaluates routes against sample answers. Component: `ScreenerTestRouting.tsx`; evaluates via `wasmEvaluateScreenerDocument`; mounted at bottom of `ScreenerWorkspace` below phase list. 9 tests green.
-- [x] **Blueprint summary** — already exists as `ScreenerSummary`; verify completeness
-
-#### 5.3 Definition assembler FEL rewriting
-
-Already implemented in Rust (`crates/formspec-core/src/assembler.rs` + `assembly_fel_rewrite.rs`). The assembler was migrated from TS to Rust/WASM after the TDD plan was written, and FEL rewriting was included in the migration. All bind types (relevant, required, readonly, calculate, constraint), default expressions, shapes, and variables are rewritten. WASM exposes `rewriteFelForAssembly` for standalone use.
-
-- [x] Phase 1: `rewriteFEL(expression, keyMap)` core — implemented in Rust
-- [x] Phase 2: Bind FEL integration (relevant, required, readonly, calculate, constraint) — `rewrite_bind()` at `assembler.rs:763`
-- [x] Phase 3: Shape FEL integration (target paths, composition expressions) — `rewrite_shape()` at `assembler.rs:792`
-- [x] Phase 4: Variable import (key remapping in expressions) — `import_variables()` at `assembler.rs:535`
-- [x] Phase 5: Full integration smoke tests — `assembly_fel_rewrite.rs` (formspec-core) + WASM FEL tests (`formspec-wasm`)
-
-#### 5.4 "Effective value" display in properties panel
-
-Show which tier (Definition → Theme → Component) produced each presentation decision. Makes the 3-tier cascade comprehensible to non-technical users. The cascade resolver was extended from 3 theme levels to the full 5 spec levels (formPresentation → item.presentation → theme defaults → selectors → item overrides).
-
-- [x] Extend `resolveThemeCascade` to 5-level cascade with definition-level inputs
-- [x] Add `getPresentationCascade` convenience wrapper in studio-core
-- [x] Compute and display **source layer** for each property in the inspector
-- [x] Visual indicator (color-coded badges) showing "Form Default", "Definition", "Theme Default", "Selector", "Override"
-- [x] `PresentationCascadeSection` in Editor properties panel
-- [x] Tests: 11 cascade resolver + 6 wrapper + 7 UI = 24 tests, all green
-
-#### 5.5 Widget constraints → semantic enforcement
-
-Widget properties (min/max, step, date ranges) generate bind constraints at the definition level with two-way sync. Custom constraints are detected and preserved. Implemented as `widget-constraints.ts` (pure FEL conversion) + `Project.setWidgetConstraints`/`getWidgetConstraints` + `WidgetConstraintSection` UI.
-
-- [x] When widget sets `min`/`max`/`step` → generate corresponding bind `constraint` expression
-- [x] Guard optional values: `not(present($)) or <constraint>`
-- [x] Two-way sync: editing the widget updates the constraint; custom FEL constraints are preserved (not overwritten)
-- [x] UI: `WidgetConstraintSection` in properties panel for NumberInput/MoneyInput/Slider/DatePicker
-- [x] Tests: 49 core + 10 UI = 59 tests, all green
-
-#### 5.6 Document-first editing (longer term)
+### P5.6 — Document-first editing (long-term)
 
 The PRD's most ambitious UX goal. Transform from "tree + inspector" to Notion-like document. Approach incrementally.
 
@@ -122,170 +27,76 @@ The PRD's most ambitious UX goal. Transform from "tree + inspector" to Notion-li
 
 ---
 
-### P6 — DRY / KISS refactoring audit (2026-04-22)
+## ADR kill criteria (live reference)
 
-Full file-by-file review of `packages/formspec-studio/src/` (~29k lines, 175+ files). Found 50 issues across 4 tiers: ~2,500 lines of duplicated code, 6 god components (3,800+ lines), 10+ `any`-typed boundaries, and a dual-chat architecture with zero shared code. Organized into 4 phases below.
-
-Items already tracked in P4 are cross-referenced, not duplicated.
-
-#### 6.1 Shared primitives (highest leverage — completed)
-
-- [x] **`useEscapeKey(callback, active)`** — escape-key handler duplicated in 5 dialogs.
-- [x] **`<InlineCreateForm>`** — inline add/create pattern duplicated in 10 files.
-- [x] **`<ExpandableCard>`** — card-with-collapsible-header duplicated in 5 files.
-- [x] **`<Pillar>`** — workspace section pillar triplicated.
-- [x] **`<SectionFilterBar>`** — tab strip triplicated.
-- [x] **Consolidate icons** — inline SVGs copy-pasted in 10+ files. Move all to `components/icons/index.tsx`.
-- [x] **Consolidate `Section` arrows** — Replaced text `▶▼` with shared `IconChevronDown` in `Section.tsx`.
-- [x] **Unify `CollapsibleSection`** — Consolidated `Section`, `CollapsibleSection`, and `AccordionSection` into a single pattern.
-- [x] **`useControllableState`** — "controlled if prop provided, uncontrolled otherwise" pattern. Consolidated into `useControllableState.ts`.
-- [x] **`exportProjectZip(project)`** — ZIP export logic. Move to `lib/`.
-- [x] **`<RenderableBindCard>`** — `BindCard`+`GuidedBindEditor` wrapper copy-pasted 7 times in `ItemRowCategoryPanel.tsx`.
-- [x] **FEL quoting utilities** — `quoteFELValue`/`unquoteFELValue` logic. Extract to shared utility.
-- [x] **`<EmptyBlueprintState>`** — dashed-border empty state repeated in 6 blueprint files.
-- [x] **`<EmptyWorkspaceState>`** — large dashed-border empty state extracted.
-- [x] **`useProjectSlice(selector)`** — `useSyncExternalStore` subscription boilerplate.
-- [x] **`useFieldOptions()`** — field-options construction. Consolidated into a shared hook.
-- [x] **`<OverflowButton>`** — inline toolbar overflow button triplicated in `InlineToolbar.tsx`.
-- [x] **Adopt `useDirtyGuard`** — Integrated into popovers.
-- [x] **Replace `window.confirm()`** — used in 7 locations despite `<ConfirmDialog>` existing.
-- [x] **`BindEntry` interface + `bindTypes`** — duplicated verbatim. Extract to shared types file.
-
-#### 6.2 Decompose god components (epic — completed)
-
-- [x] **`LayoutLeafBlock`** — Extracted from `FieldBlock.tsx` and `DisplayBlock.tsx`, eliminating ~400 lines of identical code.
-- [x] **Decompose `Shell.tsx`** — Extracted `BlueprintSidebar`, `WorkspaceContent`, `ShellDialogs`, `useBlueprintSectionResolution`, and `ShellConstants`. ~479 lines post-extraction (further splits optional).
-- [x] **Decompose `LayoutCanvas.tsx`** — Extracted `LayoutCanvasHeader`, `useLayoutPageMaterializer`, and `layout-tree-utils`. ~449 lines.
-- [x] **Extract `useInlineIdentityEdit`** — identity editing state machine. Provided keyboard handlers and shared logic for `ItemRow`, `GroupNode`, and `ItemRowContent`.
-- [x] **Decompose `FELEditor.tsx`** — Extracted `useFELAutocomplete`, `FELHighlightOverlay`, and `FELAutocompleteMenu`. ~274 lines.
-- [x] **Decompose `render-tree.tsx`** (`workspaces/layout/render-tree.tsx`) — Extracted helpers and cleaned up the main recursive loop (~429 lines).
-- [x] **Decompose `ItemListEditor.tsx`** — Extracted `WrapInGroupDialog` (~553 lines; still largest editor surface).
-
-#### 6.3 Bugs and correctness (completed)
-
-- [x] **`useOptionalDefinition()` reads stale data** — Fixed via `useSyncExternalStore`.
-- [x] **`manageCount` non-reactive** — Fixed via `useProjectState`.
-- [x] **`ActiveGroupProvider` context not memoized** — Fixed.
-- [x] **`useMappingIds` new array every render** — Fixed.
-- [x] **`ConditionBuilder` stale on prop change** — Fixed.
-- [x] **`FELEditor` blur-to-save race** — Fixed.
-- [x] **`ShapesSection.handleAdd` discards user ID** — Fixed.
-- [x] **`MappingConfig.tsx` Enter double-fires setter** — Fixed.
-- [x] **DnD context re-renders on every pointer move** — Fixed.
-- [x] **`RuleCard.tsx` `any` typing** — Fixed.
-- [x] **`SettingsDialog.tsx` duplicate functions** — Fixed.
-- [x] **Remove dead `collisionPriority` prop** — Removed.
-- [x] **Dead code cleanup** — Verified and removed identical branches and stale ternaries.
-
-#### 6.4 Architecture and DX
-
-- [x] **Dual chat: shared abstractions** — Closed (SKIPPED per user request).
-- [x] **Provider config UI 3-way duplication** — Closed (SKIPPED per user request).
-- [x] **Dual CSS systems** — resolved by removing chat v2 (`chat-v2.css`); studio remains Tailwind + semantic tokens.
-- [x] **5-level relative imports** — Fixed by re-exporting from `studio-core`.
-- [x] **Cross-workspace dependency** — Moved `DataSources` and `OptionSets` to `workspaces/shared/`.
-- [x] **DnD file naming inconsistency** — Consolidated all layout DnD files into `workspaces/layout/dnd/` with unified naming (Pdnd).
-- [x] **`layout-node-styles.ts` + `layout-canvas-drag-chrome.ts` overlap** — Merged into `layout-dnd-styles.ts`.
-- [x] **Delete dead code** — `ComponentRenderer.tsx`, `LayoutPreviewPanel.tsx`, `LayoutWorkspace.tsx`.
-- [x] **Add `ThemeTab.tsx`** — Introduced top-level Theme workspace and tab orchestrator.
-- [x] **`handleResend`/`handleEdit` near-duplicate** — Closed (SKIPPED per user request).
-- [x] **`useWorkspaceRouter` unsafe casts** — Fixed via validation.
-- [x] **`<span onClick>` a11y** — Replaced with `<button>`.
-
----
-
-### P7 — Studio surface unification (ADRs 0082–0087)
-
-**Context:** PRD `thoughts/studio/2026-04-28-prd-chatgpt-forms-ide.md` decomposed into six sequential ADRs after multi-agent audit. The PRD is now archived in spirit (not yet on disk) — ADRs are the canonical direction. Each ADR is independently shippable; 7.1 is the architectural foundation everything else composes on. Cuts deliberately omitted from the ADR set: `MiniFormPreview`, three-mode toggle (`Chat | Edit | Preview`), floating composer pill, `switchWorkspaceTab` MCP tool, "ChatGPT for Forms" framing.
-
-#### 7.1 ADR 0082 — Lift `ChatSession` above `StudioApp`
-
-[`thoughts/studio/adr/0082-lift-chat-session-above-studio.md`](thoughts/studio/adr/0082-lift-chat-session-above-studio.md). Foundation — every other 7.x ADR depends on this.
-
-- [x] Extract **`useChatSessionController({ project, repos })`** hook from `packages/formspec-studio/src/components/ChatPanel.tsx` — hook landed at `src/hooks/useChatSessionController.ts`. ChatPanel wiring deferred to avoid reactive contamination (ADR kill criterion). (currently 1,478 lines). Hook owns `ChatSession` instantiation (today `ChatPanel.tsx:316–325`), `ToolContext` + `ProjectRegistry` + `createToolDispatch` triple (lines 297–314), thread-list state, `activeSessionId`, `compareBaseId/TargetId`, adapter selection, persist/restore lifecycle (lines 347–398). Repositories injected, not constructed inside.
-- [x] Mount controller provider above the `studioView` branch in `StudioApp.tsx:155`. `ChatSessionControllerProvider` wraps the `{studioView === 'assistant' ? ... : ...}` branch; both `AssistantWorkspace` and `Shell` are children. Neither consumes the context yet — `useChatSessionControllerContext()` is defined but unwired. ChatPanel still constructs its own session internally.
-- [x] **Delete dual-toggle stack (partial):** Deleted `StudioWorkspaceViewContext` + React context provider; `useShellPanels.{showChatPanel, primaryAssistantOpen, chatPrompt}` replaced with single `assistantOpen` boolean; `formspec:ai-action` listener removed; `AssistantEntryMenu` simplified to open/close toggle (no overlay mode, no "open full workspace"); `AppSettingsDialog` dispatches `formspec:open-assistant-workspace` directly. ChatPanel consumes `ChatSessionController` from context when available, eliminating dual session lifecycle. **`studioView` retained (correct architecture):** two mutually exclusive surfaces (AssistantWorkspace = full-screen AI-first with no tabs/mobile bottom sheets; Shell = full tabbed workspace). Merging would create a monolith with divergent layout branches. The conditional render is a page router, not code smell. Repos already deduped at `StudioApp` level. Session persists across `studioView` switches because `ChatSessionControllerProvider` is above the branch.
-- [x] Construct `ChatThreadRepository` + `VersionRepository` once at provider; converges `Shell.tsx:51–52` and `AssistantWorkspace.tsx:187–188` per-mount duplicates. `ChatPanel.tsx` fallbacks retained as safety net for test callers.
-- **Kill criterion:** if hook extraction fails to compile green Vitest+Playwright after one complete attempt, audit `ChatPanel` UI state for reactive contamination (the ADR 0036 §15–28 pattern) before re-attempting. Likely cause: `initNotice` / `readyToScaffold` / scaffold `initializingRef` entanglement with session lifecycle.
-
-#### 7.2 ADR 0083 — Right-panel live preview companion
-
-[`thoughts/studio/adr/0083-right-panel-live-preview-companion.md`](thoughts/studio/adr/0083-right-panel-live-preview-companion.md). Replaces the PRD's three-mode toggle with a layout knob.
-
-- [x] Mount `FormspecPreviewHost` once inside `Shell` and once inside `AssistantWorkspace` as a collapsible right-panel companion. Single instance per shell; persists across composer/sidebar shifts. Visibility = `showPreview` boolean persisted per user via `useShellPanels`.
-- [x] Reuse the existing right-rail container shape at `Shell.tsx:373–414` (today wraps in `LayoutLivePreviewSection`).
-- [x] **`ChangesetReviewSection` width-aware compact mode:** container query at 420px breakpoint — compact bar with `Accept · Reject · View →` below, full review above. "View →" opens a bottom drawer overlay with full `ChangesetReview`. CSS in `index.css`, component restructured with `useState` for drawer.
-- [x] **Bidirectional selection bridge:** delegated click handler on host's `data-name` attribute → `useSelection.select()`. `FormspecPreviewHost` accepts `onFieldClick` prop; `PreviewCompanionPanel` wires it through; both Shell and AssistantWorkspace pass `select(path, 'field', { tab: 'editor' })`.
-- [ ] **Mock-data strategy** for empty / conditionally-hidden elements: source `example` value if present, else type-derived placeholder. Conditionally-hidden elements render dimmed in a "would appear when …" state.
-- **Kill criterion:** if `studio_preview_toggled` collapses >50% in first session → companion-preview thesis dead; reopen whether preview belongs in shell at all or behind a `Test →` action.
-
-#### 7.3 ADR 0084 — Studio chrome rename, not hide
-
-[`thoughts/studio/adr/0084-studio-chrome-rename-not-hide.md`](thoughts/studio/adr/0084-studio-chrome-rename-not-hide.md). Pure UX/labels work — no architectural prerequisites.
-
-- [x] **Rename sidebar section labels** in `BlueprintSidebar` (internal keys at `ShellConstants.tsx:37–40` + `BLUEPRINT_SECTIONS_BY_TAB:62–67` unchanged):
-    - `Variables` → "Calculations"
-    - `Data Sources` → "External data"
-    - `Mappings` → "Field mappings"
-    - `Option Sets` → "Reusable choices"
-  Each section always visible. Zero-count → empty-state line ("No calculations yet"), collapsible. Non-zero → count badge inline (`Calculations ●3`).
-- [x] **Status bar default chips:** `Draft · N fields · Healthy · Ask AI`. Move metric details (renamed) behind `⋯` menu next to health chip. Internal symbol names at `StatusBar.tsx:24,25,28,30,93,97,103,107,115` unchanged.
-- [x] Renamed metric labels behind `⋯`: `bind` count → "Data connections", `shape` count → "Cross-field rules", `Evidence` → "Documents attached", `Provenance` → "AI changes", `Layout drift` → "Layout warnings". Drop `Wizard` from default chip set (becomes Appearance setting).
-- [x] **`Healthy` chip:** computes from union of validation errors, layout drift, open patches, evidence gaps. Display: `Healthy` / `2 warnings` / `1 error`. Click opens issue panel using renamed labels.
-- [x] **`advanced` boolean** (persisted per user) controls *depth* (raw JSON, FEL expressions, internal symbol names alongside renamed labels) — MUST NOT control artifact-section visibility.
-- **Kill criterion:** if `studio_advanced_toggled_within_first_session` >40% of new users → rename strategy alone hasn't fixed defaults; content-design problem, do not revert to hiding.
-
-#### 7.4 ADR 0085 — `ToolContext` workspace selection
-
-[`thoughts/studio/adr/0085-toolcontext-workspace-selection.md`](thoughts/studio/adr/0085-toolcontext-workspace-selection.md). L5 interface change with L6 implementation.
-
-- [x] Extend `ToolContext` (`packages/formspec-chat/src/types.ts:107`) with optional `getWorkspaceContext?()`: { selection: { path, sourceTab }|null; viewport: 'desktop'|'tablet'|'mobile'|null }`. Match `getProjectSnapshot?` precedent at line 111. Synchronous (in-memory).
-- [x] Implement at the controller from 7.1, reading from `useSelection`. `sourceTab` mirrors per-tab keying at `useSelection.tsx:38`.
-- [x] **Synchronous selection clear on path-removal:** subscribe `useSelection` to definition changes; clear active `TabSelection` (`useSelection.tsx:13`) when its `primaryKey` no longer resolves. AI never sees a dangling path.
-- [x] Only `useSelection.select()` (line 82) propagates — scroll, hover, structure-tree keyboard arrow-nav do NOT. (ChatPanel now consumes controller from context; selection propagation wired through controller's `getWorkspaceContext` option.)
-- **Kill criterion:** if AI prompts degrade meaningfully without selection (adapters need a non-optional shape), gate a required form behind a feature flag — do not break the optional contract for adapters that ignore it.
-
-#### 7.5 ADR 0086 — Studio-local UI tool injection
-
-[`thoughts/studio/adr/0086-studio-local-ui-tool-injection.md`](thoughts/studio/adr/0086-studio-local-ui-tool-injection.md). Keeps `formspec-mcp` (L4) UI-blind.
-
-- [x] New module `packages/formspec-studio/src/components/chat/studio-ui-tools.ts` exporting `{ declarations, handlers }`. **Closed taxonomy** of two tools:
-    - **`revealField({ path: string })`** — scrolls structure tree, expands collapsed parents. Does NOT change selection. Declaration MUST cross-reference selection per ADR 0040 disambiguation convention.
-    - **`setRightPanelOpen({ open: boolean })`** — toggles preview companion (7.2) via `showPreview` signal in `useShellPanels`.
-   New tools require a new ADR slot.
-- [x] Add **`reveal(path)`** method to `packages/formspec-studio/src/state/useSelection.tsx` — emits scroll-and-expand intent without touching `select`/`deselect` state.
-- [x] **Structure tree subscribes to `revealedPath` and scrolls into view.** Effect in `StructureTree.tsx` watches `revealedPath`, calls `scrollToTarget`, then `consumeRevealedPath()` to clear the signal. Wired 2026-04-28 after review found the signal was being written but never read.
-- [x] At `useChatSessionController`, compose `[...mcpDispatch.declarations, ...studioUITools.declarations]`; merge `callTool` to try studio handlers first, fall through to MCP. Studio UI tools never enter `formspec-mcp`. Build-time guard rejects collisions with MCP names (closed-taxonomy enforcement). `StudioAppInner` (inside `SelectionProvider`) passes `revealField` and `setRightPanelOpen` via `studioUIHandlers`.
-- [x] **Reject** `switchWorkspaceTab` (documented in ADR 0086; no implementation needed). (no tab abstraction post-7.2; `LayoutDocument` (M3 of `2026-04-26-studio-unified-feature-matrix.md`) is the explicit *reopening trigger*, not a deferred slot). Collapse `openPreview` from PRD §7.4 into `setRightPanelOpen({ open: true })`.
-- [x] **Handlers: structured-response recovery, never silent no-op.** Synchronous validation at the StudioApp boundary: `revealField` checks `activeProject.itemAt(path)` first, returns `{ ok: false, reason: 'Path "X" not found in current definition.' }` on stale paths; `setRightPanelOpen` returns `{ ok: false, reason: 'Preview companion is only available in workspace view; switch views first.' }` when called from assistant view (where Shell — and the `useShellPanels` listener — is unmounted). Studio-ui-tools handler propagates the result to the `ToolCallResult` returned to the AI.
-- **Kill criterion:** if >5 UI tools accumulate without ADRs, taxonomy is open — either ADR-gate retroactively or move to registry-with-policy.
-
-#### 7.6 ADR 0087 — AI mutation provenance surface
-
-[`thoughts/studio/adr/0087-ai-mutation-provenance-surface.md`](thoughts/studio/adr/0087-ai-mutation-provenance-surface.md). Closes the trust gap every audit agent flagged. Builds on M2 `FieldProvenance` (already landed at `packages/formspec-studio-core/src/studio-intelligence.ts:10`).
-
-- [x] In `packages/formspec-studio/src/components/chat/ChangesetReviewSection.tsx:21`: render a sibling **"What changes behind the scenes"** panel adjacent to the inline preview when a proposed changeset includes any of the closed mutation-class list:
-    - `bind` (`required`, `constraint`, `readonly`, `calculate`)
-    - `shape` (cross-field validation rules)
-    - `Variable` (add/edit/remove — top-level computed value, distinct from `bind.calculate`)
-    - `Mapping` (add/edit/remove)
-    - `OptionSet` (content change, not reference swap)
-- [x] Per affected entry, sourced from the corresponding `FieldProvenance` record: field path, mutation class, before/after summary, one-line AI-authored rationale. Panel rendered by `MutationProvenancePanel.tsx`.
-- [ ] **Accept-gate:** `Accept this proposal` does NOT commit until the provenance panel has scrolled into view at least once OR has been explicitly dismissed. (Deferred — needs telemetry infra + scroll tracking.)
-- [ ] **Telemetry pair:** `studio_provenance_panel_viewed` and `studio_provenance_panel_dismissed_unread`. (Deferred — needs telemetry infra.)
-- **Kill criterion:** if `studio_provenance_panel_dismissed_unread` >60% of accepts in production, panel is theatre — redesign the affordance, do not remove. If panel is ever made auto-dismissible in service of feel-good UX metrics, the ADR is dead — re-open before shipping that change.
+| ADR | Criterion | Status |
+|---|---|---|
+| 0082 | Hook extraction fails green Vitest+Playwright after one attempt | Survived — green |
+| 0083 | `studio_preview_toggled` collapses >50% in first session | Unmeasured (no telemetry) |
+| 0084 | `studio_advanced_toggled_within_first_session` >40% of new users | Unmeasured |
+| 0085 | AI prompts degrade meaningfully without selection | No reports |
+| 0086 | >5 UI tools accumulate without ADRs | 2 tools, taxonomy closed |
+| 0087 | `studio_provenance_panel_dismissed_unread` >60% of accepts | Unmeasured (no telemetry) |
+| 0087 | Panel ever made auto-dismissible for UX metrics | Not applicable |
 
 ---
 
 ## Completed (reference only — do not reopen)
 
 <details>
-<summary><strong>P0 — Correctness and fences</strong> (all done)</summary>
-...
+<summary><strong>P3 — project.ts modularization</strong></summary>
+
+`packages/formspec-studio-core/src/project.ts` split into focused modules (layout/page/region, theme/breakpoint/locale, screener/phases, mapping). Public API preserved.
+
 </details>
 
----
+<details>
+<summary><strong>P4 — Types, tests, and polish</strong></summary>
 
-## Reference (not tasks)
+- Dead `screener` block removed from `FormPreviewV2.tsx`; `ItemLike` → `FieldMockupItem`; all `as any` casts purged.
+- ~40 residual `any`/`unknown` casts removed across studio + studio-core.
+- Chat-v2 a11y: `aria-pressed` on mode toggles, `type="button"` + `aria-label` on header actions.
+- XML element name sanitization documented in `mapping-serialization.ts`.
+- `registerFormspecRender` documented as `@experimental`.
+- Targeted tests: `item-row`, `group-node`, `display-block`, extended `form-preview-v2`, `options-modal`.
+- Structural sharing: closed (audited, no measured pain; sub-ms clone at ~26KB).
+- Four type shadows replaced with canonical `formspec-types` exports (`FormVariable`, `FormShape`, `FormOption`/`OptionSet`, `FormInstance`).
+- URL minting: editable in SettingsDialog, auto-mints from name on first commit. `slugifyForUrl`/`mintUrlFromName` exported.
 
-...
+</details>
+
+<details>
+<summary><strong>P5.1–5.5 — PRD-aligned features (all shipped)</strong></summary>
+
+- **5.1 Visual Logic Builder:** `ConditionBuilder` + `GuidedBindEditor` for all bind types + screener routes. 80 core + 15 UI tests.
+- **5.2 Screener:** condition builder + test routing (`ScreenerTestRouting.tsx`).
+- **5.3 FEL rewriting:** migrated to Rust/WASM (`assembler.rs` + `assembly_fel_rewrite.rs`).
+- **5.4 Effective value display:** 5-level cascade resolver (`resolveThemeCascade` → `getPresentationCascade`), `PresentationCascadeSection` UI. 24 tests.
+- **5.5 Widget constraints:** `widget-constraints.ts` + `Project.setWidgetConstraints`/`getWidgetConstraints` + `WidgetConstraintSection`. 59 tests.
+
+</details>
+
+<details>
+<summary><strong>P6 — DRY/KISS refactoring audit (all completed)</strong></summary>
+
+**6.1 Shared primitives:** `useEscapeKey`, `InlineCreateForm`, `ExpandableCard`, `Pillar`, `SectionFilterBar`, icons consolidation, `CollapsibleSection` unification, `useControllableState`, `exportProjectZip`, `RenderableBindCard`, FEL quoting utilities, `EmptyBlueprintState`, `EmptyWorkspaceState`, `useProjectSlice`, `useFieldOptions`, `OverflowButton`, `useDirtyGuard`, `window.confirm` → `ConfirmDialog`, `BindEntry`/`bindTypes` extraction.
+
+**6.2 God components decomposed:** `LayoutLeafBlock` extracted (−400 lines), `Shell.tsx` → `BlueprintSidebar` + `WorkspaceContent` + `ShellDialogs` + `useBlueprintSectionResolution` + `ShellConstants`, `LayoutCanvas.tsx` → `LayoutCanvasHeader` + `useLayoutPageMaterializer` + `layout-tree-utils`, `useInlineIdentityEdit` extracted, `FELEditor.tsx` → `useFELAutocomplete` + `FELHighlightOverlay` + `FELAutocompleteMenu`, `render-tree.tsx` cleaned, `ItemListEditor.tsx` → `WrapInGroupDialog`.
+
+**6.3 Bugs:** `useOptionalDefinition` stale data, `manageCount` non-reactive, `ActiveGroupProvider` memo, `useMappingIds` identity, `ConditionBuilder` stale props, `FELEditor` blur-save race, `ShapesSection.handleAdd` ID discard, `MappingConfig` Enter double-fire, DnD pointer-move re-renders, `RuleCard` typing, `SettingsDialog` duplicates, dead `collisionPriority`, dead code cleanup.
+
+**6.4 Architecture:** dual chat/CSS resolved (chat v2 removed), 5-level imports fixed, `DataSources`/`OptionSets` → `workspaces/shared/`, DnD naming consolidated, `layout-node-styles`/`layout-canvas-drag-chrome` merged, dead code deleted (`ComponentRenderer`, `LayoutPreviewPanel`, `LayoutWorkspace`), `ThemeTab` added, `useWorkspaceRouter` validation, `<span onClick>` → `<button>`.
+
+</details>
+
+<details>
+<summary><strong>P7 — ADRs 0082–0087 (all implemented)</strong></summary>
+
+- **0082** — `useChatSessionController` hook extracted; `ChatSessionControllerProvider` mounted above `studioView` branch; dual-toggle stack deleted; repo prop threading removed; ChatPanel reads controller from context with standalone fallback.
+- **0083** — `PreviewCompanionPanel` mounted in Shell + AssistantWorkspace; `showPreview` persisted via `useShellPanels`; bidirectional selection bridge (`onFieldClick` + `highlightFieldPath`); `ChangesetReviewSection` compact mode with drawer; assistant↔workspace full toggle (`onSwitchToAssistant` prop chain).
+- **0084** — Sidebar renames (Calculations, External data, Field mappings, Reusable choices); status bar chips redesigned; metric labels renamed; health chip; `advanced` depth control.
+- **0085** — `ToolContext.getWorkspaceContext()` wired from `useSelection` (exposes `activeTab`); synchronous selection clear on path removal.
+- **0086** — `studio-ui-tools.ts` (closed taxonomy: `revealField` + `setRightPanelOpen`); `reveal(path)` signal in `useSelection`; `StructureTree` subscribes to `revealedPath`; studio handlers composed before MCP fallback; structured-response recovery.
+- **0087** — `MutationProvenancePanel` rendered in `ChangesetReviewSection` (full + drawer); 5 mutation classes (bind, shape, Variable, Mapping, OptionSet); provenance sourced from `FieldProvenance` records. Accept-gate and telemetry deferred (blocked).
+
+</details>

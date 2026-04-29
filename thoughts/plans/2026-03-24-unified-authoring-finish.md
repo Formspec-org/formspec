@@ -100,7 +100,7 @@ Replace `import { FUNCTION_DETAILS } from '../lib/fel-catalog'` with the engine'
 - [ ] **Step 5: Build and test**
 
 ```bash
-cargo test -p fel-core
+cargo nextest run -p fel-core
 npm run build && cd packages/formspec-studio && npx vitest run
 ```
 
@@ -380,13 +380,13 @@ cd packages/formspec-studio-core && npx vitest run && cd ../..
 cd packages/formspec-mcp && npx vitest run && cd ../..
 
 # Rust workspace
-cargo test --workspace
+cargo nextest run --workspace
 
 # E2E (starts Vite server)
 npm test
 
 # Full suite
-make build && npm test && cargo test --workspace
+make build && npm test && cargo nextest run --workspace
 ```
 
 **Red-green-refactor discipline:** Every task starts with a failing test. Write the test, run it (RED), implement (GREEN), then clean up if needed. See CLAUDE.md "Development Workflow."

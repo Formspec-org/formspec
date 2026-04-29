@@ -98,7 +98,7 @@ None reported by implementation agents.
 npm run build
 
 # Rust tests
-cargo test -p fel-core
+cargo nextest run -p fel-core
 
 # Core tests
 cd packages/formspec-core && npx vitest run

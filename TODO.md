@@ -13,6 +13,18 @@ Scoring `[Imp / Cx / Debt]` per [`.claude/user_profile.md`](.claude/user_profile
 
 Historical completion notes and resolved items moved to [`COMPLETED.md`](COMPLETED.md).
 
+## Agent instruction layer
+
+Docs every agent reads before any task. Drift here compounds through every future session.
+
+- **Doc restructure: 9 → 7 files, single ownership** `[6 / 3 / 5]` (**30**)
+  - Plan: [`thoughts/plans/2026-04-28-doc-restructure.md`](thoughts/plans/2026-04-28-doc-restructure.md).
+  - Eliminates `.claude/operating-mode.md` (→ `user_profile.md§Behavioral interrupts`) and `wos-spec/POSITIONING.md` (→ `wos-spec/CLAUDE.md§Identity`).
+  - Collapses VISION.md §IX/X/XI to per-spec framing pointers; promotes root `CLAUDE.md` to canonical home for Formspec heuristics (split by topic across §Decision heuristics + §Testing philosophy) and submodule conventions; adds ownership headers (Owns / Does not own / Update when) to all 7 surviving files.
+  - Today: economic model restated in 4+ places; wos-server architecture in 3; per-spec commitments in both VISION.md and submodule `CLAUDE.md` files.
+  - Single commit + submodule pointer bumps (per the §Submodule conventions the plan adds).
+  - **Gate:** owner approval on the plan.
+
 ## Formspec-side cross-layer
 
 Work in the Formspec spec and runtime itself that other layers depend on. Lives in `specs/` and `schemas/`, not in stack ADRs.
@@ -32,6 +44,13 @@ Work in the Formspec spec and runtime itself that other layers depend on. Lives 
   - Absorbs archived migration SHOULDs ULCOMP-R-210..212 as offline-authoring semantics (not ADR 0071 migration semantics).
   - Gap source: [`trellis/specs/archive/cross-reference-map-coverage-analysis.md`](trellis/specs/archive/cross-reference-map-coverage-analysis.md) §4.4.
   - **Gate:** none.
+
+- **FEL temporal builtins return `Result<_, MissingTimezoneContextError>`** `[6 / 4 / 5]` (**30**)
+  - Migrate `fel-core::current_date()` and `fel-core::now()` from infallible signatures to `Result<RFC3339Timestamp, MissingTimezoneContextError>`, threading explicit timezone context through every FEL evaluator call site (Formspec parser/eval, WOS guards/conditions, Studio preview, Python conformance evaluator).
+  - **Why:** [ADR 0069](thoughts/adr/0069-stack-time-semantics.md) D-6 pins explicit-timezone-required as the FEL invariant; silent UTC fallback was the source of cross-tenant deadline drift in the cluster audit. Today the builtins read process-local TZ as a side channel — per-process global state leaking into spec evaluation, the worst kind of architectural debt. The error type forces every call site to inject an explicit timezone or fail audibly; no silent default.
+  - **Done:** `fel-core::FelEvaluator::eval_with_context(expr, env, tz)` signature carries `&Timezone` explicitly; `current_date()` / `now()` return `Result<_, MissingTimezoneContextError>`; downstream Formspec FEL evaluator (`src/formspec/fel/evaluator.py`), WOS guard evaluator (`wos-runtime`), Studio FEL preview, and conformance harness updated with explicit tz from caller (calendar context for WOS guards, user TZ for Formspec response display); migration test proves the silent-UTC path is unreachable. Cross-spec breaking change per `nothing-is-released` posture.
+  - **Cross-layer scope:** FEL crate is parent (`crates/fel-core`); WASM bridge in `formspec-engine`; Python evaluator parity; WOS guard evaluator. All must move together.
+  - **Gate:** [ADR 0069](thoughts/adr/0069-stack-time-semantics.md) accepted (currently *Proposed*, owner-probe gated).
 
 ## Track / Monitor
 

@@ -43,7 +43,7 @@ To graduate any draft rule:
 3. List the fixture under `rules[*].fixtures` in `specs/lint-codes.json`.
 4. Flip `state` to `"tested"`.
 5. Run `python3 -m pytest tests/unit/test_lint_rule_registry.py -v` and
-   `cargo test -p formspec-lint`.
+   `cargo nextest run -p formspec-lint`.
 
 Recommended graduation order (smallest blast radius first):
 

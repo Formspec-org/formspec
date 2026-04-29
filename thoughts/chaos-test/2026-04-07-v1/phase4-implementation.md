@@ -292,9 +292,9 @@ cd packages/formspec-studio-core && npx vitest run
 cd packages/formspec-mcp && npx vitest run
 
 # Rust crates
-cargo test -p fel-core
-cargo test -p formspec-core
-cargo test -p formspec-eval
+cargo nextest run -p fel-core
+cargo nextest run -p formspec-core
+cargo nextest run -p formspec-eval
 
 # Python conformance
 python3 -m pytest tests/ -v

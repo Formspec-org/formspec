@@ -134,7 +134,7 @@ No behavioral change — documentation only.
 
 **Red-green:** Write a test in formspec-core that passes a FEL expression comparing a date field to a number (e.g. `$start_date > 100`) with field types provided. Expect a `FEL_TYPE_MISMATCH` warning. Fail first, then implement layer by layer until it passes.
 
-**Verify:** Rust tests (`cargo test -p formspec-core`), WASM build (`npm run build` in formspec-engine), core tests, MCP tests.
+**Verify:** Rust tests (`cargo nextest run -p formspec-core`), WASM build (`npm run build` in formspec-engine), core tests, MCP tests.
 
 ---
 

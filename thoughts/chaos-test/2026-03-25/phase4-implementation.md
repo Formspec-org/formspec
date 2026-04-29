@@ -16,7 +16,7 @@
 | BUG-5 | Analysis-time arity checking via `check_function_arity` in `fel_analysis.rs`. Parses catalog signatures to extract expected arg counts. Handles optional (`?`) and variadic (`...`) params. Emits `FEL_ARITY_MISMATCH` warnings surfaced through `parseFEL`. No runtime enforcement. | `crates/formspec-core/src/fel_analysis.rs`, `packages/formspec-engine/src/interfaces.ts`, `wasm-bridge-runtime.ts`, `packages/formspec-core/src/queries/expression-index.ts` |
 | GAP-1 | Added 6 functions: `sumWhere`, `avgWhere`, `minWhere`, `maxWhere`, `moneySumWhere`, `moneyAvgWhere`. Shared `filter_where` helper follows `countWhere` pattern (let_scope with `$` binding). | `crates/fel-core/src/extensions.rs`, `crates/fel-core/src/evaluator.rs` |
 
-**Verification:** `cargo test --workspace` — 1401 tests, zero failures.
+**Verification:** `cargo nextest run --workspace` — 1401 tests, zero failures.
 
 ### Studio-Core (8 issues, 20 new tests)
 
@@ -97,7 +97,7 @@
 
 ```bash
 # 1. Rust workspace (1401 tests)
-cargo test --workspace
+cargo nextest run --workspace
 
 # 2. Core package (687 tests)
 cd packages/formspec-core && npx vitest run

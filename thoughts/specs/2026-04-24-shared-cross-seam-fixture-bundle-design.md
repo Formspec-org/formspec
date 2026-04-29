@@ -20,7 +20,7 @@ The rejected alternative — let each submodule carry its own fixtures and call 
 As of 2026-04-24:
 
 - **Formspec** ships canonical response semantics + signed-response fixture + `authoredSignatures` field set. Its own conformance suite validates Formspec behavior.
-- **WOS** ships Signature Profile, ADR 0073 intake-handoff, and runtime emission. Its own conformance suite (`cargo test -p wos-conformance`) validates WOS behavior.
+- **WOS** ships Signature Profile, ADR 0073 intake-handoff, and runtime emission. Its own conformance suite (`cargo nextest run -p wos-conformance`) validates WOS behavior.
 - **Trellis** ships append/019 (SignatureAffirmation), append/020-022 (intake handoffs), export/006 + catalog `062-signature-affirmations.cbor`, export/007-008 + catalog `063-intake-handoffs.cbor`, and 63 byte-exact vectors byte-matched by Rust + Python stranger. Its conformance suite validates Trellis byte-level behavior.
 
 All three submodules verify their respective conformance independently. **Nothing verifies that they compose.** The claim "canonical response → WOS governance → Trellis custody hook → offline verify" is asserted by prose in STACK.md and by the submodule TODOs that say "Formspec signed-response → WOS SignatureAffirmation → Trellis `custodyHook`." No artifact proves the composition holds.
