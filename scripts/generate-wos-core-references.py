@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
-"""Generate wos-core skill reference maps from canonical WOS specs and schemas."""
+"""Generate wos-core skill reference maps from canonical WOS specs and schemas.
+
+After ADR 0076 schema merge, running this script only *writes* maps for sources
+still present under ``wos-spec/``. It does not delete stale outputs. On
+Integration (step E), after someone runs this generator, manually remove any
+orphan ``*.md`` files left under ``.claude-plugin/skills/wos-core/references/``
+(and ``references/schemas/``) that no longer correspond to a discovered spec
+or schema path.
+"""
 from __future__ import annotations
 
 import json
@@ -15,14 +23,19 @@ SPEC_REF_OVERRIDES: dict[str, str] = {
     "specs/governance/workflow-governance.md": "governance.md",
 }
 
+# Output basenames under references/schemas/; keys are schema *filenames* only
+# (paths like schemas/sidecars/wos-delivery.schema.json still use path.name).
 SCHEMA_REF_NAMES: dict[str, str] = {
-    "wos-kernel.schema.json": "kernel.md",
-    "wos-workflow-governance.schema.json": "governance.md",
-    "wos-ai-integration.schema.json": "ai-integration.md",
-    "wos-advanced.schema.json": "advanced.md",
-    "wos-policy-parameters.schema.json": "policy-parameters.md",
-    "wos-business-calendar.schema.json": "business-calendar.md",
+    "wos-workflow.schema.json": "workflow.md",
+    "wos-tooling.schema.json": "tooling.md",
     "wos-case-instance.schema.json": "case-instance.md",
+    "wos-provenance-log.schema.json": "provenance-log.md",
+    "wos-delivery.schema.json": "delivery.md",
+    "wos-ontology-alignment.schema.json": "ontology-alignment.md",
+    "wos-mcp-tools.schema.json": "mcp-tools.md",
+    "conformance-trace.schema.json": "conformance-trace.md",
+    "wos-lint-diagnostic.schema.json": "lint-diagnostic.md",
+    "wos-synth-trace.schema.json": "synth-trace.md",
 }
 
 
@@ -171,17 +184,22 @@ Resolve `$ref` targets inside the schema file for full nested structures. Sideca
 
 def area_label(rel: str) -> str:
     parts = rel.split("/")
-    bucket = parts[1] if len(parts) > 1 and parts[0] in ("specs", "schemas") else parts[0]
+    if len(parts) == 2 and parts[0] == "schemas" and parts[1].endswith(".schema.json"):
+        bucket = "merged-root-schemas"
+    elif len(parts) > 1 and parts[0] in ("specs", "schemas"):
+        bucket = parts[1]
+    else:
+        bucket = parts[0]
     return {
         "kernel": "L0: Kernel",
         "governance": "L1: Governance",
         "ai": "L2: AI Integration",
         "advanced": "L3: Advanced",
         "assurance": "Assurance",
-        "companions": "Companions",
         "profiles": "Profiles",
         "registry": "Extension registry",
         "sidecars": "Sidecars",
+        "merged-root-schemas": "Merged workflow & artifacts",
         "conformance": "Conformance tooling",
         "lint": "Lint tooling",
         "mcp": "MCP tooling",
@@ -240,43 +258,44 @@ Navigate the Workflow Orchestration Standard (WOS) specification suite. This ski
 - **Version:** 1.1.0
 - **Authors:** Formspec Working Group
 - **Status:** Production
-- **Scope:** WOS Kernel (L0), Governance (L1), AI Integration (L2), Advanced Governance (L3), Assurance, Profiles, Sidecars, Companions, registry, and tooling schemas (conformance, lint, MCP, synth).
+- **Scope:** Merged workflow envelope (`wos-workflow.schema.json`), kernel and tier specs (governance, AI, assurance, profiles, sidecars), runtime and integration companion prose absorbed into `kernel/spec.md` per **ADR 0076 D-8**, and tooling schemas (conformance, lint, MCP, synth).
 
 ## Core Objective
-Enable the AI to query the WOS specification with high precision, mapping requirements to specific chapters, understanding the layered processing model, and resolving inter-spec dependencies across the four vertical layers.
+Enable the AI to query the WOS specification with high precision, mapping requirements to specific chapters, understanding the layered processing model, and resolving inter-spec dependencies. **Normative shape** for the workflow document is the merged JSON Schema; **normative prose** for absorbed companion material (runtime serialization, evaluation modes, integration binding surface, and related companion chapters) lives in `specs/kernel/spec.md` alongside the kernel narrative.
 
 ---
 
-## Architectural Navigation (The Four Layers)
+## Architectural Navigation (merged workflow + kernel)
 
-WOS is organized into a four-layer vertical stack. Each layer targets a "Kernel Document" via a sidecar pattern.
+Per **ADR 0076 D-8**, companion specs were **not left as separate files** under `specs/companions/` — their normative content was absorbed into `specs/kernel/spec.md` while tier specs (governance, AI, etc.) remain separate documents; **schemas** consolidated into a single merged envelope plus supporting artifacts.
 
-| Layer | Name | Primary Spec (canonical) | Primary Schema | Key Seams |
-|-------|------|--------------------------|----------------|-----------|
-| **L0** | **Kernel** | `wos-spec/specs/kernel/spec.md` | `wos-spec/schemas/kernel/wos-kernel.schema.json` | `topology`, `caseState`, `actorModel` |
-| **L1** | **Governance** | `wos-spec/specs/governance/workflow-governance.md` | `wos-spec/schemas/governance/wos-workflow-governance.schema.json` | `lifecycleHook`, `contractHook`, `provenanceLayer` |
-| **L2** | **AI Integration** | `wos-spec/specs/ai/ai-integration.md` | `wos-spec/schemas/ai/wos-ai-integration.schema.json` | `actorExtension`, `deonticConstraints`, `autonomyLevels` |
-| **L3** | **Advanced** | `wos-spec/specs/advanced/advanced-governance.md` | `wos-spec/schemas/advanced/wos-advanced.schema.json` | `constraintZones` (DCR), `equityGuardrails` |
+| Focus | Canonical prose | Canonical JSON Schema | Notes |
+|-------|-----------------|----------------------|-------|
+| **Kernel + absorbed companions** | `wos-spec/specs/kernel/spec.md` | `wos-spec/schemas/wos-workflow.schema.json` | Topology, case state, actors, seams, runtime serialization, evaluation modes, and related material formerly split across companion docs. |
+| **Governance** | `wos-spec/specs/governance/workflow-governance.md` | *(embedded / referenced from merged workflow `$defs`)* | Due process, holds, service-level governance. |
+| **AI integration** | `wos-spec/specs/ai/ai-integration.md` | *(embedded / referenced from merged workflow `$defs`)* | Agents, autonomy, deontic constraints. |
+| **Case runtime / provenance** | cross-links from kernel | `wos-spec/schemas/wos-case-instance.schema.json`, `wos-spec/schemas/wos-provenance-log.schema.json` | Case instance and append-only provenance log shapes. |
+| **Sidecars** | `wos-spec/specs/sidecars/` (where present) | `wos-spec/schemas/sidecars/wos-delivery.schema.json`, `wos-spec/schemas/sidecars/wos-ontology-alignment.schema.json` | Delivery and ontology alignment sidecars. |
+| **Tooling** | (tool-specific docs if any) | `schemas/conformance/`, `schemas/mcp/`, `schemas/lint/`, `schemas/synth/` | Conformance traces, MCP catalog, lint diagnostics, synth traces. |
 
-### Sidecars, profiles, and companions
-- **Sidecars:** `PolicyParameters`, `BusinessCalendar`, `NotificationTemplate`, plus kernel-adjacent metadata sidecars.
-- **Profiles:** `Integration`, `Semantic`, and `Signature` parallel seam documents.
-- **Runtime companion:** execution model for layered evaluation (`specs/companions/runtime.md`).
-- **Tooling schemas:** conformance traces, MCP tool catalog, lint diagnostics, synth traces.
+### Profiles, parameters, and tooling
+- **Profiles:** remaining profile prose under `wos-spec/specs/profiles/` (e.g. semantic, signature) where present; signature semantics may also be embedded in the merged workflow schema per ADR 0076.
+- **Parameters:** `wos-spec/specs/governance/policy-parameters.md` for temporal and policy-parameter material.
+- **Tooling schemas:** `conformance-trace`, `wos-mcp-tools`, `wos-lint-diagnostic`, `wos-synth-trace` under `wos-spec/schemas/` subfolders.
 
 ---
 
 ## Decision Tree: Where to Look
 
-1. **Topology, state, or basic actors?** → `wos-spec/specs/kernel/spec.md` (see [kernel.md](references/kernel.md))
+1. **Topology, case state, actors, runtime serialization, evaluation order, or absorbed companion behavior?** → `wos-spec/specs/kernel/spec.md` (see [kernel.md](references/kernel.md)) and `wos-spec/schemas/wos-workflow.schema.json` (see [workflow.md](references/schemas/workflow.md)).
 2. **Due process, protocols, or human governance?** → `wos-spec/specs/governance/workflow-governance.md` (see [governance.md](references/governance.md))
 3. **Agents, autonomy, or deontic constraints?** → `wos-spec/specs/ai/ai-integration.md` (see [ai-integration.md](references/ai-integration.md))
-4. **DCR zones, verification, or fairness?** → `wos-spec/specs/advanced/advanced-governance.md` (see [advanced-governance.md](references/advanced-governance.md))
-5. **Processor behavior or evaluation order?** → `wos-spec/specs/companions/runtime.md` (see [runtime.md](references/runtime.md))
-6. **Temporal parameters?** → `wos-spec/specs/governance/policy-parameters.md` (see [policy-parameters.md](references/policy-parameters.md))
-7. **SLAs, calendars, holds?** → `wos-spec/specs/sidecars/business-calendar.md` and governance service-level material in `workflow-governance.md`
-8. **Assurance posture (separate from impact level)?** → `wos-spec/specs/assurance/assurance.md` (see [assurance.md](references/assurance.md))
-9. **Extension discovery?** → `wos-spec/specs/registry/extension-registry.md` (see [extension-registry.md](references/extension-registry.md))
+4. **DCR zones, advanced governance, or compound-state extensions?** → merged workflow schema (`wos-workflow.schema.json` → [workflow.md](references/schemas/workflow.md)) and tier specs above; there is **no** separate per-tier schema path under `schemas/governance/` / `schemas/ai/` / `schemas/advanced/`.
+5. **Temporal parameters?** → `wos-spec/specs/governance/policy-parameters.md` (see [policy-parameters.md](references/policy-parameters.md))
+6. **Delivery / ontology sidecars?** → `wos-spec/schemas/sidecars/wos-delivery.schema.json`, `wos-spec/schemas/sidecars/wos-ontology-alignment.schema.json` ([delivery.md](references/schemas/delivery.md), [ontology-alignment.md](references/schemas/ontology-alignment.md))
+7. **Assurance posture (separate from impact level)?** → `wos-spec/specs/assurance/assurance.md` when present in the tree (see generated [assurance.md](references/assurance.md) if listed below).
+8. **Conformance, MCP tools, lint, or synth traces?** → `wos-spec/schemas/conformance/`, `mcp/`, `lint/`, `synth/` (see schema index below).
+9. **Anything else under `wos-spec/specs/`** → use the **Complete file map** table at the end of this skill.
 
 ---
 
