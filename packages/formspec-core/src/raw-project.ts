@@ -1,7 +1,7 @@
 /** @filedesc RawProject class: central editing surface for a Formspec artifact bundle. */
 import type { IProjectCore } from './project-core.js';
 import type {
-  ComponentDocument, ThemeDocument, MappingDocument, FormDefinition, FormItem,
+  ComponentDocument, ThemeDocument, MappingDocument, FormDefinition, FormItem, FormBind,
 } from '@formspec-org/types';
 import type {
   ProjectState,
@@ -277,9 +277,21 @@ function createDefaultDefinition(): FormDefinition {
 /**
  * Create default project state, applying seed overrides.
  */
+function normalizeBinds(binds: unknown): FormBind[] | undefined {
+  if (binds == null) return undefined;
+  if (Array.isArray(binds)) return binds as FormBind[];
+  if (typeof binds === 'object') {
+    return Object.entries(binds as Record<string, unknown>).map(([path, value]) => ({
+      path,
+      ...(typeof value === 'object' && value !== null ? value : {}),
+    })) as FormBind[];
+  }
+  return undefined;
+}
+
 function createDefaultState(options?: ProjectOptions): ProjectState {
   const rawDefinition = options?.seed?.definition ?? createDefaultDefinition();
-  const definition = rawDefinition as FormDefinition;
+  const definition = { ...rawDefinition, binds: normalizeBinds(rawDefinition.binds) } as FormDefinition;
   const url = definition.url;
   const componentState = normalizeComponentState(options?.seed?.component, url);
 

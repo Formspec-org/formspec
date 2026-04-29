@@ -139,11 +139,14 @@ export function reconcileComponentTree(
 
   // ── Collect display paths with calculate binds ──
   const calculatedDisplayPaths = new Set<string>();
-  if (definition.binds) {
-    for (const bind of definition.binds) {
-      if (bind.calculate && bind.path) {
-        calculatedDisplayPaths.add(bind.path);
-      }
+  const bindsArray: Array<{ path?: string; calculate?: string }> = Array.isArray(definition.binds)
+    ? definition.binds
+    : definition.binds && typeof definition.binds === 'object'
+      ? Object.entries(definition.binds as Record<string, unknown>).map(([path, value]) => ({ path, ...(value as object) }))
+      : [];
+  for (const bind of bindsArray) {
+    if (bind.calculate && bind.path) {
+      calculatedDisplayPaths.add(bind.path);
     }
   }
 
