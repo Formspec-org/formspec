@@ -131,7 +131,7 @@ export function handleSave(
       return errorResponse(formatToolError('SAVE_FAILED', "No save path specified. For newly created projects, provide a path parameter (e.g., formspec_save with path='my-form'). Or use formspec_publish to export the bundle inline."));
     }
 
-    const bundle = project.export();
+    const bundle = project.exportBundle();
     writeBundle(bundle, targetPath);
 
     return { saved: true, path: targetPath };
@@ -202,7 +202,7 @@ export function handleExportBundle(
       }));
     }
 
-    const bundle = project.export();
+    const bundle = project.exportBundle();
 
     if (path) {
       const targetPath = resolve(path);
