@@ -54,21 +54,15 @@ export function warnIfIncompatible(componentType: string, dataType: string): voi
  * Wire the shared reactive effects that all field behaviors need:
  * required indicator, validation display, readonly, relevance, touched tracking.
  *
- * Accepts either a FieldViewModel (reactive locale-resolved signals) or a
- * legacy (fieldPath, labelText) pair for backwards compatibility.
- *
  * Returns an array of dispose functions.
  */
 export function bindSharedFieldEffects(
     ctx: BehaviorContext,
     fieldPath: string,
-    labelTextOrVM: string | FieldViewModel,
+    vm: FieldViewModel | undefined,
+    labelText: string,
     refs: FieldRefs
 ): Array<() => void> {
-    const hasVM = typeof labelTextOrVM !== 'string';
-    const vm = hasVM ? labelTextOrVM as FieldViewModel : undefined;
-    const staticLabel = hasVM ? '' : labelTextOrVM as string;
-
     const disposers: Array<() => void> = [];
 
     // Resolve the actual interactive element for ARIA attributes.
@@ -83,7 +77,7 @@ export function bindSharedFieldEffects(
         const isRequired = vm
             ? vm.required.value
             : (ctx.engine.requiredSignals[fieldPath]?.value ?? false);
-        const currentLabel = vm ? vm.label.value : staticLabel;
+        const currentLabel = vm ? vm.label.value : labelText;
         refs.label.textContent = currentLabel;
         if (isRequired) {
             const indicator = document.createElement('abbr');

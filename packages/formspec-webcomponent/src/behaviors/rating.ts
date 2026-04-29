@@ -66,7 +66,7 @@ export function useRating(ctx: BehaviorContext, comp: any): RatingBehavior {
         },
 
         bind(refs: FieldRefs): () => void {
-            const disposers = bindSharedFieldEffects(ctx, fieldPath, vm || labelText, refs);
+            const disposers = bindSharedFieldEffects(ctx, fieldPath, vm, labelText, refs);
 
             // Sync star selection classes and glyphs from engine value
             const stars = refs.control.querySelectorAll('.formspec-rating-star');

@@ -46,7 +46,7 @@ export function useSignature(ctx: BehaviorContext, comp: any): SignatureBehavior
         },
 
         bind(refs: FieldRefs): () => void {
-            const disposers = bindSharedFieldEffects(ctx, fieldPath, vm || labelText, refs);
+            const disposers = bindSharedFieldEffects(ctx, fieldPath, vm, labelText, refs);
 
             // Listen for signature drawn event from adapter
             refs.root.addEventListener('formspec-signature-drawn', (e: Event) => {

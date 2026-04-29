@@ -230,7 +230,7 @@ describe('layout components — FileUpload', () => {
                 children: [{ component: 'FileUpload', bind: 'doc', accept: '.pdf,.doc', dragDrop: true }],
             },
         );
-        const dropZone = el.querySelector('.formspec-drop-zone') as HTMLElement;
+        const dropZone = el.querySelector('.formspec-file-drop-zone') as HTMLElement;
         expect(dropZone).not.toBeNull();
         expect(dropZone.textContent).toContain('Drag & drop a file here');
         expect(dropZone.getAttribute('aria-label')).toContain('Drop files here');

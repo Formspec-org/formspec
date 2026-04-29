@@ -50,7 +50,7 @@ export function useCheckbox(ctx: BehaviorContext, comp: any): FieldBehavior {
         },
 
         bind(refs: FieldRefs): () => void {
-            const disposers = bindSharedFieldEffects(ctx, fieldPath, vm || labelText, refs);
+            const disposers = bindSharedFieldEffects(ctx, fieldPath, vm, labelText, refs);
 
             const checkbox = refs.control.querySelector('input[type="checkbox"]') || refs.control;
 

@@ -35,7 +35,7 @@ export function bindSelectCombobox(
     } = opts;
 
     refs.skipSharedReadonlyControl = true;
-    const disposers = bindSharedFieldEffects(ctx, fieldPath, vm || labelText, refs);
+    const disposers = bindSharedFieldEffects(ctx, fieldPath, vm, labelText, refs);
 
     const root = refs.control;
     const input = root.querySelector('.formspec-combobox-input') as HTMLInputElement;

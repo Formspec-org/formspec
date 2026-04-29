@@ -105,7 +105,7 @@ describe('bindSharedFieldEffects with FieldViewModel', () => {
         const { vm, setLabel } = mockFieldVM({ label: 'Initial Label' });
         const refs = makeFieldRefs();
 
-        const disposers = bindSharedFieldEffects(ctx, 'test', vm, refs);
+        const disposers = bindSharedFieldEffects(ctx, 'test', vm, 'fallback', refs);
 
         // Effect runs immediately — label should be set
         expect(refs.label.textContent).toBe('Initial Label');
@@ -123,7 +123,7 @@ describe('bindSharedFieldEffects with FieldViewModel', () => {
         const { vm, setRequired } = mockFieldVM({ required: false });
         const refs = makeFieldRefs();
 
-        const disposers = bindSharedFieldEffects(ctx, 'test', vm, refs);
+        const disposers = bindSharedFieldEffects(ctx, 'test', vm, 'fallback', refs);
 
         // Not required — no indicator
         expect(refs.label.querySelector('.formspec-required')).toBeNull();
@@ -142,7 +142,7 @@ describe('bindSharedFieldEffects with FieldViewModel', () => {
         const { vm, setVisible } = mockFieldVM({ visible: true });
         const refs = makeFieldRefs();
 
-        const disposers = bindSharedFieldEffects(ctx, 'test', vm, refs);
+        const disposers = bindSharedFieldEffects(ctx, 'test', vm, 'fallback', refs);
 
         expect(refs.root.classList.contains('formspec-hidden')).toBe(false);
 
@@ -162,7 +162,7 @@ describe('bindSharedFieldEffects with FieldViewModel', () => {
         const { vm, setReadonly } = mockFieldVM({ readonly: false });
         const refs = makeFieldRefs();
 
-        const disposers = bindSharedFieldEffects(ctx, 'test', vm, refs);
+        const disposers = bindSharedFieldEffects(ctx, 'test', vm, 'fallback', refs);
 
         expect(refs.control.getAttribute('aria-readonly')).toBe('false');
 
@@ -178,7 +178,7 @@ describe('bindSharedFieldEffects with FieldViewModel', () => {
         const { vm, setFirstError } = mockFieldVM();
         const refs = makeFieldRefs();
 
-        const disposers = bindSharedFieldEffects(ctx, 'test', vm, refs);
+        const disposers = bindSharedFieldEffects(ctx, 'test', vm, 'fallback', refs);
 
         // Set error — not yet touched, so should not display
         setFirstError('Required field');
@@ -197,7 +197,7 @@ describe('bindSharedFieldEffects with FieldViewModel', () => {
         const { vm, setFirstError } = mockFieldVM();
         const refs = makeFieldRefs();
 
-        const disposers = bindSharedFieldEffects(ctx, 'test', vm, refs);
+        const disposers = bindSharedFieldEffects(ctx, 'test', vm, 'fallback', refs);
 
         setFirstError('Required field');
         expect(refs.error.textContent).toBe('');
@@ -218,7 +218,7 @@ describe('bindSharedFieldEffects with FieldViewModel', () => {
         const { vm, setLabel } = mockFieldVM({ label: 'A' });
         const refs = makeFieldRefs();
 
-        const disposers = bindSharedFieldEffects(ctx, 'test', vm, refs);
+        const disposers = bindSharedFieldEffects(ctx, 'test', vm, 'fallback', refs);
         expect(refs.label.textContent).toBe('A');
 
         // Dispose

@@ -50,7 +50,7 @@ export function useSlider(ctx: BehaviorContext, comp: any): SliderBehavior {
         },
 
         bind(refs: FieldRefs): () => void {
-            const disposers = bindSharedFieldEffects(ctx, fieldPath, vm || labelText, refs);
+            const disposers = bindSharedFieldEffects(ctx, fieldPath, vm, labelText, refs);
 
             const rangeInput = refs.control.querySelector('input[type="range"]') || refs.control;
 
