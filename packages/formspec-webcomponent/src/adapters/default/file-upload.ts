@@ -83,8 +83,7 @@ export const renderFileUpload: AdapterRenderFn<FileUploadBehavior> = (
 
     if (behavior.dragDrop) {
         const dropZone = document.createElement('div');
-        // Keep legacy class for compatibility with existing tests/consumers.
-        dropZone.className = 'formspec-file-drop-zone formspec-drop-zone formspec-focus-ring';
+        dropZone.className = 'formspec-file-drop-zone formspec-focus-ring';
 
         const content = document.createElement('div');
         content.className = 'formspec-file-drop-content';
