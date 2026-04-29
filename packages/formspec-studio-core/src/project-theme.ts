@@ -91,6 +91,12 @@ const S = {
     summary: (p: { itemKey: string }) => `Cleared all theme overrides for item '${p.itemKey}'`,
     affectedPaths: (p: { itemKey: string }) => [p.itemKey],
   },
+  setThemeExtension: {
+    command: 'theme.setExtension',
+    payload: (p: { key: string; value: unknown }) => ({ key: p.key, value: p.value }),
+    summary: (p: { key: string }) => `Updated theme extension '${p.key}'`,
+    affectedPaths: (p: { key: string }) => [`extensions.${p.key}`],
+  },
 } satisfies Record<string, DispatchSpec<any>>;
 
 export function setToken(project: ProjectInternals, key: string, value: string | null): HelperResult {
@@ -158,4 +164,8 @@ export function setItemOverride(project: ProjectInternals, itemKey: string, prop
 
 export function clearItemOverrides(project: ProjectInternals, itemKey: string): HelperResult {
   return exec(project, 'clearItemOverrides', { itemKey }, S.clearItemOverrides);
+}
+
+export function setThemeExtension(project: ProjectInternals, key: string, value: unknown): HelperResult {
+  return exec(project, 'setThemeExtension', { key, value }, S.setThemeExtension);
 }

@@ -176,7 +176,7 @@ describe('Project', () => {
   it('export includes added items', () => {
     const project = createProject();
     project.addField('f', 'Field', 'text');
-    const bundle = project.export();
+    const bundle = project.exportBundle();
     expect(bundle.definition.items).toHaveLength(1);
   });
 
@@ -185,7 +185,7 @@ describe('Project', () => {
     project.addField('old', 'Old', 'text');
     expect(project.canUndo).toBe(true);
 
-    const bundle = project.export();
+    const bundle = project.exportBundle();
     project.loadBundle(bundle);
     // Import is undoable — undo history is preserved (Bug #18)
     expect(project.canUndo).toBe(true);

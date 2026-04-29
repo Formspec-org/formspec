@@ -165,7 +165,7 @@ export class Project {
     return { ...this.core.statistics(), isDirty: this._isDirty };
   }
   commandHistory(): readonly LogEntry[] { return this.core.log; }
-  export(): ProjectBundle { return this.core.export() as unknown as ProjectBundle; }
+  exportBundle(): ProjectBundle { return this.core.export() as unknown as ProjectBundle; }
   diagnose(): Diagnostics { return this.core.diagnose(); }
   componentFor(fieldKey: string): Record<string, unknown> | undefined { return this.core.componentFor(fieldKey); }
   pageStructure(): PageStructureView { return resolveLayoutPageStructure(this.state); }
@@ -179,6 +179,27 @@ export class Project {
   fieldDependents(fieldPath: string): FieldDependents { return this.core.fieldDependents(fieldPath); }
   diffFromBaseline(fromVersion?: string): Change[] { return this.core.diffFromBaseline(fromVersion); }
   previewChangelog(): FormspecChangelog { return this.core.previewChangelog(); }
+ 
+  /**
+   * Return a snapshot of what the project would look like if the current changeset
+   * were accepted (including AI changes and user overlays).
+   */
+  previewChangeset(groupIndices?: number[]): Readonly<ProjectSnapshot> | null {
+    if (!this._proposals) return null;
+    try {
+      const state = this._proposals.previewMerge(groupIndices);
+      return {
+        definition: state.definition as unknown as FormDefinition,
+        component: state.component as unknown as ComponentDocument,
+        theme: state.theme as unknown as ThemeDocument,
+        mappings: state.mappings as unknown as Record<string, MappingDocument>,
+        selectedMappingId: state.selectedMappingId,
+        screener: state.screener ?? null,
+      };
+    } catch {
+      return null;
+    }
+  }
 
   // ── FEL editing helpers ───────────────────────────────────────
 
@@ -262,6 +283,14 @@ export class Project {
 
   // ── Layout node movement ────────────────────────────────────
 
+  setNodeType(path: string, type: string): HelperResult {
+    return componentTreeOps.addComponentNode(this._asInternals(), { bind: path }, type);
+  }
+
+  setItemWidgetConfig(path: string, widget: string): HelperResult {
+    return themeOps.setItemOverride(this._asInternals(), path, 'widget', widget);
+  }
+
   /** Move a component tree node to a new parent/position. */
   moveLayoutNode(
     sourceNodeId: string,
@@ -270,6 +299,7 @@ export class Project {
   ): HelperResult {
     return componentTreeOps.moveLayoutNode(this._asInternals(), sourceNodeId, targetParentNodeId, targetIndex);
   }
+
 
   /** Batch-move multiple definition items atomically (e.g. multi-select DnD). */
   moveItems(
@@ -559,6 +589,16 @@ export class Project {
     return themeOps.setToken(this._asInternals(), key, value);
   }
 
+  /** Resolve a theme token to its value. */
+  getToken(key: string): string | number | undefined {
+    return this.core.resolveToken(key);
+  }
+
+  /** Get the resolved widget for a field. */
+  getWidget(path: string): string | undefined {
+    return (this.core.effectivePresentation(path) as any)?.widgetHint;
+  }
+
   /** Set a default theme property (e.g. labelPosition, widget, cssClass). */
   setThemeDefault(property: string, value: unknown): HelperResult {
     return themeOps.setThemeDefault(this._asInternals(), property, value);
@@ -642,6 +682,11 @@ export class Project {
   /** Clear all per-item theme overrides for an item. */
   clearItemOverrides(itemKey: string): HelperResult {
     return themeOps.clearItemOverrides(this._asInternals(), itemKey);
+  }
+
+  /** Set an arbitrary theme extension property (must start with x-). */
+  setThemeExtension(key: string, value: unknown): HelperResult {
+    return themeOps.setThemeExtension(this._asInternals(), key, value);
   }
 
   // ── Region Helpers ──
@@ -1091,7 +1136,7 @@ export function createProject(options?: CreateProjectOptions): Project {
 export function buildBundleFromDefinition(definition: FormDefinition): ProjectBundle {
   try {
     const project = createProject({ seed: { definition }, enableChangesets: false });
-    const exported = project.export();
+    const exported = project.exportBundle();
     return {
       ...exported,
       component: structuredClone(project.component),

@@ -59,6 +59,8 @@ export interface CompNode {
   start?: number;
   /** Breakpoint-keyed responsive overrides on layout nodes. */
   responsive?: Record<string, unknown>;
+  /** FEL boolean expression for conditional rendering. */
+  when?: string;
 }
 
 /**

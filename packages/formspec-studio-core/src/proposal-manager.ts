@@ -200,6 +200,16 @@ export class ProposalManager {
   }
 
   /**
+   * Refresh snapshotBefore to the current core state.
+   * Call after external state mutations (e.g., extension updates) that should
+   * be preserved when the changeset is rejected.
+   */
+  refreshSnapshotBefore(): void {
+    if (!this._changeset) return;
+    this._changeset.snapshotBefore = structuredClone(this.core.state);
+  }
+
+  /**
    * Begin an AI entry bracket. Sets actor to 'ai'.
    * Called by the MCP layer before executing a tool.
    */
@@ -350,6 +360,74 @@ export class ProposalManager {
     }
     this._notify();
     return result;
+  }
+
+  /**
+   * Preview the result of merging a changeset without modifying the project's current state.
+   * Useful for rendering structural previews (ProposedArtifactBlock).
+   *
+   * @param groupIndices - If provided, only include these dependency groups.
+   * @returns The ProjectState after applying the specified changes to the snapshotBefore.
+   */
+  previewMerge(groupIndices?: number[]): ProjectState {
+    const changeset = this._changeset;
+    if (!changeset) throw new Error('No active changeset to preview');
+
+    // Start with the snapshot before the changeset
+    const state = structuredClone(changeset.snapshotBefore);
+    const core = this.core;
+
+    // Use a temporary project or direct command application if core supports it.
+    // Since we don't want to affect history/signals, we'll use a clean state and
+    // a mock dispatcher or just apply commands directly if they were pure.
+    // However, formspec-core commands often depend on the core instance.
+    
+    // For now, the most robust way is to use a temporary core or
+    // just replay the commands into the cloned state.
+    // Since we are in the manager, we'll assume we can't easily spin up a full core.
+    // BUT we have the aiEntries which are recorded commands.
+    
+    // We'll perform a "virtual replay" by temporarily restoring state,
+    // replaying, capturing the result, and restoring back.
+    const originalState = structuredClone(core.state);
+    const originalRecording = (this.core as any)._recording; // Hack to preserve state
+    
+    try {
+      this.setRecording(false);
+      core.restoreState(state);
+      
+      const acceptedEntryIndices = new Set<number>();
+      if (groupIndices) {
+        for (const gi of groupIndices) {
+          for (const ei of changeset.dependencyGroups[gi].entries) {
+            acceptedEntryIndices.add(ei);
+          }
+        }
+      } else {
+        // All AI entries
+        for (let i = 0; i < changeset.aiEntries.length; i++) acceptedEntryIndices.add(i);
+      }
+
+      for (let i = 0; i < changeset.aiEntries.length; i++) {
+        if (acceptedEntryIndices.has(i)) {
+          for (const phase of changeset.aiEntries[i].commands) {
+            core.batch(phase);
+          }
+        }
+      }
+      
+      // Also apply user overlay if any
+      for (const entry of changeset.userOverlay) {
+        for (const phase of entry.commands) {
+          core.batch(phase);
+        }
+      }
+
+      return structuredClone(core.state);
+    } finally {
+      core.restoreState(originalState);
+      this.setRecording(originalRecording);
+    }
   }
 
   /** Full rejection — restore to snapshot, replay user overlay only. */

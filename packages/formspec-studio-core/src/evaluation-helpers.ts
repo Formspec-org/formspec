@@ -209,7 +209,7 @@ export function previewForm(
   pages: { id: string; title: string; validationErrors: number; validationWarnings: number; status: 'active' | 'complete' | 'incomplete' | 'unreachable' }[];
   validationState: Record<string, { severity: 'error' | 'warning' | 'info'; message: string }>;
 } {
-  const bundle = project.export();
+  const bundle = project.exportBundle();
   // Bridge studio-core's FormDefinition → engine's FormspecDefinition at the boundary
   const engine = createFormEngine(bundle.definition as unknown as FormspecDefinition);
 
@@ -362,7 +362,7 @@ export function validateResponse(
   project: Project,
   response: Record<string, unknown>,
 ): ValidationReport {
-  const bundle = project.export();
+  const bundle = project.exportBundle();
   // Bridge studio-core's FormDefinition → engine's FormspecDefinition at the boundary
   const engine = createFormEngine(bundle.definition as unknown as FormspecDefinition);
 
