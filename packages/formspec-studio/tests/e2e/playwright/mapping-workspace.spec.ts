@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { waitForApp, waitForAppWithExport, switchTab, importProject } from './helpers';
+import { waitForApp, waitForAppWithExport, importProject, openMappingWorkspace } from './helpers';
 
 const SEED = {
   definition: {
@@ -30,14 +30,14 @@ test.describe('Mapping Workspace', () => {
   test.beforeEach(async ({ page }) => {
     await waitForApp(page);
     await importProject(page, SEED);
-    await switchTab(page, 'Mapping');
+    await openMappingWorkspace(page);
   });
 
   test('blueprint section shows direction, version and target format', async ({ page }) => {
     const workspace = page.locator('[data-testid="workspace-Mapping"]');
 
     // Check direction
-    await expect(workspace.locator('[data-testid="direction-picker"]')).toHaveText('forward');
+    await expect(workspace.locator('[data-testid="direction-picker"]')).toContainText(/forward/i);
 
     // Check version input is editable
     await expect(workspace.locator('[data-testid="mapping-version"]')).toHaveValue('1.2.3');
@@ -84,7 +84,7 @@ test.describe('Mapping Workspace', () => {
     // Need export access for this
     await waitForAppWithExport(page);
     await importProject(page, SEED);
-    await switchTab(page, 'Mapping');
+    await openMappingWorkspace(page);
 
     const workspace = page.locator('[data-testid="workspace-Mapping"]');
 
@@ -122,7 +122,7 @@ test.describe('Mapping Workspace', () => {
   test('direction picker updates mapping direction', async ({ page }) => {
     await waitForAppWithExport(page);
     await importProject(page, SEED);
-    await switchTab(page, 'Mapping');
+    await openMappingWorkspace(page);
 
     const workspace = page.locator('[data-testid="workspace-Mapping"]');
 
@@ -147,7 +147,7 @@ test.describe('Multi-mapping Selector', () => {
   test.beforeEach(async ({ page }) => {
     await waitForAppWithExport(page);
     await importProject(page, SEED);
-    await switchTab(page, 'Mapping');
+    await openMappingWorkspace(page);
   });
 
   test('selector strip shows the default mapping tab', async ({ page }) => {

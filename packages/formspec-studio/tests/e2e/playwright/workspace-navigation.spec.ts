@@ -22,18 +22,19 @@ test.describe('Workspace Navigation — Tab Switching', () => {
     await expect(page.getByTestId('manage-section-data-sources')).toBeVisible();
   });
 
-  test('Design tab shows brand & style sections in the blueprint sidebar', async ({ page }) => {
+  test('Design tab shows theme authoring in the blueprint sidebar and layout canvas', async ({ page }) => {
     await switchTab(page, 'Design');
-    const workspace = page.locator('[data-testid="design-canvas-shell"]');
-    await expect(workspace.getByRole('button', { name: /brand colors/i })).toBeVisible();
-    await expect(workspace.getByRole('button', { name: /typography/i })).toBeVisible();
+    const sidebar = page.locator('[data-testid="blueprint-sidebar"]');
+    await expect(sidebar.getByRole('button', { name: 'Colors', exact: true })).toBeVisible();
+    await expect(sidebar.getByRole('button', { name: 'Typography', exact: true })).toBeVisible();
+    await expect(page.locator('[data-testid="design-canvas-shell"]')).toBeVisible();
+    await expect(page.locator('[data-testid="workspace-Layout"]')).toBeVisible();
   });
 
-  test('Design mode renders design workspace', async ({ page }) => {
+  test('Design mode shows layout workspace shell', async ({ page }) => {
     await switchTab(page, 'Design');
-    const workspace = page.locator('[data-testid="design-canvas-shell"]');
-    await expect(workspace.getByRole('heading', { name: 'Brand Colors' })).toBeVisible();
-    await expect(workspace.getByRole('button', { name: /typography/i })).toBeVisible();
+    await expect(page.locator('[data-testid="design-canvas-shell"]')).toBeVisible();
+    await expect(page.locator('[data-testid="workspace-Layout"]')).toBeVisible();
   });
 
   test('Mapping workspace is accessible via Advanced section', async ({ page }) => {

@@ -8,13 +8,13 @@ export function layoutContainerHeaderSelectRow(container: Locator): Locator {
 
 /** Wait for the app to be fully loaded (Shell visible). */
 export async function waitForApp(page: Page) {
-  await page.goto('/?skipOnboarding=1');
+  await page.goto('/?skipOnboarding=1&studioMode=edit');
   await page.waitForSelector('[data-testid="shell"]', { timeout: 10000 });
 }
 
 /** Wait for app with e2e=1 so window.__FORMSPEC_TEST_EXPORT is available for export validation tests. */
 export async function waitForAppWithExport(page: Page) {
-  await page.goto('/?e2e=1&skipOnboarding=1');
+  await page.goto('/?e2e=1&skipOnboarding=1&studioMode=edit');
   await page.waitForSelector('[data-testid="shell"]', { timeout: 10000 });
 }
 
@@ -39,6 +39,16 @@ export async function switchTab(page: Page, tabName: string) {
   };
   const mode = modeMap[tabName] || 'edit';
   await switchMode(page, mode);
+}
+
+/**
+ * Open the Mapping workspace. UnifiedStudio mounts it as an advanced tab (not a mode toggle).
+ */
+export async function openMappingWorkspace(page: Page) {
+  await switchTab(page, 'Editor');
+  const sidebar = page.locator('[data-testid="blueprint-sidebar"]');
+  await sidebar.getByRole('button', { name: 'Open Mappings tab' }).click();
+  await page.waitForSelector('[data-testid="workspace-Mapping"]');
 }
 
 /** Canonical desktop properties rail locator. */

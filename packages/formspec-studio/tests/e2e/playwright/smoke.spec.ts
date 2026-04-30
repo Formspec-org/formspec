@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test';
-import { waitForApp } from './helpers';
 
 test.describe('Smoke — App Bootstrap', () => {
   test('loads the app and shows the shell chrome', async ({ page }) => {
-    await waitForApp(page);
+    await page.goto('/?skipOnboarding=1&studioMode=chat');
+    await page.waitForSelector('[data-testid="shell"]', { timeout: 10000 });
 
     // App title in the header
     await expect(page.locator('[data-testid="header"]')).toContainText('The Stack');
@@ -14,7 +14,7 @@ test.describe('Smoke — App Bootstrap', () => {
       await expect(page.locator(`[data-testid="mode-toggle-${mode}"]`)).toBeVisible();
     }
 
-    // Default mode is chat
+    // Explicit chat boot (waitForApp defaults to edit for authoring E2E)
     await expect(page.locator('[data-testid="mode-toggle-chat"]')).toHaveClass(/bg-accent/);
     await expect(page.locator('[data-testid="chat-panel"]')).toBeVisible();
 
