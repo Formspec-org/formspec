@@ -10,6 +10,7 @@
 import type { CommandHandler, LocaleState } from '../types.js';
 import type { FormItem } from '@formspec-org/types';
 import { normalizeComponentState } from '../component-documents.js';
+import { normalizeBindsFromUnknown } from '../definition-binds.js';
 import { normalizeBcp47 } from '../locale-utils.js';
 import { indexRegistryPayload } from '../registry-index.js';
 
@@ -18,7 +19,13 @@ export const projectHandlers = {
   'project.import': (state, payload) => {
     const p = payload as Record<string, any>;
 
-    if (p.definition) state.definition = p.definition as typeof state.definition;
+    if (p.definition) {
+      const def = p.definition as typeof state.definition;
+      state.definition = {
+        ...def,
+        binds: normalizeBindsFromUnknown(def.binds),
+      } as typeof state.definition;
+    }
     if (p.component) {
       state.component = normalizeComponentState(p.component, state.definition.url);
     } else if (p.definition) {

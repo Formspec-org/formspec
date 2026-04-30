@@ -2,6 +2,53 @@ import { describe, it, expect } from 'vitest';
 import { createRawProject } from '../src/index.js';
 
 describe('project.import', () => {
+  it('converts object-shaped binds to an array (matches createDefaultState)', () => {
+    const project = createRawProject();
+    project.dispatch({
+      type: 'project.import',
+      payload: {
+        definition: {
+          $formspec: '1.0',
+          url: 'urn:formspec:binds',
+          version: '1.0.0',
+          title: 'Binds',
+          items: [{ key: 'a', type: 'text' }],
+          binds: {
+            a: { required: 'true' },
+            b: { relevant: "$x = 'y'" },
+          },
+        },
+      },
+    });
+    const binds = project.definition.binds;
+    expect(Array.isArray(binds)).toBe(true);
+    expect(binds).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ path: 'a', required: 'true' }),
+        expect.objectContaining({ path: 'b', relevant: "$x = 'y'" }),
+      ]),
+    );
+    expect(binds).toHaveLength(2);
+  });
+
+  it('drops malformed binds (non-array, non-object) on import', () => {
+    const project = createRawProject();
+    project.dispatch({
+      type: 'project.import',
+      payload: {
+        definition: {
+          $formspec: '1.0',
+          url: 'urn:formspec:bad-binds',
+          version: '1.0.0',
+          title: 'Bad',
+          items: [],
+          binds: 'not-valid' as never,
+        },
+      },
+    });
+    expect(project.definition.binds).toBeUndefined();
+  });
+
   it('replaces the entire project state', () => {
     const project = createRawProject();
     project.dispatch({ type: 'definition.setFormTitle', payload: { title: 'Before' } });
