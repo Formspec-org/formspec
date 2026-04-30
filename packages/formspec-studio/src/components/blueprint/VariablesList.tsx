@@ -22,6 +22,8 @@ export function VariablesList() {
         <button
           key={v.name}
           type="button"
+          data-testid={`blueprint-variable-row-${v.name}`}
+          aria-label={`Variable ${v.name}, open Manage view`}
           onClick={navigateToManage}
           className="w-full rounded-[6px] px-2.5 py-1.5 text-left transition-colors hover:bg-subtle hover:text-ink group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
         >

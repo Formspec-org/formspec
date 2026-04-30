@@ -23,6 +23,7 @@ import { BlueprintSidebar } from '../components/shell/BlueprintSidebar';
 import { WorkspaceContent } from '../components/shell/WorkspaceContent';
 import { ShellDialogs } from '../components/shell/ShellDialogs';
 import { useBlueprintSectionResolution } from '../components/shell/useBlueprintSectionResolution';
+import { BLUEPRINT_SECTIONS_BY_TAB } from '../components/shell/ShellConstants';
 import { getShellBackgroundImage } from '../components/shell/shell-background-image';
 import { ChatSessionControllerProvider } from '../state/ChatSessionControllerContext';
 import { ActiveGroupProvider } from '../state/useActiveGroup';
@@ -36,6 +37,7 @@ import {
 import { telemetry } from '../services/telemetry-adapter';
 import { LayoutCanvas } from '../workspaces/layout/LayoutCanvas';
 import { LayoutLivePreviewSection } from '../workspaces/layout/LayoutLivePreviewSection';
+import { FormHealthPanel } from '../workspaces/editor/FormHealthPanel';
 import type { StudioUIHandlers } from '../components/chat/studio-ui-tools';
 import type { EditorView } from '../workspaces/editor/BuildManageToggle';
 import type { MappingTabId } from '../workspaces/mapping/MappingTab';
@@ -257,7 +259,16 @@ export function UnifiedStudio(): ReactElement {
         setMode('edit');
         if (view && VALID_EDITOR_VIEWS.has(view)) {
           setActiveEditorView(view as EditorView);
-          setActiveSection('Structure');
+          // Only reset blueprint to Structure when entering Build; Manage/Screener/Health
+          // should keep the user's sidebar section (e.g. Variables when opening Manage).
+          if (view === 'build') {
+            setActiveSection('Structure');
+          } else if (
+            section &&
+            BLUEPRINT_SECTIONS_BY_TAB.Editor.includes(section)
+          ) {
+            setActiveSection(section);
+          }
         }
         return;
       }
@@ -366,7 +377,7 @@ export function UnifiedStudio(): ReactElement {
               aria-hidden={overlayOpen ? true : undefined}
             >
               {/* Left sidebar — visible for editable project workspaces */}
-              {(isEditMode || isAdvancedWorkspace || isDesignMode) && !compactLayout && (
+              {(isEditMode || isAdvancedWorkspace || isDesignMode || isPreviewMode) && !compactLayout && (
                 <>
                   <BlueprintSidebar
                     activeTab={activeTab}
@@ -414,6 +425,15 @@ export function UnifiedStudio(): ReactElement {
                       if (event.target === event.currentTarget) deselect();
                     }}
                   >
+                    <div
+                      data-testid="editor-deselect-hitbox"
+                      className="h-4 shrink-0 w-full cursor-default"
+                      aria-hidden
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        deselect();
+                      }}
+                    />
 	                    <WorkspaceContent
 	                      activeTab={activeTab}
                       activeEditorView={activeEditorView}
@@ -507,6 +527,9 @@ export function UnifiedStudio(): ReactElement {
                       >
                         <IconChevronRight size={14} />
                       </button>
+                    </div>
+                    <div className="min-h-0 flex-1 overflow-hidden">
+                      <FormHealthPanel />
                     </div>
                   </aside>
                 </>
