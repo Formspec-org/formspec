@@ -423,10 +423,7 @@ mod tests {
         match &rules[0].transform {
             runtime_mapping::TransformType::ValueMap { forward, unmapped } => {
                 assert_eq!(forward.len(), 2);
-                assert!(matches!(
-                    unmapped,
-                    runtime_mapping::UnmappedStrategy::Error
-                ));
+                assert!(matches!(unmapped, runtime_mapping::UnmappedStrategy::Error));
             }
             other => panic!("expected ValueMap, got {:?}", other),
         }
