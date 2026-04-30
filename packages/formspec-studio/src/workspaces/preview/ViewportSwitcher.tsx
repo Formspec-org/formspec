@@ -14,15 +14,15 @@ const viewports: { id: Viewport; label: string }[] = [
 
 export function ViewportSwitcher({ active, onChange }: ViewportSwitcherProps) {
   return (
-    <div className="flex gap-1 p-2 border-b border-border">
+    <div className="flex items-center gap-1 p-1 rounded-full border border-border/40 bg-subtle/50">
       {viewports.map((vp) => (
         <button
           key={vp.id}
           type="button"
-          className={`px-3 py-1 text-sm rounded ${
+          className={`px-4 py-1.5 text-[13.5px] font-semibold rounded-full transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 ${
             active === vp.id
-              ? 'bg-accent text-white'
-              : 'text-muted hover:text-ink hover:bg-subtle'
+              ? 'bg-surface text-ink shadow-sm border border-border/20'
+              : 'text-muted/80 hover:bg-subtle/80 hover:text-ink'
           }`}
           onClick={() => onChange(vp.id)}
         >

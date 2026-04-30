@@ -48,17 +48,17 @@ export function PreviewTab({
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between gap-2 p-2 border-b border-border">
-        <div role="tablist" aria-label="Preview mode" className="flex gap-1">
+        <div role="tablist" aria-label="Preview mode" className="flex items-center gap-1 p-1 rounded-full border border-border/40 bg-subtle/50">
           {PREVIEW_MODES.map((m) => (
             <button
               key={m}
               type="button"
               role="tab"
               aria-selected={activeMode === m}
-              className={`px-3 py-1 text-sm rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 ${
+              className={`px-4 py-1.5 text-[13.5px] font-semibold rounded-full transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 ${
                 activeMode === m
-                  ? 'bg-accent text-white'
-                  : 'text-muted hover:text-ink hover:bg-subtle'
+                  ? 'bg-surface text-ink shadow-sm border border-border/20'
+                  : 'text-muted/80 hover:bg-subtle/80 hover:text-ink'
               }`}
               onClick={() => setMode(m)}
               data-testid={`preview-mode-${m}`}

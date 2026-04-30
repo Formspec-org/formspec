@@ -55,7 +55,7 @@ test.describe('Workspace Navigation — Tab Switching', () => {
   test('can navigate back to Edit mode', async ({ page }) => {
     await switchTab(page, 'Design');
     await switchTab(page, 'Editor');
-    await expect(page.locator('[data-testid="mode-toggle-edit"]')).toHaveClass(/bg-accent/);
+    await expect(page.locator('[data-testid="mode-toggle-edit"]')).toHaveAttribute('aria-selected', 'true');
     await expect(page.locator('[data-testid="workspace-Editor"]')).toBeVisible();
   });
 });

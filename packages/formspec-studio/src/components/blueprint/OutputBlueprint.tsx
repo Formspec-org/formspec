@@ -107,15 +107,15 @@ function typeTag(item: FormItem): string {
 // --- Shared rendering helpers ---
 
 function JsonKey({ name, bold }: { name: string; bold?: boolean }) {
-  return <span className={`text-orange-600 dark:text-orange-400 shrink-0 ${bold ? 'font-bold' : ''}`}>"{name}"</span>;
+  return <span className={`text-teal-600 dark:text-teal-400 shrink-0 ${bold ? 'font-bold' : ''}`}>"{name}"</span>;
 }
 
 function JsonStr({ value }: { value: string }) {
-  return <span className="text-green-700 dark:text-green-400">"{value}"</span>;
+  return <span className="text-brass dark:text-brass/80">"{value}"</span>;
 }
 
 function JsonLit({ value }: { value: string }) {
-  return <span className="text-blue-600 dark:text-blue-400">{value}</span>;
+  return <span className="text-accent dark:text-accent/80 font-medium">{value}</span>;
 }
 
 function Comma({ show }: { show: boolean }) {
@@ -166,11 +166,11 @@ function DataNode({ item, path, isSelected, onSelect, isLast, values, validation
   return (
     <div className="font-mono text-[11px] leading-[1.7]">
       <div
-        className={`group flex items-center gap-1 py-px px-1 rounded transition-colors cursor-pointer ${isSelected ? 'bg-accent/10' : 'hover:bg-subtle/50'} ${hasError ? 'bg-error/5' : ''}`}
+        className={`group flex items-center gap-1.5 py-px px-1.5 rounded-md transition-all cursor-pointer ${isSelected ? 'bg-accent/10' : 'hover:bg-subtle/60'} ${hasError ? 'bg-error/5' : ''}`}
         onClick={(e) => { e.stopPropagation(); onSelect(path, item.type); }}
       >
         <JsonKey name={item.key} />
-        <span className="text-muted shrink-0">:</span>
+        <span className="text-muted/60 shrink-0">:</span>
         {isGroup ? (
           <span className="text-muted shrink-0">{item.repeatable ? ' [{' : ' {'}</span>
         ) : isReadonly ? (
@@ -190,14 +190,14 @@ function DataNode({ item, path, isSelected, onSelect, isLast, values, validation
               value={values[path] ?? ''}
               onChange={(e) => { e.stopPropagation(); onValueChange(path, e.target.value); }}
               onClick={(e) => e.stopPropagation()}
-              className={`min-w-0 flex-1 bg-transparent text-blue-600 dark:text-blue-400 outline-none border-b border-transparent hover:border-border/50 focus:border-accent/50 px-0.5 ${hasError ? 'text-error' : ''}`}
+              className={`min-w-0 flex-1 bg-transparent text-accent dark:text-accent/80 font-medium outline-none border-b border-transparent hover:border-accent/20 focus:border-accent/40 px-0.5 ${hasError ? 'text-error' : ''}`}
             />
             <Comma show={!isLast} />
           </>
         )}
         <span className="ml-auto inline-flex items-center gap-1.5 shrink-0">
-          <span className="inline-flex items-center px-1.5 rounded bg-subtle text-[9px] font-bold uppercase tracking-tight text-muted/80 border border-border/50">{tag}</span>
-          {item.required && <span className="text-[9px] font-bold text-error/70 uppercase tracking-tighter">*req</span>}
+          <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-subtle/60 text-[9px] font-bold uppercase tracking-wider text-muted/60 border border-border/40 leading-none">{tag}</span>
+          {item.required && <span className="text-[9px] font-bold text-error/60 uppercase tracking-wider leading-none">★</span>}
         </span>
       </div>
 
@@ -318,12 +318,14 @@ export function OutputBlueprint() {
   return (
     <div className="space-y-2" data-testid="output-blueprint">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="text-muted/60 text-[10px] tracking-wider uppercase font-sans font-bold">Response Document</div>
+      <div className="flex items-center justify-between px-1">
+        <div className="text-muted/60 text-[10px] tracking-widest uppercase font-semibold">Response</div>
         {errorCount > 0 ? (
-          <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400">{errorCount} error{errorCount > 1 ? 's' : ''}</span>
+          <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+            {errorCount} {errorCount > 1 ? 'Errors' : 'Error'}
+          </span>
         ) : (
-          <span className="text-[10px] font-medium text-green-600 dark:text-green-400">Valid</span>
+          <span className="text-[10px] font-bold text-green-600 dark:text-green-500 uppercase tracking-wider">Valid</span>
         )}
       </div>
 

@@ -428,7 +428,7 @@ export function ItemListEditor({ config }: { config: ItemListEditorConfig }) {
         <div
           ref={surfaceRef}
           data-testid={surfaceTestId}
-          className="flex w-full max-w-[980px] flex-col gap-4 rounded-[22px] border border-border/65 bg-surface/96 px-4 py-4 shadow-[0_4px_16px_rgba(30,24,16,0.04)] backdrop-blur sm:px-5 md:px-6 md:py-5"
+          className="flex w-full max-w-[980px] flex-col gap-5 rounded-3xl border border-border/40 bg-surface/98 px-6 py-6 shadow-premium-lg backdrop-blur sm:px-8 md:px-10 md:py-8"
           onClick={(event) => {
             if (event.target === event.currentTarget) deselect();
           }}
@@ -449,11 +449,11 @@ export function ItemListEditor({ config }: { config: ItemListEditorConfig }) {
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-2 self-start md:self-auto">
-              <div className="rounded-full border border-border/70 bg-bg-default/55 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.16em] text-ink/68">
+              <div className="rounded-full border border-border/50 bg-subtle/40 px-3 py-1.5 font-ui text-[11px] uppercase tracking-wider text-muted font-medium">
                 {selectedSummary?.typeLabel ?? 'Canvas'}
               </div>
               {selectedSummary && (
-                <div className="rounded-full border border-accent/20 bg-accent/[0.06] px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.16em] text-accent/90">
+                <div className="rounded-full border border-accent/20 bg-accent/[0.06] px-3 py-1.5 font-ui text-[11px] uppercase tracking-wider text-accent/90 font-medium">
                   Active selection
                 </div>
               )}
@@ -473,11 +473,11 @@ export function ItemListEditor({ config }: { config: ItemListEditorConfig }) {
             {items.length === 0 ? (
               <div
                 data-testid="editor-empty-state"
-                className="rounded-[16px] border border-dashed border-accent/25 bg-bg-default/60 px-5 py-8 text-center"
+                className="rounded-2xl border border-border/40 bg-subtle/30 px-6 py-12 text-center"
               >
-                <div className="mx-auto max-w-md space-y-3">
-                  <div className="text-[11px] font-mono uppercase tracking-[0.18em] text-muted/85">Editor</div>
-                  <h2 className="text-[22px] font-semibold tracking-tight text-ink">{emptyStateTitle}</h2>
+                <div className="mx-auto max-w-md space-y-4">
+                  <div className="text-[12px] font-semibold tracking-wider text-muted/60 uppercase">Canvas</div>
+                  <h2 className="text-[24px] font-semibold tracking-tight text-ink">{emptyStateTitle}</h2>
                   <p className="text-[13px] leading-6 text-muted">
                     {emptyStateDescription}
                   </p>
@@ -489,12 +489,13 @@ export function ItemListEditor({ config }: { config: ItemListEditorConfig }) {
           </EditorDndProvider>
           <button
             data-testid="add-item"
-            className="mt-3 flex min-h-12 items-center justify-center gap-2 rounded-[10px] border border-dashed border-accent/25 bg-bg-default/75 py-3 font-mono text-[11.5px] uppercase tracking-[0.18em] text-accent/65 transition-colors cursor-pointer hover:border-accent/50 hover:bg-surface hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+            className="mt-6 flex min-h-14 items-center justify-center gap-2 rounded-xl border border-border/60 bg-subtle/40 py-4 font-ui text-[14px] font-medium text-muted transition-all cursor-pointer hover:border-accent/40 hover:bg-subtle/60 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
             onClick={() => {
               setAddParentPath(null);
               setShowPicker(!showPicker);
             }}
           >
+            <span className="text-accent text-lg">+</span>
             {addButtonLabel}
           </button>
         </div>

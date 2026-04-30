@@ -68,8 +68,8 @@ export function Blueprint({ activeSection, onSectionChange, sections, activeEdit
 
   return (
     <div className="flex flex-col shrink-0">
-      <div className="border-b border-border/70 px-3 pt-4 pb-3">
-        <h2 className="mb-3 px-1 text-[11px] font-mono font-semibold tracking-[0.18em] uppercase text-muted/75">
+      <div className="px-3 pt-4 pb-2">
+        <h2 className="mb-2 px-1 text-[13px] font-semibold text-muted/80">
           Blueprint
         </h2>
 
@@ -85,8 +85,8 @@ export function Blueprint({ activeSection, onSectionChange, sections, activeEdit
 
         {/* Advanced Section */}
         {(!visibleSections || ['Mappings', 'Evidence', 'Screener'].some(s => visibleSections.has(s))) && (
-          <div className="mt-6 border-t border-border/40 pt-4">
-            <h3 className="mb-2 px-3 text-[10px] font-mono font-semibold tracking-widest uppercase text-muted/40">
+          <div className="mt-8 pt-4">
+            <h3 className="mb-2 px-1 text-[12px] font-semibold text-muted/40">
               Advanced
             </h3>
             <nav className="flex flex-col gap-0.5">
@@ -110,10 +110,10 @@ export function Blueprint({ activeSection, onSectionChange, sections, activeEdit
         key={name}
         data-testid={`blueprint-section-${name}`}
         title={help}
-        className={`group flex items-center justify-between rounded-[10px] px-2 py-2 text-[12.5px] text-left transition-colors focus-within:ring-2 focus-within:ring-accent/35 focus-within:ring-offset-2 focus-within:ring-offset-surface ${
+        className={`group flex items-center justify-between rounded-lg px-3 py-1.5 text-[14px] text-left transition-all focus-within:ring-2 focus-within:ring-accent/35 ${
           isActive
-            ? 'bg-bg-default/90 text-ink shadow-[inset_0_0_0_1px_rgba(90,76,56,0.08)]'
-            : 'text-muted hover:text-ink hover:bg-bg-default/50'
+            ? 'bg-subtle/80 text-ink'
+            : 'text-muted/90 hover:text-ink hover:bg-subtle/40'
         }`}
       >
         <button
@@ -161,10 +161,10 @@ export function Blueprint({ activeSection, onSectionChange, sections, activeEdit
           </button>
         )}
         {count !== null && hasData && (
-          <span className={`shrink-0 rounded-full px-1.5 py-0.5 font-mono text-[11px] tabular-nums transition-colors ${
+          <span className={`shrink-0 rounded-full px-2 py-0.5 font-mono text-[10px] tabular-nums transition-colors ${
             isActive
-              ? 'bg-accent/10 text-accent/80'
-              : 'bg-border/55 text-muted/78'
+              ? 'bg-accent text-surface'
+              : 'bg-border/40 text-muted/80'
           }`}>
             {count}
           </span>

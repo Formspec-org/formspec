@@ -104,29 +104,29 @@ export function StatusBar({ variant = 'full', onAskAI }: StatusBarProps) {
   return (
     <footer
       data-testid="status-bar"
-      className="relative flex min-h-12 items-center justify-between gap-4 border-t border-border/80 bg-[linear-gradient(180deg,rgba(255,252,247,0.98),rgba(248,241,231,0.95))] dark:bg-[linear-gradient(180deg,rgba(26,35,47,0.98),rgba(32,44,59,0.95))] px-4 py-2 font-mono shrink-0"
+      className="relative flex min-h-[44px] items-center justify-between gap-4 border-t border-border/60 bg-surface/98 dark:bg-bg-default/98 px-4 py-1 font-ui shrink-0 shadow-premium"
     >
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(39,87,199,0.24),transparent)]" />
 
       <div className="flex min-w-0 flex-1 items-center gap-3 overflow-x-auto scrollbar-none">
         <div className="flex shrink-0 items-center gap-2">
-          <span className="font-display text-[17px] tracking-[-0.04em] text-ink">The Stack</span>
-          <span className="text-[11px] uppercase tracking-[0.22em] text-muted">FORMSPEC {formspecVersion}</span>
+          <span className="font-display text-[16px] tracking-tight text-ink font-semibold">The Stack</span>
+          <span className="text-[10.5px] uppercase tracking-wider text-muted/60 font-medium">FS {formspecVersion}</span>
         </div>
 
-        <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${statusTone}`}>
+        <span className={`shrink-0 rounded-full border px-2.5 py-0.5 text-[10.5px] font-semibold uppercase tracking-wider ${statusTone}`}>
           {status}
         </span>
 
-        <span className="flex shrink-0 items-center gap-2 uppercase tracking-[0.18em] text-muted text-[11px]">
-          <span className="text-[19px] leading-none text-accent" aria-hidden="true">▦</span>
-          <span className="text-accent">{plural(fieldCount, 'field')}</span>
+        <span className="flex shrink-0 items-center gap-1.5 uppercase tracking-wider text-muted text-[10.5px] font-medium">
+          <span className="text-[16px] leading-none text-accent" aria-hidden="true">▦</span>
+          <span className="text-accent/90">{plural(fieldCount, 'field')}</span>
         </span>
 
         <button
           type="button"
           onClick={handleOpenIssues}
-          className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${healthTone} hover:opacity-80 transition-opacity`}
+          className={`shrink-0 rounded-full border px-2.5 py-0.5 text-[10.5px] font-semibold uppercase tracking-wider ${healthTone} hover:opacity-80 transition-all`}
           data-testid="health-chip"
         >
           {healthLabel}
@@ -135,7 +135,7 @@ export function StatusBar({ variant = 'full', onAskAI }: StatusBarProps) {
         <button
           type="button"
           onClick={handleAskAI}
-          className="shrink-0 rounded-full border border-accent/30 bg-accent/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-accent hover:bg-accent/10 transition-colors"
+          className="shrink-0 rounded-full border border-accent/25 bg-accent/5 px-2.5 py-0.5 text-[10.5px] font-semibold uppercase tracking-wider text-accent hover:bg-accent/10 transition-all"
         >
           Ask AI
         </button>
@@ -143,7 +143,7 @@ export function StatusBar({ variant = 'full', onAskAI }: StatusBarProps) {
         <button
           type="button"
           onClick={() => window.dispatchEvent(new CustomEvent('formspec:publish-project'))}
-          className="shrink-0 rounded-full bg-accent px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-white hover:bg-accent/90 transition-colors shadow-sm"
+          className="shrink-0 rounded-full bg-accent px-3.5 py-1 text-[10.5px] font-bold uppercase tracking-wider text-white hover:bg-accent/90 transition-all shadow-sm active:scale-95"
         >
           Publish
         </button>
@@ -223,7 +223,7 @@ export function StatusBar({ variant = 'full', onAskAI }: StatusBarProps) {
           <a
             href={definition.url}
             title={definition.url}
-            className="max-w-[260px] truncate text-[11px] uppercase tracking-[0.16em] text-muted hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded-[2px]"
+            className="max-w-[260px] truncate text-[10.5px] uppercase tracking-wider text-muted/60 hover:text-accent transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded"
           >
             {definition.url}
           </a>
@@ -231,7 +231,7 @@ export function StatusBar({ variant = 'full', onAskAI }: StatusBarProps) {
             type="button"
             onClick={() => handleCopyUrl(definition.url)}
             title="Copy URL"
-            className="rounded-[4px] border border-border/70 px-2.5 py-1 text-[11px] text-muted hover:bg-surface hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+            className="rounded-full border border-border/60 px-3 py-1 text-[10.5px] font-medium text-muted hover:bg-surface hover:text-ink transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 active:scale-95"
           >
             {copied ? 'Copied' : 'Copy'}
           </button>

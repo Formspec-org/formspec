@@ -149,10 +149,10 @@ export function Header({
       ref={(node) => {
         tabRefs.current[index] = node;
       }}
-      className={`flex items-center px-3 sm:px-3.5 h-full text-[13px] transition-colors border-b-2 cursor-pointer whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 focus-visible:ring-inset ${
+      className={`flex items-center px-4 sm:px-5 h-full text-[14px] transition-all border-b-2 cursor-pointer whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 focus-visible:ring-inset ${
         activeTab === name
-          ? 'border-accent text-accent font-semibold'
-          : 'border-transparent text-muted hover:text-ink'
+          ? 'border-accent text-ink font-semibold'
+          : 'border-transparent text-muted hover:text-ink hover:bg-subtle/50'
       }`}
       onClick={() => onTabChange(name)}
       onKeyDown={(event) => handleTabKeyDown(event, index)}
@@ -240,11 +240,11 @@ export function Header({
       ) : (
         <button
           onClick={onSearch}
-          className="group flex max-w-[220px] items-center gap-2 rounded-full border border-border/55 bg-surface/70 px-3.5 py-1.5 text-muted hover:border-border/80 hover:bg-surface hover:text-ink dark:bg-surface/40 dark:hover:bg-surface/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+          className="group flex max-w-[220px] items-center gap-2 rounded-full border border-border/55 bg-subtle/40 px-4 py-2 text-muted hover:border-border/80 hover:bg-subtle/60 hover:text-ink transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
         >
-          <span className="text-[13px]">⌕</span>
-          <span className="text-[13px] font-ui">Search…</span>
-          <span className="ml-auto rounded-full border border-border/50 px-1.5 py-0.5 font-mono text-[11px] text-muted group-hover:text-ink/80 transition-colors">
+          <IconSearch size={14} />
+          <span className="text-[14px] font-ui">Search…</span>
+          <span className="ml-auto rounded-md border border-border/50 px-1.5 py-0.5 font-mono text-[10px] text-muted group-hover:text-ink/80 transition-colors">
             ⌘K
           </span>
         </button>
@@ -254,32 +254,35 @@ export function Header({
         <button
           type="button"
           aria-label={`FORMSPEC ${definition.$formspec} metadata`}
-          className="rounded-full border border-border/75 px-3.5 py-2 text-[12.5px] font-medium text-ink/88 hover:bg-surface/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+          className="rounded-full border border-border/60 bg-subtle/30 px-4 py-2 text-[13px] font-medium text-ink hover:bg-subtle/60 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
           onClick={() => onOpenMetadata?.()}
         >
           Metadata
         </button>
       )}
-      <button
-        data-testid="undo-btn"
-        aria-label="Undo"
-        disabled={!project.canUndo}
-        className="rounded-full border border-transparent p-2 text-muted hover:border-border/60 hover:bg-surface/75 hover:text-ink disabled:opacity-30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
-        onClick={() => project.undo()}
-        title="Undo (⌘Z)"
-      >
-        <IconUndo />
-      </button>
-      <button
-        data-testid="redo-btn"
-        aria-label="Redo"
-        disabled={!project.canRedo}
-        className="rounded-full border border-transparent p-2 text-muted hover:border-border/60 hover:bg-surface/75 hover:text-ink disabled:opacity-30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
-        onClick={() => project.redo()}
-        title="Redo (⌘⇧Z)"
-      >
-        <IconRedo />
-      </button>
+      
+      <div className="flex items-center gap-0.5 rounded-full border border-border/60 bg-subtle/30 p-0.5">
+        <button
+          data-testid="undo-btn"
+          aria-label="Undo"
+          disabled={!project.canUndo}
+          className="rounded-full p-2 text-muted hover:bg-surface hover:text-ink disabled:opacity-20 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+          onClick={() => project.undo()}
+          title="Undo (⌘Z)"
+        >
+          <IconUndo size={16} />
+        </button>
+        <button
+          data-testid="redo-btn"
+          aria-label="Redo"
+          disabled={!project.canRedo}
+          className="rounded-full p-2 text-muted hover:bg-surface hover:text-ink disabled:opacity-20 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+          onClick={() => project.redo()}
+          title="Redo (⌘⇧Z)"
+        >
+          <IconRedo size={16} />
+        </button>
+      </div>
 
       {assistantMenu && <AssistantEntryMenu {...assistantMenu} />}
 
@@ -340,7 +343,7 @@ export function Header({
             </div>
             <div>
               <div className="font-display text-[22px] tracking-[-0.04em] leading-none whitespace-nowrap text-ink">The Stack</div>
-            <div className="font-mono text-[11px] text-muted tracking-[0.18em] uppercase whitespace-nowrap">
+            <div className="font-ui text-[11px] text-muted/80 tracking-wider uppercase whitespace-nowrap">
                 <>{formTitle} · FORMSPEC {definition.$formspec} · {definition.status || 'DRAFT'}</>
               </div>
             </div>
@@ -381,7 +384,7 @@ export function Header({
         </div>
         <div className="space-y-1">
           <div className="font-display text-[31px] tracking-[-0.05em] leading-none text-ink">The Stack</div>
-          <div className="font-mono text-[11px] text-muted tracking-[0.18em] uppercase">
+          <div className="font-ui text-[11px] text-muted/80 tracking-wider uppercase">
             <>{formTitle} · FORMSPEC {definition.$formspec} · {definition.status || 'DRAFT'}</>
           </div>
         </div>

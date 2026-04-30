@@ -38,7 +38,7 @@ export function BuildManageToggle({ activeView, onViewChange, manageCount, showS
     <div
       role="radiogroup"
       aria-label="Editor view"
-      className="inline-flex items-center gap-1 rounded-[14px] border border-border bg-subtle/50 p-1"
+      className="inline-flex items-center gap-1 rounded-full border border-border/40 bg-subtle/50 p-1"
     >
       {options.map(({ id, label }) => {
         const isActive = activeView === id;
@@ -52,10 +52,10 @@ export function BuildManageToggle({ activeView, onViewChange, manageCount, showS
             tabIndex={isActive ? 0 : -1}
             onClick={() => { if (!isActive) onViewChange(id); }}
             onKeyDown={(e) => handleKeyDown(e, id)}
-            className={`px-3.5 py-1.5 text-[13px] font-semibold rounded-[10px] transition-colors duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 ${
+            className={`px-4 py-1.5 text-[13.5px] font-semibold rounded-full transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 ${
               isActive
-                ? id === 'screener' ? 'bg-amber text-white shadow-sm' : 'bg-accent text-white shadow-sm'
-                : 'text-muted hover:bg-subtle hover:text-ink'
+                ? 'bg-surface text-ink shadow-sm border border-border/20'
+                : 'text-muted/80 hover:bg-subtle/80 hover:text-ink'
             }`}
           >
             {label}

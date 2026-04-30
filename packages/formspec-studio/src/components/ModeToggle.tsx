@@ -55,13 +55,13 @@ export function ModeToggle({ mode, onModeChange, compact = false }: ModeTogglePr
   return (
     <div
       ref={containerRef}
-      className="relative flex items-center rounded-full border border-border/60 bg-bg-default/60 p-0.5"
+      className="relative flex items-center rounded-full border border-border/40 bg-subtle/50 p-1"
       role="tablist"
       aria-label="Studio modes"
     >
       {/* Animated pill indicator */}
       <div
-        className="absolute top-0.5 bottom-0.5 rounded-full bg-accent/10 border border-accent/25 pointer-events-none"
+        className="absolute top-1 bottom-1 rounded-full bg-surface shadow-sm border border-border/20 pointer-events-none"
         style={pillStyle}
         aria-hidden="true"
       />
@@ -78,11 +78,11 @@ export function ModeToggle({ mode, onModeChange, compact = false }: ModeTogglePr
             tabIndex={isActive ? 0 : -1}
             data-testid={`mode-toggle-${id}`}
             title={help}
-            className={`relative z-10 px-3 py-1.5 text-[13px] font-medium rounded-full transition-colors cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 focus-visible:ring-inset ${
+            className={`relative z-10 px-4 py-1.5 text-[13.5px] font-medium rounded-full transition-all cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 focus-visible:ring-inset ${
               isActive
-                ? 'bg-accent/10 text-accent font-semibold'
-                : 'text-muted hover:text-ink'
-            } ${compact ? 'px-2 py-1 text-[12px]' : ''}`}
+                ? 'text-ink font-semibold'
+                : 'text-muted/80 hover:text-ink'
+            } ${compact ? 'px-3 py-1 text-[12px]' : ''}`}
             onClick={() => onModeChange(id)}
             onKeyDown={(e) => handleKeyDown(e, index)}
           >

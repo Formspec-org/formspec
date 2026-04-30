@@ -1,5 +1,5 @@
 /* Google Fonts — must precede tailwindcss import to avoid CSS ordering warning */
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap');
 
 @import "tailwindcss";
 
@@ -68,8 +68,8 @@ html {
 }
 
 *::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
 }
 
 *::-webkit-scrollbar-track {
@@ -77,14 +77,14 @@ html {
 }
 
 *::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--color-muted) 28%, var(--color-border));
+  background: color-mix(in srgb, var(--color-muted) 20%, var(--color-border));
   border: 2px solid transparent;
   border-radius: 999px;
   background-clip: padding-box;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in srgb, var(--color-muted) 42%, var(--color-border));
+  background: color-mix(in srgb, var(--color-muted) 35%, var(--color-border));
   background-clip: padding-box;
 }
 
@@ -113,43 +113,45 @@ html {
   font-style: italic;
 }
 
-/* Design tokens — calm neutrals + readable accents (refined light / charcoal dark) */
+/* Design tokens — refined for premium feel */
 :root {
-  --studio-color-ink: #141413;
-  --studio-color-foreground: #141413;
-  --studio-color-bg-default: #f3f2ef;
-  --studio-color-surface: #fafaf9;
-  --studio-color-border: #e2e0db;
-  --studio-color-accent: #3759c8;
-  --studio-color-logic: #3d6b72;
-  --studio-color-error: #c93434;
-  --studio-color-muted: #6b6965;
-  --studio-color-subtle: #ebeae7;
-  --studio-color-panel: #f7f7f5;
-  --studio-color-green: #0d8760;
-  --studio-color-amber: #b45309;
-  --studio-color-teal: #4a6f76;
-  --studio-color-brass: #7a6a4a;
-  --studio-color-warm-border: #d5d0c8;
-  --studio-color-warm-subtle: #efeeeb;
-  --studio-color-rust: #a84838;
-  --studio-color-focus-ring: #4a6fd4;
-  --studio-font-ui: 'Space Grotesk', system-ui, sans-serif;
+  --studio-color-ink: #1c1c1a;
+  --studio-color-foreground: #1c1c1a;
+  --studio-color-bg-default: #f5f5f2;
+  --studio-color-surface: #ffffff;
+  --studio-color-border: #e8e6e1;
+  --studio-color-accent: #3b5bdb;
+  --studio-color-logic: #4c8c94;
+  --studio-color-error: #dc3838;
+  --studio-color-muted: #73716d;
+  --studio-color-subtle: #f0efeb;
+  --studio-color-panel: #fafaf9;
+  --studio-color-green: #10986d;
+  --studio-color-amber: #c25e0a;
+  --studio-color-teal: #5a858d;
+  --studio-color-brass: #8a7a5a;
+  --studio-color-warm-border: #dfd9cf;
+  --studio-color-warm-subtle: #f4f3f0;
+  --studio-color-rust: #b85040;
+  --studio-color-focus-ring: #5c7cfa;
+  
+  /* Typography */
+  --studio-font-ui: 'Inter', 'Space Grotesk', system-ui, sans-serif;
   --studio-font-display: 'Fraunces', Georgia, serif;
   --studio-font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
-  /* Type scale tokens — editor tree rows */
-  --font-size-key: 17px;
-  --font-size-key-md: 18px;
-  --font-size-group-key: 18px;
-  --font-size-group-key-md: 20px;
-  --font-size-label: 14px;
-  --font-size-label-md: 15px;
-  --font-size-category-label: 11px;
-  --font-size-category-value: 14px;
-  --font-size-category-value-md: 15px;
-  --font-size-data-type: 12px;
-  --font-size-mono-label: 11px;
+  /* Type scale tokens */
+  --font-size-key: 16px;
+  --font-size-key-md: 17px;
+  --font-size-group-key: 17px;
+  --font-size-group-key-md: 19px;
+  --font-size-label: 13px;
+  --font-size-label-md: 14px;
+  --font-size-category-label: 10px;
+  --font-size-category-value: 13px;
+  --font-size-category-value-md: 14px;
+  --font-size-data-type: 11px;
+  --font-size-mono-label: 10px;
 }
 
 @theme inline {
@@ -176,43 +178,43 @@ html {
   --font-display: var(--studio-font-display);
   --font-mono: var(--studio-font-mono);
   --radius-sm: 4px;
-  --radius-DEFAULT: 6px;
+  --radius-DEFAULT: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  
+  --shadow-premium: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  --shadow-premium-lg: 0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.05);
 }
 
-/* Dark mode — neutral charcoal surfaces, restrained lift vs pure black */
+/* Dark mode — neutral charcoal surfaces */
 .dark {
   color-scheme: dark;
-  --studio-color-ink: #f2f1ed;
-  --studio-color-foreground: #f2f1ed;
-  --studio-color-bg-default: #141415;
-  --studio-color-surface: #1c1c1e;
-  --studio-color-border: #2f2f32;
-  --studio-color-accent: #8ab4ff;
+  --studio-color-ink: #f5f5f3;
+  --studio-color-foreground: #f5f5f3;
+  --studio-color-bg-default: #0f0f10;
+  --studio-color-surface: #18181b;
+  --studio-color-border: #27272a;
+  --studio-color-accent: #748ffc;
   --studio-color-logic: #8ec5c9;
-  --studio-color-error: #f09090;
-  --studio-color-muted: #9d9d97;
-  --studio-color-subtle: #232325;
+  --studio-color-error: #f87171;
+  --studio-color-muted: #a1a1aa;
+  --studio-color-subtle: #202023;
   --studio-color-panel: #1e1e20;
-  --studio-color-green: #5fd4a8;
-  --studio-color-amber: #e8b86a;
-  --studio-color-teal: #9bcdcf;
-  --studio-color-brass: #d4b896;
-  --studio-color-warm-border: #3a3835;
-  --studio-color-warm-subtle: #181716;
-  --studio-color-rust: #f4a09e;
-  --studio-color-focus-ring: #9bb8f0;
+  --studio-color-green: #34d399;
+  --studio-color-amber: #fbbf24;
+  --studio-color-teal: #94d8db;
+  --studio-color-brass: #d9c19d;
+  --studio-color-warm-border: #3f3f46;
+  --studio-color-warm-subtle: #1c1c1e;
+  --studio-color-rust: #fca5a5;
+  --studio-color-focus-ring: #91a7ff;
 }
 
 body {
   background:
-    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--color-brass) 7%, transparent) 0, transparent 32%),
-    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--color-teal) 6%, transparent) 0, transparent 34%),
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--color-surface) 55%, var(--color-bg-default)) 0%,
-      var(--color-bg-default) 48%,
-      color-mix(in srgb, var(--color-subtle) 22%, var(--color-bg-default)) 100%
-    );
+    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--color-accent) 5%, transparent) 0, transparent 40%),
+    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--color-teal) 4%, transparent) 0, transparent 40%),
+    var(--color-bg-default);
   color: var(--color-ink);
   font-family: var(--font-ui);
   -webkit-font-smoothing: antialiased;
@@ -221,9 +223,48 @@ body {
 
 .dark body {
   background:
-    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--color-accent) 9%, transparent) 0, transparent 30%),
-    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--color-teal) 5%, transparent) 0, transparent 32%),
-    linear-gradient(180deg, #181819 0%, var(--color-bg-default) 42%, #121213 100%);
+    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--color-accent) 8%, transparent) 0, transparent 35%),
+    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--color-teal) 5%, transparent) 0, transparent 35%),
+    #09090b;
+}
+
+/* Glassmorphism utility */
+@utility glass {
+  background: color-mix(in srgb, var(--color-surface) 70%, transparent);
+  backdrop-filter: blur(12px);
+  border: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
+}
+
+/* Premium pill toggle */
+.pill-toggle {
+  display: inline-flex;
+  padding: 3px;
+  background: var(--color-subtle);
+  border-radius: 9999px;
+  gap: 2px;
+}
+
+.pill-toggle-item {
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  color: var(--color-muted);
+}
+
+.pill-toggle-item[data-active="true"] {
+  background: var(--color-surface);
+  color: var(--color-ink);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Soft Canvas border */
+.soft-canvas {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-premium);
 }
 
 /* ChangesetReviewSection — JS picks compact-vs-full based on container width (ResizeObserver). CSS only owns the compact bar's chrome. */
@@ -231,10 +272,11 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent);
+  padding: 8px 16px;
 }
 
-/* Changeset detail drawer (opened from compact bar's "View →") */
+/* Changeset detail drawer */
 .changeset-drawer-overlay {
   position: fixed;
   inset: 0;
@@ -242,16 +284,18 @@ body {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  background: color-mix(in srgb, var(--color-ink) 30%, transparent);
+  background: color-mix(in srgb, var(--color-ink) 20%, transparent);
+  backdrop-filter: blur(4px);
 }
 .changeset-drawer {
   width: 100%;
-  max-width: 480px;
-  max-height: 80vh;
+  max-width: 520px;
+  max-height: 85vh;
   background: var(--color-surface);
-  border-radius: 12px 12px 0 0;
-  box-shadow: 0 -4px 24px color-mix(in srgb, var(--color-ink) 12%, transparent);
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 -8px 32px color-mix(in srgb, var(--color-ink) 8%, transparent);
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
+
