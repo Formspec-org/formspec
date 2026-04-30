@@ -37,9 +37,10 @@ Execution homes: `TODO-STACK.md`, `PLANNING.md`, `wos-spec/TODO.md` (ADR 0066/00
 
 ### 2c. 0068 — Tenant And Scope
 
-- **Next slice:** Update canonical tenant-truth source, then wire runtime/storage/verifier checks
+- **Next slice:** Add `CaseInstance.tenant` + `DurableRuntime` tenant threading (canonical tenant-truth source for WOS), then Trellis envelope `tenant` field + verifier, then Formspec response `tenant`
 - **Owner pins:** tenant required at Trellis envelope/profile level (not optional-with-MUST-populate); regenerate pre-release fixtures if needed
-- **Proof gates:** PLN-0004, PLN-0005, PLN-0011–0013, PLN-0015, PLN-0001–0007, Trellis item 17
+- **Proof gates — closed:** PLN-0004 (D-1.1 grammar), PLN-0005 (D-1.2 payload.tenant authoritative), PLN-0011 (D-4 tenant×ledger scoped), PLN-0013 (D-3 global identity + per-tenant authority), PLN-0015 (D-2 immutable tuple vs 0071 mutable pins)
+- **Proof gates — open:** PLN-0001 (Formspec response tenant), PLN-0006 (DurableRuntime threading), PLN-0007 (runtime rejection), PLN-0012 (supersession carry-forward, deferred to 0066), Trellis item 17
 - **Blocks:** 0066 (cross-tenant supersession)
 
 ### 2d. 0071 — Migration And Versioning

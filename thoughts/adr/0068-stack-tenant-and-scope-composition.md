@@ -2,7 +2,7 @@
 
 **Status:** Proposed
 **Date:** 2026-04-21
-**Last revised:** 2026-04-28 (maximalist position cluster revision)
+**Last revised:** 2026-04-30 (D-1.2 tenant authority; PLN-0004/0005/0011/0013/0015 closed)
 **Coordinated cluster ratification:** This ADR ratifies as part of the WOS Stack Closure cluster (0066–0071) — all six ratify together once Agent A's `ProvenanceKind` variants and Agent B's schema `$defs` land. See `wos-spec/COMPLETED.md` Session 17 (forthcoming) for implementation tracking.
 **Scope:** Cross-layer — Formspec + WOS + Trellis
 **Related:** [STACK.md Open Contracts](../../STACK.md#open-contracts); [ADR 0061 (WOS custodyHook wire format)](../../wos-spec/thoughts/adr/0061-custody-hook-trellis-wire-format.md) (TypeID tenant prefix; this ADR pins the tenant grammar — see §D-1.1); [ADR 0066 (amendment and supersession)](./0066-stack-amendment-and-supersession.md) (cross-bundle boundaries; cross-tenant supersession composes per §D-5); [ADR 0067 (statutory clocks)](./0067-stack-statutory-clocks.md); [ADR 0069 (time semantics)](./0069-stack-time-semantics.md); [ADR 0070 (failure and compensation)](./0070-stack-failure-and-compensation.md) (tenant scope is the failure-isolation boundary); [ADR 0071 (cross-layer migration and versioning)](./0071-stack-cross-layer-migration-and-versioning.md) (scope-bundle four-tuple is identity; pin set is orthogonal version metadata); WOS #3 migration routing; WOS `DurableRuntime` tenant-scope contract (session 9); Trellis Core §17 ledger scope; Trellis Core §22.4 (case-ledger composition); [parent TODO](../../TODO.md) stack-wide section
@@ -36,6 +36,10 @@ Tenant identifiers MUST match `^[a-z][a-z0-9-]{0,62}$` (1–63 characters, lower
 Rationale: tenant→subdomain mapping is the SaaS pattern. Aligning the tenant ID grammar with DNS-label limits means each tenant maps 1:1 to a subdomain (`{tenant}.example.com`) without re-encoding, truncation, or collision risk. The 63-char limit is the standards-anchored reality of the deployment surface — not a synthetic constraint.
 
 Implementation consequence: [ADR 0061](../../wos-spec/thoughts/adr/0061-custody-hook-trellis-wire-format.md) TypeID grammar (`{tenant}_{type}_{uuidv7_base32}`) MUST adopt this regex on the tenant prefix; the existing `is_valid_tenant` Rust validator MUST update accordingly. The Trellis envelope `tenant` field and the WOS `CaseInstance.tenant` field share the grammar — one rule, three consumers.
+
+#### D-1.2. Tenant authority — payload field is canonical
+
+When both a signed `payload.tenant` field and a TypeID tenant prefix are present, `payload.tenant` is the authoritative source. The TypeID prefix MUST match; a mismatch is a hard reject at verifier and runtime. Rationale: the signed envelope is the tamper-evident source of truth; TypeID is a routing convenience whose prefix is derived from the authoritative field. Storage layers key on `payload.tenant`; API routing may use the TypeID prefix for lookup but MUST validate it against the authoritative source before returning data.
 
 ### D-2. A case's scope bundle is the four-tuple `(Tenant, DefinitionId, KernelId, LedgerId)`
 
@@ -147,7 +151,11 @@ Truth-at-HEAD-after-cluster-implementation.
 **Resolved (this revision).**
 
 - ~~Tenant identifier format~~ — resolved by D-1.1: `^[a-z][a-z0-9-]{0,62}$` with RFC 1035 DNS-label rationale; binding on TypeID grammar and `is_valid_tenant`.
+- ~~Tenant authority source~~ — resolved by D-1.2: `payload.tenant` is authoritative; TypeID prefix must match; mismatch is hard reject (PLN-0005 closed).
 - ~~Actor-across-tenants identity format~~ — resolved by D-3.1: `IdentityAttestation` shape pulled inline; PLN-0381 closed.
+- ~~Case ID scope~~ — resolved by D-4: case IDs are scoped by `(tenant, ledger)`, not globally unique (PLN-0011 closed).
+- ~~Actor identity model~~ — resolved by D-3: one global identity with per-tenant authority; grants do not transfer (PLN-0013 closed).
+- ~~Identity vs pin mutability~~ — resolved by D-2 + ADR 0071 D-6: four-tuple is immutable identity; version pins are mutable through governance (PLN-0015 closed).
 
 ## Alternatives considered
 
