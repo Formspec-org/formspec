@@ -39,6 +39,7 @@ const MULTI_SHAPE_DEFINITION = {
   shapes: [
     {
       id: 'inc-lim',
+      target: 'annInc',
       severity: 'error',
       constraint: '$annInc <= 50000',
       message: 'Exceeds income limit.',
@@ -46,6 +47,7 @@ const MULTI_SHAPE_DEFINITION = {
     },
     {
       id: 'ast-req',
+      target: 'addr',
       severity: 'warning',
       message: 'Address or homelessness required.',
       code: 'ADDR',
@@ -53,6 +55,7 @@ const MULTI_SHAPE_DEFINITION = {
     },
     {
       id: 'hh-match',
+      target: 'hhSize',
       severity: 'error',
       message: 'Household size mismatch.',
       code: 'HH_MIS',
@@ -63,7 +66,7 @@ const MULTI_SHAPE_DEFINITION = {
 
 /** Helper: navigate to Manage view within Editor workspace */
 async function switchToManage(page: import('@playwright/test').Page) {
-  await page.getByRole('radio', { name: 'Manage' }).click();
+  await page.locator('[data-testid="workspace-Editor"]').getByRole('radio', { name: 'Manage' }).click();
 }
 
 async function scrollToManageVariables(page: import('@playwright/test').Page) {

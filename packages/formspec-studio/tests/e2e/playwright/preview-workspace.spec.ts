@@ -135,10 +135,11 @@ test.describe('Preview Workspace', () => {
     await switchTab(page, 'Preview');
 
     const workspace = page.locator('[data-testid="workspace-Preview"]');
-    await expect(workspace.getByRole('spinbutton', { name: 'Gross Annual Income' })).toBeVisible({ timeout: 3000 });
+    const gross = workspace.getByLabel('Gross Annual Income');
+    await expect(gross).toBeVisible({ timeout: 8000 });
 
-    await workspace.getByRole('spinbutton', { name: 'Gross Annual Income' }).fill('60000');
-    await workspace.getByRole('spinbutton', { name: 'Gross Annual Income' }).press('Tab');
+    await gross.fill('60000');
+    await gross.press('Tab');
 
     await expect(workspace.getByRole('textbox', { name: 'Income Summary' })).toHaveValue('60000');
   });

@@ -6,16 +6,18 @@ export function layoutContainerHeaderSelectRow(container: Locator): Locator {
   return container.locator(':scope > div').first().getByTestId('layout-select-row');
 }
 
-/** Wait for the app to be fully loaded (Shell visible). */
+/** Wait for the app to be fully loaded (Shell visible) and Editor column mounted (Edit mode). */
 export async function waitForApp(page: Page) {
-  await page.goto('/?skipOnboarding=1&studioMode=edit');
+  await page.goto('?skipOnboarding=1&studioMode=edit');
   await page.waitForSelector('[data-testid="shell"]', { timeout: 10000 });
+  await switchMode(page, 'edit');
 }
 
 /** Wait for app with e2e=1 so window.__FORMSPEC_TEST_EXPORT is available for export validation tests. */
 export async function waitForAppWithExport(page: Page) {
-  await page.goto('/?e2e=1&skipOnboarding=1&studioMode=edit');
+  await page.goto('?e2e=1&skipOnboarding=1&studioMode=edit');
   await page.waitForSelector('[data-testid="shell"]', { timeout: 10000 });
+  await switchMode(page, 'edit');
 }
 
 /** Switch the Studio surface to a specific mode. */
@@ -137,7 +139,8 @@ export async function selectGroup(page: Page, key: string) {
 
 /** Open the command palette and search. */
 export async function openPaletteAndSearch(page: Page, query: string) {
-  await page.keyboard.press('Meta+k');
+  const mod = process.platform === 'darwin' ? 'Meta' : 'Control';
+  await page.keyboard.press(`${mod}+KeyK`);
   await page.waitForSelector('[data-testid="command-palette"]');
   await page.fill('[data-testid="command-palette"] input', query);
 }

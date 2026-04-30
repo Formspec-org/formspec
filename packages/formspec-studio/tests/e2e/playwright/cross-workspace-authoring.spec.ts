@@ -1,5 +1,14 @@
 import { test, expect } from '@playwright/test';
-import { addFromPalette, editorFieldRows, importDefinition, importProject, switchTab, waitForApp } from './helpers';
+import {
+  addFromPalette,
+  editorFieldRows,
+  importDefinition,
+  importProject,
+  openMappingWorkspace,
+  propertiesPanel,
+  switchTab,
+  waitForApp,
+} from './helpers';
 
 test.describe('Cross-Workspace Authoring', () => {
   test.beforeEach(async ({ page }) => {
@@ -23,7 +32,7 @@ test.describe('Cross-Workspace Authoring', () => {
     await expect(canvas.locator('[data-testid="field-lastName"]')).toBeVisible();
     await expect(canvas.locator('[data-testid="field-dob"]')).toBeVisible();
 
-    const outputBlueprint = page.locator('[data-testid="output-blueprint"]');
+    const outputBlueprint = propertiesPanel(page).locator('[data-testid="output-blueprint"]');
     await expect(outputBlueprint).toContainText('firstName');
     await expect(outputBlueprint).toContainText('lastName');
     await expect(outputBlueprint).toContainText('dob');
@@ -87,10 +96,11 @@ test.describe('Cross-Workspace Authoring', () => {
         tokens: { 'color.primaryColor': '#3b82f6', spacing: '8px' },
       },
       mapping: {
-        direction: 'outbound',
+        direction: 'forward',
+        version: '1.0.0',
         definitionRef: 'urn:formspec:test',
-        rules: [{ source: 'name', target: 'fullName', transform: 'preserve' }],
-        adapter: { format: 'JSON', options: {} },
+        rules: [{ sourcePath: 'name', targetPath: 'fullName', transform: 'preserve' }],
+        targetSchema: { format: 'json' },
       },
     };
 
@@ -109,7 +119,7 @@ test.describe('Cross-Workspace Authoring', () => {
 
     // Verify data content in Manage view (Response Inspector is in Form Health panel)
     await page.getByRole('radio', { name: 'Build' }).click();
-    const responsePanel = page.locator('[data-testid="output-blueprint"]');
+    const responsePanel = propertiesPanel(page).locator('[data-testid="output-blueprint"]');
     await expect(responsePanel).toContainText('name');
     await expect(responsePanel).toContainText('email');
 
@@ -121,9 +131,9 @@ test.describe('Cross-Workspace Authoring', () => {
     await expect(colorToken).toBeVisible();
     await expect(themeSidebar.locator('[data-testid="color-value-color.primaryColor"]')).toHaveValue('#3b82f6');
 
-    await switchTab(page, 'Mapping');
+    await openMappingWorkspace(page);
     const mappingWorkspace = page.locator('[data-testid="workspace-Mapping"]');
-    await expect(mappingWorkspace.getByText('outbound')).toBeVisible();
+    await expect(mappingWorkspace.getByTestId('direction-picker')).toContainText('forward');
 
     await switchTab(page, 'Preview');
     const previewWorkspace = page.locator('[data-testid="workspace-Preview"]');

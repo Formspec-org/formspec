@@ -84,9 +84,7 @@ test.describe('Blueprint Selection Sync', () => {
     await page.click('[data-testid="field-firstName"]');
     await expect(page.locator('[data-testid="field-firstName"]')).toHaveClass(/border-accent/);
 
-    // Click on the canvas container background (outside any field block)
-    // Use the workspace container and click at the very top (above field blocks)
-    await page.click('[data-testid="workspace-Editor"]', { position: { x: 10, y: 5 } });
+    await page.getByTestId('editor-deselect-hitbox').click();
 
     // When deselected, the field should lose its selected styling
     await expect(page.locator('[data-testid="field-firstName"]')).not.toHaveClass(/border-accent/);

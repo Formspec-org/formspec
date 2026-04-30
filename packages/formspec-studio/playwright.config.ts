@@ -12,7 +12,8 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   reporter: 'list',
   use: {
-    baseURL: 'http://localhost:5173',
+    // Must match vite `base: '/studio/'` so relative gotos resolve under /studio/
+    baseURL: 'http://localhost:5173/studio/',
     trace: 'on-first-retry',
   },
   projects: [
@@ -20,7 +21,7 @@ export default defineConfig({
   ],
   webServer: {
     command: 'npm run dev',
-    url: 'http://localhost:5173',
+    url: 'http://localhost:5173/studio/',
     reuseExistingServer: !process.env.CI,
     cwd: __dirname,
     timeout: 30000,

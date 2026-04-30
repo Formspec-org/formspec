@@ -1,5 +1,10 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { waitForApp, importDefinition } from './helpers';
+
+async function pressOpenPalette(page: Page) {
+  const mod = process.platform === 'darwin' ? 'Meta' : 'Control';
+  await page.keyboard.press(`${mod}+KeyK`);
+}
 
 const SEED_DEFINITION = {
   $formspec: '1.0',
@@ -43,7 +48,7 @@ test.describe('Command Palette', () => {
 
   test('open and close with keyboard', async ({ page }) => {
     // Press Meta+k to open the palette
-    await page.keyboard.press('Meta+k');
+    await pressOpenPalette(page);
 
     // The command palette should be visible
     await expect(page.locator('[data-testid="command-palette"]')).toBeVisible();
@@ -57,7 +62,7 @@ test.describe('Command Palette', () => {
 
   test('search filters field results', async ({ page }) => {
     // Open palette
-    await page.keyboard.press('Meta+k');
+    await pressOpenPalette(page);
     await page.waitForSelector('[data-testid="command-palette"]');
 
     // Type "first" in the search input
@@ -73,7 +78,7 @@ test.describe('Command Palette', () => {
 
   test('click result selects item and closes palette', async ({ page }) => {
     // Open palette
-    await page.keyboard.press('Meta+k');
+    await pressOpenPalette(page);
     await page.waitForSelector('[data-testid="command-palette"]');
 
     // Type "firstName" to narrow results
@@ -90,7 +95,7 @@ test.describe('Command Palette', () => {
   });
 
   test('keyboard navigation selects the highlighted result', async ({ page }) => {
-    await page.keyboard.press('Meta+k');
+    await pressOpenPalette(page);
     await page.waitForSelector('[data-testid="command-palette"]');
     await page.fill('[data-testid="command-palette"] input', 'name');
 
@@ -104,13 +109,13 @@ test.describe('Command Palette', () => {
   });
 
   test('reopening the palette resets the previous search', async ({ page }) => {
-    await page.keyboard.press('Meta+k');
+    await pressOpenPalette(page);
     await page.waitForSelector('[data-testid="command-palette"]');
     await page.fill('[data-testid="command-palette"] input', 'first');
     await page.keyboard.press('Escape');
     await expect(page.locator('[data-testid="command-palette"]')).not.toBeVisible();
 
-    await page.keyboard.press('Meta+k');
+    await pressOpenPalette(page);
     const searchInput = page.locator('[data-testid="command-palette"] input');
     await expect(searchInput).toHaveValue('');
     await expect(page.locator('[data-testid="palette-result"]').filter({ hasText: 'firstName' })).toBeVisible();
@@ -125,7 +130,7 @@ test.describe('Command Palette', () => {
     await importDefinition(page, LOGIC_SEED_DEFINITION);
     await page.waitForSelector('[data-testid="field-grossIncome"]', { timeout: 5000 });
 
-    await page.keyboard.press('Meta+k');
+    await pressOpenPalette(page);
     await page.waitForSelector('[data-testid="command-palette"]');
 
     // Search for "netIncome" — it is both a field key AND a bind target.
@@ -146,7 +151,7 @@ test.describe('Command Palette', () => {
     await importDefinition(page, LOGIC_SEED_DEFINITION);
     await page.waitForSelector('[data-testid="field-grossIncome"]', { timeout: 5000 });
 
-    await page.keyboard.press('Meta+k');
+    await pressOpenPalette(page);
     await page.waitForSelector('[data-testid="command-palette"]');
 
     // Search for "incomeCheck" — shape id (not an item key)

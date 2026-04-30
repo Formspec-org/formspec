@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Smoke — App Bootstrap', () => {
   test('loads the app and shows the shell chrome', async ({ page }) => {
-    await page.goto('/?skipOnboarding=1&studioMode=chat');
+    await page.goto('?skipOnboarding=1&studioMode=chat');
     await page.waitForSelector('[data-testid="shell"]', { timeout: 10000 });
 
     // App title in the header

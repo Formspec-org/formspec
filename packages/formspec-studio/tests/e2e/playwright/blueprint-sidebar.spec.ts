@@ -72,9 +72,9 @@ const VARIABLES_DEFINITION = {
 
 /** Click a Blueprint sidebar nav button to activate that section. */
 async function openBlueprintSection(page: import('@playwright/test').Page, sectionName: string) {
-  const btn = page.locator(`[data-testid="blueprint-section-${sectionName}"]`);
-  await btn.waitFor({ state: 'visible' });
-  await btn.click();
+  const row = page.locator(`[data-testid="blueprint-section-${sectionName}"]`);
+  await row.waitFor({ state: 'visible' });
+  await row.locator('button').first().click();
 }
 
 // ─── Bug #14 — Component Tree count badge ────────────────────────────────────
@@ -163,12 +163,13 @@ test.describe('Variables sidebar rows are navigation buttons', () => {
     // VariablesList.tsx renders each variable as a <button> that dispatches
     // formspec:navigate-workspace with { tab: 'Editor', view: 'manage' } on click.
     // Note the current view before clicking.
-    const manageBefore = await page.getByRole('radio', { name: 'Manage' }).getAttribute('aria-checked');
+    await page.getByTestId('blueprint-variable-row-taxRate').click();
 
-    await page.getByRole('button').filter({ hasText: '@taxRate' }).filter({ hasText: /Manage/i }).click();
-
-    // After clicking, the Manage view should become active (if it wasn't already).
-    await expect(page.getByRole('radio', { name: 'Manage' })).toHaveAttribute('aria-checked', 'true', { timeout: 3000 });
+    await expect(page.locator('[data-testid="workspace-Editor"]').getByRole('radio', { name: 'Manage' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+      { timeout: 3000 },
+    );
   });
 
   test('each variable row is a button element', async ({ page }) => {
@@ -179,9 +180,8 @@ test.describe('Variables sidebar rows are navigation buttons', () => {
     await openBlueprintSection(page, 'Variables');
     await page.waitForSelector('text=@taxRate', { timeout: 5000 });
 
-    // VariablesList.tsx renders each variable as a <button> for navigation.
-    await expect(page.getByRole('button').filter({ hasText: '@taxRate' }).filter({ hasText: /Manage/i })).toBeVisible();
-    await expect(page.getByRole('button').filter({ hasText: '@netIncome' }).filter({ hasText: /Manage/i })).toBeVisible();
+    await expect(page.getByTestId('blueprint-variable-row-taxRate')).toBeVisible();
+    await expect(page.getByTestId('blueprint-variable-row-netIncome')).toBeVisible();
   });
 });
 
