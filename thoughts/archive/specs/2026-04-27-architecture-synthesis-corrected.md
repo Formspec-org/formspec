@@ -295,11 +295,13 @@ Control-plane / data-plane separation (per ADR-0002 §15):
 **Deletion-follows-org invariant** (per ADR-0006 Invariant 5): Deletion and retention key off organization ownership, not billing state. A billing-suspended organization's data is governed by retention policy on the org, not by lapse of the SaaS subscription. This is what makes crypto-shredding work cleanly: class-DEK destruction is organization-scoped, not subscription-scoped.
 
 **Derived artifact lineage** (per ADR-0006 absorption): every derived artifact (AI extraction, redacted version, generated summary, export package) carries:
+
 ```
 source_object_type, source_object_id,
 producer_type, producer_version,
 organization_id, derived_at, derivation_chain
 ```
+
 Composes with ADR-0074 access-class inheritance for lifecycle and access scoping.
 
 ---
@@ -322,6 +324,7 @@ Identity  — assuranceLevel × privacyTier, provider-neutral attestation
 These three planes share references (`subjectRef`, `eventHash`, `attestation_id`, `ledgerHeadRef`, `responseId`); never collapse storage or disclosure. Sovereign-posture deployments need this orthogonality. Respondent Ledger §6.6A explicitly preserves three-concern decoupling.
 
 `assuranceLevel × privacyTier`:
+
 - assuranceLevel ∈ {ial1, ial2, ial3} × {aal1, aal2, aal3} (NIST 800-63)
 - privacyTier ∈ {anonymous, pseudonymous, identified, public}
 
@@ -496,6 +499,7 @@ Inbound vs outbound trust boundary explicit
 ```
 
 Tenant package secret-exclusion list (per ADR-0013 absorption) — these never serialize:
+
 ```
 passwords, API keys, OAuth refresh tokens, session tokens,
 signing private keys, infra credentials
@@ -506,6 +510,7 @@ signing private keys, infra credentials
 ## Operational architecture
 
 SLO categories (per ADR-0011 absorption):
+
 ```
 intake             — submission acceptance latency, success rate
 case durability    — chain append durability; checkpoint cadence
@@ -517,6 +522,7 @@ AI                 — inference latency; degradation mode activation rate
 ```
 
 Each adapter declares a degraded mode at port boundary. Operational principles:
+
 - "Core workflow integrity outranks AI convenience"
 - "An outage is not permission to create undocumented history" — chain semantics survive incidents
 - Audit ⊥ observability (Trellis events answer who/what/why; OTel answers what failed)
@@ -530,6 +536,7 @@ Cell architecture (per ADR-0002 absorption — deferred to when rollout rings ex
 Configuration is releasable state with promotion discipline (per ADR-0014 absorption):
 
 Migration class declared per release:
+
 ```
 backward-compatible    — older clients work unchanged
 forward-compatible     — newer clients tolerate older state
@@ -548,6 +555,7 @@ Privacy Profile changes ledger-emit `governance.profile-evolved`. Access-class r
 ## Compliance taxonomy
 
 Five control categories (per ADR-0015 absorption):
+
 ```
 product             — controls baked into spec/code (encryption, chain integrity)
 deployment          — controls applied at deploy (posture, isolation, region)
@@ -558,6 +566,7 @@ inherited           — controls from underlying infrastructure (cloud SOC 2, KM
 ```
 
 Architectural rules:
+
 1. **Tier-qualified claims only.** No compliance claim is made without naming the trust posture and configuration.
 2. **Deployment differences must be real, not cosmetic.** SBA-posture vs Federal-posture must produce observably different behavior.
 3. **Customer-configurable controls explicitly distinguished from defaults.** SaaS sign-up shows defaults; controls customer changes are recorded.
@@ -584,6 +593,7 @@ Architectural rules:
 Center commitments close now to prevent drift. Profile-specific extensions are trigger-gated by deployment need. Not phased delivery — architectural-vs-profile distinction.
 
 **Architectural center commitments (close now):**
+
 - Statutory clocks ([0067](../adr/0067-stack-statutory-clocks.md)): `ClockStarted/Resolved` events; materialized-once deadline; `open-clocks.json` manifest
 - Amendment ([0066](../adr/0066-stack-amendment-and-supersession.md)): four modes; `supersedes_chain_id` envelope reservation; linear supersession only
 - Failure ([0070](../adr/0070-stack-failure-and-compensation.md)): commit-point semantic pinned (Trellis local-append IS commit); idempotency tuple; `stalled` state
@@ -597,6 +607,7 @@ Center commitments close now to prevent drift. Profile-specific extensions are t
 - External recipient lifecycle (PROPOSED parent-repo stack ADR): Privacy Profile registration + ledgered access.granted/access.revoked events under `wos.governance.*` namespace + recipient-rotation rule explicit in Companion clarification
 
 **Procurement-blocking center commitments (close now):**
+
 - Accessibility: WCAG 2.2 AA conformance; VPAT for each frontend app
 - Counsel-pinned legal claim: ESIGN/UETA/eIDAS compatibility statement reviewed by counsel
 - SOC 2 controls inventory (pre-cert)
@@ -605,6 +616,7 @@ Center commitments close now to prevent drift. Profile-specific extensions are t
 - Incident response and breach-notification commitments
 
 **Profile-specific extensions (trigger-gated):**
+
 - Confidential-compute reference adapter (TEE minimum) — posture-gated; required before first Federal-posture customer, NOT before SBA PoC. SBA PoC uses `processing-audited` reference.
 - Data residency story — required before first Sovereign-posture or EU-touching customer
 - Statutory clocks: jurisdiction-aware business calendars → trigger-gated by first jurisdiction beyond initial profile
