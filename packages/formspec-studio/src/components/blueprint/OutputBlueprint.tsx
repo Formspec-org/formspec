@@ -319,13 +319,13 @@ export function OutputBlueprint() {
     <div className="space-y-2" data-testid="output-blueprint">
       {/* Header */}
       <div className="flex items-center justify-between px-1">
-        <div className="text-muted/60 text-[10px] tracking-widest uppercase font-semibold">Response</div>
+        <div className="text-muted/60 text-[11px] tracking-widest uppercase font-semibold">Response Document</div>
         {errorCount > 0 ? (
-          <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
-            {errorCount} {errorCount > 1 ? 'Errors' : 'Error'}
+          <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+            {`${errorCount} ${errorCount === 1 ? 'error' : 'errors'}`}
           </span>
         ) : (
-          <span className="text-[10px] font-bold text-green-600 dark:text-green-500 uppercase tracking-wider">Valid</span>
+          <span className="text-[11px] font-bold text-green-600 dark:text-green-500 uppercase tracking-wider">Valid</span>
         )}
       </div>
 

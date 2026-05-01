@@ -161,7 +161,7 @@ export function Blueprint({ activeSection, onSectionChange, sections, activeEdit
           </button>
         )}
         {count !== null && hasData && (
-          <span className={`shrink-0 rounded-full px-2 py-0.5 font-mono text-[10px] tabular-nums transition-colors ${
+          <span className={`shrink-0 rounded-full px-2 py-0.5 font-mono text-[11px] tabular-nums transition-colors ${
             isActive
               ? 'bg-accent text-surface'
               : 'bg-border/40 text-muted/80'

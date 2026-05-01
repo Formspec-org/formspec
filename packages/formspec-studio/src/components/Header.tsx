@@ -244,7 +244,7 @@ export function Header({
         >
           <IconSearch size={14} />
           <span className="text-[14px] font-ui">Search…</span>
-          <span className="ml-auto rounded-md border border-border/50 px-1.5 py-0.5 font-mono text-[10px] text-muted group-hover:text-ink/80 transition-colors">
+          <span className="ml-auto rounded-md border border-border/50 px-1.5 py-0.5 font-mono text-[11px] text-muted group-hover:text-ink/80 transition-colors">
             ⌘K
           </span>
         </button>

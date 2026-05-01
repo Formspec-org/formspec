@@ -15,7 +15,7 @@ test.describe('Smoke — App Bootstrap', () => {
     }
 
     // Explicit chat boot (waitForApp defaults to edit for authoring E2E)
-    await expect(page.locator('[data-testid="mode-toggle-chat"]')).toHaveClass(/bg-accent/);
+    await expect(page.locator('[data-testid="mode-toggle-chat"]')).toHaveAttribute('aria-selected', 'true');
     await expect(page.locator('[data-testid="chat-panel"]')).toBeVisible();
 
     // StatusBar is visible at the bottom

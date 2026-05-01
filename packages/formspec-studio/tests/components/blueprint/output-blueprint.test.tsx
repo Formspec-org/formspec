@@ -157,12 +157,12 @@ describe('OutputBlueprint — repeating group paths and validation', () => {
     // Currently the error count ignores repeating groups entirely because
     // the engine never gets addRepeatInstance called, so no repeat-path binds fire.
 
-    // Find the error count in the header — it has a specific class pattern
-    const headerEl = screen.getByText(/^\d+\s+error/);
+    // Find the error count in the header (e.g. "6 errors" — single span, case-insensitive plural)
+    const headerEl = screen.getByText(/^\d+\s+errors?$/i);
     expect(headerEl).toBeInTheDocument();
 
     // Extract the count
-    const countMatch = headerEl.textContent?.match(/(\d+)\s*error/);
+    const countMatch = headerEl.textContent?.match(/(\d+)\s*errors?/i);
     expect(countMatch).toBeTruthy();
     const errorCount = parseInt(countMatch![1], 10);
 

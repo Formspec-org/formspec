@@ -21,7 +21,7 @@ export function ViewportSwitcher({ active, onChange }: ViewportSwitcherProps) {
           type="button"
           className={`px-4 py-1.5 text-[13.5px] font-semibold rounded-full transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 ${
             active === vp.id
-              ? 'bg-surface text-ink shadow-sm border border-border/20'
+              ? 'bg-accent text-white shadow-sm border border-accent/25'
               : 'text-muted/80 hover:bg-subtle/80 hover:text-ink'
           }`}
           onClick={() => onChange(vp.id)}

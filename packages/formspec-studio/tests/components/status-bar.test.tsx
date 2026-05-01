@@ -38,7 +38,7 @@ describe('StatusBar', () => {
 
   it('shows formspec version', () => {
     renderStatusBar();
-    expect(screen.getByText(/formspec 1\.0/i)).toBeInTheDocument();
+    expect(screen.getByText(/FS\s*1\.0/)).toBeInTheDocument();
   });
 
   it('shows definition status badge', () => {

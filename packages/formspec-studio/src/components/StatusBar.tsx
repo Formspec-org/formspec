@@ -111,14 +111,14 @@ export function StatusBar({ variant = 'full', onAskAI }: StatusBarProps) {
       <div className="flex min-w-0 flex-1 items-center gap-3 overflow-x-auto scrollbar-none">
         <div className="flex shrink-0 items-center gap-2">
           <span className="font-display text-[16px] tracking-tight text-ink font-semibold">The Stack</span>
-          <span className="text-[10.5px] uppercase tracking-wider text-muted/60 font-medium">FS {formspecVersion}</span>
+          <span className="text-[11px] uppercase tracking-wider text-muted/60 font-medium">FS {formspecVersion}</span>
         </div>
 
-        <span className={`shrink-0 rounded-full border px-2.5 py-0.5 text-[10.5px] font-semibold uppercase tracking-wider ${statusTone}`}>
+        <span className={`shrink-0 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${statusTone}`}>
           {status}
         </span>
 
-        <span className="flex shrink-0 items-center gap-1.5 uppercase tracking-wider text-muted text-[10.5px] font-medium">
+        <span className="flex shrink-0 items-center gap-1.5 uppercase tracking-wider text-muted text-[11px] font-medium">
           <span className="text-[16px] leading-none text-accent" aria-hidden="true">▦</span>
           <span className="text-accent/90">{plural(fieldCount, 'field')}</span>
         </span>
@@ -126,7 +126,7 @@ export function StatusBar({ variant = 'full', onAskAI }: StatusBarProps) {
         <button
           type="button"
           onClick={handleOpenIssues}
-          className={`shrink-0 rounded-full border px-2.5 py-0.5 text-[10.5px] font-semibold uppercase tracking-wider ${healthTone} hover:opacity-80 transition-all`}
+          className={`shrink-0 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${healthTone} hover:opacity-80 transition-all`}
           data-testid="health-chip"
         >
           {healthLabel}
@@ -135,7 +135,7 @@ export function StatusBar({ variant = 'full', onAskAI }: StatusBarProps) {
         <button
           type="button"
           onClick={handleAskAI}
-          className="shrink-0 rounded-full border border-accent/25 bg-accent/5 px-2.5 py-0.5 text-[10.5px] font-semibold uppercase tracking-wider text-accent hover:bg-accent/10 transition-all"
+          className="shrink-0 rounded-full border border-accent/25 bg-accent/5 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-accent hover:bg-accent/10 transition-all"
         >
           Ask AI
         </button>
@@ -143,7 +143,7 @@ export function StatusBar({ variant = 'full', onAskAI }: StatusBarProps) {
         <button
           type="button"
           onClick={() => window.dispatchEvent(new CustomEvent('formspec:publish-project'))}
-          className="shrink-0 rounded-full bg-accent px-3.5 py-1 text-[10.5px] font-bold uppercase tracking-wider text-white hover:bg-accent/90 transition-all shadow-sm active:scale-95"
+          className="shrink-0 rounded-full bg-accent px-3.5 py-1 text-[11px] font-bold uppercase tracking-wider text-white hover:bg-accent/90 transition-all shadow-sm active:scale-95"
         >
           Publish
         </button>
@@ -223,7 +223,7 @@ export function StatusBar({ variant = 'full', onAskAI }: StatusBarProps) {
           <a
             href={definition.url}
             title={definition.url}
-            className="max-w-[260px] truncate text-[10.5px] uppercase tracking-wider text-muted/60 hover:text-accent transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded"
+            className="max-w-[260px] truncate text-[11px] uppercase tracking-wider text-muted/60 hover:text-accent transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded"
           >
             {definition.url}
           </a>
@@ -231,7 +231,7 @@ export function StatusBar({ variant = 'full', onAskAI }: StatusBarProps) {
             type="button"
             onClick={() => handleCopyUrl(definition.url)}
             title="Copy URL"
-            className="rounded-full border border-border/60 px-3 py-1 text-[10.5px] font-medium text-muted hover:bg-surface hover:text-ink transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 active:scale-95"
+            className="rounded-full border border-border/60 px-3 py-1 text-[11px] font-medium text-muted hover:bg-surface hover:text-ink transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 active:scale-95"
           >
             {copied ? 'Copied' : 'Copy'}
           </button>

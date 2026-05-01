@@ -16,7 +16,7 @@ test.describe('Studio first-run onboarding', () => {
   test('loads shell with chat first; Edit shows blank editor', async ({ page }) => {
     await expect(page.locator('[data-testid="shell"]')).toBeVisible();
     await expect(page.locator('[data-testid="chat-panel"]')).toBeVisible();
-    await expect(page.locator('[data-testid="mode-toggle-chat"]')).toHaveClass(/bg-accent/);
+    await expect(page.locator('[data-testid="mode-toggle-chat"]')).toHaveAttribute('aria-selected', 'true');
     await page.locator('[data-testid="mode-toggle-edit"]').click();
     await expect(page.locator('[data-testid="workspace-Editor"]')).toBeVisible();
     await expect(page.getByText('No items defined')).toBeVisible();
