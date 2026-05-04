@@ -109,3 +109,54 @@ jobs:
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npm run test:studio:e2e
+
+  # Matches root `Makefile` `test-wos-spec` → full WOS `make test` (Rust nextest
+  # workspace + pytest schemas + Studio Vitest). Heavier than core-only Rust;
+  # for a faster local slice use `make -C wos-spec test-core` (see wos-spec/Makefile).
+  # Dependency installs: `wos-spec/Makefile` `test` pulls `studio-test` → `studio-install`
+  # (`npm install` in `wos-spec/studio`). Python schema tests use stdlib + repo layout only.
+  wos-spec-tests:
+    name: WOS Spec (make test-wos-spec)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@nextest
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: make test-wos-spec
+
+  # WS-094 Phase 4 (R-6.1): pinned Restate Server + `wos-restate-worker` + ingress smoke.
+  # Keep the Docker image in lockstep with `restate-sdk` + `wos-spec/scripts/restate_ingress_smoke.sh`
+  # + `wos-server-runtime-restate/README.md` (see "Lockstep policy" there).
+  wos-restate-ingress-smoke:
+    name: WOS Restate ingress smoke (WS-094)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Restate Server + worker + ingress test
+        working-directory: wos-spec
+        run: bash scripts/restate_ingress_smoke.sh
+
+  trellis-tests:
+    name: Trellis (make test-trellis)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@nextest
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: make test-trellis
