@@ -103,9 +103,9 @@ export function MappingSelector() {
   const canDelete = ids.length > 1;
 
   return (
-    <div data-testid="mapping-selector" className="flex items-center gap-1.5 flex-wrap">
+    <div data-testid="mapping-selector" className="flex items-center gap-2 flex-wrap">
       {/* Mapping tabs */}
-      <div className="flex items-center gap-1 p-0.5 bg-subtle/30 rounded-lg border border-border/40">
+      <div className="flex items-center gap-0.5 p-0.5 bg-subtle rounded border border-border">
         {ids.map((id) => {
           const isActive = id === selectedId;
           const isRenaming = renamingId === id;
@@ -115,10 +115,10 @@ export function MappingSelector() {
               key={id}
               data-testid={`mapping-tab-${id}`}
               aria-selected={isActive}
-              className={`group relative flex items-center gap-2 px-3 py-1.5 rounded-[6px] cursor-pointer transition-all duration-200 ${
+              className={`group relative flex items-center gap-2 px-2.5 py-1 rounded cursor-pointer transition-all duration-200 ${
                 isActive
-                  ? 'bg-surface text-ink shadow-sm ring-1 ring-black/5'
-                  : 'text-muted hover:text-ink hover:bg-subtle/50'
+                  ? 'bg-surface text-ink shadow-sm border border-border'
+                  : 'text-muted hover:text-ink hover:bg-surface'
               }`}
               onClick={() => !isRenaming && handleSelect(id)}
             >
@@ -130,13 +130,13 @@ export function MappingSelector() {
                   onChange={(e) => setRenameValue(e.target.value)}
                   onBlur={handleRenameCommit}
                   onKeyDown={handleRenameKeyDown}
-                  className="font-mono text-[11px] font-bold bg-transparent border-none outline-none w-24 text-accent"
+                  className="font-mono text-[10px] font-bold uppercase tracking-normal bg-transparent border-none outline-none w-28 text-accent"
                   onClick={(e) => e.stopPropagation()}
                 />
               ) : (
                 <span
                   data-testid={`mapping-tab-label-${id}`}
-                  className={`font-mono text-[11px] font-bold leading-none ${isActive ? 'text-accent' : ''}`}
+                  className={`font-mono text-[10px] font-bold uppercase tracking-normal leading-none ${isActive ? 'text-accent' : ''}`}
                   onDoubleClick={(e) => startRename(id, e)}
                   title="Double-click to rename"
                 >
@@ -153,7 +153,7 @@ export function MappingSelector() {
                   className="opacity-0 group-hover:opacity-40 hover:!opacity-100 text-muted leading-none transition-opacity"
                   onClick={(e) => startRename(id, e)}
                 >
-                  <IconEdit size={8} />
+                  <IconEdit size={10} />
                 </button>
               )}
 
@@ -166,7 +166,7 @@ export function MappingSelector() {
                   className={`leading-none transition-opacity opacity-0 group-hover:opacity-40 hover:!opacity-100 text-muted hover:text-error`}
                   onClick={(e) => handleDelete(id, e)}
                 >
-                  <IconClose size={8} />
+                  <IconClose size={10} />
                 </button>
               )}
             </div>
@@ -177,7 +177,7 @@ export function MappingSelector() {
       {/* Create new mapping */}
       <div className="flex items-center">
         {creating ? (
-          <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-300">
+          <div className="flex items-center gap-2">
             <div className="relative">
               <input
                 ref={createInputRef}
@@ -186,12 +186,9 @@ export function MappingSelector() {
                 onChange={(e) => setNewId(e.target.value)}
                 onBlur={handleCreate}
                 onKeyDown={handleCreateKeyDown}
-                placeholder="mapping-id"
-                className="font-mono text-[11px] font-bold px-3 py-1.5 rounded-lg border border-accent/30 outline-none bg-surface text-ink w-32 focus:w-48 shadow-lg shadow-accent/10 transition-all duration-300 ring-2 ring-accent/5"
+                placeholder="MAPPING-ID"
+                className="font-mono text-[10px] font-bold uppercase tracking-normal px-3 py-1.5 rounded border border-accent/40 outline-none bg-surface text-ink w-32 focus:w-48 shadow-sm transition-all duration-200"
               />
-              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-30 pointer-events-none">
-                <span className="text-[7px] font-bold">↵</span>
-              </div>
             </div>
           </div>
         ) : (
@@ -199,17 +196,17 @@ export function MappingSelector() {
             type="button"
             data-testid="mapping-create-btn"
             title="Add new mapping"
-            className="flex items-center justify-center w-8 h-8 rounded-lg border border-dashed border-border hover:border-accent hover:bg-accent/5 hover:text-accent transition-all duration-200 text-muted group/add shadow-sm"
+            className="flex items-center justify-center w-7 h-7 rounded border border-dashed border-border hover:border-accent/40 hover:bg-accent/[0.03] hover:text-accent transition-all duration-200 text-muted group/add shadow-sm"
             onClick={() => { setCreating(true); setNewId(''); }}
           >
-            <IconPlus size={12} className="transition-transform duration-300 group-hover/add:rotate-90" />
+            <IconPlus size={14} className="transition-transform duration-300 group-hover/add:rotate-90" />
           </button>
         )}
       </div>
 
       {/* Inline error */}
       {error && (
-        <span data-testid="mapping-selector-error" className="text-rust text-[10px] ml-1 animate-in fade-in">
+        <span data-testid="mapping-selector-error" className="text-error font-mono text-[9px] font-bold uppercase tracking-normal ml-2">
           {error}
         </span>
       )}

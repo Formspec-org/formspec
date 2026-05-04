@@ -123,7 +123,7 @@ function EmptyContainerPlaceholder({ containerRef }: { containerRef: { bind?: st
     <div
       ref={setHost}
       data-testid="empty-container-placeholder"
-      className={`py-8 border-2 border-dashed rounded-[16px] flex flex-col items-center justify-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all duration-200 bg-bg-default/30 border-accent/10 text-accent/20 ${
+      className={`py-8 border-2 border-dashed rounded-[16px] flex flex-col items-center justify-center gap-2 text-[10px] font-mono uppercase tracking-[0.2em] transition-all duration-200 bg-bg-default/30 border-accent/10 text-muted ${
         emptyDropActive ? LAYOUT_CANVAS_EMPTY_CONTAINER_DROP_ACTIVE : ''
       }`}
     >
@@ -271,7 +271,7 @@ export function LayoutContainer(props: LayoutContainerProps) {
               onSelect?.(e);
             }
           }}
-          className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded px-1 py-0.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/70"
+          className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded px-1 py-0.5 text-left focus-ring"
         >
           <span className={`shrink-0 inline-block rounded px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider ${
             selected ? 'bg-accent/15 text-accent' : 'bg-subtle text-muted'

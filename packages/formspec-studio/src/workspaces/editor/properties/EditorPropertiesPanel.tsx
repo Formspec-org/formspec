@@ -180,7 +180,7 @@ export function EditorPropertiesPanel({ showActions = true }: { showActions?: bo
         <div data-testid="properties-selection-path" className="mt-2 font-mono text-[10px] font-semibold tracking-[0.12em] uppercase text-accent/80">
           {selectionPath}
         </div>
-        <p className="mt-3 max-w-[28rem] text-[12px] leading-relaxed text-muted/70 italic">
+        <p className="mt-3 max-w-[28rem] text-[12px] leading-relaxed text-muted italic">
           Deep configuration and advanced behavioral logic for this {isGroup ? 'group' : 'field'}.
         </p>
       </div>
@@ -188,7 +188,7 @@ export function EditorPropertiesPanel({ showActions = true }: { showActions?: bo
       <div className="flex-1 overflow-y-auto px-6 py-6 space-y-8 md:px-7">
         <Section title="Identity">
           <div className="mb-4 space-y-2">
-            <label className="block text-[11px] font-bold uppercase tracking-[0.1em] text-muted/60">
+            <label className="block text-[11px] font-bold uppercase tracking-[0.1em] text-muted">
               <HelpTip text={propertyHelp.key}>Key</HelpTip>
             </label>
             <input
@@ -201,7 +201,7 @@ export function EditorPropertiesPanel({ showActions = true }: { showActions?: bo
             />
           </div>
           <div className="mb-4 space-y-2">
-            <label className="block text-[11px] font-bold uppercase tracking-[0.1em] text-muted/60">
+            <label className="block text-[11px] font-bold uppercase tracking-[0.1em] text-muted">
               <HelpTip text={propertyHelp.label}>Label</HelpTip>
             </label>
             <input
@@ -283,14 +283,14 @@ export function EditorPropertiesPanel({ showActions = true }: { showActions?: bo
           <div className="flex gap-3">
           <button
             type="button"
-            className="flex-1 rounded-[14px] border border-border/80 bg-surface px-4 py-3 text-[12px] font-bold uppercase tracking-[0.15em] text-ink transition-all cursor-pointer hover:bg-subtle/80 hover:border-muted/30 hover:scale-[1.02] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25 shadow-sm"
+            className="flex-1 rounded-[14px] border border-border/80 bg-surface px-4 py-3 text-[12px] font-bold uppercase tracking-[0.15em] text-ink transition-all cursor-pointer hover:bg-subtle/80 hover:border-muted/30 hover:scale-[1.02] active:scale-[0.98] focus-ring shadow-sm"
             onClick={() => handleDuplicate(path)}
           >
             Duplicate
           </button>
           <button
             type="button"
-            className="rounded-[14px] border border-border/80 bg-surface px-4 py-3 text-[12px] font-bold uppercase tracking-[0.15em] text-muted/60 transition-all cursor-pointer hover:border-error/40 hover:bg-error/[0.03] hover:text-error hover:scale-[1.02] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error/20 shadow-sm"
+            className="rounded-[14px] border border-border/80 bg-surface px-4 py-3 text-[12px] font-bold uppercase tracking-[0.15em] text-muted transition-all cursor-pointer hover:border-error/40 hover:bg-error/[0.03] hover:text-error hover:scale-[1.02] active:scale-[0.98] focus-ring shadow-sm"
             onClick={() => handleDelete(path)}
           >
             Delete

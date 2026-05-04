@@ -1,4 +1,4 @@
-/** @filedesc Accessible Build/Manage/Screener segmented control for the Editor workspace (role="radiogroup"). */
+/** @filedesc Accessible Build/Manage/Screener segmented control for the Editor workspace. */
 import { useMemo } from 'react';
 
 export type EditorView = 'build' | 'manage' | 'screener';
@@ -19,14 +19,14 @@ const SCREENER_OPTION: { id: EditorView; label: string } = { id: 'screener', lab
 
 export function BuildManageToggle({ activeView, onViewChange, manageCount, showScreener }: BuildManageToggleProps) {
   const options = useMemo(
-    () => showScreener ? [...BASE_OPTIONS, SCREENER_OPTION] : BASE_OPTIONS,
+    () => (showScreener ? [...BASE_OPTIONS, SCREENER_OPTION] : BASE_OPTIONS),
     [showScreener],
   );
 
   const handleKeyDown = (e: React.KeyboardEvent, current: EditorView) => {
     if (!['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'].includes(e.key)) return;
     e.preventDefault();
-    const currentIndex = options.findIndex(o => o.id === current);
+    const currentIndex = options.findIndex((o) => o.id === current);
     const forward = e.key === 'ArrowRight' || e.key === 'ArrowDown';
     const nextIndex = forward
       ? (currentIndex + 1) % options.length
@@ -38,7 +38,7 @@ export function BuildManageToggle({ activeView, onViewChange, manageCount, showS
     <div
       role="radiogroup"
       aria-label="Editor view"
-      className="inline-flex items-center gap-1 rounded-full border border-border/40 bg-subtle/50 p-1"
+      className="inline-flex items-center gap-0.5 rounded-md border border-border bg-subtle p-0.5 shadow-inner"
     >
       {options.map(({ id, label }) => {
         const isActive = activeView === id;
@@ -50,19 +50,23 @@ export function BuildManageToggle({ activeView, onViewChange, manageCount, showS
             aria-checked={isActive}
             aria-label={label}
             tabIndex={isActive ? 0 : -1}
-            onClick={() => { if (!isActive) onViewChange(id); }}
+            onClick={() => {
+              if (!isActive) onViewChange(id);
+            }}
             onKeyDown={(e) => handleKeyDown(e, id)}
-            className={`px-4 py-1.5 text-[13.5px] font-semibold rounded-full transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 ${
+            className={`px-3 py-1 text-[11px] font-bold uppercase tracking-normal rounded-sm transition-all duration-200 cursor-pointer focus-ring ${
               isActive
                 ? id === 'screener'
-                  ? 'bg-amber-500 text-white shadow-sm border border-amber-600/30'
-                  : 'bg-accent text-white shadow-sm border border-accent/25'
-                : 'text-muted/80 hover:bg-subtle/80 hover:text-ink'
+                  ? 'bg-amber-600 text-surface shadow-sm'
+                  : 'bg-accent text-surface shadow-sm'
+                : 'text-muted hover:bg-surface hover:text-ink'
             }`}
           >
             {label}
             {id === 'manage' && manageCount ? (
-              <span className="ml-1.5 text-[11px] font-normal opacity-70">{manageCount}</span>
+              <span className={`ml-1.5 text-[9px] font-extrabold ${isActive ? 'text-surface/70' : 'text-accent/60'}`}>
+                {manageCount}
+              </span>
             ) : null}
           </button>
         );

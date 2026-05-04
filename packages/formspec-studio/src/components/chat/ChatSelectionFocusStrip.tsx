@@ -90,7 +90,7 @@ export function ChatSelectionFocusStrip({ project }: { project: Project }) {
       return (
         <p
           data-testid="chat-selection-focus-empty"
-          className="rounded-[10px] border border-dashed border-border/55 bg-bg-default/40 px-3 py-2.5 text-[11px] leading-snug text-muted/90"
+          className="rounded-[10px] border border-dashed border-border/55 bg-bg-default/40 px-3 py-2.5 text-[11px] leading-snug text-muted"
         >
           Choose a field, section, or content block in the blueprint sidebar or the editor structure list. Changes
           apply to the form right away — with or without an assistant API key.
@@ -190,7 +190,7 @@ export function ChatSelectionFocusStrip({ project }: { project: Project }) {
     }
 
     return (
-      <p className="text-[11px] text-muted/90">This part of the form can’t be edited here yet.</p>
+      <p className="text-[11px] text-muted">This part of the form can’t be edited here yet.</p>
     );
   }, [allBinds, items, onRenameIdentity, project, selectedEntry, selectedKey, selection]);
 
@@ -240,7 +240,7 @@ export function ChatSelectionFocusStrip({ project }: { project: Project }) {
         <div className="mb-1.5">
           <h3
             id="chat-selection-focus-heading"
-            className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-muted/85"
+            className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-muted"
           >
             Form field
           </h3>

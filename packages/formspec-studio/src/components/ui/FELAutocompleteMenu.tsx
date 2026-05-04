@@ -69,7 +69,7 @@ export function FELAutocompleteMenu({
                       {opt.kind === 'path' ? `$${opt.path}` : opt.name}
                     </span>
                     {opt.kind === 'path' && opt.label !== opt.path && (
-                      <span className={`text-[10px] truncate ${isSelected ? 'text-white/70' : 'text-muted/80'}`}>
+                      <span className={`text-[10px] truncate ${isSelected ? 'text-white/70' : 'text-muted'}`}>
                         {opt.label}
                       </span>
                     )}
@@ -96,7 +96,7 @@ export function FELAutocompleteMenu({
               </span>
             </div>
             {activeOption.description && (
-              <div className="text-[10px] text-ink/60 leading-normal mt-1 border-t border-border/40 pt-2">
+              <div className="text-[10px] text-muted leading-normal mt-1 border-t border-border/40 pt-2">
                 {activeOption.description}
               </div>
             )}

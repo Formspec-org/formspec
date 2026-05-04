@@ -16,15 +16,18 @@ interface PillProps {
   title?: string;
   /** When true, appends a warning indicator and applies a warning border. */
   warn?: boolean;
+  /** Merged after base pill classes (caller wins for overlapping utilities). */
+  className?: string;
 }
 
-export function Pill({ text, color = 'muted', size = 'md', title, warn }: PillProps) {
+export function Pill({ text, color = 'muted', size = 'md', title, warn, className }: PillProps) {
   const colorClasses = colorMap[color] || colorMap.muted;
-  const sizeClasses = size === 'sm' ? 'text-[10px] px-2 py-0.5 font-bold uppercase tracking-wider' : 'text-[12px] px-2.5 py-1 font-semibold';
-  const warnClasses = warn ? ' ring-1 ring-amber/30' : '';
+  const sizeClasses = size === 'sm' ? 'text-[9px] px-1.5 py-0.5 font-bold uppercase tracking-normal' : 'text-[11px] px-1.5 py-0.5 font-medium';
+  const warnClasses = warn ? ' ring-1 ring-amber/20' : '';
+  const extra = className ? ` ${className}` : '';
   return (
-    <span className={`inline-flex items-center rounded-full border transition-all ${colorClasses} ${sizeClasses}${warnClasses}`} title={title}>
-      {text}{warn ? <span aria-hidden="true" className="ml-1">{' \u26A0'}</span> : ''}
+    <span className={`inline-flex items-center rounded-sm border transition-all ${colorClasses} ${sizeClasses}${warnClasses}${extra}`} title={title}>
+      {text}{warn ? <span aria-hidden="true" className="ml-1 opacity-60">{' \u26A0'}</span> : ''}
     </span>
   );
 }

@@ -16,7 +16,7 @@ const selectClass =
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-muted text-sm">{label}</span>
+      <span className="text-muted text-[12px]">{label}</span>
       {children}
     </div>
   );
@@ -29,13 +29,13 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: 
       role="switch"
       aria-checked={checked}
       aria-label={label}
-      className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors cursor-pointer ${
+      className={`relative inline-flex h-4 w-7 items-center rounded-sm transition-colors cursor-pointer ${
         checked ? 'bg-accent' : 'bg-border'
       }`}
       onClick={() => onChange(!checked)}
     >
       <span
-        className={`inline-block h-3 w-3 rounded-full bg-white transition-transform ${
+        className={`inline-block h-3 w-3 rounded-[1px] bg-white transition-transform ${
           checked ? 'translate-x-3.5' : 'translate-x-0.5'
         }`}
       />
@@ -73,7 +73,7 @@ export function AdapterConfig() {
 
   return (
     <Section title="Adapter">
-      <div className="flex flex-col gap-2 text-sm">
+      <div className="flex flex-col gap-2 text-[12px]">
         <Row label="Output format">
           <div className="flex items-center gap-1.5">
             {formats.map((f) => (
@@ -81,9 +81,9 @@ export function AdapterConfig() {
                 key={f}
                 type="button"
                 onClick={() => setFormat(format === f ? '' : f)}
-                className={`px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider rounded-[3px] border transition-all cursor-pointer ${
+                className={`px-2 py-0.5 text-[11px] font-bold uppercase tracking-normal rounded-[3px] border transition-all cursor-pointer ${
                   format === f
-                    ? 'bg-accent text-white border-accent shadow-sm'
+                    ? 'bg-accent text-surface border-accent shadow-sm'
                     : 'bg-subtle text-muted border-border hover:border-accent/40 hover:text-ink'
                 }`}
               >
@@ -177,7 +177,7 @@ function XmlOptions({
         />
       </Row>
       <div className="flex flex-col gap-1">
-        <span className="text-muted text-sm">CDATA paths</span>
+        <span className="text-muted text-[12px]">CDATA paths</span>
         <input
           type="text"
           className={`${inputClass} w-full`}

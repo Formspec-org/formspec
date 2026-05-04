@@ -3,9 +3,11 @@ import { describe, it, expect } from 'vitest';
 import { createProject } from '@formspec-org/studio-core';
 import { ProjectProvider } from '../../src/state/ProjectContext';
 import { useEditorState } from '../../src/hooks/useEditorState';
+import { ModeProvider } from '../../src/studio-app/ModeProvider';
+import { ShellProviders } from '../../src/providers/ShellProviders';
 
 function ManageCountDisplay() {
-  const { manageCount } = useEditorState('Editor', false);
+  const { manageCount } = useEditorState();
   return <div data-testid="manage-count">{manageCount}</div>;
 }
 
@@ -14,7 +16,11 @@ describe('useEditorState manageCount', () => {
     const project = createProject();
     render(
       <ProjectProvider project={project}>
-        <ManageCountDisplay />
+        <ModeProvider defaultMode="edit">
+          <ShellProviders>
+            <ManageCountDisplay />
+          </ShellProviders>
+        </ModeProvider>
       </ProjectProvider>
     );
     expect(screen.getByTestId('manage-count')).toHaveTextContent('0');

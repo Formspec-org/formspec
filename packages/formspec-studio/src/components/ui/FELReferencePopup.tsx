@@ -143,18 +143,18 @@ export function FELReferencePopup({ label = 'FEL Reference' }: FELReferencePopup
       {open && (
         <div
           data-testid="fel-reference-popup"
-          className="absolute bottom-full right-0 mb-2 z-[200] w-72 rounded-[6px] border border-border bg-surface shadow-lg overflow-hidden flex flex-col"
+          className="absolute bottom-full right-0 mb-2 z-[200] w-72 rounded-2xl border border-border/60 bg-surface/95 backdrop-blur-xl shadow-premium-lg overflow-hidden flex flex-col animate-fade-in"
           style={{ maxHeight: '380px' }}
         >
           {/* Header */}
-          <div className="px-3 py-2 border-b border-border flex items-center justify-between shrink-0">
-            <span className="font-mono text-[10px] font-bold tracking-[0.12em] uppercase text-muted">
-              FEL Reference
+          <div className="px-4 py-3 border-b border-border/40 bg-subtle/30 flex items-center justify-between shrink-0">
+            <span className="font-mono text-[10px] font-extrabold tracking-[0.15em] uppercase text-muted">
+              Reference
             </span>
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="text-muted hover:text-ink text-[12px] cursor-pointer"
+              className="w-5 h-5 flex items-center justify-center rounded-full text-muted hover:text-ink hover:bg-surface transition-all active:scale-90"
             >
               ✕
             </button>
@@ -167,7 +167,7 @@ export function FELReferencePopup({ label = 'FEL Reference' }: FELReferencePopup
               placeholder="Search functions…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="w-full px-2 py-1 text-[12px] font-mono bg-subtle border border-border rounded-[3px] outline-none focus:border-accent placeholder:text-muted/50 transition-colors"
+              className="w-full px-2 py-1 text-[12px] font-mono bg-subtle border border-border rounded-[3px] outline-none focus:border-accent placeholder:text-muted transition-colors"
               autoFocus
             />
           </div>
@@ -216,7 +216,7 @@ export function FELReferencePopup({ label = 'FEL Reference' }: FELReferencePopup
                               <span className={`font-mono text-[11px] font-semibold ${catColor}`}>{fn.name}</span>
                               <span className="font-mono text-[10px] text-muted">{fn.signature}</span>
                             </div>
-                            <div className="text-[10px] text-muted/80 leading-tight mt-0.5">{fn.description}</div>
+                            <div className="text-[10px] text-muted leading-tight mt-0.5">{fn.description}</div>
                           </button>
                         ))}
                         {activeFunction && (

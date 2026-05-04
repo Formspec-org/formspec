@@ -32,7 +32,7 @@ export function ShapeCard({ name, severity, constraint, message, code }: ShapeCa
             {name}
           </span>
           {code && (
-            <span className="font-mono text-[9px] text-muted/80 tracking-wide uppercase">
+            <span className="font-mono text-[9px] text-muted tracking-wide uppercase">
               {code}
             </span>
           )}

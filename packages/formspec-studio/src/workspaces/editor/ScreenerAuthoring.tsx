@@ -15,7 +15,7 @@ export function ScreenerAuthoring() {
 
   return (
     <div className="space-y-4">
-      <p className="text-[11px] text-muted/70 italic">
+      <p className="text-[11px] text-muted italic">
         Answers are used for routing only and are not saved in the form response.
       </p>
 

@@ -69,7 +69,7 @@ function ToolbarSelect({
       aria-label={ariaLabel}
       value={value}
       onChange={(e) => onChange(e.currentTarget.value)}
-      className="h-7 rounded border border-border bg-surface px-1 text-[12px] font-mono text-ink outline-none focus:border-accent"
+      className="h-7 px-1 text-[12px] font-mono field-input"
     >
       {options.map((o) => (
         <option key={o.value} value={o.value}>{o.label}</option>
@@ -98,7 +98,7 @@ function ToolbarIconBtn({
       aria-label={ariaLabel}
       aria-pressed={active}
       onClick={(e) => { e.stopPropagation(); onClick(); }}
-      className={`inline-flex h-7 min-w-[24px] items-center justify-center rounded border px-1.5 text-[12px] font-mono transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/70 ${
+      className={`inline-flex h-7 min-w-[24px] items-center justify-center rounded border px-1.5 text-[12px] font-mono transition-colors focus-ring ${
         active
           ? 'border-accent bg-accent/15 text-accent'
           : 'border-border bg-surface text-muted hover:border-accent/40 hover:text-ink'
@@ -137,7 +137,7 @@ function OverflowButton({
       data-testid="toolbar-overflow"
       aria-label="More properties"
       onClick={(e) => { e.stopPropagation(); onOpenPopover(); }}
-      className="relative ml-auto inline-flex h-7 w-6 flex-shrink-0 items-center justify-center rounded border border-border bg-surface text-[12px] text-muted hover:border-accent/40 hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/70"
+      className="relative ml-auto inline-flex h-7 w-6 flex-shrink-0 items-center justify-center rounded border border-border bg-surface text-[12px] text-muted hover:border-accent/40 hover:text-ink transition-colors focus-ring"
     >
       ...
       {hasPopoverContent && (
@@ -180,7 +180,7 @@ function Stepper({
         aria-label={`Decrease ${ariaLabel}`}
         disabled={value <= min}
         onClick={(e) => { e.stopPropagation(); if (value > min) onDecrement(); }}
-        className="inline-flex h-7 w-5 items-center justify-center rounded border border-border bg-surface text-[12px] text-muted hover:border-accent/40 hover:text-ink disabled:cursor-not-allowed disabled:opacity-40 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/70"
+        className="inline-flex h-7 w-5 items-center justify-center rounded border border-border bg-surface text-[12px] text-muted hover:border-accent/40 hover:text-ink disabled:cursor-not-allowed disabled:opacity-40 transition-colors focus-ring"
       >
         −
       </button>
@@ -196,7 +196,7 @@ function Stepper({
         aria-label={`Increase ${ariaLabel}`}
         disabled={value >= max}
         onClick={(e) => { e.stopPropagation(); if (value < max) onIncrement(); }}
-        className="inline-flex h-7 w-5 items-center justify-center rounded border border-border bg-surface text-[12px] text-muted hover:border-accent/40 hover:text-ink disabled:cursor-not-allowed disabled:opacity-40 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/70"
+        className="inline-flex h-7 w-5 items-center justify-center rounded border border-border bg-surface text-[12px] text-muted hover:border-accent/40 hover:text-ink disabled:cursor-not-allowed disabled:opacity-40 transition-colors focus-ring"
       >
         +
       </button>
@@ -360,7 +360,7 @@ function PanelControls({ nodeProps, onSetProp }: { nodeProps: Record<string, unk
         onBlur={() => onSetProp('width', draft)}
         onKeyDown={(e) => { if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur(); }}
         onClick={(e) => e.stopPropagation()}
-        className="h-7 w-20 rounded border border-border bg-surface px-1.5 text-[12px] font-mono text-ink outline-none placeholder:text-muted/40 focus:border-accent"
+        className="h-7 w-20 rounded border border-border bg-surface px-1.5 text-[12px] font-mono text-ink outline-none placeholder:text-muted focus:border-accent"
       />
     </>
   );
@@ -384,7 +384,7 @@ function CollapsibleControls({ nodeProps, onSetProp }: { nodeProps: Record<strin
         onBlur={() => onSetProp('title', draft)}
         onKeyDown={(e) => { if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur(); }}
         onClick={(e) => e.stopPropagation()}
-        className="h-7 w-32 rounded border border-border bg-surface px-1.5 text-[12px] font-mono text-ink outline-none placeholder:text-muted/40 focus:border-accent"
+        className="h-7 w-32 rounded border border-border bg-surface px-1.5 text-[12px] font-mono text-ink outline-none placeholder:text-muted focus:border-accent"
       />
       <ToolbarIconBtn
         testId="toolbar-default-open"
@@ -437,7 +437,7 @@ function FieldControls({
             // Tier-3 tree uses `component` (Select, RadioGroup, …); `widget` is not a tree field.
             onSetProp('component', v === '' ? defaultWidget : v);
           }}
-          className="h-7 rounded border border-border bg-surface px-1 text-[12px] font-mono text-ink outline-none focus:border-accent"
+          className="h-7 px-1 text-[12px] font-mono field-input"
         >
           <option value="">Default (theme / data type)</option>
           {widgets.map((w) => (
@@ -557,7 +557,7 @@ export function InlineToolbar(props: InlineToolbarProps) {
             <button
               type="button"
               data-testid="toolbar-condition-chip-compact"
-              className="inline-flex h-7 px-1 items-center justify-center rounded border border-warning/30 bg-warning/5 text-[10px] cursor-pointer hover:bg-warning/10 transition-colors flex-shrink-0 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-warning/60"
+              className="inline-flex h-7 px-1 items-center justify-center rounded border border-warning/30 bg-warning/5 text-[10px] cursor-pointer hover:bg-warning/10 transition-colors flex-shrink-0 focus-ring"
               title="This hides the component only. Use relevant in Editor to control data."
               aria-label="Condition controls rendering only"
               onClick={(e) => { e.stopPropagation(); onOpenPopover(); }}

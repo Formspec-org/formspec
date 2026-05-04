@@ -83,7 +83,7 @@ export function DependencyGroup({
                 className="px-3 py-2.5 space-y-1"
               >
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-[10px] text-muted/70">
+                  <span className="font-mono text-[10px] text-muted">
                     #{entry.index}
                   </span>
                   {entry.toolName && (

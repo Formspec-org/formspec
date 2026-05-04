@@ -55,8 +55,8 @@ describe('EditorPropertiesPanel', () => {
   it('shows field identity when a field is selected', async () => {
     renderPanel(baseDef, 'name', 'field');
     await act(async () => { screen.getByText('Select').click(); });
-    expect(screen.getByText('Advanced Details')).toBeInTheDocument();
-    expect(screen.getByText(/use the rows for fast edits/i)).toBeInTheDocument();
+    expect(screen.getByText('Identity')).toBeInTheDocument();
+    expect(screen.getByText(/Deep configuration and advanced behavioral logic for this field/i)).toBeInTheDocument();
     expect(screen.getByDisplayValue('name')).toBeInTheDocument();
     expect(screen.getByText(/^Provenance$/i)).toBeInTheDocument();
   });

@@ -24,7 +24,7 @@ export function LayoutContextMenu({ items, onAction, onClose }: LayoutContextMen
           <button
             role="menuitem"
             data-testid={`layout-ctx-${action}`}
-            className="w-full text-left px-3.5 py-1.5 text-[13px] font-medium text-ink hover:bg-accent/10 hover:text-accent focus:bg-accent/10 focus:text-accent transition-colors focus-visible:outline-none"
+            className="w-full text-left px-3.5 py-1.5 text-[13px] font-medium text-ink hover:bg-accent/10 hover:text-accent focus:bg-accent/10 focus:text-accent transition-colors focus-ring"
             onClick={() => {
               onAction(action);
               onClose();

@@ -41,18 +41,18 @@ export function RuleEditor() {
         onConfirm={confirmClear}
         onCancel={() => setShowClearConfirm(false)}
       />
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2 mb-3">
         <button
           type="button"
           onClick={addRule}
-          className="px-3 py-1.5 bg-accent text-white rounded-md text-[11px] font-bold uppercase tracking-wider hover:bg-accent/90 transition-colors shadow-sm"
+          className="px-3 py-1 bg-accent text-surface rounded text-[11px] font-bold uppercase tracking-normal transition-colors shadow-sm"
         >
           Add Rule
         </button>
         <button
           type="button"
           onClick={autoGenerate}
-          className="px-3 py-1.5 bg-subtle text-ink rounded-md text-[11px] font-bold uppercase tracking-wider hover:bg-border transition-colors border border-border"
+          className="px-3 py-1 bg-subtle text-ink rounded text-[11px] font-bold uppercase tracking-normal hover:bg-border transition-colors border border-border"
         >
           Auto-Generate
         </button>
@@ -60,26 +60,26 @@ export function RuleEditor() {
           <button
             type="button"
             onClick={clearAll}
-            className="px-3 py-1.5 bg-rust/5 text-rust rounded-md text-[11px] font-bold uppercase tracking-wider hover:bg-rust/10 transition-colors border border-rust/20 ml-auto"
+            className="px-3 py-1 bg-rust/[0.04] text-rust rounded text-[11px] font-bold uppercase tracking-normal hover:bg-rust/[0.08] transition-colors border border-rust/20 ml-auto"
           >
             Clear All
           </button>
         )}
       </div>
 
-      <div className="flex flex-col gap-2 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+      <div className="flex flex-col gap-1.5 max-h-[600px] overflow-y-auto pr-1 custom-scrollbar">
         {rules.length === 0 ? (
-          <div className="p-8 rounded-xl border-2 border-dashed border-border/40 bg-subtle/20 flex flex-col items-center justify-center text-center">
-            <div className="w-12 h-12 rounded-full bg-subtle flex items-center justify-center text-xl mb-3">
+          <div className="p-8 rounded border border-dashed border-border bg-subtle flex flex-col items-center justify-center text-center">
+            <div className="w-10 h-10 rounded bg-surface border border-border flex items-center justify-center text-xl mb-3 shadow-sm">
               📝
             </div>
-            <h4 className="text-sm font-bold text-ink mb-1">No Rules Yet</h4>
+            <h4 className="text-[14px] font-bold text-ink mb-1">No Rules Yet</h4>
             <p className="text-[11px] text-muted max-w-[200px] leading-relaxed mb-4">
               Connect your form fields to the target schema to start transforming data.
             </p>
             <button
                onClick={autoGenerate}
-               className="text-[11px] font-bold text-accent hover:underline uppercase tracking-wider"
+               className="text-[11px] font-bold text-accent hover:underline uppercase tracking-normal"
             >
               Get started with Auto-Mapping
             </button>
@@ -89,7 +89,7 @@ export function RuleEditor() {
             const source = rule.source ?? rule.sourcePath ?? '';
             const target = rule.target ?? rule.targetPath ?? '';
             return (
-              <div key={i} className="animate-in fade-in slide-in-from-bottom-1 duration-300" style={{ animationDelay: `${i * 30}ms` }}>
+              <div key={i}>
                 <RuleCard
                   index={i}
                   source={source}

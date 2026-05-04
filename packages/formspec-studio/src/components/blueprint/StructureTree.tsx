@@ -91,7 +91,7 @@ function TreeNode({
         type="button"
         data-testid={`tree-item-${fullPath}`}
         aria-current={isSelected ? 'true' : undefined}
-        className={`w-full flex items-center gap-1.5 rounded-[8px] px-2 py-1.5 text-left transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 focus-visible:ring-offset-2 focus-visible:ring-offset-surface ${
+        className={`w-full flex items-center gap-1.5 rounded-[8px] px-2 py-1.5 text-left transition-all cursor-pointer focus-ring ${
           isSelected
             ? 'bg-accent/[0.08] text-accent font-medium border-l-2 border-accent'
             : 'text-ink/88 hover:bg-bg-default/45 border-l-2 border-transparent'
@@ -103,7 +103,7 @@ function TreeNode({
         <span className="shrink-0 w-4 flex justify-center">{icon}</span>
         <span className="truncate flex-1">{item.label || item.key}</span>
         {item.type === 'group' && item.children && (
-          <span className="text-[11px] text-muted/80 ml-auto font-mono">
+          <span className="text-[11px] text-muted ml-auto font-mono">
             {item.children.length}
           </span>
         )}
@@ -127,7 +127,7 @@ function AddButton({ onClick, title }: { onClick: () => void; title: string }) {
       type="button"
       title={title}
       onClick={onClick}
-      className="h-5 w-5 flex items-center justify-center rounded-[4px] text-muted/85 hover:text-ink hover:bg-subtle transition-colors cursor-pointer leading-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
+      className="h-5 w-5 flex items-center justify-center rounded-[4px] text-muted hover:text-ink hover:bg-subtle transition-colors cursor-pointer leading-none focus-ring"
     >
       +
     </button>
@@ -326,7 +326,7 @@ export function StructureTree() {
         <section aria-label="Items" className="space-y-3">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <h3 className="font-mono text-[11px] font-bold tracking-[0.15em] uppercase text-muted/85">
+              <h3 className="font-mono text-[11px] font-bold tracking-[0.15em] uppercase text-muted">
                 Items
               </h3>
             </div>

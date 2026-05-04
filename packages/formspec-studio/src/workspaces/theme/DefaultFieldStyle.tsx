@@ -24,8 +24,8 @@ export function DefaultFieldStyle() {
     <div className="space-y-6">
       {/* Label Position */}
       <div className="space-y-3">
-        <h4 className="text-[12px] font-bold text-muted uppercase tracking-wider">Label Position</h4>
-        <div className="flex gap-3">
+        <h4 className="text-[11px] font-bold text-muted uppercase tracking-normal">Label Position</h4>
+        <div className="flex gap-2">
           {POSITIONS.map((pos) => {
             const isActive = currentPosition === pos.id;
             return (
@@ -33,9 +33,9 @@ export function DefaultFieldStyle() {
                 key={pos.id}
                 type="button"
                 onClick={() => setDefault('labelPosition', pos.id)}
-                className={`flex-1 p-3 rounded-lg border-2 transition-all cursor-pointer ${
+                className={`flex-1 p-2 rounded border transition-all cursor-pointer ${
                   isActive
-                    ? 'border-accent bg-accent/5'
+                    ? 'border-accent bg-accent/[0.04]'
                     : 'border-border hover:border-accent/40'
                 }`}
               >
@@ -52,7 +52,7 @@ export function DefaultFieldStyle() {
       <div className="space-y-1">
         <label
           htmlFor="default-widget"
-          className="font-mono text-[10px] text-muted uppercase tracking-wider block"
+          className="font-mono text-[9px] text-muted uppercase tracking-normal block"
         >
           Default Widget
         </label>
@@ -67,7 +67,7 @@ export function DefaultFieldStyle() {
             const v = e.target.value.trim();
             setDefault('widget', v);
           }}
-          className="w-full px-2 py-1 text-[13px] font-mono border border-border rounded-[4px] bg-surface outline-none focus:border-accent transition-colors"
+          className="w-full px-2 py-1 text-[12px] font-mono border border-border rounded bg-surface outline-none focus:border-accent transition-colors"
         />
       </div>
 
@@ -75,7 +75,7 @@ export function DefaultFieldStyle() {
       <div className="space-y-1">
         <label
           htmlFor="default-css-class"
-          className="font-mono text-[10px] text-muted uppercase tracking-wider block"
+          className="font-mono text-[9px] text-muted uppercase tracking-normal block"
         >
           CSS Class
         </label>
@@ -90,7 +90,7 @@ export function DefaultFieldStyle() {
             const v = e.target.value.trim();
             setDefault('cssClass', v);
           }}
-          className="w-full px-2 py-1 text-[13px] font-mono border border-border rounded-[4px] bg-surface outline-none focus:border-accent transition-colors"
+          className="w-full px-2 py-1 text-[12px] font-mono border border-border rounded bg-surface outline-none focus:border-accent transition-colors"
         />
       </div>
     </div>
@@ -102,21 +102,21 @@ function LabelPositionWireframe({ position }: { position: LabelPosition }) {
     case 'top':
       return (
         <div className="space-y-1">
-          <div className="h-2 w-10 bg-muted/30 rounded" />
-          <div className="h-5 w-full bg-subtle border border-border rounded" />
+          <div className="h-1 w-8 bg-muted/20 rounded" />
+          <div className="h-4 w-full bg-subtle border border-border rounded" />
         </div>
       );
     case 'start':
       return (
         <div className="flex items-center gap-2">
-          <div className="h-2 w-8 bg-muted/30 rounded shrink-0" />
-          <div className="h-5 flex-1 bg-subtle border border-border rounded" />
+          <div className="h-1 w-6 bg-muted/20 rounded shrink-0" />
+          <div className="h-4 flex-1 bg-subtle border border-border rounded" />
         </div>
       );
     case 'hidden':
       return (
         <div>
-          <div className="h-5 w-full bg-subtle border border-dashed border-border rounded" />
+          <div className="h-4 w-full bg-subtle border border-dashed border-border rounded" />
         </div>
       );
   }

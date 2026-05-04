@@ -22,7 +22,7 @@ export function PrePopulateCard({ value, onChange, onRemove, itemKey = '' }: Pre
         <button
           type="button"
           onClick={onRemove}
-          className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-error/10 hover:text-error text-muted/40 transition-colors"
+          className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-error/10 hover:text-error text-muted transition-colors"
           title="Remove pre-populate"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">

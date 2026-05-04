@@ -4,6 +4,7 @@ import { createProject, type Project } from '@formspec-org/studio-core';
 import { ProjectProvider } from '../../src/state/ProjectContext';
 import { SelectionProvider } from '../../src/state/useSelection';
 import { Header } from '../../src/components/Header';
+import type { WorkspaceShellTab } from '../../src/studio/workspace-shell-tabs';
 
 function renderHeader(project?: Project) {
   const p = project ?? createProject();
@@ -30,7 +31,7 @@ function renderHeader(project?: Project) {
 describe('Header', () => {
   it('shows formspec version', () => {
     renderHeader();
-    expect(screen.getByText(/1\.0/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /FORMSPEC 1\.0 metadata/i })).toBeInTheDocument();
   });
 
   it('undo button disabled when canUndo is false', () => {
@@ -126,6 +127,46 @@ describe('Header', () => {
     expect(tabs.map(t => t.textContent)).toEqual(['Editor', 'Design', 'Evidence', 'Mapping', 'Preview']);
   });
 
+  it('calls onTabChange with Evidence when the Evidence workspace tab is clicked (workspace tab strip)', async () => {
+    const onTabChange = vi.fn<(tab: WorkspaceShellTab) => void>();
+    render(
+      <ProjectProvider project={createProject()}>
+        <SelectionProvider>
+          <Header
+            activeTab="Editor"
+            onTabChange={onTabChange}
+            onImport={() => {}}
+            onSearch={() => {}}
+          />
+        </SelectionProvider>
+      </ProjectProvider>,
+    );
+    await act(async () => {
+      screen.getByTestId('tab-Evidence').click();
+    });
+    expect(onTabChange).toHaveBeenCalledWith('Evidence');
+  });
+
+  it('calls onTabChange with Mapping when the Mapping workspace tab is clicked (workspace tab strip)', async () => {
+    const onTabChange = vi.fn<(tab: WorkspaceShellTab) => void>();
+    render(
+      <ProjectProvider project={createProject()}>
+        <SelectionProvider>
+          <Header
+            activeTab="Editor"
+            onTabChange={onTabChange}
+            onImport={() => {}}
+            onSearch={() => {}}
+          />
+        </SelectionProvider>
+      </ProjectProvider>,
+    );
+    await act(async () => {
+      screen.getByTestId('tab-Mapping').click();
+    });
+    expect(onTabChange).toHaveBeenCalledWith('Mapping');
+  });
+
   it('does not render legacy Logic or Data tabs', () => {
     renderHeader();
     expect(screen.queryByRole('tab', { name: 'Logic' })).not.toBeInTheDocument();
@@ -149,7 +190,7 @@ describe('Header', () => {
       </ProjectProvider>,
     );
     expect(screen.getByTestId('mode-toggle-chat')).toBeInTheDocument();
-    expect(screen.queryByRole('tab', { name: 'Editor' })).not.toBeInTheDocument();
+    expect(screen.getByTestId('tab-Editor')).toBeInTheDocument();
   });
 
   it('renders Ask AI toggle when onSwitchToAssistant provided (workspace mode)', () => {

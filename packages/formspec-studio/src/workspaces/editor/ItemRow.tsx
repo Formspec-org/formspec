@@ -479,7 +479,7 @@ export function ItemRow({
                 type='button'
                 data-testid={`${testId}-select`}
                 aria-label={`Select ${itemLabel}`}
-                className='block w-full min-w-0 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 rounded-[10px]'
+                className='block w-full min-w-0 text-left focus-ring rounded-[10px]'
                 onClick={onClick}
                 onContextMenu={onContextMenu}
                 onKeyDown={(event) => {

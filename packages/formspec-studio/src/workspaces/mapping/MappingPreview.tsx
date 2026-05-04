@@ -54,17 +54,17 @@ export function MappingPreview() {
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-      <div className="flex items-center gap-2 mb-6 p-1 bg-subtle/40 border border-border/40 rounded-lg w-fit">
+      <div className="flex items-center gap-1 mb-6 p-1 bg-subtle border border-border rounded-md w-fit">
         <button
           onClick={() => setPreviewDirection('forward')}
-          className={`px-3 py-1.5 min-w-[120px] rounded-md text-[11px] font-bold uppercase tracking-wider transition-all ${previewDirection === 'forward' ? 'bg-accent text-white shadow-sm' : 'text-muted hover:text-ink'
+          className={`px-3 py-1.5 min-w-[110px] rounded-md text-[11px] font-bold uppercase tracking-normal transition-all ${previewDirection === 'forward' ? 'bg-accent text-surface shadow-sm' : 'text-muted hover:text-ink'
             }`}
         >
           Forward Preview
         </button>
         <button
           onClick={() => setPreviewDirection('reverse')}
-          className={`px-3 py-1.5 min-w-[120px] rounded-md text-[11px] font-bold uppercase tracking-wider transition-all ${previewDirection === 'reverse' ? 'bg-accent text-white shadow-sm' : 'text-muted hover:text-ink'
+          className={`px-3 py-1.5 min-w-[110px] rounded-md text-[11px] font-bold uppercase tracking-normal transition-all ${previewDirection === 'reverse' ? 'bg-accent text-surface shadow-sm' : 'text-muted hover:text-ink'
             }`}
         >
           Reverse Preview
@@ -74,7 +74,7 @@ export function MappingPreview() {
 
         <button
           onClick={() => setShowRaw(!showRaw)}
-          className={`px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all border border-border/40 ${showRaw ? 'bg-panel text-ink shadow-sm' : 'bg-transparent text-muted hover:text-ink'
+          className={`px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-normal transition-all border border-border ${showRaw ? 'bg-surface text-ink shadow-sm' : 'bg-transparent text-muted hover:text-ink'
             }`}
         >
           {showRaw ? 'Raw Object' : 'Formatted Output'}
@@ -97,12 +97,12 @@ export function MappingPreview() {
                   </span>
                 </div>
                 {previewDirection === 'forward' && (
-                  <button
-                    type="button"
-                    onClick={generateSchemaSample}
-                    className="flex items-center gap-1.5 px-2 py-0.5 rounded border border-border/60 hover:border-accent/40 hover:bg-accent/5 transition-all text-[9px] font-bold uppercase tracking-wider text-muted hover:text-accent group/sync"
-                    title="Populate with sample data derived from form fields"
-                  >
+                <button
+                  type="button"
+                  onClick={generateSchemaSample}
+                  className="flex items-center gap-1.5 px-2 py-0.5 rounded-sm border border-border hover:border-accent/40 hover:bg-accent/5 transition-all text-[9px] font-bold uppercase tracking-normal text-muted hover:text-accent group/sync"
+                  title="Populate with sample data derived from form fields"
+                >
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="group-hover/sync:rotate-180 transition-transform duration-500">
                       <path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16" />
                     </svg>
@@ -115,7 +115,7 @@ export function MappingPreview() {
                   value={sampleInput}
                   onChange={(e) => setSampleInput(e.target.value)}
                   spellCheck={false}
-                  className="absolute inset-0 w-full h-full font-mono text-[12px] leading-relaxed text-ink bg-surface/50 rounded-lg p-3 border border-border/20 transition-all focus:border-accent/40 focus:ring-1 focus:ring-accent/10 resize-none outline-none shadow-inner"
+                  className="absolute inset-0 w-full h-full font-mono text-[11px] leading-normal text-ink bg-surface border border-border rounded-md p-2 transition-all focus:border-accent/40 focus:ring-1 focus:ring-accent/10 resize-none outline-none"
                 />
               </div>
             </div>
@@ -132,7 +132,7 @@ export function MappingPreview() {
                 </span>
               </div>
               <div className="flex-1 relative min-h-0">
-                <div className={`absolute inset-0 overflow-auto font-mono text-[12px] leading-relaxed rounded-lg p-3 border shadow-sm transition-all ${error ? 'bg-red-50/50 border-red-200 text-red-600' : 'bg-surface/50 border-border/20 text-ink'
+                <div className={`absolute inset-0 overflow-auto font-mono text-[11px] leading-normal rounded-md p-2 border shadow-sm transition-all ${error ? 'bg-red-50/50 border-red-200 text-red-600' : 'bg-surface border border-border text-ink'
                   }`}>
                   {error ? (
                     <div className="flex items-start gap-2">
@@ -149,7 +149,7 @@ export function MappingPreview() {
         />
       </div>
 
-      <div className="mt-8 p-4 rounded-xl bg-panel/40 border border-border/30 border-dashed">
+      <div className="mt-8 p-4 rounded-md bg-panel border border-border border-dashed">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-subtle flex items-center justify-center text-[18px]">
             ✨

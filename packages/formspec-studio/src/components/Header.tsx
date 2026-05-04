@@ -16,18 +16,12 @@ import {
 import { AssistantEntryMenu, type AssistantEntryMenuProps } from './AssistantEntryMenu';
 import { ModeToggle } from './ModeToggle';
 import type { StudioMode } from '../studio-app/ModeProvider';
-
-const TABS: { name: string; help: string }[] = [
-  { name: 'Editor', help: 'Build your form structure and manage shared resources' },
-  { name: 'Design', help: 'Visual brand, layout regions, and style controls' },
-  { name: 'Evidence', help: 'Review source documents, citations, missing coverage, and conflicts' },
-  { name: 'Mapping', help: 'Bidirectional data transforms for import/export formats' },
-  { name: 'Preview', help: 'Live form preview, behavior lab, and JSON document view' },
-];
+import type { WorkspaceShellTab } from '../studio/workspace-shell-tabs';
+import { WORKSPACE_HEADER_TAB_CONFIG } from '../studio/workspace-shell-tabs';
 
 interface HeaderProps {
-  activeTab: string;
-  onTabChange: (tab: string) => void;
+  activeTab: WorkspaceShellTab;
+  onTabChange: (tab: WorkspaceShellTab) => void;
   onNew?: () => void;
   onExport?: () => void;
   onImport: () => void;
@@ -124,19 +118,19 @@ export function Header({
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
     event.preventDefault();
 
-    const lastIndex = TABS.length - 1;
+    const lastIndex = WORKSPACE_HEADER_TAB_CONFIG.length - 1;
     let nextIndex = index;
     if (event.key === 'ArrowRight') nextIndex = index === lastIndex ? 0 : index + 1;
     if (event.key === 'ArrowLeft') nextIndex = index === 0 ? lastIndex : index - 1;
     if (event.key === 'Home') nextIndex = 0;
     if (event.key === 'End') nextIndex = lastIndex;
 
-    const nextTab = TABS[nextIndex];
+    const nextTab = WORKSPACE_HEADER_TAB_CONFIG[nextIndex];
     onTabChange(nextTab.name);
     tabRefs.current[nextIndex]?.focus();
   };
 
-  const tabButtons = TABS.map(({ name, help }, index) => (
+  const tabButtons = WORKSPACE_HEADER_TAB_CONFIG.map(({ name, help }, index) => (
     <button
       key={name}
       id={tabId(name)}
@@ -149,35 +143,40 @@ export function Header({
       ref={(node) => {
         tabRefs.current[index] = node;
       }}
-      className={`flex items-center px-4 sm:px-5 h-full text-[14px] transition-all border-b-2 cursor-pointer whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 focus-visible:ring-inset ${
+      className={`relative flex items-center px-4 h-full text-[13px] font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 focus-ring ${
         activeTab === name
-          ? 'border-accent text-ink font-semibold'
-          : 'border-transparent text-muted hover:text-ink hover:bg-subtle/50'
+          ? 'text-ink'
+          : 'text-muted hover:text-ink hover:bg-subtle/50'
       }`}
       onClick={() => onTabChange(name)}
       onKeyDown={(event) => handleTabKeyDown(event, index)}
     >
       {name}
+      {activeTab === name && (
+        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent" />
+      )}
     </button>
   ));
 
   const profileMenu = (
-    <div ref={menuRef} className="relative ml-0.5 sm:ml-1">
+    <div ref={menuRef} className="relative ml-1 sm:ml-2">
       <button
         type="button"
         aria-label="Open account menu"
         aria-expanded={menuOpen}
-        className={`w-7 h-7 rounded-full bg-[#E2D9CF] border-2 shrink-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
-          menuOpen ? 'border-accent' : 'border-border hover:border-muted/40'
+        className={`w-8 h-8 rounded border shrink-0 focus-ring ${
+          menuOpen ? 'border-accent bg-surface' : 'border-border bg-subtle'
         }`}
         onClick={() => setMenuOpen(!menuOpen)}
       />
       {menuOpen && (
-        <div className="absolute right-0 top-full mt-1 w-56 bg-surface border border-border rounded-[6px] shadow-lg py-1 z-50" role="menu" aria-label="Account actions">
+        <>
+        <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
+        <div className="right-0 top-full mt-2 w-64 dropdown-panel" role="menu">
           <button
             type="button"
             role="menuitem"
-            className="w-full text-left px-3 py-2 text-[13px] hover:bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 focus-visible:ring-inset"
+            className="w-full text-left px-4 py-2 text-[13px] font-bold rounded hover:bg-accent/10 hover:text-accent focus-ring"
             onClick={() => { setMenuOpen(false); onNew?.(); }}
           >
             New Form
@@ -186,7 +185,7 @@ export function Header({
             type="button"
             role="menuitem"
             data-testid="import-btn"
-            className="w-full text-left px-3 py-2 text-[13px] hover:bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 focus-visible:ring-inset"
+            className="w-full text-left px-4 py-2 text-[13px] font-medium rounded hover:bg-accent/10 hover:text-accent focus-ring"
             onClick={() => { setMenuOpen(false); onImport(); }}
           >
             Import
@@ -195,17 +194,17 @@ export function Header({
             <button
               type="button"
               role="menuitem"
-              className="w-full text-left px-3 py-2 text-[13px] hover:bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 focus-visible:ring-inset"
+              className="w-full text-left px-4 py-2 text-[13px] font-medium rounded hover:bg-accent/10 hover:text-accent focus-ring"
               onClick={() => { setMenuOpen(false); onExport(); }}
             >
               Export
             </button>
           )}
-          <div className="border-t border-border my-1" role="separator" />
+          <div className="border-t border-border/40 my-1" role="separator" />
           <button
             type="button"
             role="menuitem"
-            className="w-full text-left px-3 py-2 text-[13px] hover:bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 focus-visible:ring-inset"
+            className="w-full text-left px-4 py-2 text-[13px] font-medium rounded hover:bg-accent/10 hover:text-accent focus-ring"
             onClick={() => { setMenuOpen(false); onOpenMetadata?.(); }}
           >
             Form Settings
@@ -213,40 +212,39 @@ export function Header({
           <button
             type="button"
             role="menuitem"
-            className="w-full text-left px-3 py-2 text-[13px] hover:bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 focus-visible:ring-inset"
+            className="w-full text-left px-4 py-2 text-[13px] font-bold rounded hover:bg-accent/10 hover:text-accent focus-ring"
             onClick={() => { setMenuOpen(false); onToggleAccountMenu?.(); }}
           >
             App Settings
           </button>
         </div>
+        </>
       )}
     </div>
   );
 
   const actionButtons = (
     <div
-      className="flex min-w-0 shrink-0 items-center gap-1.5 sm:gap-2"
+      className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-3"
     >
       {/* Search — icon-only on compact, full bar on wide */}
       {isCompact ? (
         <button
           onClick={onSearch}
           aria-label="Search"
-          className="rounded-full border border-border/65 bg-surface/70 p-2 text-muted hover:bg-surface hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+          className="rounded border border-border bg-surface p-1.5 text-muted hover:text-ink focus-ring"
           title="Search (⌘K)"
         >
-          <IconSearch />
+          <IconSearch size={14} />
         </button>
       ) : (
         <button
           onClick={onSearch}
-          className="group flex max-w-[220px] items-center gap-2 rounded-full border border-border/55 bg-subtle/40 px-4 py-2 text-muted hover:border-border/80 hover:bg-subtle/60 hover:text-ink transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+          className="flex items-center gap-2 rounded border border-border bg-subtle px-2 py-1 text-muted hover:border-accent/40 hover:text-ink focus-ring"
         >
           <IconSearch size={14} />
-          <span className="text-[14px] font-ui">Search…</span>
-          <span className="ml-auto rounded-md border border-border/50 px-1.5 py-0.5 font-mono text-[11px] text-muted group-hover:text-ink/80 transition-colors">
-            ⌘K
-          </span>
+          <span className="text-[12px] font-medium">Search</span>
+          <span className="ml-2 rounded border border-border px-1 font-mono text-[9px] text-muted">⌘K</span>
         </button>
       )}
 
@@ -254,33 +252,33 @@ export function Header({
         <button
           type="button"
           aria-label={`FORMSPEC ${definition.$formspec} metadata`}
-          className="rounded-full border border-border/60 bg-subtle/30 px-4 py-2 text-[13px] font-medium text-ink hover:bg-subtle/60 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+          className="rounded border border-border bg-subtle px-2 py-1 text-[11px] font-medium text-ink hover:border-accent/40 focus-ring"
           onClick={() => onOpenMetadata?.()}
         >
           Metadata
         </button>
       )}
       
-      <div className="flex items-center gap-0.5 rounded-full border border-border/60 bg-subtle/30 p-0.5">
+      <div className="flex items-center gap-0.5 rounded border border-border bg-subtle p-0.5">
         <button
           data-testid="undo-btn"
           aria-label="Undo"
           disabled={!project.canUndo}
-          className="rounded-full p-2 text-muted hover:bg-surface hover:text-ink disabled:opacity-20 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+          className="rounded p-1 text-muted hover:text-ink disabled:opacity-30 focus-ring"
           onClick={() => project.undo()}
           title="Undo (⌘Z)"
         >
-          <IconUndo size={16} />
+          <IconUndo size={14} />
         </button>
         <button
           data-testid="redo-btn"
           aria-label="Redo"
           disabled={!project.canRedo}
-          className="rounded-full p-2 text-muted hover:bg-surface hover:text-ink disabled:opacity-20 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+          className="rounded p-1 text-muted hover:text-ink disabled:opacity-30 focus-ring"
           onClick={() => project.redo()}
           title="Redo (⌘⇧Z)"
         >
-          <IconRedo size={16} />
+          <IconRedo size={14} />
         </button>
       </div>
 
@@ -290,11 +288,8 @@ export function Header({
         <button
           type="button"
           data-testid="toggle-to-assistant"
-          className={`shrink-0 rounded-full border border-accent/25 bg-accent/10 font-semibold text-accent hover:bg-accent/15 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 ${
-            isCompact ? 'p-2' : 'px-3 py-1.5 text-[12px]'
-          }`}
-          onClick={onSwitchToAssistant}
-          aria-label="Switch to AI authoring"
+          onClick={() => onSwitchToAssistant()}
+          className="shrink-0 rounded-sm bg-accent px-3 py-1 text-[9px] font-bold uppercase text-surface hover:bg-accent/90 shadow-sm"
         >
           Ask AI
         </button>
@@ -304,8 +299,8 @@ export function Header({
         <button
           type="button"
           aria-label={`Switch to ${nextTheme(colorScheme.theme)} theme`}
-          title={`Theme: ${colorScheme.theme} (click to switch to ${nextTheme(colorScheme.theme)})`}
-          className="rounded-full border border-transparent p-2 text-muted hover:border-border/60 hover:bg-surface/75 hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+          title={`Theme: ${colorScheme.theme}`}
+          className="rounded border border-transparent p-1.5 text-muted hover:border-border hover:text-ink focus-ring"
           onClick={() => colorScheme.setTheme(nextTheme(colorScheme.theme))}
         >
           <ThemeToggleIcon theme={colorScheme.theme} resolved={colorScheme.resolvedTheme} />
@@ -321,30 +316,30 @@ export function Header({
     return (
       <div data-testid="header" className="shrink-0 border-b border-border bg-surface">
         {/* Row 1: Logo + Title + Actions */}
-        <div className="flex min-h-[56px] items-center gap-3 px-3">
+        <div className="flex min-h-[44px] items-center gap-3 px-3">
           {onToggleMenu && (
             <button
               type="button"
               aria-label="Toggle blueprint menu"
-              className="rounded-full border border-border/60 bg-surface/75 p-2 -ml-1.5 hover:bg-surface transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+              className="rounded border border-border bg-surface p-1.5 -ml-1 hover:bg-subtle focus-ring"
               onClick={onToggleMenu}
             >
-              <IconMenu />
+              <IconMenu size={14} />
             </button>
           )}
           <button
             type="button"
             aria-label="The Stack home"
-            className="flex items-center gap-2.5 shrink-0 text-left"
+            className="flex items-center gap-2 shrink-0 text-left"
             onClick={() => { onTabChange('Editor'); onHome?.(); }}
           >
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-accent text-surface" aria-hidden="true">
-              <IconStack size={11} className="text-surface" />
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-accent text-surface" aria-hidden="true">
+              <IconStack size={12} className="text-surface" />
             </div>
-            <div>
-              <div className="font-display text-[22px] tracking-[-0.04em] leading-none whitespace-nowrap text-ink">The Stack</div>
-            <div className="font-ui text-[11px] text-muted/80 tracking-wider uppercase whitespace-nowrap">
-                <>{formTitle} · FORMSPEC {definition.$formspec} · {definition.status || 'DRAFT'}</>
+            <div className="flex flex-col">
+              <div className="text-[13px] font-bold tracking-tight text-ink">The Stack</div>
+              <div className="text-[9px] font-bold text-muted uppercase">
+                <>{formTitle.length > 20 ? formTitle.slice(0, 17) + '...' : formTitle} · {definition.status || 'DRAFT'}</>
               </div>
             </div>
           </button>
@@ -352,13 +347,16 @@ export function Header({
           {actionButtons}
         </div>
 
-        {/* Row 2: Mode toggle or workspace tabs */}
+        {/* Row 2: Mode toggle + workspace tabs (advanced workspaces stay reachable). */}
         {mode && onModeChange ? (
-          <div className="flex h-[42px] items-center justify-center border-t border-border/40 px-3">
+          <div className="flex h-[36px] min-w-0 items-center gap-2 border-t border-border px-2">
             <ModeToggle mode={mode} onModeChange={onModeChange} compact />
+            <nav className="flex min-h-0 min-w-0 flex-1 items-center gap-0.5 overflow-x-auto scrollbar-none" role="tablist" aria-label="Studio workspaces">
+              {tabButtons}
+            </nav>
           </div>
         ) : (
-          <nav className="flex h-[42px] overflow-x-auto scrollbar-none border-t border-border/40 px-3" role="tablist" aria-label="Studio workspaces">
+          <nav className="flex h-[36px] overflow-x-auto scrollbar-none border-t border-border px-3" role="tablist" aria-label="Studio workspaces">
             {tabButtons}
           </nav>
         )}
@@ -370,33 +368,38 @@ export function Header({
   return (
     <header
       data-testid="header"
-      className="glass sticky top-0 z-40 flex min-h-[72px] shrink-0 items-center gap-5 px-6 py-3 transition-all duration-300 shadow-premium"
+      className="sticky top-0 z-40 flex min-h-[48px] shrink-0 items-center gap-6 px-4 bg-surface border-b border-border"
     >
       {/* Left: App Mark + Title */}
       <button
         type="button"
         aria-label="The Stack home"
-        className="group flex items-center gap-3.5 mr-6 shrink-0 text-left focus-visible:outline-none"
+        className="group flex items-center gap-3 mr-4 shrink-0 text-left focus-ring"
         onClick={() => { onTabChange('Editor'); onHome?.(); }}
       >
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-accent text-surface shadow-md group-hover:scale-105 group-hover:rotate-3 transition-all duration-300" aria-hidden="true">
-          <IconStack size={18} className="text-surface" />
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-accent text-surface shadow-sm group-hover:bg-accent/90" aria-hidden="true">
+          <IconStack size={12} className="text-surface" />
         </div>
-        <div className="space-y-0.5">
-          <div className="font-display text-[32px] tracking-[-0.06em] leading-none text-ink group-hover:text-accent transition-colors duration-300">The Stack</div>
-          <div className="font-ui text-[10px] font-medium text-muted/70 tracking-[0.1em] uppercase">
+        <div className="flex flex-col">
+          <div className="text-[15px] font-bold tracking-tight text-ink group-hover:text-accent">The Stack</div>
+          <div className="text-[9px] font-bold text-muted uppercase">
             <>{formTitle} · {definition.status || 'DRAFT'}</>
           </div>
         </div>
       </button>
 
-      {/* Mode toggle or workspace tabs */}
+      {/* Mode toggle + workspace tabs — Evidence/Mapping stay in the header beside primary modes. */}
       {mode && onModeChange ? (
-        <div className="flex h-12 items-center">
-          <ModeToggle mode={mode} onModeChange={onModeChange} />
+        <div className="flex min-h-10 min-w-0 max-w-[min(100%,52rem)] flex-1 items-end gap-3 self-stretch">
+          <div className="shrink-0">
+            <ModeToggle mode={mode} onModeChange={onModeChange} />
+          </div>
+          <nav className="flex min-h-0 min-w-0 flex-1 items-end gap-1 overflow-x-auto scrollbar-none" role="tablist" aria-label="Studio workspaces">
+            {tabButtons}
+          </nav>
         </div>
       ) : (
-        <nav className="flex h-12 items-end self-stretch" role="tablist" aria-label="Studio workspaces">
+        <nav className="flex h-10 items-end self-stretch gap-1" role="tablist" aria-label="Studio workspaces">
           {tabButtons}
         </nav>
       )}

@@ -265,7 +265,7 @@ export function ScreenerTestRouting() {
         )}
 
         {!hasAnyAnswer && (
-          <div className="text-[11px] text-muted/60 italic border-t border-border pt-3">
+          <div className="text-[11px] text-muted italic border-t border-border pt-3">
             Fill in answers above to see routing results.
           </div>
         )}

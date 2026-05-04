@@ -4,6 +4,7 @@ import { normalizeBindEntries, flatItems } from '@formspec-org/studio-core';
 import { useDefinition } from '../state/useDefinition';
 import { useSelection } from '../state/useSelection';
 import type { FormShape, FormVariable } from '@formspec-org/types';
+import { dispatchStudioEvent, STUDIO_EVENTS } from '../studio-events';
 
 interface CommandPaletteProps {
   open: boolean;
@@ -115,7 +116,7 @@ export function CommandPalette({ open, onClose, surface = 'studio' }: CommandPal
         subtitle: 'Switch to the structural editor',
         keywords: ['go', 'mode', 'edit', 'editor', 'structure'],
         onSelect: () => {
-          window.dispatchEvent(new CustomEvent('formspec:set-mode', { detail: { mode: 'edit' } }));
+          dispatchStudioEvent(STUDIO_EVENTS.SET_MODE, { mode: 'edit' });
           onClose();
         },
         actionable: true,
@@ -127,7 +128,7 @@ export function CommandPalette({ open, onClose, surface = 'studio' }: CommandPal
         subtitle: 'Switch to visual styling and brand colors',
         keywords: ['go', 'mode', 'design', 'theme', 'style', 'colors', 'layout'],
         onSelect: () => {
-          window.dispatchEvent(new CustomEvent('formspec:set-mode', { detail: { mode: 'design' } }));
+          dispatchStudioEvent(STUDIO_EVENTS.SET_MODE, { mode: 'design' });
           onClose();
         },
         actionable: true,
@@ -139,7 +140,7 @@ export function CommandPalette({ open, onClose, surface = 'studio' }: CommandPal
         subtitle: 'Test the form interactively',
         keywords: ['go', 'mode', 'preview', 'test', 'run'],
         onSelect: () => {
-          window.dispatchEvent(new CustomEvent('formspec:set-mode', { detail: { mode: 'preview' } }));
+          dispatchStudioEvent(STUDIO_EVENTS.SET_MODE, { mode: 'preview' });
           onClose();
         },
         actionable: true,
@@ -151,8 +152,8 @@ export function CommandPalette({ open, onClose, surface = 'studio' }: CommandPal
         subtitle: 'Configure import/export mapping rules',
         keywords: ['go', 'workspace', 'mapping', 'import', 'export', 'rules'],
         onSelect: () => {
-          window.dispatchEvent(new CustomEvent('formspec:set-mode', { detail: { mode: 'edit' } }));
-          window.dispatchEvent(new CustomEvent('formspec:navigate-workspace', { detail: { tab: 'Mapping' } }));
+          dispatchStudioEvent(STUDIO_EVENTS.SET_MODE, { mode: 'edit' });
+          dispatchStudioEvent(STUDIO_EVENTS.NAVIGATE_WORKSPACE, { tab: 'Mapping' });
           onClose();
         },
         actionable: true,
@@ -164,8 +165,8 @@ export function CommandPalette({ open, onClose, surface = 'studio' }: CommandPal
         subtitle: 'Configure attachments and evidence collection',
         keywords: ['go', 'workspace', 'evidence', 'attachments'],
         onSelect: () => {
-          window.dispatchEvent(new CustomEvent('formspec:set-mode', { detail: { mode: 'edit' } }));
-          window.dispatchEvent(new CustomEvent('formspec:navigate-workspace', { detail: { tab: 'Evidence' } }));
+          dispatchStudioEvent(STUDIO_EVENTS.SET_MODE, { mode: 'edit' });
+          dispatchStudioEvent(STUDIO_EVENTS.NAVIGATE_WORKSPACE, { tab: 'Evidence' });
           onClose();
         },
         actionable: true,
@@ -177,7 +178,7 @@ export function CommandPalette({ open, onClose, surface = 'studio' }: CommandPal
         subtitle: 'Edit form metadata and behavior',
         keywords: ['go', 'settings', 'metadata', 'behavior', 'config'],
         onSelect: () => {
-          window.dispatchEvent(new CustomEvent('formspec:open-settings'));
+          dispatchStudioEvent(STUDIO_EVENTS.OPEN_SETTINGS);
           onClose();
         },
         actionable: true,
@@ -250,7 +251,7 @@ export function CommandPalette({ open, onClose, surface = 'studio' }: CommandPal
             aria-expanded="true"
             aria-controls={listboxId}
             aria-activedescendant={activeId}
-            className="w-full px-3 py-2.5 text-[13.5px] bg-bg-default border border-border rounded-[4px] focus-visible:outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/30 transition-[border-color,box-shadow] font-ui"
+            className="w-full px-3 py-2.5 text-[13.5px] bg-bg-default border border-border rounded-[4px] focus-visible:border-accent focus-ring transition-[border-color,box-shadow] font-ui"
             value={search}
             onInput={(e) => {
               setSearch((e.target as HTMLInputElement).value);

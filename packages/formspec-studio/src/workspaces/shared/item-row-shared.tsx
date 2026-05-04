@@ -22,15 +22,21 @@ export interface MissingAction {
 
 /** Dashed outline for "add" actions in the expanded editor (field-detail launchers, behavior, options). */
 export const EDITOR_DASH_BUTTON =
-  'inline-flex items-center rounded-full border border-dashed border-accent/50 px-2.5 py-1 text-[12px] font-medium text-accent transition-colors hover:border-accent/70 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35';
+  'inline-flex items-center rounded-full border border-dashed border-accent/50 px-2.5 py-1 text-[12px] font-medium text-accent transition-colors hover:border-accent/70 hover:text-ink focus-ring';
 
 export const summaryInputClassName = 'mt-1 w-full rounded-[6px] border border-border/70 bg-bg-default/80 px-2.5 py-2 text-[14px] leading-5 text-ink outline-none transition-shadow focus:border-accent focus:ring-2 focus:ring-accent/30 shadow-[0_1px_2px_rgba(0,0,0,0.03)]';
 
-export const lowerEditorInputClassName = 'mt-1 w-full appearance-none border-0 border-b border-border/75 bg-transparent px-0 pb-2 pt-2 text-[14px] text-ink outline-none transition-colors placeholder:text-muted [color-scheme:light] focus:border-accent focus-visible:ring-0 dark:[color-scheme:dark]';
+export const lowerEditorInputClassName = 'mt-1 w-full appearance-none border-0 border-b border-border/75 bg-transparent px-0 pb-2 pt-2 text-[14px] text-ink outline-none transition-colors placeholder:text-muted [color-scheme:light] focus:border-accent focus-ring dark:[color-scheme:dark]';
+
+export const groupInlineInputClassName = 'mt-1 w-full rounded-[6px] border border-border/80 bg-surface px-2.5 py-2 text-[14px] text-ink outline-none focus:border-accent focus-ring';
+
+export const sectionHeadingClassName = 'text-[13px] font-semibold tracking-[0.04em] text-ink/84';
+
+export const formLabelClassName = 'text-[13px] font-semibold tracking-[0.01em] text-ink/95';
 
 export function PreFillSourceHint() {
   return (
-    <p className="mt-1 text-[11px] leading-snug text-ink/50">
+    <p className="mt-1 text-[11px] leading-snug text-muted">
       <span className="font-mono text-ink/65">$</span> = form fields; <span className="font-mono text-ink/65">@</span> = context (e.g.{' '}
       <span className="font-mono text-ink/65">@instance(&apos;name&apos;).field</span>). Shorthand:{' '}
       <span className="font-mono text-ink/65">@name.field</span> — leading <span className="font-mono text-ink/65">$</span> is fine too.
@@ -43,7 +49,7 @@ export function EditMark({ testId }: { testId?: string }) {
     <span
       aria-hidden="true"
       data-testid={testId}
-      className="ml-1 inline-flex shrink-0 items-center justify-center text-ink/30 transition-colors group-hover:text-accent/55"
+      className="ml-1 inline-flex shrink-0 items-center justify-center text-muted transition-colors group-hover:text-accent/55"
     >
       <svg
         width="10"

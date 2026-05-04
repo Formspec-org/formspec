@@ -80,7 +80,7 @@ export function PhaseList() {
               value={newId}
               onChange={(e) => setNewId(e.target.value)}
               onKeyDown={handleAddKeyDown}
-              className="flex-1 bg-transparent border-none outline-none text-sm text-ink placeholder:text-muted/40"
+              className="flex-1 bg-transparent border-none outline-none text-sm text-ink placeholder:text-muted"
             />
           </div>
         </InlineCreateForm>

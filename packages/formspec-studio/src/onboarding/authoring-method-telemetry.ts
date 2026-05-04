@@ -1,5 +1,6 @@
 /** @filedesc Capability-level telemetry for AI/manual authoring method parity tracking. */
 import type { AuthoringFallbackReason } from './authoring-fallback-reasons.js';
+import { dispatchStudioEvent, STUDIO_EVENTS } from '../studio-events';
 
 export type AuthoringMethod = 'ai_only' | 'manual_only' | 'mixed';
 
@@ -32,11 +33,9 @@ export function emitAuthoringTelemetry(
   detail: Omit<AuthoringTelemetryDetail, 'schemaVersion'>,
 ): void {
   if (typeof window === 'undefined') return;
-  window.dispatchEvent(new CustomEvent('formspec:authoring-telemetry', {
-    detail: {
-      schemaVersion: 1,
-      ...detail,
-    } satisfies AuthoringTelemetryDetail,
-  }));
+  dispatchStudioEvent(STUDIO_EVENTS.AUTHORING_TELEMETRY, {
+    schemaVersion: 1,
+    ...detail,
+  } satisfies AuthoringTelemetryDetail);
 }
 

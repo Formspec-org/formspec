@@ -41,17 +41,17 @@ export function MappingTab({
 
   return (
     <WorkspacePage 
-      maxWidth={(activeTab === 'all' || activeTab === 'preview') ? "max-w-[1000px]" : "max-w-[660px]"}
-      className="overflow-y-auto min-h-[800px]"
+      maxWidth={(activeTab === 'all' || activeTab === 'preview') ? "max-w-[1020px]" : "max-w-[720px]"}
+      className="overflow-y-auto"
     >
       <WorkspacePageSection
-        padding="px-7"
-        className="pointer-events-none sticky top-0 z-20 border-b border-border/40 bg-bg-default/80 pb-2 pt-4 backdrop-blur-md"
+        padding="px-6"
+        className="pointer-events-none sticky top-0 z-20 border-b border-border bg-surface pb-1.5 pt-3 shadow-sm transition-all duration-200"
       >
         {/* Let clicks reach mapping controls below the sticky chrome (e.g. direction picker). */}
         <div className="pointer-events-auto">
-          <div className="mb-3 flex items-center">
-            <span className="mr-2 shrink-0 font-mono text-[10px] uppercase tracking-widest text-muted">Mapping</span>
+          <div className="mb-2 flex items-center">
+            <span className="mr-2 shrink-0 font-bold text-[9px] uppercase tracking-normal text-muted">Mapping</span>
             <MappingSelector />
           </div>
           <SectionFilterBar
@@ -64,7 +64,7 @@ export function MappingTab({
         </div>
       </WorkspacePageSection>
 
-      <WorkspacePageSection padding="px-7" className="flex-1 py-10 min-h-0">
+      <WorkspacePageSection padding="px-6" className="flex-1 py-8 min-h-0">
         <Pillar
           data-testid="mapping-pillar-config"
           title="Mapping Blueprint"

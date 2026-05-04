@@ -47,36 +47,36 @@ export function MappingConfig({ open: controlledOpen, onOpenChange }: MappingCon
   };
 
   return (
-    <div className="mb-4">
+    <div className="mb-8">
       <button
         type="button"
         className="w-full flex items-center justify-between py-1.5 cursor-pointer group"
         onClick={toggleOpen}
       >
-        <span className="font-mono text-[10px] font-bold tracking-[0.15em] uppercase text-muted group-hover:text-ink transition-colors">
+        <span className="text-[10px] font-bold tracking-normal uppercase text-muted group-hover:text-ink transition-colors">
           Configuration
         </span>
-        <span className={`text-[10px] text-muted transition-transform duration-150 ${open ? 'rotate-90' : ''}`}>
-          ▶
+        <span className={`text-[12px] text-muted transition-transform duration-300 ${open ? 'rotate-90' : ''}`}>
+          ▸
         </span>
       </button>
       {open && (
-        <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
+        <div className="space-y-1.5 mt-1">
           {/* Mapping Direction Row */}
-          <div className="flex items-center justify-between py-1 px-2 rounded-md hover:bg-subtle/30 transition-colors">
+          <div className="flex items-center justify-between py-1 px-2 rounded hover:bg-subtle transition-all">
             <div className="flex items-center gap-2">
-              <span className="text-[12px] font-medium text-muted">Direction</span>
+              <span className="text-[12px] font-bold text-muted">Direction</span>
               <HelpTip text="The flow of transformation. 'Forward' for exports (Form -> External), 'Reverse' for imports (External -> Form).">
-                <span className="text-[10px] text-muted/50 cursor-help hover:text-accent transition-colors">ⓘ</span>
+                <span className="text-[11px] text-muted cursor-help hover:text-accent transition-colors">ⓘ</span>
               </HelpTip>
             </div>
             <div className="relative z-30 isolate">
               <button
                 type="button"
                 data-testid="direction-picker"
-                className={`inline-flex items-center rounded-sm border font-ui text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 ${direction === 'unset'
-                  ? 'bg-panel text-muted border-border'
-                  : 'bg-accent/10 text-accent border-accent/20'
+                className={`inline-flex items-center rounded border font-bold text-[9px] uppercase tracking-normal px-2 py-1 transition-all ${direction === 'unset'
+                  ? 'bg-surface text-muted border-border shadow-sm'
+                  : 'bg-accent/[0.04] text-accent border-accent/20'
                   }`}
                 aria-haspopup="listbox"
                 aria-expanded={pickerOpen}
@@ -92,14 +92,14 @@ export function MappingConfig({ open: controlledOpen, onOpenChange }: MappingCon
                 <div
                   id={listboxId}
                   role="listbox"
-                  className="absolute right-0 top-full z-50 mt-1 min-w-32 rounded-md border border-border bg-panel p-1 shadow-lg"
+                  className="right-0 top-full mt-1 min-w-[130px] p-0.5 shadow-md dropdown-panel"
                 >
                   {directions.map((value) => (
                     <button
                       key={value}
                       type="button"
                       aria-selected={value === direction}
-                      className={`flex w-full rounded px-2 py-1 text-left text-[11px] font-bold uppercase ${value === direction ? 'bg-accent/10 text-accent' : 'text-ink hover:bg-subtle'
+                      className={`flex w-full rounded px-2 py-1.5 text-left text-[11px] font-bold uppercase tracking-normal transition-all ${value === direction ? 'bg-accent text-surface shadow-sm' : 'text-ink hover:bg-subtle hover:text-accent'
                         }`}
                       onClick={() => setDirection(value)}
                     >
@@ -112,11 +112,11 @@ export function MappingConfig({ open: controlledOpen, onOpenChange }: MappingCon
           </div>
 
           {/* Mapping Version Row */}
-          <div className="flex items-center justify-between py-1 px-2 rounded-md hover:bg-subtle/30 transition-colors">
+          <div className="flex items-center justify-between py-1 px-2 rounded hover:bg-subtle transition-all">
             <div className="flex items-center gap-2">
-              <span className="text-[12px] font-medium text-muted">Version</span>
+              <span className="text-[12px] font-bold text-muted">Version</span>
               <HelpTip text="Author-defined SemVer for this mapping document. Bump when making breaking changes.">
-                <span className="text-[10px] text-muted/50 cursor-help hover:text-accent transition-colors">ⓘ</span>
+                <span className="text-[11px] text-muted cursor-help hover:text-accent transition-colors">ⓘ</span>
               </HelpTip>
             </div>
             <div className="shrink-0">
@@ -133,33 +133,33 @@ export function MappingConfig({ open: controlledOpen, onOpenChange }: MappingCon
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
                 }}
-                className="font-mono text-[11px] text-ink text-right bg-subtle/40 border border-border/40 rounded px-1.5 py-0.5 w-20 focus:outline-none focus:border-accent/30 focus:ring-1 focus:ring-accent/10 placeholder:text-muted/30"
+                className="font-mono text-[11px] font-bold text-ink text-right bg-subtle border border-border rounded px-2 py-1 w-20 outline-none focus:ring-1 focus:ring-accent transition-all placeholder:text-muted"
               />
             </div>
           </div>
 
           {/* Definition Ref Row */}
           {mapping?.definitionRef && (
-            <div className="flex items-center justify-between py-1 px-2 rounded-md hover:bg-subtle/30 transition-colors">
+            <div className="flex items-center justify-between py-1 px-2 rounded hover:bg-subtle transition-all">
               <div className="flex items-center gap-2">
-                <span className="text-[12px] font-medium text-muted">Definition</span>
+                <span className="text-[12px] font-bold text-muted">Definition</span>
                 <HelpTip text="The Formspec definition this mapping transforms.">
-                  <span className="text-[10px] text-muted/50 cursor-help hover:text-accent transition-colors">ⓘ</span>
+                  <span className="text-[11px] text-muted cursor-help hover:text-accent transition-colors">ⓘ</span>
                 </HelpTip>
               </div>
-              <span className="font-mono text-[11px] text-ink truncate max-w-[120px]" title={mapping.definitionRef}>
+              <span className="font-mono text-[11px] font-bold text-ink/70 truncate max-w-[160px]" title={mapping.definitionRef}>
                 {mapping.definitionRef}
               </span>
             </div>
           )}
 
           {/* Target Schema & Format Section */}
-          <div className="mt-4 pt-3 border-t border-border/40">
-            <div className="px-2 mb-2">
-              <div className="flex items-center gap-2 mb-1.5">
-                <span className="text-[12px] font-medium text-muted">Target Schema</span>
+          <div className="mt-4 pt-4 border-t border-border">
+            <div className="px-2 mb-3">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-[11px] font-bold text-muted">Target Schema</span>
                 <HelpTip text="The external JSON Schema URL used to validate the output and provide structural hints.">
-                  <span className="text-[10px] text-muted/50 cursor-help hover:text-accent transition-colors">ⓘ</span>
+                  <span className="text-[11px] text-muted cursor-help hover:text-accent transition-colors">ⓘ</span>
                 </HelpTip>
               </div>
               <input
@@ -173,13 +173,13 @@ export function MappingConfig({ open: controlledOpen, onOpenChange }: MappingCon
                     (e.target as HTMLInputElement).blur();
                   }
                 }}
-                className="w-full font-mono text-[10px] bg-subtle/40 border border-border/40 rounded px-2 py-1.5 text-ink placeholder:text-muted/30 focus:outline-none focus:border-accent/30 focus:ring-1 focus:ring-accent/10 transition-all"
+                className="w-full font-mono text-[11px] font-bold bg-subtle border border-border rounded px-2 py-1.5 text-ink placeholder:text-muted outline-none focus:ring-1 focus:ring-accent transition-all"
               />
             </div>
             {mapping?.targetSchema?.format && (
-              <div className="flex items-center justify-between px-2 mt-2">
-                <span className="text-muted/60 italic text-[10px]">Output Format</span>
-                <span className="font-bold text-[10px] text-green uppercase tracking-widest bg-green/10 px-1.5 py-0.5 rounded-sm border border-green/20">
+              <div className="flex items-center justify-between px-2 mt-3">
+                <span className="text-muted text-[10px] font-bold uppercase tracking-normal">Output Format</span>
+                <span className="text-[10px] font-bold text-teal uppercase tracking-normal bg-teal/[0.04] px-2 py-0.5 rounded border border-teal/20 shadow-sm">
                   {mapping?.targetSchema?.format}
                 </span>
               </div>

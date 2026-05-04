@@ -1,8 +1,14 @@
 /** @filedesc Studio mode context — four-mode taxonomy replacing studioView toggle. */
 import { createContext, useContext, useState, useCallback, useMemo, useEffect, type ReactNode } from 'react';
+import {
+  dispatchStudioEvent,
+  addStudioEventListener,
+  STUDIO_EVENTS,
+  type StudioModeLiteral,
+} from '../studio-events';
 
 /** Closed taxonomy: the four primary authoring modes. */
-export type StudioMode = 'chat' | 'edit' | 'design' | 'preview';
+export type StudioMode = StudioModeLiteral;
 
 export interface ModeContextValue {
   mode: StudioMode;
@@ -57,25 +63,21 @@ export function ModeProvider({ children, defaultMode = 'chat' }: ModeProviderPro
       persistMode(next);
 
       // Emit event for telemetry adapter and other listeners
-      window.dispatchEvent(new CustomEvent('formspec:mode-changed', {
-        detail: { from: current, to: next },
-      }));
+      dispatchStudioEvent(STUDIO_EVENTS.MODE_CHANGED, {
+        from: current, to: next,
+      });
 
       return next;
     });
   }, []);
 
   useEffect(() => {
-    const handleSetMode = (e: Event) => {
-      if ('detail' in e && typeof (e as any).detail?.mode === 'string') {
-        const next = (e as any).detail.mode as StudioMode;
-        if (VALID_MODES.has(next)) {
-          setMode(next);
-        }
+    return addStudioEventListener(STUDIO_EVENTS.SET_MODE, (e) => {
+      const next = e.detail.mode;
+      if (VALID_MODES.has(next)) {
+        setMode(next);
       }
-    };
-    window.addEventListener('formspec:set-mode', handleSetMode);
-    return () => window.removeEventListener('formspec:set-mode', handleSetMode);
+    });
   }, [setMode]);
 
   const value = useMemo<ModeContextValue>(() => ({

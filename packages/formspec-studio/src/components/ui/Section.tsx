@@ -23,7 +23,7 @@ export function Section({ title, children, defaultOpen = true }: SectionProps) {
         className="group flex w-full items-center justify-between gap-4 py-1 cursor-pointer text-left"
         onClick={() => setOpen(!open)}
       >
-        <span className="text-[12px] font-semibold tracking-[0.08em] uppercase text-muted/90 group-hover:text-ink transition-colors">
+        <span className="text-[12px] font-semibold tracking-[0.08em] uppercase text-muted group-hover:text-ink transition-colors">
           {title}
         </span>
         <IconChevronDown size={11} className={`text-muted transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />

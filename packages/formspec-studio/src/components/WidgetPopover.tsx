@@ -70,12 +70,12 @@ export function WidgetPopover({ path, project, onSelect, children }: WidgetPopov
             <div
               ref={refs.setFloating}
               style={floatingStyles}
-              className="z-50 bg-surface shadow-2xl rounded-xl border border-border overflow-hidden min-w-[220px] animate-in fade-in zoom-in-95 duration-100"
+              className="z-50 bg-surface shadow-premium-xl rounded-2xl border border-border/60 overflow-hidden min-w-[220px] animate-fade-in"
               {...getFloatingProps()}
             >
-              <div className="px-4 py-3 border-b border-border bg-subtle/30 flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted">Change Widget</span>
-                <div className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-surface border border-current ${tierColor}`}>
+              <div className="px-4 py-3 border-b border-border/40 bg-subtle/30 backdrop-blur-md flex items-center justify-between">
+                <span className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-muted">Widget</span>
+                <div className={`text-[9px] font-bold px-2 py-0.5 rounded-full bg-surface border border-current ${tierColor}`}>
                   {tier}
                 </div>
               </div>
@@ -84,9 +84,9 @@ export function WidgetPopover({ path, project, onSelect, children }: WidgetPopov
                 {WIDGETS.map((w) => (
                   <button
                     key={w.id}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[12px] transition-all text-left ${
+                    className={`flex items-center gap-2 px-3 py-2 rounded-xl text-[12px] transition-all duration-200 text-left active:scale-95 ${
                       currentWidget === w.id 
-                        ? 'bg-accent text-white font-bold' 
+                        ? 'bg-accent text-white font-bold shadow-sm' 
                         : 'hover:bg-subtle text-ink'
                     }`}
                     onClick={() => {
@@ -94,15 +94,15 @@ export function WidgetPopover({ path, project, onSelect, children }: WidgetPopov
                       setIsOpen(false);
                     }}
                   >
-                    <span className="w-5 text-center opacity-60 font-mono text-[10px]">{w.icon}</span>
-                    <span>{w.label}</span>
+                    <span className="w-5 text-center opacity-40 font-mono text-[10px]">{w.icon}</span>
+                    <span className="font-medium">{w.label}</span>
                   </button>
                 ))}
               </div>
 
-              <div className="px-4 py-2 bg-subtle/20 border-t border-border">
-                <p className="text-[9px] text-muted leading-tight">
-                  Selection will be saved to the <strong>{tier}</strong> document to ensure maximum durability across renders.
+              <div className="px-4 py-2.5 bg-subtle/20 border-t border-border/40">
+                <p className="text-[10px] font-bold text-muted leading-tight">
+                  Saved to <strong className="text-muted">{tier}</strong> manifest.
                 </p>
               </div>
             </div>

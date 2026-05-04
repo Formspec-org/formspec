@@ -48,14 +48,14 @@ export function JsonDocumentsView() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex gap-1 p-2 border-b border-border">
+      <div className="flex gap-1 p-1.5 border-b border-border bg-surface shrink-0">
         {DOC_IDS.map((id) => (
           <button
             key={id}
             type="button"
-            className={`px-3 py-1 text-sm rounded ${
+            className={`px-3 py-1 text-[12px] font-bold rounded transition-all duration-200 ${
               active === id
-                ? 'bg-accent text-white'
+                ? 'bg-accent text-surface shadow-sm'
                 : 'text-muted hover:text-ink hover:bg-subtle'
             }`}
             onClick={() => setActive(id)}
@@ -65,13 +65,13 @@ export function JsonDocumentsView() {
         ))}
         <button
           type="button"
-          className="ml-auto px-3 py-1 text-sm rounded border border-border text-muted hover:text-ink hover:bg-subtle"
+          className="ml-auto px-3 py-1 text-[12px] font-bold rounded border border-border text-muted hover:text-ink hover:bg-subtle transition-all duration-200"
           onClick={handleCopy}
         >
           Copy
         </button>
       </div>
-      <div className="flex-1 overflow-auto p-4 bg-subtle/30">
+      <div className="flex-1 overflow-auto p-4 bg-subtle">
         <pre
           className="font-mono text-xs text-ink bg-surface border border-border rounded p-4 overflow-x-auto min-h-0"
           data-testid={`json-doc-${active.toLowerCase()}`}

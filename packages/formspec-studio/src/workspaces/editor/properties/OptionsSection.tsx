@@ -105,7 +105,7 @@ export function OptionsSection({
                 defaultValue={formatCommaSeparatedKeywords(option.keywords)}
                 onBlur={(event) => updateOptionKeywords(index, event.currentTarget.value)}
               />
-              <p className="text-[10px] text-muted/80">Comma-separated. Used for searchable Select / combobox type-ahead.</p>
+              <p className="text-[10px] text-muted">Comma-separated. Used for searchable Select / combobox type-ahead.</p>
             </div>
           </div>
         ))}

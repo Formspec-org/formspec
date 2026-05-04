@@ -25,8 +25,6 @@ export interface ProposedArtifactBlockProps {
  *
  * Chat supplies intent and rationale; this block is the thing being accepted.
  * ~240px max height with scroll; [Accept all] [Review details] [Tweak it].
- *
- * Uses `<formspec-render>` in read-only mode over the proposed-state definition.
  */
 export function ProposedArtifactBlock({
   definition,
@@ -41,42 +39,46 @@ export function ProposedArtifactBlock({
 
   return (
     <div
-      className="rounded-xl border border-accent/20 bg-accent/[0.03] overflow-hidden"
+      className="rounded-[2.5rem] border border-accent/30 bg-accent/[0.02] overflow-hidden shadow-premium-lg animate-onboarding-enter"
       data-testid="proposed-artifact-block"
     >
       {/* Preview area */}
-      <div className="max-h-[240px] overflow-y-auto px-3 py-3">
-        <div className="rounded-lg border border-border/50 bg-surface/80 px-3 py-2.5">
-          <div className="flex items-center gap-2 mb-2">
-            <div className={`w-1.5 h-1.5 rounded-full ${status === 'complete' ? 'bg-accent' : 'bg-amber-500 animate-pulse'}`} />
-            <span className={`text-[11px] font-semibold uppercase tracking-[0.16em] ${status === 'complete' ? 'text-accent' : 'text-amber-500'}`}>
-              {status === 'generating' ? 'Generating proposal...' : status === 'refining' ? 'Refining layout...' : 'Proposed changes'}
-            </span>
+      <div className="max-h-[320px] overflow-y-auto px-6 py-6 scrollbar-none">
+        <div className="glass rounded-[2rem] border border-border/30 px-6 py-6 shadow-premium-sm">
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-3">
+              <div className={`w-2.5 h-2.5 rounded-full ${status === 'complete' ? 'bg-accent' : 'bg-amber animate-pulse'} shadow-[0_0_10px_rgba(var(--color-accent-rgb),0.4)]`} />
+              <span className={`font-display text-[11px] font-black uppercase tracking-[0.25em] ${status === 'complete' ? 'text-accent' : 'text-amber'}`}>
+                {status === 'generating' ? 'Writing Structure' : status === 'refining' ? 'Refining Layout' : 'Proposed Manifest'}
+              </span>
+            </div>
+            <div className="px-3 py-1 rounded-full bg-subtle/50 border border-border/40 text-[10px] font-black uppercase tracking-widest text-muted">
+              {fieldCount} field{fieldCount === 1 ? '' : 's'}
+            </div>
           </div>
           {summary && (
-            <p className="text-[13px] text-ink/80 leading-relaxed mb-2">{summary}</p>
+            <p className="text-[14px] font-medium text-ink/80 leading-relaxed mb-4 italic border-l-2 border-accent/20 pl-4">"{summary}"</p>
           )}
-          <div className="text-[12px] text-muted">
-            <span className="font-medium text-ink">{definition.title ?? 'Untitled'}</span>
-            <span className="mx-1.5">·</span>
-            <span>{fieldCount} field{fieldCount === 1 ? '' : 's'}</span>
+          
+          <div className="mb-4">
+             <p className="font-display text-[18px] font-bold text-ink mb-1 tracking-tight">{definition.title ?? 'Untitled Form'}</p>
           </div>
-          {/* Structural preview: show item keys */}
-          <div className="mt-2 space-y-0.5">
+
+          <div className="space-y-2 border-l-[3px] border-border/10 pl-5 ml-1">
             {(definition.items ?? []).slice(0, 8).map((item: any) => (
-              <div key={item.key} className="flex items-center gap-1.5 text-[12px]">
-                <span className={`w-4 text-center text-muted ${item.type === 'group' ? 'text-[10px]' : 'text-[11px]'}`}>
-                  {item.type === 'group' ? '▤' : '▪'}
+              <div key={item.key} className="flex items-center gap-3 group">
+                <span className={`flex items-center justify-center w-5 h-5 rounded-lg text-[10px] font-black ${item.type === 'group' ? 'bg-accent text-white' : 'bg-subtle text-muted'}`}>
+                  {item.type === 'group' ? 'G' : 'F'}
                 </span>
-                <span className="text-ink/70">{item.label ?? item.key}</span>
+                <span className="text-[13px] font-semibold text-ink/70 group-hover:text-ink transition-colors tracking-tight">{item.label ?? item.key}</span>
                 {item.type === 'group' && item.children && (
-                  <span className="text-muted text-[11px]">({item.children.length})</span>
+                  <span className="text-[10px] font-black text-muted uppercase tracking-widest">({item.children.length})</span>
                 )}
               </div>
             ))}
             {(definition.items ?? []).length > 8 && (
-              <div className="text-[11px] text-muted pl-5.5">
-                +{(definition.items ?? []).length - 8} more
+              <div className="text-[10px] font-black text-muted uppercase tracking-[0.2em] mt-4 ml-1">
+                + {(definition.items ?? []).length - 8} additional entities
               </div>
             )}
           </div>
@@ -85,37 +87,37 @@ export function ProposedArtifactBlock({
 
       {/* Action bar */}
       {status === 'complete' ? (
-        <div className="flex items-center gap-2 px-3 py-2.5 border-t border-accent/10 bg-accent/[0.02]">
+        <div className="flex items-center gap-3 px-6 py-4 border-t border-accent/10 bg-accent/[0.04] backdrop-blur-sm">
           <button
             type="button"
             data-testid="accept-proposal"
-            className="rounded-lg bg-accent px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-accent/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+            className="rounded-2xl bg-accent px-6 py-2.5 text-[13px] font-bold text-white hover:bg-accent-hover shadow-premium-lg transition-all active:scale-95"
             onClick={onAccept}
           >
-            Accept all
+            Accept changes
           </button>
           <button
             type="button"
             data-testid="review-proposal"
-            className="rounded-lg border border-border px-3 py-1.5 text-[12px] font-medium text-ink hover:bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+            className="rounded-2xl border border-border/40 bg-surface px-5 py-2.5 text-[13px] font-bold text-ink hover:bg-subtle hover:border-accent/20 transition-all active:scale-95"
             onClick={onReviewDetails}
           >
-            Review details
+            Details
           </button>
           <button
             type="button"
             data-testid="tweak-proposal"
-            className="rounded-lg border border-border px-3 py-1.5 text-[12px] font-medium text-muted hover:text-ink hover:bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+            className="rounded-2xl border border-border/40 bg-surface px-5 py-2.5 text-[13px] font-bold text-muted hover:text-ink hover:bg-subtle transition-all active:scale-95"
             onClick={onTweak}
           >
-            Tweak it
+            Tweak
           </button>
           <div className="flex-1" />
           {onReject && (
             <button
               type="button"
               data-testid="reject-proposal"
-              className="rounded-lg px-2.5 py-1.5 text-[12px] text-muted hover:text-red-600 hover:bg-red-500/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/35"
+              className="rounded-2xl px-4 py-2.5 text-[13px] font-bold text-muted hover:text-rose-500 hover:bg-rose-50 transition-all"
               onClick={onReject}
             >
               Reject
@@ -123,13 +125,13 @@ export function ProposedArtifactBlock({
           )}
         </div>
       ) : (
-        <div className="flex items-center justify-between px-4 py-3 border-t border-accent/10 bg-accent/[0.02]">
-          <div className="flex items-center gap-3 text-[12px] text-muted">
-            <svg className="animate-spin h-4 w-4 text-accent" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <div className="flex items-center justify-between px-8 py-5 border-t border-accent/10 bg-accent/[0.04] backdrop-blur-sm">
+          <div className="flex items-center gap-4 text-[13px] font-bold text-accent italic">
+            <svg className="animate-spin h-5 w-5 text-accent" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
-            <span>{status === 'generating' ? 'Writing structure...' : 'Evaluating rules...'}</span>
+            <span className="tracking-tight">{status === 'generating' ? 'Drafting Blueprint...' : 'Evaluating Rules...'}</span>
           </div>
         </div>
       )}

@@ -12,6 +12,7 @@ import { OptionSets } from '../shared/OptionSets';
 import { DataSources } from '../shared/DataSources';
 import { WorkspacePage, WorkspacePageSection } from '../../components/ui/WorkspacePage';
 import { HelpTip } from '../../components/ui/HelpTip';
+import { dispatchStudioEvent, STUDIO_EVENTS } from '../../studio-events';
 
 const SECTIONS = [
   { id: 'option-sets', label: 'Options' },
@@ -133,9 +134,9 @@ export function ManageView() {
 
   const handleSelectPath = useCallback((path: string) => {
     select(path, 'field', { tab: 'editor' });
-    window.dispatchEvent(new CustomEvent('formspec:navigate-workspace', {
-      detail: { tab: 'Editor', view: 'build' },
-    }));
+    dispatchStudioEvent(STUDIO_EVENTS.NAVIGATE_WORKSPACE, {
+      tab: 'Editor', view: 'build',
+    });
   }, [select]);
 
   return (

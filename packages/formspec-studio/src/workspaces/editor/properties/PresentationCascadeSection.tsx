@@ -72,7 +72,7 @@ export function PresentationCascadeSection({
           <CascadeRow key={prop} prop={prop} resolved={resolved} />
         ))}
       </div>
-      <div className="mt-2 text-[10px] text-muted/60 font-mono">
+      <div className="mt-2 text-[10px] text-muted font-mono">
         Shows which tier sets each presentation property.
       </div>
     </Section>

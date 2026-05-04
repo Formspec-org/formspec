@@ -67,7 +67,7 @@ function StyleControl({ label, value, onChange }: { label: string; value: string
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="text-[12px] font-mono text-muted bg-subtle px-2 py-0.5 rounded border border-transparent hover:border-border focus-visible:outline-none focus-visible:border-accent focus-visible:ring-1 focus-visible:ring-accent w-24 text-right transition-colors"
+        className="text-[12px] font-mono text-muted bg-subtle px-2 py-0.5 rounded border border-transparent hover:border-border focus-visible:border-accent focus-ring w-24 text-right transition-colors"
       />
     </div>
   );

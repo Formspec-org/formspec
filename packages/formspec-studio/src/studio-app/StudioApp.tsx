@@ -8,6 +8,7 @@ import { ProjectProvider } from '../state/ProjectContext';
 import { SelectionProvider } from '../state/useSelection';
 import { blankDefinition } from '../fixtures/blank-definition';
 import { ModeProvider } from './ModeProvider';
+import { ShellProviders } from '../providers/ShellProviders';
 import { UnifiedStudio } from './UnifiedStudio';
 
 /**
@@ -61,7 +62,9 @@ export function StudioApp({ project }: StudioAppProps = {}): ReactElement {
     <ProjectProvider project={activeProject}>
       <SelectionProvider project={activeProject}>
         <ModeProvider defaultMode={hasHandoff ? 'edit' : 'chat'}>
-          <UnifiedStudio />
+          <ShellProviders>
+            <UnifiedStudio />
+          </ShellProviders>
         </ModeProvider>
       </SelectionProvider>
     </ProjectProvider>

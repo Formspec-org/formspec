@@ -59,7 +59,7 @@ function InlineDataEditor({ data, hasSource, onSave }: {
       {error && (
         <p className="text-[11px] text-error font-medium">{error}</p>
       )}
-      <p className="text-[10px] text-muted/60 italic">
+      <p className="text-[10px] text-muted italic">
         {hasSource
           ? 'Used as fallback when the source URL is unavailable. Paste any valid JSON.'
           : 'Paste a JSON object or array. This is the data returned by @instance().'}
@@ -153,7 +153,7 @@ export function DataSources() {
                 if (e.key === 'Enter') handleAdd();
                 if (e.key === 'Escape') { setIsAdding(false); setNewName(''); }
               }}
-              className="flex-1 bg-transparent border-none outline-none text-sm font-mono text-ink placeholder:text-muted/40"
+              className="flex-1 bg-transparent border-none outline-none text-sm font-mono text-ink placeholder:text-muted"
             />
           </div>
         </InlineCreateForm>
@@ -225,7 +225,7 @@ export function DataSources() {
                   placeholder="https://api.example.com/data/{{entityId}}"
                   className="block w-full text-[13px] bg-subtle border border-border rounded-lg px-3 py-2.5 hover:border-accent/50 hover:bg-subtle/70 underline decoration-accent/30 decoration-dotted underline-offset-4"
                 />
-                <p className="text-[10px] text-muted/60 italic">
+                <p className="text-[10px] text-muted italic">
                   {"Supports {{template}} variables. Leave empty for inline-only data."}
                 </p>
               </div>
@@ -287,7 +287,7 @@ export function DataSources() {
                   />
                   <div>
                     <span className="text-[12px] font-bold text-ink block">Static (Caching)</span>
-                    <span className="text-[10px] text-muted/70">Data won't change during this form session. Enables aggressive caching.</span>
+                    <span className="text-[10px] text-muted">Data won't change during this form session. Enables aggressive caching.</span>
                   </div>
                 </label>
                 <label className="flex items-start gap-3 cursor-pointer">
@@ -300,7 +300,7 @@ export function DataSources() {
                   />
                   <div>
                     <span className="text-[12px] font-bold text-ink block">Read-only</span>
-                    <span className="text-[10px] text-muted/70">Prevent calculate binds from writing back. Uncheck for scratch-pad instances.</span>
+                    <span className="text-[10px] text-muted">Prevent calculate binds from writing back. Uncheck for scratch-pad instances.</span>
                   </div>
                 </label>
               </div>

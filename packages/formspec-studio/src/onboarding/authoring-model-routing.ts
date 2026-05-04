@@ -1,4 +1,5 @@
 /** @filedesc Model routing policy for AI-first authoring flows. */
+import { dispatchStudioEvent, STUDIO_EVENTS } from '../studio-events';
 
 export type AuthoringTaskTier = 'fast' | 'reasoning' | 'governance';
 
@@ -32,5 +33,5 @@ export function selectModelForOperation(operation: string, policy: ModelRoutingP
 
 export function emitModelRoutingDecision(decision: ModelRoutingDecision): void {
   if (typeof window === 'undefined') return;
-  window.dispatchEvent(new CustomEvent('formspec:model-routing', { detail: decision }));
+  dispatchStudioEvent(STUDIO_EVENTS.MODEL_ROUTING, decision);
 }

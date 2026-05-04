@@ -29,7 +29,7 @@ export function DefinitionProperties({
               id="def-title"
               type="text"
               aria-label="Title"
-              className="w-full rounded-[12px] border border-border/80 bg-surface px-3 py-2 text-[13px] outline-none transition-colors focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/25"
+              className="w-full rounded-[12px] border border-border/80 bg-surface px-3 py-2 text-[13px] outline-none transition-colors focus:border-accent focus-ring"
               defaultValue={definition.title ?? ''}
               onBlur={(event) => {
                 project.setMetadata({ title: event.currentTarget.value || null });

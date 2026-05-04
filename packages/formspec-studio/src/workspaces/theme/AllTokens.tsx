@@ -36,14 +36,14 @@ export function AllTokens() {
   return (
     <div className="space-y-3">
       <div className="flex justify-between items-center mb-1">
-        <h4 className="text-[12px] font-bold text-muted uppercase tracking-wider">
+        <h4 className="text-[11px] font-bold text-muted uppercase tracking-normal">
           {totalTokens} tokens
         </h4>
         {!isAdding && (
           <button
             type="button"
             onClick={() => setIsAdding(true)}
-            className="text-[11px] text-accent hover:text-accent-hover font-bold uppercase tracking-wider transition-colors"
+            className="text-[11px] text-accent hover:text-accent-hover font-bold uppercase tracking-normal transition-colors"
           >
             + New Token
           </button>
@@ -66,7 +66,7 @@ export function AllTokens() {
                 if (e.key === 'Enter') handleAdd();
                 if (e.key === 'Escape') setIsAdding(false);
               }}
-              className="flex-1 bg-transparent border-b border-border outline-none text-sm font-mono text-ink placeholder:text-muted/40"
+              className="flex-1 bg-transparent border-b border-border outline-none text-[12px] font-mono text-ink placeholder:text-muted"
             />
             <input
               type="text"
@@ -77,24 +77,24 @@ export function AllTokens() {
                 if (e.key === 'Enter') handleAdd();
                 if (e.key === 'Escape') setIsAdding(false);
               }}
-              className="flex-1 bg-transparent border-b border-border outline-none text-sm font-mono text-ink placeholder:text-muted/40"
+              className="flex-1 bg-transparent border-b border-border outline-none text-[12px] font-mono text-ink placeholder:text-muted"
             />
           </div>
         </InlineCreateForm>
       )}
 
       {Array.from(groups.entries()).map(([prefix, items]) => (
-        <div key={prefix} className="space-y-1">
-          <div className="text-[11px] font-bold text-muted uppercase tracking-wider">{prefix}</div>
+        <div key={prefix} className="space-y-0.5">
+          <div className="text-[10px] font-bold text-muted uppercase tracking-normal px-2 pt-2">{prefix}</div>
           {items.map(({ key, name, value }) => (
             <div
               key={key}
-              className="flex items-center gap-2 py-1 px-2 rounded hover:bg-subtle/50 group"
+              className="flex items-center gap-2 py-0.5 px-2 rounded hover:bg-subtle group"
             >
               {isHexColor(value) && (
                 <div
                   data-testid={`swatch-${key}`}
-                  className="w-4 h-4 rounded-full border border-border/60 shrink-0"
+                  className="w-3 h-3 rounded border border-border/60 shrink-0"
                   style={{ backgroundColor: value }}
                 />
               )}
@@ -107,13 +107,13 @@ export function AllTokens() {
                   const v = e.target.value.trim();
                   if (v !== value) setToken(key, v);
                 }}
-                className="flex-1 text-[12px] font-mono text-muted bg-transparent border-none outline-none"
+                className="flex-1 text-[12px] font-mono text-muted bg-transparent border-none outline-none focus:text-ink transition-colors"
               />
               <button
                 type="button"
                 aria-label={`Delete ${key}`}
                 onClick={() => setToken(key, null)}
-                className="text-[10px] text-muted hover:text-error font-mono uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-all"
+                className="text-[10px] text-muted hover:text-error font-bold uppercase tracking-normal opacity-0 group-hover:opacity-100 transition-all"
               >
                 Delete
               </button>

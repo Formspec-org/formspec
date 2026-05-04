@@ -33,7 +33,7 @@ function ReadOnlyRow({ label, value, help }: { label: string; value: string; hel
       <span className="font-mono text-[11px] text-muted uppercase tracking-tight shrink-0 w-[120px]">
         {help ? <HelpTip text={help}>{label}</HelpTip> : label}
       </span>
-      <span className="font-mono text-[12px] text-ink/60">{value}</span>
+      <span className="font-mono text-[12px] text-muted">{value}</span>
     </div>
   );
 }
@@ -143,7 +143,7 @@ function TextAreaField({
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="font-mono text-[11px] font-bold tracking-[0.12em] uppercase text-muted/60 mb-3 mt-1">
+    <h3 className="font-mono text-[11px] font-bold tracking-[0.12em] uppercase text-muted mb-3 mt-1">
       {children}
     </h3>
   );
@@ -179,7 +179,7 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
           <button
             type="button"
             aria-label="Close"
-            className="p-1 rounded-[4px] hover:bg-subtle text-muted hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+            className="p-1 rounded-[4px] hover:bg-subtle text-muted hover:text-ink transition-colors focus-ring"
             onClick={onClose}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -237,7 +237,7 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
         <div className="p-4 border-t border-border flex justify-end">
           <button
             type="button"
-            className="px-3 py-1.5 text-sm rounded-[4px] border border-border text-muted hover:bg-surface-hover hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+            className="px-3 py-1.5 text-sm rounded-[4px] border border-border text-muted hover:bg-surface-hover hover:text-ink transition-colors focus-ring"
             onClick={onClose}
           >
             Done

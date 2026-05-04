@@ -8,9 +8,9 @@ describe('Smoke', () => {
     window.history.replaceState({}, '', '/');
   });
 
-  it('mounts UnifiedStudio directly without onboarding', () => {
+  it('mounts UnifiedStudio directly without onboarding', async () => {
     render(<App />);
-    expect(screen.getByTestId('shell')).toBeInTheDocument();
+    expect(await screen.findByTestId('shell')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /the stack home/i })).toBeInTheDocument();
   });
 });

@@ -1,5 +1,6 @@
 /** @filedesc Modal dialog for pasting and importing JSON artifacts (definition, component, theme, mapping). */
 import { useEffect, useId, useMemo, useState } from 'react';
+import type { ComponentDocument, FormDefinition, ThemeDocument, MappingDocument } from '@formspec-org/types';
 import { useProject } from '../state/useProject';
 import { useEscapeKey } from '../hooks/useEscapeKey';
 
@@ -13,6 +14,49 @@ interface ImportDialogProps {
 }
 
 const ARTIFACT_TYPES = ['Definition', 'Component', 'Theme', 'Mapping'] as const;
+
+type ImportArtifactKey = 'definition' | 'component' | 'theme' | 'mapping';
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isFormDefinitionPayload(value: unknown): value is FormDefinition {
+  return isPlainObject(value) && typeof value.$formspec === 'string';
+}
+
+function isComponentPayload(value: unknown): value is ComponentDocument {
+  return isPlainObject(value) && (value as { $formspecComponent?: unknown }).$formspecComponent === '1.0';
+}
+
+function isThemePayload(value: unknown): value is ThemeDocument {
+  return isPlainObject(value) && (value as { $formspecTheme?: unknown }).$formspecTheme === '1.0';
+}
+
+function isMappingDocumentLike(value: unknown): value is MappingDocument {
+  if (!isPlainObject(value)) return false;
+  return (
+    value.$formspecMapping === '1.0'
+    && typeof value.version === 'string'
+    && typeof value.definitionRef === 'string'
+  );
+}
+
+function narrowMappingsRecord(
+  raw: Record<string, unknown>,
+): { ok: true; mappings: Record<string, MappingDocument> } | { ok: false; error: string } {
+  const mappings: Record<string, MappingDocument> = {};
+  for (const [key, entry] of Object.entries(raw)) {
+    if (!isMappingDocumentLike(entry)) {
+      return {
+        ok: false,
+        error: `Invalid mapping import: entry "${key}" is not a valid Mapping Document (expected $formspecMapping "1.0" with string version and definitionRef).`,
+      };
+    }
+    mappings[key] = entry;
+  }
+  return { ok: true, mappings };
+}
 
 /**
  * Normalize pasted Mapping JSON into the shape expected by `project.import` (`mappings` map).
@@ -100,7 +144,7 @@ export function ImportDialog({ open, onClose, onBeforeLoad, onImportSuccess }: I
                 <button
                   type="button"
                   key={type}
-                  className={`px-3 py-1 text-sm rounded-[4px] border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
+                  className={`px-3 py-1 text-sm rounded-[4px] border transition-colors focus-ring ${
                     selectedType === type
                       ? 'border-accent bg-accent text-on-accent'
                       : 'border-border text-muted hover:text-ink hover:bg-subtle/70'
@@ -146,14 +190,14 @@ export function ImportDialog({ open, onClose, onBeforeLoad, onImportSuccess }: I
         <div className="p-4 border-t border-border flex justify-end gap-2">
           <button
             type="button"
-            className="px-3 py-1.5 text-sm rounded-[4px] border border-border text-muted hover:bg-subtle/70 hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+            className="px-3 py-1.5 text-sm rounded-[4px] border border-border text-muted hover:bg-subtle/70 hover:text-ink transition-colors focus-ring"
             onClick={onClose}
           >
             Cancel
           </button>
           <button
             type="button"
-            className="px-3 py-1.5 text-[13px] font-medium rounded-[4px] bg-accent text-white hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:opacity-50 transition-colors"
+            className="px-3 py-1.5 text-[13px] font-medium rounded-[4px] bg-accent text-white hover:bg-accent/90 focus-ring disabled:opacity-50 transition-colors"
             disabled={!canLoad}
             onClick={async () => {
               if (onBeforeLoad) {
@@ -162,17 +206,52 @@ export function ImportDialog({ open, onClose, onBeforeLoad, onImportSuccess }: I
                 if (!ok) return;
               }
               try {
-                const parsed = JSON.parse(jsonText);
-                const artifactKey = selectedType.toLowerCase();
-                if (artifactKey === 'mapping') {
-                  const result = resolveMappingsImportPayload(parsed);
-                  if (!result.ok) {
-                    setParseError(result.error);
-                    return;
+                const parsed: unknown = JSON.parse(jsonText);
+                const rawKey = selectedType.toLowerCase();
+                if (rawKey !== 'mapping' && rawKey !== 'definition' && rawKey !== 'component' && rawKey !== 'theme') {
+                  setParseError(`Unsupported artifact type: ${selectedType}`);
+                  return;
+                }
+                const artifactKey = rawKey as ImportArtifactKey;
+                switch (artifactKey) {
+                  case 'mapping': {
+                    const result = resolveMappingsImportPayload(parsed);
+                    if (!result.ok) {
+                      setParseError(result.error);
+                      return;
+                    }
+                    const narrowed = narrowMappingsRecord(result.mappings);
+                    if (!narrowed.ok) {
+                      setParseError(narrowed.error);
+                      return;
+                    }
+                    project.loadBundle({ mappings: narrowed.mappings });
+                    break;
                   }
-                  project.loadBundle({ mappings: result.mappings });
-                } else {
-                  project.loadBundle({ [artifactKey]: parsed });
+                  case 'definition': {
+                    if (!isFormDefinitionPayload(parsed)) {
+                      setParseError('Invalid definition: expected a JSON object with a string $formspec field.');
+                      return;
+                    }
+                    project.loadBundle({ definition: parsed });
+                    break;
+                  }
+                  case 'component': {
+                    if (!isComponentPayload(parsed)) {
+                      setParseError('Invalid component: expected a JSON object with $formspecComponent "1.0".');
+                      return;
+                    }
+                    project.loadBundle({ component: parsed });
+                    break;
+                  }
+                  case 'theme': {
+                    if (!isThemePayload(parsed)) {
+                      setParseError('Invalid theme: expected a JSON object with $formspecTheme "1.0".');
+                      return;
+                    }
+                    project.loadBundle({ theme: parsed });
+                    break;
+                  }
                 }
                 onImportSuccess?.();
                 onClose();

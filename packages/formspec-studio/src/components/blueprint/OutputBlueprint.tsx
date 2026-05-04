@@ -170,7 +170,7 @@ function DataNode({ item, path, isSelected, onSelect, isLast, values, validation
         onClick={(e) => { e.stopPropagation(); onSelect(path, item.type); }}
       >
         <JsonKey name={item.key} />
-        <span className="text-muted/60 shrink-0">:</span>
+        <span className="text-muted shrink-0">:</span>
         {isGroup ? (
           <span className="text-muted shrink-0">{item.repeatable ? ' [{' : ' {'}</span>
         ) : isReadonly ? (
@@ -196,7 +196,7 @@ function DataNode({ item, path, isSelected, onSelect, isLast, values, validation
           </>
         )}
         <span className="ml-auto inline-flex items-center gap-1.5 shrink-0">
-          <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-subtle/60 text-[9px] font-bold uppercase tracking-wider text-muted/60 border border-border/40 leading-none">{tag}</span>
+          <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-subtle/60 text-[9px] font-bold uppercase tracking-wider text-muted border border-border/40 leading-none">{tag}</span>
           {item.required && <span className="text-[9px] font-bold text-error/60 uppercase tracking-wider leading-none">★</span>}
         </span>
       </div>
@@ -319,7 +319,7 @@ export function OutputBlueprint() {
     <div className="space-y-2" data-testid="output-blueprint">
       {/* Header */}
       <div className="flex items-center justify-between px-1">
-        <div className="text-muted/60 text-[11px] tracking-widest uppercase font-semibold">Response Document</div>
+        <div className="text-muted text-[11px] tracking-widest uppercase font-semibold">Response Document</div>
         {errorCount > 0 ? (
           <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
             {`${errorCount} ${errorCount === 1 ? 'error' : 'errors'}`}
@@ -350,7 +350,7 @@ export function OutputBlueprint() {
             <div className="px-1"><JsonKey name="data" bold /><span className="text-muted">: {'{'}</span></div>
             <div className="ml-3 pl-2 border-l border-accent/20 py-0.5">
               {items.length === 0 ? (
-                <div className="text-muted/40 italic text-[10px]">// No fields defined yet</div>
+                <div className="text-muted italic text-[10px]">// No fields defined yet</div>
               ) : (
                 items.map((item: FormItem, i: number) => (
                   <DataNode

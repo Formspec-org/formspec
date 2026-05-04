@@ -1,6 +1,7 @@
 /** @filedesc Telemetry helpers for first-run onboarding events. */
 import { loadProviderConfig } from '../lib/provider-config-storage.js';
 import type { AuthoringCapability, AuthoringMethod } from './authoring-method-telemetry.js';
+import { dispatchStudioEvent, STUDIO_EVENTS } from '../studio-events';
 import type { EnterWorkspaceSource } from './enter-workspace-source.js';
 
 export type OnboardingEventName =
@@ -50,5 +51,5 @@ export function emitOnboardingTelemetry(
     buildMode: resolveBuildMode(),
     ...partialDetail,
   };
-  window.dispatchEvent(new CustomEvent('formspec:onboarding-telemetry', { detail }));
+  dispatchStudioEvent(STUDIO_EVENTS.ONBOARDING_TELEMETRY, detail);
 }

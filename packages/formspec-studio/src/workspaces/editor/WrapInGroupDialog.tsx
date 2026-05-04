@@ -68,14 +68,14 @@ export function WrapInGroupDialog({ draft, onCancel, onConfirm }: WrapInGroupDia
         <div className="flex justify-end gap-2 border-t border-border px-5 py-4">
           <button
             type="button"
-            className="rounded-[6px] border border-border/80 bg-surface px-3 py-2 text-[11px] font-mono font-semibold uppercase tracking-[0.18em] text-ink transition-colors hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+            className="rounded-[6px] border border-border/80 bg-surface px-3 py-2 text-[11px] font-mono font-semibold uppercase tracking-[0.18em] text-ink transition-colors hover:bg-surface-hover focus-ring"
             onClick={onCancel}
           >
             Cancel Wrap
           </button>
           <button
             type="button"
-            className="rounded-[6px] border border-accent/30 bg-accent/8 px-3 py-2 text-[11px] font-mono font-semibold uppercase tracking-[0.18em] text-accent transition-colors hover:bg-accent/12 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+            className="rounded-[6px] border border-accent/30 bg-accent/8 px-3 py-2 text-[11px] font-mono font-semibold uppercase tracking-[0.18em] text-accent transition-colors hover:bg-accent/12 focus-ring"
             onClick={() => {
               if (!key.trim()) return;
               onConfirm(key.trim(), label.trim() || 'Group');

@@ -3,6 +3,7 @@ import type { ChatMessage } from '@formspec-org/chat';
 import { IconSparkle, IconTriangleWarning as IconWarning } from '../icons/index.js';
 import { ProposedArtifactBlock } from '../ProposedArtifactBlock.js';
 import { Project } from '@formspec-org/studio-core';
+import { dispatchStudioEvent, STUDIO_EVENTS } from '../../studio-events';
 
 export interface ChatMessageListProps {
   messages: ChatMessage[];
@@ -70,7 +71,7 @@ export function ChatMessageList({
           </div>
           <button
             type="button"
-            onClick={() => window.dispatchEvent(new CustomEvent('formspec:open-app-settings'))}
+            onClick={() => dispatchStudioEvent(STUDIO_EVENTS.OPEN_APP_SETTINGS)}
             className="px-4 py-2 text-[13px] font-semibold rounded-lg bg-accent text-white hover:bg-accent/90 transition-colors"
           >
             Open App Settings

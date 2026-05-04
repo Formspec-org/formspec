@@ -18,6 +18,7 @@ import {
 import { isInteractiveTarget } from '../workspaces/preview/FormspecPreviewHost';
 import { telemetry } from '../services/telemetry-adapter';
 import { WidgetPopover } from './WidgetPopover';
+import { dispatchStudioEvent, STUDIO_EVENTS } from '../studio-events';
 
 export interface AuthoringOverlayProps {
   /** Current studio mode — gates which affordances render. */
@@ -513,7 +514,7 @@ export function AuthoringOverlay({
     if (!item) return;
     
     const prompt = `Tell me about the logic for the "${item.label || path}" field and suggest any improvements.`;
-    window.dispatchEvent(new CustomEvent('formspec:assistant-prompt', { detail: { prompt } }));
+    dispatchStudioEvent(STUDIO_EVENTS.ASSISTANT_PROMPT, { prompt });
     setOverlayState(prev => ({ ...prev, contextMenu: null }));
   };
 

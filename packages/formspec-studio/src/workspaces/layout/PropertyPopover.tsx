@@ -60,7 +60,7 @@ function PopoverInput({
           onCommit(e.currentTarget.value.trim());
         }}
         onKeyDown={(e) => { if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur(); }}
-        className="flex-1 h-7 rounded-[6px] border border-border/80 bg-surface px-2 text-[12px] font-mono text-ink outline-none placeholder:text-muted/40 transition-all focus:border-accent focus:ring-2 focus:ring-accent/30"
+        className="flex-1 h-7 rounded-[6px] border border-border/80 bg-surface px-2 text-[12px] font-mono text-ink outline-none placeholder:text-muted transition-all focus:border-accent focus:ring-2 focus:ring-accent/30"
       />
     </div>
   );
@@ -247,15 +247,15 @@ export function PropertyPopover({
         visibility: position != null ? 'visible' : 'hidden',
         zIndex: 50,
       }}
-      className="flex w-[320px] max-h-[min(32rem,calc(100dvh-1rem))] flex-col overflow-hidden rounded-[8px] border border-border/70 bg-surface/95 backdrop-blur-[2px] shadow-[0_4px_16px_rgba(0,0,0,0.06)]"
+      className="flex w-[320px] max-h-[min(32rem,calc(100dvh-1rem))] flex-col overflow-hidden rounded-2xl border border-border/60 bg-surface/95 backdrop-blur-xl shadow-premium-xl animate-fade-in"
     >
-      <div className="flex items-center justify-between px-3 py-2 border-b border-border/60 bg-surface/80 shrink-0">
-        <span className="text-[13px] font-semibold text-ink font-ui">Properties</span>
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border/40 bg-subtle/30 backdrop-blur-md shrink-0">
+        <span className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-muted font-ui">Properties</span>
         <button
           type="button"
           aria-label="Close"
           onClick={requestClose}
-          className="text-muted hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/70"
+          className="w-6 h-6 flex items-center justify-center rounded-full text-muted hover:text-ink hover:bg-surface transition-all active:scale-90"
         >
           ×
         </button>
@@ -298,7 +298,7 @@ export function PropertyPopover({
                   data-testid={`style-row-remove-${key}`}
                   aria-label={`Remove ${key}`}
                   onClick={() => onStyleRemove(key)}
-                  className="text-muted hover:text-error transition-colors focus-visible:outline-none"
+                  className="text-muted hover:text-error transition-colors focus-ring"
                 >
                   ×
                 </button>
@@ -329,7 +329,7 @@ export function PropertyPopover({
                   data-testid="style-new-commit"
                   aria-label="Add style"
                   onClick={commitStyleAdd}
-                  className="h-6 px-2 rounded border border-accent bg-accent/10 text-[11px] text-accent hover:bg-accent/20 transition-colors focus-visible:outline-none"
+                  className="h-6 px-2 rounded border border-accent bg-accent/10 text-[11px] text-accent hover:bg-accent/20 transition-colors focus-ring"
                 >
                   +
                 </button>
@@ -339,7 +339,7 @@ export function PropertyPopover({
                 type="button"
                 data-testid="popover-style-add"
                 onClick={() => setAddingStyle(true)}
-                className="text-[11px] text-muted hover:text-accent transition-colors focus-visible:outline-none"
+                className="text-[11px] text-muted hover:text-accent transition-colors focus-ring"
               >
                 + add
               </button>
@@ -377,7 +377,7 @@ export function PropertyPopover({
                   });
                   onClose();
                 }}
-                className="rounded-full border border-border bg-surface px-3 py-1 text-[12px] font-semibold text-ink hover:border-accent hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/70"
+                className="rounded-full border border-border bg-surface px-3 py-1 text-[12px] font-semibold text-ink hover:border-accent hover:text-accent transition-colors focus-ring"
               >
                 Theme properties →
               </button>
@@ -387,7 +387,7 @@ export function PropertyPopover({
                 type="button"
                 data-testid="popover-unwrap"
                 onClick={onUnwrap}
-                className="rounded-full border border-border bg-surface px-3 py-1 text-[12px] font-semibold text-ink hover:border-accent hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/70"
+                className="rounded-full border border-border bg-surface px-3 py-1 text-[12px] font-semibold text-ink hover:border-accent hover:text-accent transition-colors focus-ring"
               >
                 Unwrap
               </button>
@@ -396,7 +396,7 @@ export function PropertyPopover({
               type="button"
               data-testid="popover-remove"
               onClick={onRemove}
-              className="rounded-full border border-border bg-surface px-3 py-1 text-[12px] font-semibold text-ink hover:border-error hover:text-error transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error/70"
+              className="rounded-full border border-border bg-surface px-3 py-1 text-[12px] font-semibold text-ink hover:border-error hover:text-error transition-colors focus-ring"
             >
               Remove from Tree
             </button>

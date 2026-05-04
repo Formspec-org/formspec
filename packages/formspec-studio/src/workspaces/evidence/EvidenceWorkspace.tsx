@@ -88,100 +88,133 @@ export function EvidenceWorkspace() {
   };
 
   return (
-    <div className="flex h-full min-h-0 bg-[linear-gradient(180deg,rgba(255,252,247,0.72),rgba(246,238,227,0.94))] dark:bg-[linear-gradient(180deg,rgba(26,35,47,0.86),rgba(19,24,33,0.96))]">
-      <aside className="hidden w-[280px] shrink-0 border-r border-border/70 bg-surface/76 px-4 py-4 lg:flex lg:flex-col" aria-label="Evidence documents">
-        <div className="flex items-center justify-between gap-3">
+    <div className="flex h-full min-h-0 bg-surface">
+      <aside className="hidden w-[280px] shrink-0 border-r border-border bg-surface lg:flex lg:flex-col" aria-label="Evidence documents">
+        <div className="flex items-center justify-between px-6 h-[52px] border-b border-border shrink-0">
           <div>
-            <h2 className="font-display text-[24px] leading-none tracking-[-0.04em] text-ink">Evidence</h2>
-            <p className="mt-1 text-[11px] uppercase tracking-[0.18em] text-muted">{documents.length} source{documents.length === 1 ? '' : 's'}</p>
+            <p className="text-[11px] font-bold uppercase tracking-normal text-muted">Intelligence</p>
           </div>
           <button
             type="button"
-            className="rounded-[5px] border border-border px-2.5 py-1.5 text-[12px] font-medium hover:bg-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+            className="flex items-center gap-1.5 px-3 py-1 rounded bg-accent text-surface hover:bg-accent/90 text-[10px] font-bold uppercase tracking-normal transition-all shadow-sm"
             onClick={() => inputRef.current?.click()}
           >
-            Add
+            <span className="text-[13px] leading-none">+</span> Add Source
           </button>
         </div>
+        
         <input ref={inputRef} type="file" className="hidden" accept=".pdf,.txt,.md,.json,application/pdf,text/plain,application/json" onChange={(event) => handleUpload(event.currentTarget.files)} />
-        <div className="mt-5 space-y-2">
-          {documents.length === 0 ? (
-            <button
-              type="button"
-              className="w-full rounded-[6px] border border-dashed border-border px-4 py-8 text-left text-[12px] text-muted hover:border-accent/50 hover:text-ink"
-              onClick={() => inputRef.current?.click()}
-            >
-              Upload PDF, text, or JSON sources to start citation coverage.
-            </button>
-          ) : documents.map((document) => (
-            <div key={document.id} className="rounded-[7px] border border-border bg-bg-default/70 px-3 py-3">
-              <div className="truncate text-[13px] font-semibold text-ink">{document.name}</div>
-              <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.14em] text-muted">{document.mimeType}</div>
-              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-border/50">
-                <div className="h-full rounded-full bg-accent" style={{ width: `${Math.min(100, document.fieldRefs.length * 20)}%` }} />
+        
+        <div className="flex-1 overflow-y-auto px-6 py-8 scrollbar-none">
+          <div className="space-y-6">
+            <p className="text-[10px] font-bold uppercase tracking-normal text-muted">Source Documents ({documents.length})</p>
+            
+            {documents.length === 0 ? (
+              <button
+                type="button"
+                className="w-full rounded border border-dashed border-border px-6 py-10 text-center bg-subtle hover:bg-subtle/80 group"
+                onClick={() => inputRef.current?.click()}
+              >
+                <p className="text-[12px] text-muted font-bold leading-relaxed">
+                  Upload PDF, text, or JSON sources to start citation coverage.
+                </p>
+              </button>
+            ) : (
+              <div className="space-y-3">
+                {documents.map((document) => (
+                  <div key={document.id} className="group relative rounded border border-border bg-surface p-4 shadow-sm hover:border-accent/40 transition-all duration-300">
+                    <div className="flex flex-col gap-1 mb-3">
+                      <p className="text-[13px] font-bold text-ink tracking-tight truncate">{document.name}</p>
+                      <span className="text-[9px] font-bold uppercase tracking-normal text-muted">{document.mimeType}</span>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div className="h-1 overflow-hidden rounded bg-subtle">
+                        <div className="h-full rounded bg-accent" style={{ width: `${Math.min(100, document.fieldRefs.length * 20)}%` }} />
+                      </div>
+                      <div className="flex items-center justify-between">
+                         <span className="text-[10px] font-bold text-muted">{document.fieldRefs.length} linked fields</span>
+                         <span className="text-[10px] font-bold text-accent uppercase tracking-normal">{Math.min(100, document.fieldRefs.length * 20)}%</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div className="mt-2 text-[11px] text-muted">{document.fieldRefs.length} linked field{document.fieldRefs.length === 1 ? '' : 's'}</div>
-            </div>
-          ))}
+            )}
+          </div>
         </div>
       </aside>
 
-      <section className="min-w-0 flex-1 overflow-y-auto px-4 py-5 md:px-8">
-        <div className="flex flex-wrap items-end justify-between gap-4 border-b border-border/70 pb-5">
-          <div>
-            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-accent">Source coverage</p>
-            <h1 className="mt-1 font-display text-[34px] leading-none tracking-[-0.05em] text-ink">Evidence workbench</h1>
-            <p className="mt-2 max-w-[680px] text-[13px] text-muted">Uploaded sources become field-level support, missing coverage, and conflicts instead of disappearing into chat history.</p>
+      <section className="min-w-0 flex-1 overflow-y-auto px-8 py-8 md:px-12 lg:px-16 scrollbar-none">
+        <div className="flex flex-wrap items-end justify-between gap-8 border-b border-border pb-8 mb-8">
+          <div className="max-w-[640px]">
+            <p className="text-[10px] font-bold uppercase tracking-normal text-accent mb-2">Coverage Analysis</p>
+            <h1 className="text-[32px] leading-tight font-bold tracking-tight text-ink mb-4">Evidence Workbench</h1>
+            <p className="text-[14px] text-muted font-bold leading-relaxed italic">
+              Verified sources manifest as field-level support and cross-referenced citations. Connect your data to its origin.
+            </p>
           </div>
-          <div className="grid grid-cols-3 gap-2 text-center">
-            <Metric label="Covered" value={`${coverage.linkedFields}/${coverage.totalFields}`} />
-            <Metric label="Missing" value={String(coverage.missing)} />
-            <Metric label="Conflicts" value={String(coverage.conflicts)} />
+          <div className="grid grid-cols-3 gap-3">
+            <Metric label="Covered" value={`${coverage.linkedFields}/${coverage.totalFields}`} accent="emerald" />
+            <Metric label="Missing" value={String(coverage.missing)} accent="amber" />
+            <Metric label="Conflicts" value={String(coverage.conflicts)} accent="rose" />
           </div>
         </div>
 
-        <div className="mt-5 overflow-hidden rounded-[8px] border border-border bg-surface/82">
-          <div className="grid grid-cols-[minmax(180px,1fr)_minmax(180px,1.4fr)_auto] gap-4 border-b border-border bg-subtle/70 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.14em] text-muted">
-            <span>Field</span>
-            <span>Support</span>
-            <span>Action</span>
+        <div className="rounded border border-border bg-surface overflow-hidden shadow-sm">
+          <div className="grid grid-cols-[minmax(200px,1fr)_minmax(200px,1.2fr)_auto] gap-6 px-6 py-3 bg-subtle border-b border-border">
+            <span className="text-[10px] font-bold uppercase tracking-normal text-muted">Field Node</span>
+            <span className="text-[10px] font-bold uppercase tracking-normal text-muted">Support Provenance</span>
+            <span className="text-[10px] font-bold uppercase tracking-normal text-muted text-right pr-4">Actions</span>
           </div>
-          {fields.map((field) => {
-            const supported = field.provenance?.sourceRefs.length;
-            return (
-              <div key={field.ref} className="grid grid-cols-[minmax(180px,1fr)_minmax(180px,1.4fr)_auto] items-center gap-4 border-b border-border/70 px-4 py-3 last:border-b-0">
-                <div>
-                  <div className="text-[13px] font-semibold text-ink">{field.label}</div>
-                  <div className="font-mono text-[10px] text-muted">{field.ref}</div>
+          <div className="divide-y divide-border">
+            {fields.map((field) => {
+              const supported = field.provenance?.sourceRefs.length;
+              return (
+                <div key={field.ref} className="grid grid-cols-[minmax(200px,1fr)_minmax(200px,1.2fr)_auto] items-center gap-6 px-6 py-4 group hover:bg-subtle transition-colors">
+                  <div className="flex flex-col">
+                    <div className="text-[14px] font-bold text-ink tracking-tight group-hover:text-accent transition-colors">{field.label}</div>
+                    <div className="font-mono text-[10px] font-bold text-muted">{field.ref}</div>
+                  </div>
+                  <div className="space-y-1">
+                    <span className={`status-chip inline-flex ${toneFor(field.provenance?.reviewStatus)}`}>
+                      {supported ? field.provenance?.sourceRefs.join(', ') : 'Missing Manifestation'}
+                    </span>
+                    {field.provenance?.rationale && (
+                      <p className="text-[12px] text-muted font-bold leading-relaxed line-clamp-2 italic">"{field.provenance.rationale}"</p>
+                    )}
+                  </div>
+                  <div className="flex justify-end pr-2">
+                    <button
+                      type="button"
+                      disabled={documents.length === 0 || !!supported}
+                      className="rounded border border-border bg-surface px-4 py-1.5 text-[11px] font-bold text-ink hover:border-accent hover:bg-subtle hover:text-accent transition-all disabled:opacity-20 shadow-sm"
+                      onClick={() => linkFieldToDocument(field.ref)}
+                    >
+                      Link source
+                    </button>
+                  </div>
                 </div>
-                <div>
-                  <span className={`inline-flex rounded-[4px] border px-2 py-1 text-[11px] font-medium ${toneFor(field.provenance?.reviewStatus)}`}>
-                    {supported ? field.provenance?.sourceRefs.join(', ') : 'Missing citation'}
-                  </span>
-                  {field.provenance?.rationale && <p className="mt-1 text-[12px] text-muted">{field.provenance.rationale}</p>}
-                </div>
-                <button
-                  type="button"
-                  disabled={documents.length === 0 || !!supported}
-                  className="rounded-[5px] border border-border px-3 py-1.5 text-[12px] font-medium text-ink hover:bg-subtle disabled:cursor-not-allowed disabled:opacity-40"
-                  onClick={() => linkFieldToDocument(field.ref)}
-                >
-                  Link source
-                </button>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </section>
     </div>
   );
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+function Metric({ label, value, accent }: { label: string; value: string; accent: 'emerald' | 'amber' | 'rose' }) {
+  const colors = {
+    emerald: 'text-emerald-600 border-emerald-100 bg-emerald-50/[0.04]',
+    amber: 'text-amber-600 border-amber-100 bg-amber-50/[0.04]',
+    rose: 'text-rose-600 border-rose-100 bg-rose-50/[0.04]'
+  };
+
   return (
-    <div className="min-w-[92px] rounded-[7px] border border-border bg-surface/80 px-3 py-2">
-      <div className="font-display text-[24px] leading-none tracking-[-0.04em] text-ink">{value}</div>
-      <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.14em] text-muted">{label}</div>
+    <div className={`min-w-[100px] rounded border px-4 py-3 shadow-sm ${colors[accent]}`}>
+      <div className="text-[24px] leading-none font-bold tracking-tight mb-1.5">{value}</div>
+      <div className="text-[10px] font-bold uppercase tracking-normal opacity-60">{label}</div>
     </div>
   );
 }

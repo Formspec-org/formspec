@@ -36,34 +36,48 @@ export function LayoutCanvasHeader({
       type="button"
       data-testid="layout-add-page"
       aria-label="Add page to layout"
-      className="min-h-11 rounded-full border border-transparent px-3 py-2 text-[12px] font-medium text-muted transition-colors hover:border-border/60 hover:bg-bg-default/50 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/70"
+      className="h-9 flex items-center gap-1.5 px-3 rounded-md bg-accent text-surface hover:bg-accent/90 text-[10px] font-bold uppercase tracking-normal transition-all shadow-sm"
       onClick={onAddPage}
     >
-      + Page
+      <span className="text-[12px] leading-none">+</span> Page
     </button>
   );
 
   return (
-    <div className="sticky top-0 z-20 w-full shrink-0 border-b border-border/40 bg-bg-default/85 py-4 backdrop-blur-md">
-      <div className="mx-auto w-full max-w-[980px] px-7">
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <ModeSelector mode={mode} onSetMode={onSetMode} />
+    <div className="sticky top-0 z-30 w-full shrink-0 border-b border-border bg-bg-default py-4">
+      <div className="mx-auto w-full max-w-[1020px] px-6 lg:px-8">
+        <div className="flex flex-col gap-6">
+          <div className="flex flex-wrap items-center justify-between gap-6">
+            <div className="flex items-center gap-6">
+              <div className="flex flex-col">
+                <p className="font-display text-[9px] font-bold uppercase tracking-normal text-muted">Layout Orchestration</p>
+                <div className="flex items-center gap-3">
+                   <h2 className="font-display text-[16px] font-bold tracking-tight text-ink">Surface Flow</h2>
+                   <div className="h-4 w-[1px] bg-border/40" />
+                   <ModeSelector mode={mode} onSetMode={onSetMode} />
+                </div>
+              </div>
             </div>
-            {showAddPageButton && addPageButton}
+            {showAddPageButton && (
+              <div className="animate-in fade-in slide-in-from-right-4 duration-500">
+                {addPageButton}
+              </div>
+            )}
           </div>
+          
           {isMultiPage && (
-            <LayoutStepNav
-              pages={pageNavItems}
-              activePageId={activePageId ?? pageNavItems[0]?.id ?? null}
-              onSelectPage={onSelectPage}
-              onRenamePage={onRenamePage}
-              onReorderPage={onReorderPage}
-              onMovePageToIndex={onMovePageToIndex}
-              onRequestRemovePage={onRequestRemovePage}
-              trailing={addPageButton}
-            />
+            <div className="animate-in fade-in slide-in-from-top-4 duration-500">
+              <LayoutStepNav
+                pages={pageNavItems}
+                activePageId={activePageId ?? pageNavItems[0]?.id ?? null}
+                onSelectPage={onSelectPage}
+                onRenamePage={onRenamePage}
+                onReorderPage={onReorderPage}
+                onMovePageToIndex={onMovePageToIndex}
+                onRequestRemovePage={onRequestRemovePage}
+                trailing={addPageButton}
+              />
+            </div>
           )}
         </div>
       </div>

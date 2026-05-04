@@ -34,7 +34,7 @@ export function BrandColorsSection() {
         <button
           type="button"
           onClick={() => setIsAdding(true)}
-          className="rounded-full bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+          className="rounded-full bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent/90 transition-colors focus-ring"
         >
           Add Color
         </button>
@@ -64,7 +64,7 @@ export function BrandColorsSection() {
                 if (e.key === 'Enter') handleAdd();
                 if (e.key === 'Escape') setIsAdding(false);
               }}
-              className="w-full bg-transparent border-none outline-none text-[15px] font-medium text-ink placeholder:text-muted/50 mb-3"
+              className="w-full bg-transparent border-none outline-none text-[15px] font-medium text-ink placeholder:text-muted mb-3"
             />
             <div className="flex gap-2">
               <button

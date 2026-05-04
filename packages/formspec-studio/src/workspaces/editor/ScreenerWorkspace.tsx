@@ -42,7 +42,7 @@ export function ScreenerWorkspace() {
           <div className="w-full max-w-[980px] rounded-[22px] border border-border/65 bg-surface/96 px-4 py-4 shadow-[0_4px_16px_rgba(30,24,16,0.04)] backdrop-blur sm:px-5 md:px-6 md:py-5">
             <div className="flex flex-col gap-3 border-b border-border/65 pb-4 mb-4">
               <h2 className="text-[18px] font-semibold tracking-tight text-ink">Evaluation Phases</h2>
-              <p className="text-[13px] leading-6 text-muted/90">
+              <p className="text-[13px] leading-6 text-muted">
                 Configure how screening answers are evaluated and where respondents are routed.
               </p>
             </div>

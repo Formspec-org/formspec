@@ -37,7 +37,7 @@ export function ThemeTab({ sectionFilter: controlledFilter, onSectionFilterChang
 
   return (
     <WorkspacePage className="overflow-y-auto">
-      <WorkspacePageSection padding="px-7" className="sticky top-0 bg-bg-default/80 backdrop-blur-md z-20 pt-6 pb-2 border-b border-border/40">
+      <WorkspacePageSection padding="px-8" className="sticky top-0 bg-surface z-20 pt-6 pb-2 border-b border-border shadow-sm">
         <SectionFilterBar
           tabs={sectionTabs}
           activeTab={sectionFilter}
@@ -46,7 +46,7 @@ export function ThemeTab({ sectionFilter: controlledFilter, onSectionFilterChang
         />
       </WorkspacePageSection>
 
-      <WorkspacePageSection className="flex-1 py-10">
+      <WorkspacePageSection className="flex-1 py-12 px-8">
         {showColors && (
           <Pillar
             title="Color Palette"

@@ -39,7 +39,7 @@ export function AssistantEntryMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label="Assistant menu"
-        className={`inline-flex items-center gap-1.5 rounded-full border border-accent/25 bg-accent/10 font-semibold text-accent transition-colors hover:bg-accent/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 ${
+        className={`inline-flex items-center gap-1.5 rounded-full border border-accent/25 bg-accent/10 font-semibold text-accent transition-colors hover:bg-accent/15 focus-ring ${
           compactLayout ? 'p-2' : 'px-3 py-1.5 text-[12px]'
         }`}
         onClick={() => setOpen((v) => !v)}
@@ -59,7 +59,7 @@ export function AssistantEntryMenu({
               type="button"
               role="menuitem"
               data-testid="assistant-menu-open-side-chat"
-              className="flex w-full flex-col gap-0.5 px-3 py-2 text-left hover:bg-subtle focus-visible:bg-subtle focus-visible:outline-none"
+              className="flex w-full flex-col gap-0.5 px-3 py-2 text-left hover:bg-subtle focus-visible:bg-subtle focus-ring"
               onClick={() => {
                 setOpen(false);
                 onOpenSideChat();
@@ -76,7 +76,7 @@ export function AssistantEntryMenu({
               type="button"
               role="menuitem"
               data-testid="assistant-menu-hide-chat"
-              className="flex w-full flex-col gap-0.5 px-3 py-2 text-left hover:bg-subtle focus-visible:bg-subtle focus-visible:outline-none"
+              className="flex w-full flex-col gap-0.5 px-3 py-2 text-left hover:bg-subtle focus-visible:bg-subtle focus-ring"
               onClick={() => {
                 setOpen(false);
                 onCloseAllChat();

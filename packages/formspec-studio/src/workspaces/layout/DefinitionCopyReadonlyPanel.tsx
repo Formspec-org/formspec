@@ -72,7 +72,7 @@ export function DefinitionCopyReadonlyPanel({
         type="button"
         data-layout-stop-select=""
         data-testid={`${testIdPrefix}-edit-copy-in-editor`}
-        className="w-full rounded-[8px] border border-border/60 bg-bg-default/40 px-2 py-1.5 text-left text-[12px] font-medium text-accent transition-colors hover:border-accent/50 hover:bg-accent/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+        className="w-full rounded-[8px] border border-border/60 bg-bg-default/40 px-2 py-1.5 text-left text-[12px] font-medium text-accent transition-colors hover:border-accent/50 hover:bg-accent/5 focus-ring"
         onClick={(e) => {
           e.stopPropagation();
           openInEditor(definitionPath, kind);
@@ -90,7 +90,7 @@ export function DefinitionCopyReadonlyPanel({
           type="button"
           data-layout-stop-select=""
           data-testid={`${testIdPrefix}-definition-copy-toggle`}
-          className="mt-2 flex w-full items-center gap-2 rounded-[8px] border border-border/45 bg-bg-default/35 px-2 py-1.5 text-left text-[12px] font-medium text-ink transition-colors hover:bg-bg-default/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+          className="mt-2 flex w-full items-center gap-2 rounded-[8px] border border-border/45 bg-bg-default/35 px-2 py-1.5 text-left text-[12px] font-medium text-ink transition-colors hover:bg-bg-default/50 focus-ring"
           aria-expanded={detailsOpen}
           onClick={(e) => {
             e.stopPropagation();

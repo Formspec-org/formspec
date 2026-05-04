@@ -13,17 +13,16 @@ interface WorkspacePageProps extends React.HTMLAttributes<HTMLDivElement> {
 export function WorkspacePage({ 
   children, 
   className = "", 
-  maxWidth = "max-w-[660px]",
+  maxWidth = "max-w-[720px]",
   ...props 
 }: WorkspacePageProps) {
   return (
     <div 
-      className={`flex flex-col min-h-full w-full ${maxWidth} mx-auto animate-in fade-in slide-in-from-bottom-2 duration-500 ease-out ${className}`}
+      className={`flex flex-col min-h-full w-full ${maxWidth} mx-auto animate-onboarding-enter ${className}`}
       {...props}
     >
       {children}
     </div>
-
   );
 }
 
@@ -39,7 +38,7 @@ interface WorkspacePageSectionProps {
 export function WorkspacePageSection({ 
   children, 
   className = "", 
-  padding = "px-7" 
+  padding = "px-4" 
 }: WorkspacePageSectionProps) {
   return (
     <div className={`w-full ${padding} ${className}`}>

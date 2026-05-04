@@ -151,7 +151,15 @@ describe('ImportDialog', () => {
       screen.getByRole('button', { name: /mapping/i }).click();
     });
 
-    const doc = { version: '9.9.9', direction: 'forward', rules: [{ sourcePath: 'a', targetPath: 'b' }] };
+    const doc = {
+      $formspecMapping: '1.0',
+      version: '9.9.9',
+      definitionRef: 'urn:test',
+      definitionVersion: '1.0.0',
+      direction: 'forward' as const,
+      targetSchema: { format: 'json' as const },
+      rules: [{ sourcePath: 'a', targetPath: 'b', transform: 'preserve' as const }],
+    };
     const textarea = screen.getByPlaceholderText(/paste mapping json here/i);
     await act(async () => {
       fireEvent.change(textarea, { target: { value: JSON.stringify(doc) } });

@@ -163,7 +163,7 @@ describe('LayoutCanvas', () => {
 
     renderLayout(project);
     fireEvent.click(screen.getByTestId('layout-add-item'));
-    fireEvent.click(screen.getByRole('button', { name: /^Card / }));
+    fireEvent.click(screen.getByRole('button', { name: /Card / }));
 
     const cardContainer = screen.getByTestId((id, el) =>
       Boolean((el as HTMLElement).getAttribute('data-testid')?.startsWith('layout-container-')),

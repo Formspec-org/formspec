@@ -294,160 +294,178 @@ export function LayoutCanvas() {
 
   return (
     <LayoutDndProvider activePageId={activePageId}>
-    <div className="flex min-h-full w-full flex-col">
-      <LayoutCanvasHeader
-        mode={structure.mode}
-        onSetMode={(mode) => project.setFlow(mode)}
-        isMultiPage={isMultiPage}
-        showAddPageButton={structure.mode !== 'single' && !isMultiPage}
-        onAddPage={handleAddPage}
-        pageNavItems={pageNavItems}
-        activePageId={activePageId}
-        onSelectPage={setActivePageId}
-        onRenamePage={handleRenamePage}
-        onReorderPage={handlePageNavReorder}
-        onMovePageToIndex={handlePageNavMoveToIndex}
-        onRequestRemovePage={(navId) => setPendingRemovePageNavId(navId)}
-      />
-      <LayoutDocumentStrip layouts={intelligence.layouts} />
+      <div className="flex min-h-full w-full flex-col bg-bg-default/50">
+        <LayoutCanvasHeader
+          mode={structure.mode}
+          onSetMode={(mode) => project.setFlow(mode)}
+          isMultiPage={isMultiPage}
+          showAddPageButton={structure.mode !== 'single' && !isMultiPage}
+          onAddPage={handleAddPage}
+          pageNavItems={pageNavItems}
+          activePageId={activePageId}
+          onSelectPage={setActivePageId}
+          onRenamePage={handleRenamePage}
+          onReorderPage={handlePageNavReorder}
+          onMovePageToIndex={handlePageNavMoveToIndex}
+          onRequestRemovePage={(navId) => setPendingRemovePageNavId(navId)}
+        />
+        <LayoutDocumentStrip layouts={intelligence.layouts} />
 
-    <div className="min-h-0 flex-1 overflow-y-auto relative w-full">
-    <WorkspacePage maxWidth="max-w-[980px]" className="relative">
-      <>
-        <WorkspacePageSection className="space-y-3 py-4">
-            <div
-              onContextMenu={handleContextMenu}
-              onKeyDown={(e) => {
-                if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) {
-                  const target = (e.target as HTMLElement).closest<HTMLElement>('[data-layout-node]');
-                  if (!target) return;
-                  const rect = target.getBoundingClientRect();
-                  handleContextMenu({
-                    preventDefault: () => {},
-                    clientX: rect.left + rect.width / 2,
-                    clientY: rect.top + rect.height / 2,
-                    target: e.target,
-                  } as React.MouseEvent);
-                  e.preventDefault();
-                }
-              }}
-            >
-              {renderLayoutTree(
-                visibleTreeChildren,
-                {
-                  defLookup,
-                  bindKeyMap,
-                  isSelected: isLayoutRowSelected,
-                  layoutPrimaryKey,
-                  onSelect: handleLayoutRowSelect,
-                  activePageId,
-                  onSelectPage: setActivePageId,
-                  onSetNodeProp: handleSetNodeProp,
-                  onUnwrapNode: handleUnwrapNode,
-                  onRemoveNode: handleRemoveNode,
-                  onSetStyle: handleStyleAdd,
-                  onStyleRemove: handleStyleRemove,
-                  onResizeColSpan: handleResizeColSpan,
-                  onResizeRowSpan: handleResizeRowSpan,
-                  onCommitDisplayLabel: (defPath, text) => {
-                    project.updateItem(defPath, { label: text });
-                  },
-                  onRenameDefinitionItem: handleRenameDefinitionItem,
-                },
-                '',
-                undefined,
-                0,
-                !isMultiPage,
-                'root',
-              )}
+        <div className="min-h-0 flex-1 overflow-y-auto relative w-full scrollbar-none">
+          <WorkspacePage maxWidth="max-w-[1020px]" className="relative">
+            <>
+              <WorkspacePageSection className="space-y-4 py-8 px-6 lg:px-8">
+                <div
+                  className="rounded-lg border border-border bg-surface p-6 shadow-sm min-h-[400px] relative overflow-hidden"
+                  onContextMenu={handleContextMenu}
+                  onKeyDown={(e) => {
+                    if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) {
+                      const target = (e.target as HTMLElement).closest<HTMLElement>('[data-layout-node]');
+                      if (!target) return;
+                      const rect = target.getBoundingClientRect();
+                      handleContextMenu({
+                        preventDefault: () => {},
+                        clientX: rect.left + rect.width / 2,
+                        clientY: rect.top + rect.height / 2,
+                        target: e.target,
+                      } as React.MouseEvent);
+                      e.preventDefault();
+                    }
+                  }}
+                >
+                  
+                  <div className="relative z-10">
+                    {renderLayoutTree(
+                      visibleTreeChildren,
+                      {
+                        defLookup,
+                        bindKeyMap,
+                        isSelected: isLayoutRowSelected,
+                        layoutPrimaryKey,
+                        onSelect: handleLayoutRowSelect,
+                        activePageId,
+                        onSelectPage: setActivePageId,
+                        onSetNodeProp: handleSetNodeProp,
+                        onUnwrapNode: handleUnwrapNode,
+                        onRemoveNode: handleRemoveNode,
+                        onSetStyle: handleStyleAdd,
+                        onStyleRemove: handleStyleRemove,
+                        onResizeColSpan: handleResizeColSpan,
+                        onResizeRowSpan: handleResizeRowSpan,
+                        onCommitDisplayLabel: (defPath, text) => {
+                          project.updateItem(defPath, { label: text });
+                        },
+                        onRenameDefinitionItem: handleRenameDefinitionItem,
+                      },
+                      '',
+                      undefined,
+                      0,
+                      !isMultiPage,
+                      'root',
+                    )}
 
-              {visibleTreeChildren.length === 0 && (
-                <p className="text-center text-[13px] text-muted py-8">
-                  No layout content yet. Use add below or place existing definition items from the tray.
-                </p>
-              )}
-            </div>
-          <button
-            type="button"
-            data-testid="layout-add-item"
-            aria-label="Add item to layout"
-            aria-expanded={paletteOpen}
-            className="mt-3 flex min-h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-[10px] border border-dashed border-accent/25 bg-bg-default/75 py-3 font-mono text-[11.5px] uppercase tracking-[0.18em] text-accent/65 transition-colors hover:border-accent/50 hover:bg-surface hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
-            onClick={() => {
-              setPaletteOpen((open) => !open);
-            }}
-          >
-            Add to layout
-          </button>
-        </WorkspacePageSection>
+                    {visibleTreeChildren.length === 0 && (
+                      <div className="flex flex-col items-center justify-center py-24 text-center">
+                        <div className="w-12 h-12 rounded bg-accent/[0.04] flex items-center justify-center mb-4 text-muted">
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                            <rect x="3" y="3" width="18" height="18" rx="2" />
+                            <path d="M3 9h18M9 21V9" />
+                          </svg>
+                        </div>
+                        <p className="text-[13px] text-muted font-medium italic max-w-[280px]">
+                          Your form canvas is empty. Start by placing items from the tray below.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
 
-        <WorkspacePageSection className="py-4">
-            <UnassignedTray
-              items={items}
-              treeChildren={treeChildren}
-              activePageId={activePageId}
-              onPlaceItem={(item) => {
-                if (!activePageId) return;
-                project.placeOnPage(item.key, activePageId);
-                selectLayoutNode(item.key, item.itemType);
-              }}
+                <button
+                  type="button"
+                  data-testid="layout-add-item"
+                  aria-label="Add item to layout"
+                  aria-expanded={paletteOpen}
+                  className="group relative flex h-14 w-full items-center justify-center rounded-md border border-dashed border-border bg-subtle transition-all hover:bg-subtle/80 hover:border-accent/40"
+                  onClick={() => {
+                    setPaletteOpen((open) => !open);
+                  }}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-7 h-7 rounded bg-accent/[0.08] flex items-center justify-center text-accent transition-transform">
+                      <span className="text-[16px] font-bold leading-none">+</span>
+                    </div>
+                    <span className="font-display text-[11px] font-bold uppercase tracking-normal text-muted group-hover:text-accent transition-colors">Add Component</span>
+                  </div>
+                </button>
+              </WorkspacePageSection>
+
+              <WorkspacePageSection className="py-8 px-6 lg:px-8 border-t border-border">
+                <UnassignedTray
+                  items={items}
+                  treeChildren={treeChildren}
+                  activePageId={activePageId}
+                  onPlaceItem={(item) => {
+                    if (!activePageId) return;
+                    project.placeOnPage(item.key, activePageId);
+                    selectLayoutNode(item.key, item.itemType);
+                  }}
+                />
+              </WorkspacePageSection>
+            </>
+
+            <ThemeOverridePopover
+              open={!!themeSelectedKey}
+              itemKey={themeSelectedKey ?? ''}
+              position={themePopoverPosition}
+              project={project}
+              onClose={() => setThemeSelectedKey(null)}
+              onSetOverride={(key, prop, value) => setThemeOverride(project, key, prop, value)}
+              onClearOverride={(key, prop) => clearThemeOverride(project, key, prop)}
             />
-        </WorkspacePageSection>
-      </>
 
-      <ThemeOverridePopover
-        open={!!themeSelectedKey}
-        itemKey={themeSelectedKey ?? ''}
-        position={themePopoverPosition}
-        project={project}
-        onClose={() => setThemeSelectedKey(null)}
-        onSetOverride={(key, prop, value) => setThemeOverride(project, key, prop, value)}
-        onClearOverride={(key, prop) => clearThemeOverride(project, key, prop)}
-      />
+            {contextMenu && menuItems.length > 0 && (
+              <>
+                <div
+                  className="fixed inset-0 z-50"
+                  onClick={closeMenu}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    closeMenu();
+                  }}
+                />
+                <div
+                  className="fixed z-[51]"
+                  style={{ left: contextMenu.x, top: contextMenu.y }}
+                >
+                  <LayoutContextMenu
+                    items={menuItems}
+                    onAction={handleAction}
+                    onClose={closeMenu}
+                  />
+                </div>
+              </>
+            )}
 
-      {contextMenu && menuItems.length > 0 && (
-        <>
-          <div
-            className="fixed inset-0 z-50"
-            onClick={closeMenu}
-            onContextMenu={(e) => {
-              e.preventDefault();
-              closeMenu();
-            }}
-          />
-          <div
-            className="fixed z-[51]"
-            style={{ left: contextMenu.x, top: contextMenu.y }}
-          >
-            <LayoutContextMenu
-              items={menuItems}
-              onAction={handleAction}
-              onClose={closeMenu}
+            <AddItemPalette
+              open={paletteOpen}
+              onClose={() => setPaletteOpen(false)}
+              onAdd={handleAddItem}
+              title="Add To Layout"
+              scope="layout"
             />
-          </div>
-        </>
-      )}
 
-      <AddItemPalette
-        open={paletteOpen}
-        onClose={() => setPaletteOpen(false)}
-        onAdd={handleAddItem}
-        title="Add To Layout"
-        scope="layout"
-      />
-
-      <ConfirmDialog
-        open={pendingRemovePageNavId !== null}
-        title={`Remove page “${pageNavItems.find((p) => p.id === pendingRemovePageNavId)?.title ?? ''}”?`}
-        description="The page surface is removed. Definition items on this page stay in the project and appear in the unassigned tray until you place them again."
-        confirmLabel="Remove page"
-        cancelLabel="Cancel"
-        onCancel={() => setPendingRemovePageNavId(null)}
-        onConfirm={handleConfirmRemovePage}
-      />
-    </WorkspacePage>
-    </div>
-    </div>
+            <ConfirmDialog
+              open={pendingRemovePageNavId !== null}
+              title={`Remove page “${pageNavItems.find((p) => p.id === pendingRemovePageNavId)?.title ?? ''}”?`}
+              description="The page surface is removed. Definition items on this page stay in the project and appear in the unassigned tray until you place them again."
+              confirmLabel="Remove page"
+              cancelLabel="Cancel"
+              onCancel={() => setPendingRemovePageNavId(null)}
+              onConfirm={handleConfirmRemovePage}
+            />
+          </WorkspacePage>
+        </div>
+      </div>
     </LayoutDndProvider>
   );
 }
@@ -456,31 +474,43 @@ function LayoutDocumentStrip({ layouts }: { layouts: LayoutDocument[] }) {
   const openDrift = layouts.reduce((count, layout) => count + layout.drift.filter((entry) => entry.status === 'open').length, 0);
 
   return (
-    <section className="border-b border-border/50 bg-surface/68 px-4 py-3" aria-label="Layout documents">
-      <div className="mx-auto flex w-full max-w-[980px] flex-wrap items-center gap-2">
-        <span className="mr-1 font-mono text-[10px] uppercase tracking-[0.18em] text-muted">Layout documents</span>
-        {layouts.map((layout) => {
-          const drift = layout.drift.filter((entry) => entry.status === 'open').length;
-          return (
-            <span
-              key={layout.id}
-              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] ${
-                drift > 0
-                  ? 'border-amber-500/35 bg-amber-500/10 text-amber-800 dark:text-amber-200'
-                  : 'border-border bg-bg-default/70 text-ink'
-              }`}
-              title={`${layout.channel} · ${layout.publishStatus ?? 'draft'}`}
-            >
-              <span className={`h-1.5 w-1.5 rounded-full ${drift > 0 ? 'bg-amber-500' : 'bg-accent'}`} />
-              <span className="font-medium">{layout.name}</span>
-              <span className="font-mono text-[10px] text-muted">{layout.placements.filter((entry) => !entry.hidden).length} placed</span>
-              {drift > 0 && <span className="font-mono text-[10px]">drift {drift}</span>}
-            </span>
-          );
-        })}
-        <span className="ml-auto font-mono text-[10px] uppercase tracking-[0.14em] text-muted">
-          {openDrift === 0 ? 'in sync' : `${openDrift} open drift`}
-        </span>
+    <section className="h-12 flex items-center border-b border-border bg-surface px-8 overflow-hidden" aria-label="Layout documents">
+      <div className="flex items-center gap-6 overflow-x-auto scrollbar-none pr-8">
+        <span className="font-display text-[9px] font-bold uppercase tracking-normal text-muted whitespace-nowrap">Active Documents</span>
+        
+        <div className="flex items-center gap-3">
+          {layouts.map((layout) => {
+            const drift = layout.drift.filter((entry) => entry.status === 'open').length;
+            return (
+              <div
+                key={layout.id}
+                className={`flex items-center gap-3 rounded-md border px-3 py-1 transition-all duration-200 ${
+                  drift > 0
+                    ? 'border-amber-400/40 bg-amber-50/50 text-amber-900'
+                    : 'border-border bg-surface text-ink hover:border-accent/40 shadow-sm'
+                }`}
+                title={`${layout.channel} · ${layout.publishStatus ?? 'draft'}`}
+              >
+                <div className={`w-1.5 h-1.5 rounded-full ${drift > 0 ? 'bg-amber-500 animate-pulse' : 'bg-accent'}`} />
+                <span className="text-[11px] font-bold tracking-tight whitespace-nowrap">{layout.name}</span>
+                <div className="h-3 w-[1px] bg-border/40" />
+                <span className="font-mono text-[9px] font-bold text-muted uppercase tracking-normal">{layout.placements.filter((entry) => !entry.hidden).length} Nodes</span>
+                {drift > 0 && (
+                  <span className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-amber-500/10 text-[9px] font-bold uppercase tracking-normal text-amber-600">
+                    Drift {drift}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="ml-auto flex items-center gap-3 pl-8">
+          <div className="h-4 w-[1.5px] bg-border/20" />
+          <span className={`font-display text-[9px] font-bold uppercase tracking-normal ${openDrift === 0 ? 'text-emerald-500/60' : 'text-amber-500/80'}`}>
+            {openDrift === 0 ? '✓ Synced' : `! ${openDrift} Open Drift`}
+          </span>
+        </div>
       </div>
     </section>
   );

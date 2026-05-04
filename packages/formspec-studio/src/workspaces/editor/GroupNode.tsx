@@ -3,7 +3,7 @@ import { useEffect, useState, useRef, type KeyboardEvent, type ReactNode } from 
 import { Pill } from '../../components/ui/Pill';
 import { DragHandle } from '../../components/ui/DragHandle';
 import type { FormItem } from '@formspec-org/types';
-import type { StatusPill, MissingAction } from '../shared/item-row-shared';
+import { type StatusPill, type MissingAction, groupInlineInputClassName, sectionHeadingClassName, formLabelClassName } from '../shared/item-row-shared';
 import { useSelection } from '../../state/useSelection';
 import { useInlineIdentityEdit } from './useInlineIdentityEdit';
 
@@ -12,7 +12,7 @@ function EditMark({ testId }: { testId?: string }) {
     <span
       aria-hidden="true"
       data-testid={testId}
-      className="ml-1 inline-flex shrink-0 items-center justify-center text-ink/30 transition-colors group-hover:text-accent/55"
+      className="ml-1 inline-flex shrink-0 items-center justify-center text-muted transition-colors group-hover:text-accent/55"
     >
       <svg
         width="10"
@@ -249,7 +249,7 @@ export function GroupNode({
               aria-expanded={expanded}
               aria-controls={`group-panel-${itemKey}`}
               data-testid={`toggle-${itemKey}`}
-              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border/80 bg-surface text-[14px] text-ink/80 shadow-sm transition-all hover:border-accent/40 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 ${expanded ? 'rotate-90' : ''}`}
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border/80 bg-surface text-[14px] text-ink/80 shadow-sm transition-all hover:border-accent/40 hover:text-ink focus-ring ${expanded ? 'rotate-90' : ''}`}
               onClick={(e) => {
                 e.stopPropagation();
                 setExpanded(!expanded);
@@ -263,7 +263,7 @@ export function GroupNode({
             <button
               type="button"
               aria-label={`Select group ${resolvedLabel}`}
-              className="flex min-w-0 flex-1 items-start rounded-[10px] text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+              className="flex min-w-0 flex-1 items-start rounded-[10px] text-left focus-ring"
             >
               <div className="min-w-0 flex-1">
                 {activeIdentityField === 'key' ? (
@@ -272,7 +272,7 @@ export function GroupNode({
                     type="text"
                     autoFocus
                     value={draftKey}
-                    className="w-full rounded-[6px] border border-accent/30 bg-surface px-2 py-1.5 text-[18px] font-semibold font-mono tracking-tight text-ink outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/25 md:text-[20px]"
+                    className="w-full rounded-[6px] border border-accent/30 bg-surface px-2 py-1.5 text-[18px] font-semibold font-mono tracking-tight text-ink outline-none focus:border-accent focus-ring md:text-[20px]"
                     onChange={(event) => setDraftKey(event.currentTarget.value)}
                     onClick={(event) => event.stopPropagation()}
                     onBlur={() => commitIdentityField('key')}
@@ -306,7 +306,7 @@ export function GroupNode({
                         type="text"
                         autoFocus
                         value={draftLabel}
-                        className="w-full rounded-[6px] border border-border/80 bg-surface px-2 py-1.5 text-[14px] font-normal leading-snug tracking-normal text-ink outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/25 md:text-[15px]"
+                        className="w-full rounded-[6px] border border-border/80 bg-surface px-2 py-1.5 text-[14px] font-normal leading-snug tracking-normal text-ink outline-none focus:border-accent focus-ring md:text-[15px]"
                         onChange={(event) => setDraftLabel(event.currentTarget.value)}
                         onClick={(event) => event.stopPropagation()}
                         onBlur={() => commitIdentityField('label')}
@@ -321,7 +321,7 @@ export function GroupNode({
                           openIdentityField('label');
                         }}
                       >
-                        <span className={labelForDescription ? '' : 'italic text-ink/50'}>
+                        <span className={labelForDescription ? '' : 'italic text-muted'}>
                           {labelForDescription ?? 'Add a display label…'}
                         </span>
                         {effectiveSelected ? <EditMark testId={`group-${itemKey}-label-edit`} /> : null}
@@ -337,7 +337,7 @@ export function GroupNode({
             type="button"
             data-testid={`add-to-${itemKey}`}
             aria-label={`Add item to ${resolvedLabel}`}
-            className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border/80 bg-bg-default text-[18px] leading-none text-ink/80 transition-colors hover:border-accent/40 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+            className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border/80 bg-bg-default text-[18px] leading-none text-ink/80 transition-colors hover:border-accent/40 hover:text-ink focus-ring"
             onClick={(e) => {
               e.stopPropagation();
               onAddItem?.(e, itemPath);
@@ -359,7 +359,7 @@ export function GroupNode({
                         aria-label={`Inline group ${entry.label.toLowerCase()}`}
                         type="text"
                         autoFocus
-                        className="mt-1 w-full rounded-[6px] border border-border/80 bg-surface px-2.5 py-2 text-[14px] leading-5 text-ink outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/25"
+                        className={`${groupInlineInputClassName} leading-5`}
                         value={
                           entry.label === 'Description' ? (typeof item?.description === 'string' ? item.description : '')
                           : entry.label === 'Hint' ? (typeof item?.hint === 'string' ? item.hint : '')
@@ -419,7 +419,7 @@ export function GroupNode({
                 <button
                   type="button"
                   aria-label={`Edit repeats for ${resolvedLabel}`}
-                  className="inline-flex items-center rounded-full border border-border/90 px-2.5 py-1 text-[12px] font-medium text-ink/75 transition-colors hover:border-accent/40 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+                  className="inline-flex items-center rounded-full border border-border/90 px-2.5 py-1 text-[12px] font-medium text-ink/75 transition-colors hover:border-accent/40 hover:text-ink focus-ring"
                   onClick={(event) => {
                     event.stopPropagation();
                     closeOtherEditors('repeats');
@@ -433,7 +433,7 @@ export function GroupNode({
                   key={`${itemPath}-${action.key}`}
                   type="button"
                   aria-label={action.ariaLabel}
-                  className="inline-flex items-center rounded-full border border-dashed border-accent/50 px-2.5 py-1 text-[12px] font-medium text-accent transition-colors hover:border-accent/70 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+                  className="inline-flex items-center rounded-full border border-dashed border-accent/50 px-2.5 py-1 text-[12px] font-medium text-accent transition-colors hover:border-accent/70 hover:text-ink focus-ring"
                   onClick={(event) => {
                     event.stopPropagation();
                     if (action.key === 'behavior') closeOtherEditors('behavior');
@@ -448,32 +448,32 @@ export function GroupNode({
               <div className="mt-4 space-y-4 border-t border-border/65 pt-4">
                 {editingGroupSummaryContent && (
                   <section aria-label="Group content" className="space-y-3">
-                    <h3 className="text-[13px] font-semibold tracking-[0.04em] text-ink/84">Group details</h3>
-                    <p className="mt-1 text-[11px] leading-snug text-ink/50">
+                    <h3 className={sectionHeadingClassName}>Group details</h3>
+                    <p className="mt-1 text-[11px] leading-snug text-muted">
                       Edit description and hint in the summary row above.
                     </p>
                   </section>
                 )}
                 {editingContent === 'both' && (
                   <section aria-label="Group details" className="space-y-3">
-                    <h3 className="text-[13px] font-semibold tracking-[0.04em] text-ink/84">
+                    <h3 className={sectionHeadingClassName}>
                       Group details
                     </h3>
                     <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
-                    <label className="text-[13px] font-semibold tracking-[0.01em] text-ink/95">
+                    <label className={formLabelClassName}>
                       Description
                       <textarea
                         aria-label="Inline group description"
-                        className="mt-1 min-h-20 w-full rounded-[6px] border border-border/80 bg-surface px-2.5 py-2 text-[14px] text-ink outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/25"
+                        className={`min-h-20 ${groupInlineInputClassName}`}
                         value={typeof item?.description === 'string' ? item.description : ''}
                         onChange={(event) => onUpdateItem?.({ description: event.currentTarget.value || null })}
                       />
                     </label>
-                    <label className="text-[13px] font-semibold tracking-[0.01em] text-ink/95">
+                    <label className={formLabelClassName}>
                       Hint
                       <textarea
                         aria-label="Inline group hint"
-                        className="mt-1 min-h-20 w-full rounded-[6px] border border-border/80 bg-surface px-2.5 py-2 text-[14px] text-ink outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/25"
+                        className={`min-h-20 ${groupInlineInputClassName}`}
                         value={typeof item?.hint === 'string' ? item.hint : ''}
                         onChange={(event) => onUpdateItem?.({ hint: event.currentTarget.value || null })}
                       />
@@ -483,7 +483,7 @@ export function GroupNode({
                 )}
                 {editingBehavior && (
                   <section aria-label="Behavior" className="space-y-3 border-t border-border/65 pt-4 first:border-t-0 first:pt-0">
-                    <h3 className="text-[13px] font-semibold tracking-[0.04em] text-ink/84">
+                    <h3 className={sectionHeadingClassName}>
                       Behavior
                     </h3>
                     <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
@@ -496,12 +496,12 @@ export function GroupNode({
                       />
                       Required
                     </label>
-                    <label className="text-[13px] font-semibold tracking-[0.01em] text-ink/95">
+                    <label className={formLabelClassName}>
                       Relevant
                       <input
                         aria-label="Group relevant behavior"
                         type="text"
-                        className="mt-1 w-full rounded-[6px] border border-border/80 bg-surface px-2.5 py-2 text-[14px] text-ink outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/25"
+                        className={groupInlineInputClassName}
                         value={binds.relevant ?? ''}
                         onChange={(event) => onUpdateItem?.({ relevant: event.currentTarget.value || null })}
                       />
@@ -513,7 +513,7 @@ export function GroupNode({
             )}
             {editingRepeats && (
               <section aria-label="Repeat settings" className="mt-4 space-y-3 border-t border-border/65 pt-4">
-                <h3 className="text-[13px] font-semibold tracking-[0.04em] text-ink/84">
+                <h3 className={sectionHeadingClassName}>
                   Repeat settings
                 </h3>
                 <div className="grid gap-x-6 gap-y-4 sm:grid-cols-[auto,110px,110px] sm:items-end">
@@ -526,25 +526,25 @@ export function GroupNode({
                     />
                     Repeatable
                   </label>
-                  <label className="text-[13px] font-semibold tracking-[0.01em] text-ink/95">
+                  <label className={formLabelClassName}>
                     Minimum repeats
                     <input
                       aria-label="Minimum repeats"
                       type="number"
                       min="0"
                       value={minRepeat ?? ''}
-                      className="mt-1 w-full rounded-[6px] border border-border/80 bg-surface px-2.5 py-2 text-[14px] text-ink outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/25"
+                      className={groupInlineInputClassName}
                       onChange={(event) => onUpdateRepeatSettings?.({ minRepeat: event.currentTarget.value === '' ? null : Number(event.currentTarget.value) })}
                     />
                   </label>
-                  <label className="text-[13px] font-semibold tracking-[0.01em] text-ink/95">
+                  <label className={formLabelClassName}>
                     Maximum repeats
                     <input
                       aria-label="Maximum repeats"
                       type="number"
                       min="0"
                       value={maxRepeat ?? ''}
-                      className="mt-1 w-full rounded-[6px] border border-border/80 bg-surface px-2.5 py-2 text-[14px] text-ink outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/25"
+                      className={groupInlineInputClassName}
                       onChange={(event) => onUpdateRepeatSettings?.({ maxRepeat: event.currentTarget.value === '' ? null : Number(event.currentTarget.value) })}
                     />
                   </label>

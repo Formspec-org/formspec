@@ -92,7 +92,7 @@ export function WidgetConstraintSection({
           );
         })}
         {widgetState.isManaged && (
-          <div className="text-[10px] text-muted/70 font-mono mt-1" data-testid="widget-constraint-managed">
+          <div className="text-[10px] text-muted font-mono mt-1" data-testid="widget-constraint-managed">
             Constraint: <code className="bg-bg-default px-1 rounded">{project.bindFor(path)?.constraint as string}</code>
           </div>
         )}

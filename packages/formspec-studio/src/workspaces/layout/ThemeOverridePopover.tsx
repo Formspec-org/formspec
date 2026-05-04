@@ -105,7 +105,7 @@ function OverrideRow({ propInfo, sources, onCommit, onClear, onDirtyChange }: Ov
             onChange={(e) => handleChange(e.currentTarget.value)}
             onBlur={handleBlur}
             onKeyDown={(e) => { if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur(); }}
-            className="flex-1 h-6 rounded border border-border bg-surface px-2 text-[12px] font-mono text-ink outline-none placeholder:text-muted/40 focus:border-accent transition-colors"
+            className="flex-1 h-6 rounded border border-border bg-surface px-2 text-[12px] font-mono text-ink outline-none placeholder:text-muted focus:border-accent transition-colors"
           />
         )}
         {hasOverride && (
@@ -114,7 +114,7 @@ function OverrideRow({ propInfo, sources, onCommit, onClear, onDirtyChange }: Ov
             data-testid={`clear-override-${prop}`}
             aria-label={`Clear ${prop} override`}
             onClick={() => onClear(prop)}
-            className="h-6 px-2 rounded border border-border text-[10px] text-muted hover:border-error hover:text-error transition-colors focus-visible:outline-none"
+            className="h-6 px-2 rounded border border-border text-[10px] text-muted hover:border-error hover:text-error transition-colors focus-outline-none"
           >
             ×
           </button>
@@ -204,7 +204,7 @@ export function ThemeOverridePopover({
           type="button"
           aria-label="Close"
           onClick={requestClose}
-          className="text-muted hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent/70"
+          className="text-muted hover:text-ink transition-colors focus-ring"
         >
           ×
         </button>

@@ -64,7 +64,7 @@ export function FormHealthPanel() {
                 </svg>
               </div>
               <span className="text-[13px] font-medium text-ink/90">No issues found</span>
-              <span className="mt-1 text-[11px] text-ink/50">Your form definition looks good!</span>
+              <span className="mt-1 text-[11px] text-muted">Your form definition looks good!</span>
             </div>
           ) : (
             <ul className="space-y-3">
@@ -74,10 +74,10 @@ export function FormHealthPanel() {
                     type="button"
                     data-testid={`form-health-issue-${i}`}
                     aria-label={`${issue.severity === 'info' ? 'Info' : 'Warning'}: ${issue.label} at ${issue.path} — ${issue.message}`}
-                    className={`w-full text-left rounded-[8px] border px-3 py-2.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+                    className={`w-full text-left rounded-[8px] border px-3 py-2.5 transition-colors focus-ring ${
                       issue.severity === 'info'
-                        ? 'border-blue-500/35 bg-blue-500/5 hover:bg-blue-500/10 focus-visible:ring-blue-500/40 hover:border-blue-500/50'
-                        : 'border-amber-500/35 bg-amber-500/5 hover:bg-amber-500/10 focus-visible:ring-amber-500/40 hover:border-amber-500/50'
+                        ? 'border-blue-500/35 bg-blue-500/5 hover:bg-blue-500/10 hover:border-blue-500/50'
+                        : 'border-amber-500/35 bg-amber-500/5 hover:bg-amber-500/10 hover:border-amber-500/50'
                     }`}
                     onClick={() =>
                       select(issue.path, 'field', { tab: EDITOR_SELECTION_TAB })

@@ -103,7 +103,7 @@ export function OptionSets() {
                 if (e.key === 'Enter') handleAdd();
                 if (e.key === 'Escape') { setIsAdding(false); setNewName(''); }
               }}
-              className="flex-1 bg-transparent border-none outline-none text-sm font-mono text-ink placeholder:text-muted/40"
+              className="flex-1 bg-transparent border-none outline-none text-sm font-mono text-ink placeholder:text-muted"
             />
           </div>
         </InlineCreateForm>
@@ -170,7 +170,7 @@ export function OptionSets() {
                         placeholder="https://api.example.com/options"
                         className="block w-full text-[13px] bg-subtle border border-border rounded-lg px-3 py-2.5 hover:border-accent/50 hover:bg-subtle/70 underline decoration-accent/30 decoration-dotted underline-offset-4"
                       />
-                      <p className="text-[10px] text-muted/60 italic">
+                      <p className="text-[10px] text-muted italic">
                         Must return a JSON array of objects with value and label; optional keywords array for combobox search.
                       </p>
                     </div>
@@ -259,7 +259,7 @@ export function OptionSets() {
                           <div className="py-6 text-center text-[12px] text-muted italic">No options defined. Click "+ Add Row" to start.</div>
                         )}
                       </div>
-                      <p className="text-[10px] text-muted/60 italic mt-1.5">
+                      <p className="text-[10px] text-muted italic mt-1.5">
                         Value is stored in the response. Label is what the user sees. Keywords are optional aliases for searchable Select / combobox.
                       </p>
                     </section>

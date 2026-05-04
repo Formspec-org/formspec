@@ -125,7 +125,7 @@ export function DisplayBlock(props: DisplayBlockProps) {
   const identity = (
     <div className="flex flex-col min-w-0">
       <div className="flex items-center gap-2 group/id">
-        <span className="text-[10px] font-mono text-muted/60 uppercase tracking-wider tabular-nums shrink-0">
+        <span className="text-[10px] font-mono text-muted uppercase tracking-wider tabular-nums shrink-0">
           {props.groupPathPrefix}{itemKey}
         </span>
         {editable && !activeIdentityField && (
@@ -150,13 +150,13 @@ export function DisplayBlock(props: DisplayBlockProps) {
           onChange={(e) => setDraftLabel(e.target.value)}
           onBlur={commitIdentityField}
           onKeyDown={handleIdentityKeyDown}
-          className="bg-transparent border-none outline-none p-0 text-[15px] font-bold text-ink w-full placeholder:text-muted/30 resize-none"
+          className="bg-transparent border-none outline-none p-0 text-[15px] font-bold text-ink w-full placeholder:text-muted resize-none"
           rows={Math.max(1, draftLabel.split('\n').length)}
           placeholder="Enter content..."
         />
       ) : (
         <div 
-          className={`text-[15px] font-bold whitespace-pre-wrap ${hasDistinctHumanLabel ? 'text-ink' : 'text-muted/40 italic font-medium'}`}
+          className={`text-[15px] font-bold whitespace-pre-wrap ${hasDistinctHumanLabel ? 'text-ink' : 'text-muted italic font-medium'}`}
           onDoubleClick={openLabelEditor}
         >
           {label?.trim() ? label : 'No content'}
@@ -167,7 +167,7 @@ export function DisplayBlock(props: DisplayBlockProps) {
 
   const icon = (
     <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-bg-default/85">
-      <span className="font-ui text-[18px] font-bold text-muted/40 tabular-nums">
+      <span className="font-ui text-[18px] font-bold text-muted tabular-nums">
         {glyph}
       </span>
     </div>

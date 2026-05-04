@@ -23,22 +23,27 @@ export function Pillar({
   return (
     <div
       data-testid={testId}
-      className={`mb-12 last:mb-0 group animate-in fade-in slide-in-from-bottom-2 duration-500 ${hidden ? 'hidden' : ''}`}
+      className={`mb-16 last:mb-0 group ${hidden ? 'hidden' : ''}`}
     >
-      <header className="mb-6">
-        <div className="flex items-center gap-3 mb-1">
-          <div className={`w-1 h-5 rounded-full ${accentColor}`} />
-          <h3 className="font-mono text-[13px] font-bold tracking-[0.2em] uppercase text-ink">
-            {title}
-          </h3>
-        </div>
-        <div className="flex items-center gap-2 pl-4">
-          <HelpTip text={helpText}>
-            <span className="text-[12px] text-muted italic tracking-tight">{subtitle}</span>
-          </HelpTip>
+      <header className="mb-6 flex items-start justify-between">
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center gap-3">
+            <div className={`w-1 h-5 rounded-sm ${accentColor} opacity-90`} />
+            <h3 className="text-[18px] font-bold tracking-tight text-ink">
+              {title}
+            </h3>
+          </div>
+          <div className="flex items-center gap-2 pl-4">
+            <span className="text-[13px] text-muted font-bold tracking-tight opacity-70">{subtitle}</span>
+            <HelpTip text={helpText}>
+              <button className="flex h-4 w-4 items-center justify-center rounded bg-subtle text-[9px] font-bold text-muted hover:bg-accent/10 hover:text-accent transition-all cursor-help">
+                ?
+              </button>
+            </HelpTip>
+          </div>
         </div>
       </header>
-      <div className="pl-6 border-l border-border/60 ml-0.5 mt-4">
+      <div className="pl-4 border-l-2 border-border/10 ml-0.5 transition-all duration-300 group-hover:border-accent/20">
         {children}
       </div>
     </div>

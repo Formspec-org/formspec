@@ -52,18 +52,18 @@ function UnassignedTrayItem({
       tabIndex={0}
       data-testid={`unassigned-${item.key}`}
       aria-label={`${item.label} — drag onto the layout canvas to place`}
-      className={`flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1.5 text-[12px] text-muted outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-accent/55 ${
+      className={`flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1.5 text-[12px] text-muted outline-none transition-all duration-200 focus-ring ${
         isDragging ? `cursor-grabbing ${LAYOUT_DRAG_SOURCE_STYLE}` : 'cursor-grab'
       }`}
     >
       <span className="truncate">{item.label}</span>
-      <span className="text-[10px] font-mono text-muted/60">{item.itemType}</span>
+      <span className="text-[10px] font-mono text-muted">{item.itemType}</span>
       {activePageId && onPlaceItem && (
         <button
           type="button"
           aria-label={`Add ${item.label} to current page`}
           onClick={() => onPlaceItem(item)}
-          className="rounded-full border border-border/80 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink transition-colors hover:border-accent hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/70"
+          className="rounded-full border border-border/80 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink transition-colors hover:border-accent hover:text-accent focus-ring"
         >
           Add
         </button>

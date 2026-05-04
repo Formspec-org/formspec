@@ -54,7 +54,7 @@ export function HelpTip({ text, children }: HelpTipProps) {
             ref={refs.setFloating}
             style={floatingStyles}
             role="tooltip"
-            className="z-50 w-52 px-2.5 py-2 text-[11px] leading-snug text-ink bg-surface border border-border rounded-[4px] shadow-[0_4px_16px_rgba(0,0,0,0.12)] font-ui animate-in fade-in slide-in-from-top-1 duration-150"
+            className="z-50 w-52 px-2.5 py-2 text-[11px] font-medium leading-snug text-ink bg-surface border border-border/60 rounded-xl shadow-premium-lg font-ui animate-fade-in"
             {...getFloatingProps()}
           >
             {text}

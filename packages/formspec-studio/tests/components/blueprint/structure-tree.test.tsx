@@ -157,7 +157,7 @@ describe('StructureTree', () => {
     });
 
     await act(async () => {
-      screen.getByRole('button', { name: /^Text Short text\b/i }).click();
+      screen.getByRole('button', { name: /Text Short text/i }).click();
     });
 
     const insertedItem = project.definition.items.find((item: any) => item.label === 'Text');
@@ -208,7 +208,7 @@ describe('StructureTree', () => {
     });
 
     await act(async () => {
-      screen.getByRole('button', { name: /^Text Short text\b/i }).click();
+      screen.getByRole('button', { name: /Text Short text/i }).click();
     });
 
     const group = project.definition.items[0] as any;
@@ -224,7 +224,7 @@ describe('StructureTree', () => {
       screen.getByTitle('Add item').click();
     });
 
-    expect(screen.getByRole('button', { name: /^Heading Section heading or title/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Heading Section heading or title/i })).toBeInTheDocument();
   });
 
   it('opens the same editor context menu on right-click and can duplicate a field', async () => {

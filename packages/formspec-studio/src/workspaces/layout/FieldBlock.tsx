@@ -107,7 +107,7 @@ export function FieldBlock(props: FieldBlockProps) {
   const identity = (
     <div className="flex flex-col min-w-0">
       <div className="flex items-center gap-2 group/id">
-        <span className="text-[10px] font-mono text-muted/60 uppercase tracking-wider tabular-nums shrink-0">
+        <span className="text-[10px] font-mono text-muted uppercase tracking-wider tabular-nums shrink-0">
           {props.groupPathPrefix}{itemKey}
         </span>
         {editable && !activeIdentityField && (
@@ -133,12 +133,12 @@ export function FieldBlock(props: FieldBlockProps) {
           onChange={(e) => setDraftLabel(e.target.value)}
           onBlur={commitIdentityField}
           onKeyDown={handleIdentityKeyDown}
-          className="bg-transparent border-none outline-none p-0 text-[15px] font-bold text-ink w-full placeholder:text-muted/30"
+          className="bg-transparent border-none outline-none p-0 text-[15px] font-bold text-ink w-full placeholder:text-muted"
           placeholder="Enter label..."
         />
       ) : (
         <div 
-          className={`text-[15px] font-bold truncate ${hasDistinctHumanLabel ? 'text-ink' : 'text-muted/40 italic font-medium'}`}
+          className={`text-[15px] font-bold truncate ${hasDistinctHumanLabel ? 'text-ink' : 'text-muted italic font-medium'}`}
           onDoubleClick={openLabelEditor}
         >
           {label?.trim() ? label : 'No label'}

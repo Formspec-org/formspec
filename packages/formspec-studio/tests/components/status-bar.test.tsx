@@ -32,7 +32,7 @@ describe('StatusBar', () => {
       </ProjectProvider>,
     );
     expect(screen.getByText(/1 field/i)).toBeInTheDocument();
-    expect(screen.queryByText(/Documents attached/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Documents linked/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Layout warnings/i)).not.toBeInTheDocument();
   });
 
@@ -113,9 +113,9 @@ describe('StatusBar', () => {
 
     expect(screen.getByText(/Data connections/i)).toBeInTheDocument();
     expect(screen.getByText(/Cross-field rules/i)).toBeInTheDocument();
-    expect(screen.getByText(/Documents attached/i)).toBeInTheDocument();
+    expect(screen.getByText(/Documents linked/i)).toBeInTheDocument();
     expect(screen.getByText(/AI changes/i)).toBeInTheDocument();
-    expect(screen.getByText(/Layout warnings/i)).toBeInTheDocument();
+    expect(screen.getByText(/Layout drift/i)).toBeInTheDocument();
   });
 
   it('health chip shows warnings when issues exist', () => {
@@ -153,7 +153,7 @@ describe('StatusBar', () => {
       version: '1.0.0',
       items: [],
     });
-    expect(screen.getByRole('link', { name: 'https://example.com/forms/lease' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'example.com/forms/lease' })).toHaveAttribute(
       'href',
       'https://example.com/forms/lease'
     );

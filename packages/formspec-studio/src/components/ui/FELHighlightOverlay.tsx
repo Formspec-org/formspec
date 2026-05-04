@@ -18,7 +18,7 @@ export function FELHighlightOverlay({ tokens, placeholder }: FELHighlightOverlay
       aria-hidden="true"
     >
       {tokens.length === 0 && placeholder && (
-        <span className="text-muted/40">{placeholder}</span>
+        <span className="text-muted">{placeholder}</span>
       )}
       {tokens.map((token, i) => (
         <span 
@@ -28,7 +28,7 @@ export function FELHighlightOverlay({ tokens, placeholder }: FELHighlightOverlay
             ${token.kind === 'path' ? 'text-green' : ''}
             ${token.kind === 'function' ? 'text-logic font-semibold underline decoration-logic/20 underline-offset-2' : ''}
             ${token.kind === 'literal' ? 'text-amber' : ''}
-            ${token.kind === 'operator' ? 'text-muted/60' : ''}
+            ${token.kind === 'operator' ? 'text-muted' : ''}
             ${token.kind === 'plain' ? 'text-ink/80' : ''}
           `}
         >

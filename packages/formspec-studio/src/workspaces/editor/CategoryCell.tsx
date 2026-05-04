@@ -19,14 +19,15 @@ export function CategoryCell({
   title,
   onOpen,
 }: CategoryCellProps) {
-  const isEmpty = !value;
+  const isEmpty = !value || value === '\u2014';
 
   return (
     <div
       data-testid={testId}
       className={[
-        'min-w-0 border-l border-border/65 pl-3',
-        selected ? 'cursor-pointer' : '',
+        'min-w-0 px-4 py-2.5 rounded-xl transition-all duration-300 relative group/cell',
+        selected ? 'cursor-pointer hover:bg-accent/5' : '',
+        isExpanded ? 'bg-accent/10 shadow-sm' : 'bg-subtle/30',
       ].join(' ')}
       onClick={(event) => {
         if (!selected) return;
@@ -34,26 +35,39 @@ export function CategoryCell({
         onOpen(category);
       }}
     >
-      <dt className="font-mono text-[11px] tracking-[0.14em] text-ink/72" title={title}>
-        {category}
+      <dt className="flex items-center gap-2 mb-1.5" title={title}>
+        <span className="font-display text-[9px] font-black uppercase tracking-[0.2em] text-muted group-hover/cell:text-accent/60 transition-colors">
+          {category}
+        </span>
+        {isExpanded && (
+          <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+        )}
       </dt>
       <dd
         className={[
-          'group mt-1 inline-flex max-w-full items-center truncate rounded-md px-1 -mx-1 text-[14px] font-medium leading-5 text-ink/94 md:text-[15px]',
-          isExpanded ? 'bg-accent/12 ring-1 ring-accent/25' : '',
-          isEmpty && selected ? 'hover:ring-1 hover:ring-accent/15' : '',
+          'flex max-w-full items-center truncate text-[14px] font-bold leading-none transition-all',
+          isExpanded ? 'text-accent' : 'text-ink/80',
+          isEmpty ? 'text-muted italic font-medium' : '',
         ].join(' ')}
       >
         {isEmpty && selected ? (
-          <span className="truncate italic" style={{ color: 'color-mix(in srgb, var(--color-ink) 35%, transparent)' }}>
-            Add {category.toLowerCase()}...
+          <span className="truncate">
+            Add {category.toLowerCase()}\u2026
           </span>
         ) : isEmpty && !selected ? (
-          <span className="truncate text-ink/56">{'\u2014'}</span>
+          <span className="truncate">{'\u2014'}</span>
         ) : (
           <span className="truncate">{value}</span>
         )}
       </dd>
+      
+      {selected && !isExpanded && (
+        <div className="absolute right-2 top-2 opacity-0 group-hover/cell:opacity-100 transition-opacity">
+          <div className="w-4 h-4 rounded-full bg-accent/20 flex items-center justify-center">
+            <span className="text-accent text-[10px]">+</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

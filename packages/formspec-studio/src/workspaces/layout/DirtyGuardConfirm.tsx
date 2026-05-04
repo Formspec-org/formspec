@@ -18,7 +18,7 @@ export function DirtyGuardConfirm({ onDiscard, onCancel }: DirtyGuardConfirmProp
           type="button"
           data-testid="dirty-guard-discard"
           onClick={onDiscard}
-          className="rounded-full border border-error bg-surface px-3 py-1 text-[12px] font-semibold text-error hover:bg-error/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error/70"
+          className="rounded-full border border-error bg-surface px-3 py-1 text-[12px] font-semibold text-error hover:bg-error/5 transition-colors focus-ring"
         >
           Discard
         </button>
@@ -26,7 +26,7 @@ export function DirtyGuardConfirm({ onDiscard, onCancel }: DirtyGuardConfirmProp
           type="button"
           data-testid="dirty-guard-cancel"
           onClick={onCancel}
-          className="rounded-full border border-border bg-surface px-3 py-1 text-[12px] font-semibold text-ink hover:border-accent/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/70"
+          className="rounded-full border border-border bg-surface px-3 py-1 text-[12px] font-semibold text-ink hover:border-accent/40 transition-colors focus-ring"
         >
           Keep editing
         </button>

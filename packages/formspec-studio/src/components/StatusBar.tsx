@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { countDefinitionFields, getStudioIntelligence } from '@formspec-org/studio-core';
 import { useProjectState } from '../state/useProjectState';
 import { useProject } from '../state/useProject';
+import { dispatchStudioEvent, STUDIO_EVENTS } from '../studio-events';
 
 function plural(n: number, singular: string): string {
   return `${n} ${singular}${n === 1 ? '' : 's'}`;
@@ -60,19 +61,19 @@ export function StatusBar({ variant = 'full', onAskAI }: StatusBarProps) {
   const totalIssues = validationErrorCount + validationWarningCount + layoutDriftCount + openPatchCount + evidenceGapCount;
 
   const statusTone = status === 'active'
-    ? 'text-emerald-700 bg-emerald-500/10 border-emerald-500/25 dark:text-emerald-300 dark:bg-emerald-500/10 dark:border-emerald-400/25'
+    ? 'text-emerald-600 bg-emerald-50 border-emerald-100 dark:text-emerald-400 dark:bg-emerald-950/30 dark:border-emerald-800'
     : status === 'retired'
-      ? 'text-slate-600 bg-slate-500/10 border-slate-400/25 dark:text-slate-300 dark:bg-slate-500/10 dark:border-slate-400/25'
-      : 'text-amber-700 bg-amber-500/10 border-amber-500/25 dark:text-amber-300 dark:bg-amber-500/10 dark:border-amber-400/25';
+      ? 'text-slate-500 bg-slate-50 border-slate-100 dark:text-slate-400 dark:bg-slate-900/30 dark:border-slate-800'
+      : 'text-amber-600 bg-amber-50 border-amber-100 dark:text-amber-400 dark:bg-amber-950/30 dark:border-amber-800';
 
   const healthTone = totalIssues === 0
-    ? 'text-emerald-700 bg-emerald-500/10 border-emerald-500/25 dark:text-emerald-300 dark:bg-emerald-500/10 dark:border-emerald-400/25'
+    ? 'text-emerald-600 bg-emerald-50 border-emerald-100 dark:text-emerald-400 dark:bg-emerald-950/30 dark:border-emerald-800'
     : validationErrorCount > 0
-      ? 'text-red-700 bg-red-500/10 border-red-500/25 dark:text-red-300 dark:bg-red-500/10 dark:border-red-400/25'
-      : 'text-amber-700 bg-amber-500/10 border-amber-500/25 dark:text-amber-300 dark:bg-amber-500/10 dark:border-amber-400/25';
+      ? 'text-rose-600 bg-rose-50 border-rose-100 dark:text-rose-400 dark:bg-rose-950/30 dark:border-rose-800'
+      : 'text-amber-600 bg-amber-50 border-amber-100 dark:text-amber-400 dark:bg-amber-950/30 dark:border-amber-800';
 
   const healthLabel = totalIssues === 0
-    ? 'Healthy'
+    ? 'System Healthy'
     : validationErrorCount > 0
       ? `${validationErrorCount} error${validationErrorCount === 1 ? '' : 's'}`
       : `${validationWarningCount + layoutDriftCount + openPatchCount + evidenceGapCount} warning${validationWarningCount + layoutDriftCount + openPatchCount + evidenceGapCount === 1 ? '' : 's'}`;
@@ -84,14 +85,14 @@ export function StatusBar({ variant = 'full', onAskAI }: StatusBarProps) {
   };
 
   const handleOpenIssues = () => {
-    window.dispatchEvent(new CustomEvent('formspec:open-settings'));
+    dispatchStudioEvent(STUDIO_EVENTS.OPEN_SETTINGS);
   };
 
   const handleAskAI = () => {
     if (onAskAI) {
       onAskAI();
     } else {
-      window.dispatchEvent(new CustomEvent('formspec:open-assistant-workspace'));
+      dispatchStudioEvent(STUDIO_EVENTS.OPEN_ASSISTANT_WORKSPACE, {});
     }
   };
 
@@ -104,29 +105,29 @@ export function StatusBar({ variant = 'full', onAskAI }: StatusBarProps) {
   return (
     <footer
       data-testid="status-bar"
-      className="relative flex min-h-[44px] items-center justify-between gap-4 border-t border-border/60 bg-surface/98 dark:bg-bg-default/98 px-4 py-1 font-ui shrink-0 shadow-premium"
+      className="sticky bottom-0 z-40 flex min-h-[32px] items-center justify-between gap-6 border-t border-border px-3 py-1 font-ui shrink-0 shadow-sm bg-surface"
     >
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(39,87,199,0.24),transparent)]" />
-
-      <div className="flex min-w-0 flex-1 items-center gap-3 overflow-x-auto scrollbar-none">
-        <div className="flex shrink-0 items-center gap-2">
-          <span className="font-display text-[16px] tracking-tight text-ink font-semibold">The Stack</span>
-          <span className="text-[11px] uppercase tracking-wider text-muted/60 font-medium">FS {formspecVersion}</span>
+      <div className="flex min-w-0 flex-1 items-center gap-4 overflow-x-auto scrollbar-none">
+        <div className="flex shrink-0 items-center gap-2 mr-2">
+          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-accent/[0.08] text-accent">
+            <span className="font-display text-[11px] font-bold">S</span>
+          </div>
+          <span className="text-[10px] font-bold tracking-normal text-muted uppercase">FS {formspecVersion}</span>
         </div>
 
-        <span className={`shrink-0 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${statusTone}`}>
+        <span className={`status-chip ${statusTone}`}>
           {status}
         </span>
 
-        <span className="flex shrink-0 items-center gap-1.5 uppercase tracking-wider text-muted text-[11px] font-medium">
-          <span className="text-[16px] leading-none text-accent" aria-hidden="true">▦</span>
-          <span className="text-accent/90">{plural(fieldCount, 'field')}</span>
+        <span className="flex shrink-0 items-center gap-1.5 text-[10px] font-bold text-muted group cursor-default">
+          <span className="text-[12px] leading-none text-muted group-hover:text-accent transition-colors duration-200" aria-hidden="true">▦</span>
+          <span className="text-muted group-hover:text-ink transition-colors duration-200">{plural(fieldCount, 'field')}</span>
         </span>
 
         <button
           type="button"
           onClick={handleOpenIssues}
-          className={`shrink-0 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${healthTone} hover:opacity-80 transition-all`}
+          className={`status-chip ${healthTone}`}
           data-testid="health-chip"
         >
           {healthLabel}
@@ -135,15 +136,15 @@ export function StatusBar({ variant = 'full', onAskAI }: StatusBarProps) {
         <button
           type="button"
           onClick={handleAskAI}
-          className="shrink-0 rounded-full border border-accent/25 bg-accent/5 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-accent hover:bg-accent/10 transition-all"
+          className="shrink-0 rounded-sm border border-border bg-subtle px-2 py-0.5 text-[9px] font-bold uppercase tracking-normal text-muted hover:text-ink hover:bg-surface transition-all duration-200 shadow-sm"
         >
           Ask AI
         </button>
 
         <button
           type="button"
-          onClick={() => window.dispatchEvent(new CustomEvent('formspec:publish-project'))}
-          className="shrink-0 rounded-full bg-accent px-3.5 py-1 text-[11px] font-bold uppercase tracking-wider text-white hover:bg-accent/90 transition-all shadow-sm active:scale-95"
+          onClick={() => dispatchStudioEvent(STUDIO_EVENTS.PUBLISH_PROJECT)}
+          className="shrink-0 rounded-sm bg-accent px-3 py-1 text-[9px] font-bold uppercase tracking-normal text-surface hover:bg-accent/90 shadow-sm"
         >
           Publish
         </button>
@@ -153,62 +154,63 @@ export function StatusBar({ variant = 'full', onAskAI }: StatusBarProps) {
             <button
               type="button"
               onClick={() => setMenuOpen((o) => !o)}
-              className="shrink-0 rounded-full border border-border px-2 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-muted hover:bg-subtle hover:text-ink transition-colors"
+              className={`shrink-0 flex items-center justify-center w-6 h-6 rounded border border-border/60 text-[12px] font-bold transition-all duration-200 ${menuOpen ? 'bg-accent text-surface border-accent' : 'text-muted hover:bg-subtle hover:text-ink'}`}
               aria-label="More metrics"
               aria-expanded={menuOpen}
             >
-              ⋯
+              <span className={menuOpen ? 'rotate-90' : ''}>⋯</span>
             </button>
             {menuOpen && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
-                <div className="absolute bottom-full left-0 z-50 mb-2 w-56 rounded-lg border border-border bg-surface shadow-lg p-2 space-y-1">
-                  <div
-                    data-testid="status-metric-binds"
-                    className="flex items-center justify-between px-2 py-1 text-[11px] uppercase tracking-[0.18em] text-muted"
-                  >
-                    <span>Data connections</span>
-                    <span className="text-ink">{bindCount}</span>
+                <div className="bottom-full left-0 mb-2 w-64 dropdown-panel">
+                  <div className="p-2 space-y-0.5">
+                    <div className="px-1 pb-1 text-[9px] font-bold uppercase tracking-normal text-muted">Intelligence Metrics</div>
+                    <div
+                      data-testid="status-metric-binds"
+                      className="flex items-center justify-between px-2 py-1.5 text-[12px] font-bold text-muted rounded hover:bg-subtle transition-colors"
+                    >
+                      <span>Data connections</span>
+                      <span className="text-ink font-bold">{bindCount}</span>
+                    </div>
+                    <div
+                      data-testid="status-metric-shapes"
+                      className="flex items-center justify-between px-2 py-1.5 text-[12px] font-bold text-muted rounded hover:bg-subtle transition-colors"
+                    >
+                      <span>Cross-field rules</span>
+                      <span className="text-ink font-bold">{shapeCount}</span>
+                    </div>
+                    <div className="flex items-center justify-between px-2 py-1.5 text-[12px] font-bold text-muted rounded hover:bg-subtle transition-colors">
+                      <span>Documents linked</span>
+                      <span className="text-ink font-bold">{evidence.linkedFields}/{evidence.totalFields}</span>
+                    </div>
+                    <div className="flex items-center justify-between px-2 py-1.5 text-[12px] font-bold text-muted rounded hover:bg-subtle transition-colors">
+                      <span>AI Changes</span>
+                      <span className="text-ink font-bold">{confirmedProvenanceCount}</span>
+                    </div>
+                    <div className="flex items-center justify-between px-2 py-1.5 text-[12px] font-bold text-muted rounded hover:bg-subtle transition-colors">
+                      <span>Layout drift</span>
+                      <span className={`${layoutDriftCount > 0 ? 'text-amber-600 font-bold' : 'text-ink font-bold'}`}>{layoutDriftCount}</span>
+                    </div>
                   </div>
-                  <div
-                    data-testid="status-metric-shapes"
-                    className="flex items-center justify-between px-2 py-1 text-[11px] uppercase tracking-[0.18em] text-muted"
-                  >
-                    <span>Cross-field rules</span>
-                    <span className="text-ink">{shapeCount}</span>
-                  </div>
-                  <div className="flex items-center justify-between px-2 py-1 text-[11px] uppercase tracking-[0.18em] text-muted">
-                    <span>Documents attached</span>
-                    <span className="text-ink">{evidence.linkedFields}/{evidence.totalFields}</span>
-                  </div>
-                  <div className="flex items-center justify-between px-2 py-1 text-[11px] uppercase tracking-[0.18em] text-muted">
-                    <span>AI changes</span>
-                    <span className="text-ink">{confirmedProvenanceCount}</span>
-                  </div>
-                  <div className="flex items-center justify-between px-2 py-1 text-[11px] uppercase tracking-[0.18em] text-muted">
-                    <span>Layout warnings</span>
-                    <span className={`${layoutDriftCount > 0 ? 'text-brass' : 'text-ink'}`}>{layoutDriftCount}</span>
-                  </div>
-                  <div className="border-t border-border pt-1">
+                  
+                  <div className="border-t border-border/40 p-1">
                     <button
                       type="button"
                       onClick={handleToggleAdvanced}
-                      className="w-full text-left px-2 py-1 text-[11px] uppercase tracking-[0.18em] text-muted hover:bg-subtle rounded transition-colors"
+                      className="w-full text-center py-1 text-[9px] font-bold uppercase tracking-normal text-muted hover:text-accent hover:bg-accent/[0.04] rounded transition-all"
                     >
-                      {advanced ? 'Hide advanced' : 'Show advanced'}
+                      {advanced ? 'Collapse System Stats' : 'Expand System Stats'}
                     </button>
                   </div>
+
                   {advanced && (
-                    <div className="space-y-1 border-t border-border pt-1">
-                      <div className="px-2 py-1 text-[11px] uppercase tracking-[0.18em] text-muted/60">Raw</div>
-                      <div className="px-2 py-0.5 text-[11px] font-mono text-ink/70">bind: {bindCount}</div>
-                      <div className="px-2 py-0.5 text-[11px] font-mono text-ink/70">shape: {shapeCount}</div>
-                      <div className="px-2 py-0.5 text-[11px] font-mono text-ink/70">evidence: {evidence.linkedFields}/{evidence.totalFields}</div>
-                      <div className="px-2 py-0.5 text-[11px] font-mono text-ink/70">provenance: {confirmedProvenanceCount}</div>
-                      <div className="px-2 py-0.5 text-[11px] font-mono text-ink/70">patches: {openPatchCount}</div>
-                      <div className="px-2 py-0.5 text-[11px] font-mono text-ink/70">layout drift: {layoutDriftCount}</div>
-                      <div className="px-2 py-0.5 text-[11px] font-mono text-ink/70">validation errors: {validationErrorCount}</div>
-                      <div className="px-2 py-0.5 text-[11px] font-mono text-ink/70">validation warnings: {validationWarningCount}</div>
+                    <div className="p-2 space-y-1 border-t border-border/40 bg-subtle/20 rounded-b">
+                      <div className="px-1 py-0.5 text-[10px] font-mono text-muted flex justify-between"><span>binds</span><span>{bindCount}</span></div>
+                      <div className="px-1 py-0.5 text-[10px] font-mono text-muted flex justify-between"><span>shapes</span><span>{shapeCount}</span></div>
+                      <div className="px-1 py-0.5 text-[10px] font-mono text-muted flex justify-between"><span>evidence</span><span>{evidence.linkedFields}/{evidence.totalFields}</span></div>
+                      <div className="px-1 py-0.5 text-[10px] font-mono text-muted flex justify-between"><span>errors</span><span className="text-error">{validationErrorCount}</span></div>
+                      <div className="px-1 py-0.5 text-[10px] font-mono text-muted flex justify-between"><span>warnings</span><span className="text-amber-500">{validationWarningCount}</span></div>
                     </div>
                   )}
                 </div>
@@ -219,19 +221,22 @@ export function StatusBar({ variant = 'full', onAskAI }: StatusBarProps) {
       </div>
 
       {definition.url && (
-        <div className="ml-4 hidden min-w-0 shrink-0 items-center gap-2 sm:flex">
-          <a
-            href={definition.url}
-            title={definition.url}
-            className="max-w-[260px] truncate text-[11px] uppercase tracking-wider text-muted/60 hover:text-accent transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded"
-          >
-            {definition.url}
-          </a>
+        <div className="ml-6 hidden min-w-0 shrink-0 items-center gap-3 lg:flex">
+          <div className="flex flex-col items-end -space-y-0.5">
+            <span className="text-[8px] font-bold uppercase tracking-normal text-muted">Live Environment</span>
+            <a
+              href={definition.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="max-w-[240px] truncate text-[10px] font-bold text-muted hover:text-accent transition-all focus-ring"
+            >
+              {definition.url.replace(/^https?:\/\//, '')}
+            </a>
+          </div>
           <button
             type="button"
             onClick={() => handleCopyUrl(definition.url)}
-            title="Copy URL"
-            className="rounded-full border border-border/60 px-3 py-1 text-[11px] font-medium text-muted hover:bg-surface hover:text-ink transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 active:scale-95"
+            className={`rounded-sm border border-border px-2 py-0.5 text-[9px] font-bold uppercase tracking-normal transition-all duration-200 shadow-sm ${copied ? 'bg-emerald-500 border-emerald-500 text-surface' : 'text-muted hover:bg-subtle hover:text-ink hover:border-accent/40'}`}
           >
             {copied ? 'Copied' : 'Copy'}
           </button>

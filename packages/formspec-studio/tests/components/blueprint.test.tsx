@@ -5,6 +5,7 @@ import { ProjectProvider } from '../../src/state/ProjectContext';
 import { SelectionProvider } from '../../src/state/useSelection';
 import { Blueprint } from '../../src/components/Blueprint';
 import { Section } from '../../src/components/ui/Section';
+import { STUDIO_EVENTS, dispatchStudioEvent } from '../../src/studio-events';
 
 function renderBlueprint(onSectionChange = vi.fn()) {
   const project = createProject();
@@ -48,6 +49,22 @@ describe('Blueprint', () => {
       screen.getByText('Calculations').click();
     });
     expect(onSectionChange).toHaveBeenCalledWith('Variables');
+  });
+
+  it('scrolls matching blueprint nav into view when SCROLL_TO_SECTION fires', async () => {
+    const proto = Element.prototype;
+    const originalScrollIntoView = proto.scrollIntoView;
+    const scrollIntoView = vi.fn();
+    proto.scrollIntoView = scrollIntoView as typeof originalScrollIntoView;
+    try {
+      renderBlueprint();
+      await act(async () => {
+        dispatchStudioEvent(STUDIO_EVENTS.SCROLL_TO_SECTION, { section: 'Structure' });
+      });
+      expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'nearest' });
+    } finally {
+      proto.scrollIntoView = originalScrollIntoView;
+    }
   });
 
   it('shows a non-zero count badge for Component Tree when a component document exists', () => {

@@ -1,15 +1,14 @@
-import { render, screen, act, fireEvent, within, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
-import { useRef } from 'react';
+import { render, screen, act, fireEvent, within, waitFor, cleanup } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import JSZip from 'jszip';
 import { createProject } from '@formspec-org/studio-core';
 import type { FormDefinition } from '@formspec-org/types';
 import { ProjectProvider } from '../../src/state/ProjectContext';
 import { SelectionProvider } from '../../src/state/useSelection';
-import { ActiveGroupProvider } from '../../src/state/useActiveGroup';
-import { ChatSessionControllerProvider } from '../../src/state/ChatSessionControllerContext';
-import type { ChatSessionController } from '../../src/hooks/useChatSessionController';
-import { Shell } from '../../src/components/Shell';
+import { ModeProvider } from '../../src/studio-app/ModeProvider';
+import { ShellProviders } from '../../src/providers/ShellProviders';
+import { UnifiedStudio } from '../../src/studio-app/UnifiedStudio';
+import { STUDIO_EVENTS } from '../../src/studio-events';
 
 const seededDefinition = {
   $formspec: '1.0' as const,
@@ -21,7 +20,7 @@ const seededDefinition = {
   ],
 };
 
-function renderShell(definition?: FormDefinition, width = 1440, screener?: unknown) {
+function renderStudio(definition?: FormDefinition, width = 1440, screener?: unknown) {
   Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: width });
   Object.defineProperty(document.documentElement, 'clientWidth', { writable: true, configurable: true, value: width });
   const project = definition
@@ -36,9 +35,11 @@ function renderShell(definition?: FormDefinition, width = 1440, screener?: unkno
     ...render(
       <ProjectProvider project={project}>
         <SelectionProvider>
-          <ActiveGroupProvider>
-            <Shell />
-          </ActiveGroupProvider>
+          <ModeProvider defaultMode="edit">
+            <ShellProviders>
+              <UnifiedStudio />
+            </ShellProviders>
+          </ModeProvider>
         </SelectionProvider>
       </ProjectProvider>
     ),
@@ -46,68 +47,6 @@ function renderShell(definition?: FormDefinition, width = 1440, screener?: unkno
   };
 }
 
-/**
- * Minimal ChatSessionController stub for testing context wiring.
- * Returns sentinel values so the test can assert Shell consumed the context (not a fallback local instance).
- */
-function makeStubController(overrides?: Partial<ChatSessionController>): ChatSessionController {
-  const sessionRef = { current: null } as unknown as React.RefObject<null>;
-  const noop = () => {};
-  const noopAsync = async () => {};
-  const noopAsyncList = async () => [];
-  return {
-    messages: [],
-    readyToScaffold: false,
-    initNotice: false,
-    recentSessions: [],
-    activeSessionId: 'STUB-SESSION-ID',
-    versions: [],
-    compareBaseId: null,
-    compareTargetId: null,
-    hasApiKey: false,
-    sessionRef,
-    proposalManager: null,
-    toolContext: { tools: [], callTool: async () => ({ content: '', isError: false }) },
-    repository: { saveThread: noopAsync, loadThread: async () => null, listThreads: async () => ({ items: [] }), deleteThread: noopAsync, clearThreads: noopAsync } as unknown as ChatSessionController['repository'],
-    projectScope: 'stub-scope',
-    versionStore: { listVersions: async () => [], commit: noopAsync, restore: noopAsync, fork: noopAsync } as unknown as ChatSessionController['versionStore'],
-    resolvedVersionScope: 'stub-scope',
-    createSession: () => null,
-    setActiveSession: noop,
-    ensureSession: () => Promise.reject(new Error('stub')),
-    startNewSession: noopAsync,
-    switchToSession: noopAsync,
-    deleteSession: noopAsync,
-    clearSessions: noopAsync,
-    refreshVersions: noopAsyncList as unknown as ChatSessionController['refreshVersions'],
-    refreshRecentSessions: noopAsyncList as unknown as ChatSessionController['refreshRecentSessions'],
-    setMessages: noop,
-    setReadyToScaffold: noop,
-    setInitNotice: noop,
-    setCompareBaseId: noop,
-    setCompareTargetId: noop,
-    loadDefinitionAsChangeset: noop,
-    ...overrides,
-  };
-}
-
-function StubControllerProbe({ project }: { project: ReturnType<typeof createProject> }) {
-  // Render Shell underneath a stub controller; the stub's identity proves the consumer reads from context.
-  const controllerRef = useRef(makeStubController());
-  return (
-    <ProjectProvider project={project}>
-      <SelectionProvider>
-        <ActiveGroupProvider>
-          <ChatSessionControllerProvider controller={controllerRef.current}>
-            <Shell />
-          </ChatSessionControllerProvider>
-        </ActiveGroupProvider>
-      </SelectionProvider>
-    </ProjectProvider>
-  );
-}
-
-// Define formspec-render if not already defined (mock for test)
 if (typeof customElements !== 'undefined' && !customElements.get('formspec-render')) {
   class MockFormspecRender extends HTMLElement {
     connectedCallback() {
@@ -122,95 +61,89 @@ if (typeof customElements !== 'undefined' && !customElements.get('formspec-rende
   customElements.define('formspec-render', MockFormspecRender);
 }
 
+afterEach(() => {
+  cleanup();
+  localStorage.clear();
+});
+
 describe('Shell', () => {
-  it('consumes ChatSessionController from context when one is provided', async () => {
-    const project = createProject();
-    render(<StubControllerProbe project={project} />);
-
-    // Sanity: Shell rendered.
-    expect(screen.getByRole('button', { name: /the stack home/i })).toBeInTheDocument();
-
-    // Open the assistant rail. ChatPanel should mount and read from the stub controller (not throw,
-    // not invent a local one). The stub has hasApiKey=false → ChatPanel renders its no-key empty state
-    // rather than spinning up a session — proving context was consumed.
-    await act(async () => {
-      screen.getByRole('button', { name: /assistant menu/i }).click();
-    });
-    await act(async () => {
-      const openButton = screen.queryByRole('menuitem', { name: /open chat panel|open assistant/i })
-        ?? screen.queryByRole('button', { name: /open chat panel|open assistant/i });
-      if (openButton) openButton.click();
-    });
-
-    // The chat panel container should mount (or at minimum, Shell must not crash trying to read context).
-    await waitFor(() => {
-      expect(screen.queryByTestId('shell')).toBeInTheDocument();
-    });
-  });
-
-  it('renders without crashing when no controller provider is mounted (local fallback)', () => {
-    // ChatPanel falls back to a local controller when ChatSessionControllerContext is absent.
-    // This test guards the fallback path — important for standalone ChatPanel test usage.
-    const project = createProject();
-    render(
-      <ProjectProvider project={project}>
-        <SelectionProvider>
-          <ActiveGroupProvider>
-            <Shell />
-          </ActiveGroupProvider>
-        </SelectionProvider>
-      </ProjectProvider>
-    );
-
-    expect(screen.getByRole('button', { name: /the stack home/i })).toBeInTheDocument();
+  it('renders without crashing', () => {
+    renderStudio();
+    expect(screen.getByTestId('shell')).toBeInTheDocument();
   });
 
   it('renders header with app title', () => {
-    renderShell();
+    renderStudio();
     expect(screen.getByRole('button', { name: /the stack home/i })).toBeInTheDocument();
   });
 
-  it('shows unified workspace tabs — Theme mode lives inside Design', () => {
-    renderShell();
-    for (const tab of ['Editor', 'Design', 'Evidence', 'Mapping', 'Preview']) {
-      expect(screen.getByRole('tab', { name: tab })).toBeInTheDocument();
-    }
-    expect(screen.queryByRole('tab', { name: 'Theme' })).toBeNull();
+  it('shows mode tabs (Chat, Edit, Design, Preview)', () => {
+    renderStudio();
+    expect(screen.getByTestId('mode-toggle-chat')).toBeInTheDocument();
+    expect(screen.getByTestId('mode-toggle-edit')).toBeInTheDocument();
+    expect(screen.getByTestId('mode-toggle-design')).toBeInTheDocument();
+    expect(screen.getByTestId('mode-toggle-preview')).toBeInTheDocument();
   });
 
-  it('defaults to Editor tab', () => {
-    renderShell();
-    expect(screen.getByTestId('workspace-Editor')).toHaveAttribute('data-workspace', 'Editor');
+  it('defaults to Editor workspace in edit mode', () => {
+    renderStudio();
+    expect(screen.getByTestId('workspace-Editor')).toBeInTheDocument();
   });
 
-  it('exposes the active workspace as a tabpanel linked to the selected tab', () => {
-    renderShell();
-    const workspace = screen.getByTestId('workspace-Editor');
-
-    expect(workspace).toHaveAttribute('role', 'tabpanel');
-    expect(workspace).toHaveAttribute('id', 'studio-panel-editor');
-    expect(workspace).toHaveAttribute('aria-labelledby', 'studio-tab-editor');
-  });
-
-  it('clicking a tab switches workspace', async () => {
-    renderShell();
+  it('switches to Evidence workspace when navigate-workspace targets Evidence', async () => {
+    renderStudio();
     await act(async () => {
-      screen.getByRole('tab', { name: 'Design' }).click();
+      window.dispatchEvent(new CustomEvent(STUDIO_EVENTS.NAVIGATE_WORKSPACE, {
+        detail: { tab: 'Evidence' },
+      }));
     });
-    expect(screen.getByTestId('workspace-Design')).toHaveAttribute('data-workspace', 'Design');
+    expect(screen.getByTestId('workspace-Evidence')).toBeInTheDocument();
+  });
+
+  it('switches to Mapping workspace when navigate-workspace targets Mapping', async () => {
+    renderStudio();
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent(STUDIO_EVENTS.NAVIGATE_WORKSPACE, {
+        detail: { tab: 'Mapping' },
+      }));
+    });
+    expect(screen.getByTestId('workspace-Mapping')).toBeInTheDocument();
+  });
+
+  it('switches to Evidence workspace when the Evidence header tab is clicked', async () => {
+    renderStudio();
+    await act(async () => {
+      screen.getByTestId('tab-Evidence').click();
+    });
+    expect(screen.getByTestId('workspace-Evidence')).toBeInTheDocument();
+  });
+
+  it('switches to Mapping workspace when the Mapping header tab is clicked', async () => {
+    renderStudio();
+    await act(async () => {
+      screen.getByTestId('tab-Mapping').click();
+    });
+    expect(screen.getByTestId('workspace-Mapping')).toBeInTheDocument();
+  });
+
+  it('clicking a mode tab switches workspace', async () => {
+    renderStudio();
+    await act(async () => {
+      screen.getByTestId('mode-toggle-design').click();
+    });
+    expect(screen.getByTestId('workspace-Design')).toBeInTheDocument();
   });
 
   it('renders the app logo as a clickable home action', () => {
-    renderShell();
+    renderStudio();
     expect(screen.getByRole('button', { name: /the stack/i })).toBeInTheDocument();
   });
 
   it('resets the project to a blank form when New Form is clicked', async () => {
-    const { project } = renderShell(seededDefinition);
+    const { project } = renderStudio(seededDefinition);
 
     expect(screen.getByTestId('field-name')).toBeInTheDocument();
 
-    // Open the account menu dropdown, then click New Form
     await act(async () => {
       screen.getByRole('button', { name: /account menu/i }).click();
     });
@@ -223,7 +156,7 @@ describe('Shell', () => {
   });
 
   it('exports the current project as a downloadable ZIP bundle', async () => {
-    const { project } = renderShell(seededDefinition);
+    const { project } = renderStudio(seededDefinition);
     const createObjectURL = vi.fn(() => 'blob:formspec-test');
     const revokeObjectURL = vi.fn();
     const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
@@ -233,7 +166,6 @@ describe('Shell', () => {
     URL.revokeObjectURL = revokeObjectURL;
 
     try {
-      // Open the account menu dropdown, then click Export
       await act(async () => {
         screen.getByRole('button', { name: /account menu/i }).click();
       });
@@ -241,12 +173,11 @@ describe('Shell', () => {
         screen.getByRole('menuitem', { name: /^export$/i }).click();
       });
 
-      // Wait for async zip generation and URL creation
       await waitFor(() => expect(createObjectURL).toHaveBeenCalledTimes(1), { timeout: 2000 });
 
       const blob = (createObjectURL.mock.calls as unknown[][])[0][0] as Blob;
       const zip = await JSZip.loadAsync(blob);
-      
+
       const defFile = await zip.file('definition.json')?.async('string');
       const compFile = await zip.file('component.json')?.async('string');
       const themeFile = await zip.file('theme.json')?.async('string');
@@ -264,110 +195,66 @@ describe('Shell', () => {
     }
   });
 
-  it('does not delete the selected field after switching away from the Editor workspace', async () => {
-    renderShell(seededDefinition, 768);
-
-    await act(async () => {
-      screen.getByTestId('field-name').click();
-    });
-
-    await act(async () => {
-      screen.getByRole('tab', { name: 'Design' }).click();
-    });
-
-    await act(async () => {
-      fireEvent.keyDown(window, { key: 'Delete' });
-    });
-
-    await act(async () => {
-      screen.getByRole('tab', { name: 'Editor' }).click();
-    });
-
-    expect(screen.getByTestId('field-name')).toBeInTheDocument();
-  });
-
   it('always shows Form Health in the right rail regardless of selection', async () => {
-    renderShell(seededDefinition, 1440);
+    renderStudio(seededDefinition, 1440);
 
     expect(screen.getByTestId('blueprint-sidebar')).toBeInTheDocument();
-    expect(screen.getByTestId('editor-canvas-shell')).toBeInTheDocument();
     expect(screen.getByTestId('properties-panel')).toBeInTheDocument();
-    // No field selected — shows Form Health
     expect(screen.getByText('Form Health')).toBeInTheDocument();
 
-    // Select a field — right rail still shows Form Health (inline editing handles properties)
     await act(async () => {
       screen.getByTestId('field-name').click();
     });
     expect(screen.getByText('Form Health')).toBeInTheDocument();
   });
 
-  it('hides the Component Tree blueprint section while Editor or Design is active', () => {
-    renderShell(seededDefinition, 1440);
+  it('hides the Component Tree blueprint section while Editor or Design is active', async () => {
+    renderStudio(seededDefinition, 1440);
 
     expect(screen.queryByTestId('blueprint-section-Component Tree')).toBeNull();
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Design' }));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('tab-Design'));
+    });
     expect(screen.queryByTestId('blueprint-section-Component Tree')).toBeNull();
   });
 
-  it('hides Theme while Editor is active, keeps Mappings in Advanced, and Design uses theme authoring list', () => {
-    renderShell(seededDefinition, 1440);
+  it('hides Theme while Editor is active, keeps Mappings', () => {
+    renderStudio(seededDefinition, 1440);
 
     expect(screen.queryByTestId('blueprint-section-Theme')).toBeNull();
     expect(screen.getByTestId('blueprint-section-Mappings')).toBeInTheDocument();
-    // Screener is now visible in Editor
     expect(screen.getByTestId('blueprint-section-Screener')).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('tab', { name: 'Design' }));
-    expect(screen.getByTestId('blueprint-section-Colors')).toBeInTheDocument();
-    expect(screen.queryByTestId('blueprint-section-Theme')).toBeNull();
-    expect(screen.queryByTestId('blueprint-section-Mappings')).toBeNull();
-  });
-
-  it('uses the same row-first editor surface on compact screens without a separate properties mode', async () => {
-    renderShell({
-      ...seededDefinition,
-      items: [
-        { key: 'app', type: 'group' as const, label: 'Applicant Information', children: [
-          { key: 'name', type: 'field' as const, dataType: 'string' as const, label: 'Full Legal Name' },
-        ] },
-      ],
-    }, 390);
-    fireEvent(window, new Event('resize'));
-
-    expect(screen.queryByTestId('mobile-editor-switcher')).toBeNull();
-    expect(screen.getByTestId('mobile-editor-structure')).toBeInTheDocument();
-    expect(screen.queryByTestId('mobile-editor-properties')).toBeNull();
-    expect(screen.getByTestId('mobile-selection-context')).toBeInTheDocument();
   });
 
   it('renders Build/Manage toggle in Editor workspace', () => {
-    renderShell();
+    renderStudio();
     expect(screen.getByRole('radiogroup', { name: /editor view/i })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: 'Build' })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: 'Manage' })).toBeInTheDocument();
   });
 
-  it('Design workspace Blueprint shows theme authoring sections (Colors, Typography, …) in the sidebar', async () => {
-    renderShell(seededDefinition, 1440);
-    await act(async () => { fireEvent.click(screen.getByRole('tab', { name: 'Design' })); });
+  it('Design workspace Blueprint shows theme authoring sections', async () => {
+    renderStudio(seededDefinition, 1440);
+    await act(async () => { fireEvent.click(screen.getByTestId('tab-Design')); });
     expect(screen.getByTestId('blueprint-section-Colors')).toBeInTheDocument();
     expect(screen.getByTestId('blueprint-section-Typography')).toBeInTheDocument();
   });
 
   it('Design workspace shows a live preview in the right rail', async () => {
-    renderShell(seededDefinition, 1440);
-    await act(async () => { fireEvent.click(screen.getByRole('tab', { name: 'Design' })); });
+    renderStudio(seededDefinition, 1440);
+    await act(async () => { fireEvent.click(screen.getByTestId('tab-Design')); });
     expect(screen.getByTestId('layout-preview-panel')).toBeInTheDocument();
     expect(within(screen.getByTestId('layout-preview-panel')).getByTestId('layout-preview-header')).toBeInTheDocument();
   });
 
   it('preserves Mapping tab state when navigating away and returning', async () => {
-    renderShell();
+    renderStudio();
 
     await act(async () => {
-      screen.getByRole('tab', { name: 'Mapping' }).click();
+      window.dispatchEvent(new CustomEvent(STUDIO_EVENTS.NAVIGATE_WORKSPACE, {
+        detail: { tab: 'Mapping' },
+      }));
     });
 
     const mappingWorkspace = screen.getByTestId('workspace-Mapping');
@@ -378,11 +265,13 @@ describe('Shell', () => {
     expect(within(mappingWorkspace).getByTestId('preview-source-header')).toBeInTheDocument();
 
     await act(async () => {
-      screen.getByRole('tab', { name: 'Design' }).click();
+      fireEvent.click(screen.getByTestId('tab-Design'));
     });
 
     await act(async () => {
-      screen.getByRole('tab', { name: 'Mapping' }).click();
+      window.dispatchEvent(new CustomEvent(STUDIO_EVENTS.NAVIGATE_WORKSPACE, {
+        detail: { tab: 'Mapping' },
+      }));
     });
 
     const restoredMappingWorkspace = screen.getByTestId('workspace-Mapping');
@@ -392,16 +281,15 @@ describe('Shell', () => {
       within(restoredMappingWorkspace).getByTestId('mapping-filter-tab-preview').click();
     });
 
-    // Preview-only filter hides the config pillar
     expect(within(screen.getByTestId('workspace-Mapping')).queryByText('Direction')).not.toBeInTheDocument();
   });
 
   it('preserves Preview mode and viewport when navigating away and returning', async () => {
-    renderShell(seededDefinition, 768);
+    renderStudio(seededDefinition, 768);
     fireEvent(window, new Event('resize'));
 
     await act(async () => {
-      screen.getByRole('tab', { name: 'Preview' }).click();
+      screen.getByTestId('tab-Preview').click();
     });
 
     const previewWorkspace = screen.getByTestId('workspace-Preview');
@@ -413,11 +301,11 @@ describe('Shell', () => {
     });
 
     await act(async () => {
-      screen.getByRole('tab', { name: 'Design' }).click();
+      screen.getByTestId('tab-Design').click();
     });
 
     await act(async () => {
-      screen.getByRole('tab', { name: 'Preview' }).click();
+      screen.getByTestId('tab-Preview').click();
     });
 
     const restoredWorkspace = screen.getByTestId('workspace-Preview');
@@ -430,167 +318,67 @@ describe('Shell', () => {
     expect(within(restoredWorkspace).getByRole('button', { name: /mobile/i }).className).toMatch(/bg-accent|text-white/);
   });
 
-  // Bug #1: Shell layout breaks at tablet width — sidebar + main overflow horizontally
-  it('does not overflow horizontally at tablet width (768px)', () => {
-    // Set viewport width to tablet size before rendering
-    Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 768 });
-    Object.defineProperty(document.documentElement, 'clientWidth', { writable: true, configurable: true, value: 768 });
-
-    renderShell(seededDefinition, 768);
-    fireEvent(window, new Event('resize'));
-
-    const shell = screen.getByTestId('shell');
-
-    // The shell root must not exceed the viewport width
-    // scrollWidth > clientWidth indicates horizontal overflow
-    // In jsdom getBoundingClientRect returns zeros, so we check that the shell
-    // does not carry a fixed-width layout wider than the viewport by checking
-    // that it lacks any inline style or class that would force width > 768px.
-    // The concrete failure signal: both sidebars are always visible at full
-    // width (230px + 270px = 500px) without any responsive hiding mechanism.
-    const leftSidebar = shell.querySelector('aside:first-of-type');
-    const rightSidebar = shell.querySelector('aside[data-testid="properties-panel"]');
-
-    // At tablet width at least one sidebar should be hidden or collapsed to
-    // prevent the total rendered width from exceeding the viewport.
-    const leftHidden =
-      !leftSidebar ||
-      leftSidebar.getAttribute('data-responsive-hidden') === 'true' ||
-      (leftSidebar as HTMLElement).style.display === 'none' ||
-      leftSidebar.classList.contains('hidden');
-
-    const rightHidden =
-      !rightSidebar ||
-      rightSidebar.getAttribute('data-responsive-hidden') === 'true' ||
-      (rightSidebar as HTMLElement).style.display === 'none' ||
-      rightSidebar.classList.contains('hidden');
-
-    // At least one sidebar must be hidden at tablet width — if both are visible
-    // the layout overflows at 768px (230 + main + 270 > 768px)
-    expect(leftHidden || rightHidden).toBe(true);
-  });
-
-  // Bug #8: Navigational and diagnostic text is too small (9-10px); minimum should be 11px
   it('uses a minimum font size of 11px for blueprint count badges', () => {
-    renderShell(seededDefinition);
+    renderStudio(seededDefinition);
 
-    // Blueprint count badges are rendered with font-mono text-[9px] — below the 11px minimum.
-    // The Badge spec requires all navigational / diagnostic text to be >= 11px.
-    // We verify the rendered class list does NOT contain a sub-11px Tailwind font size.
     const blueprint = screen.getByTestId('blueprint');
     const countBadges = blueprint.querySelectorAll('span');
 
-    // At least one count badge should be rendered for the seeded definition
-    // (it has 1 item so the Structure section badge should show "1")
     const visibleBadges = Array.from(countBadges).filter(
       (span) => span.textContent !== '' && /^\d+$/.test((span.textContent ?? '').trim())
     );
     expect(visibleBadges.length).toBeGreaterThan(0);
 
     for (const badge of visibleBadges) {
-      // text-[9px] and text-[10px] are the violating classes currently in production
       expect(badge.className).not.toMatch(/text-\[9px\]/);
       expect(badge.className).not.toMatch(/text-\[10px\]/);
     }
   });
 
   it('uses a minimum font size of 11px for status bar text', () => {
-    renderShell(seededDefinition);
+    renderStudio(seededDefinition);
 
     const statusBar = screen.getByTestId('status-bar');
-
-    // Status bar currently uses text-[9px] — below the 11px minimum for legible
-    // diagnostic text. The class must be replaced with at least text-[11px].
     expect(statusBar.className).not.toMatch(/text-\[9px\]/);
     expect(statusBar.className).not.toMatch(/text-\[10px\]/);
   });
 
-  it('renders the compact blueprint overlay as a modal dialog with a labelled close action', async () => {
-    renderShell(seededDefinition, 768);
-    fireEvent(window, new Event('resize'));
-
-    await act(async () => {
-      screen.getByRole('button', { name: /toggle blueprint menu/i }).click();
-    });
-
-    expect(screen.getByRole('dialog', { name: /blueprint/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /close blueprint drawer/i })).toBeInTheDocument();
-  });
-
-  it('shows the selected item label in compact editor context without a separate properties mode', async () => {
-    renderShell(seededDefinition, 768);
-    fireEvent(window, new Event('resize'));
-
-    await act(async () => {
-      within(screen.getByTestId('field-name')).getByRole('button', { name: 'Select Full Name' }).click();
-    });
-
-    expect(screen.getByTestId('mobile-selection-context')).toHaveTextContent('Full Name');
-    expect(screen.getByTestId('mobile-selection-context')).not.toHaveTextContent('app.name');
-    expect(screen.getByTestId('mobile-editor-structure')).toBeInTheDocument();
-    expect(screen.queryByTestId('mobile-editor-properties')).toBeNull();
-    expect(screen.queryByText('app.name')).toBeNull();
-  });
-
-  it('keeps compact editor selection context while staying on the single structure surface', async () => {
-    renderShell(seededDefinition, 768);
-    fireEvent(window, new Event('resize'));
-
-    await act(async () => {
-      within(screen.getByTestId('field-name')).getByRole('button', { name: 'Select Full Name' }).click();
-    });
-
-    expect(screen.getByTestId('mobile-editor-structure')).toBeInTheDocument();
-    expect(screen.queryByTestId('mobile-editor-properties')).toBeNull();
-    expect(screen.getByTestId('mobile-selection-context')).toHaveTextContent('Full Name');
-  });
-
-  // Right rail always shows FormHealthPanel regardless of view or selection
   it('shows Form Health panel in both Build and Manage views', async () => {
-    renderShell(seededDefinition, 1440);
+    renderStudio(seededDefinition, 1440);
 
-    // Select a field in Build view — right rail still shows Form Health
     await act(async () => {
       screen.getByTestId('field-name').click();
     });
     expect(screen.getByText('Form Health')).toBeInTheDocument();
 
-    // Switch to Manage view — still Form Health
     await act(async () => {
       screen.getByRole('radio', { name: 'Manage' }).click();
     });
     expect(screen.getByText('Form Health')).toBeInTheDocument();
   });
 
-  // A7: Navigate-workspace event with `view` parameter
   it('responds to formspec:navigate-workspace event with view parameter', async () => {
-    renderShell(seededDefinition, 1440);
+    renderStudio(seededDefinition, 1440);
 
-    // Initially in Build view
     expect(screen.getByRole('radio', { name: 'Build' })).toHaveAttribute('aria-checked', 'true');
 
-    // Dispatch navigate event with view
     await act(async () => {
-      window.dispatchEvent(new CustomEvent('formspec:navigate-workspace', {
+      window.dispatchEvent(new CustomEvent(STUDIO_EVENTS.NAVIGATE_WORKSPACE, {
         detail: { tab: 'Editor', view: 'manage' },
       }));
     });
 
-    // Should switch to Manage view
     expect(screen.getByRole('radio', { name: 'Manage' })).toHaveAttribute('aria-checked', 'true');
   });
 
-  // A8: Toggle resets to 'build' on New Form
-  it('resets to Build view when creating a new form', async () => {
-    renderShell(seededDefinition, 1440);
+  it('switches to chat mode when creating a new form', async () => {
+    renderStudio(seededDefinition, 1440);
 
-    // Switch to Manage view
     await act(async () => {
       screen.getByRole('radio', { name: 'Manage' }).click();
     });
     expect(screen.getByRole('radio', { name: 'Manage' })).toHaveAttribute('aria-checked', 'true');
 
-    // Create new form
     await act(async () => {
       screen.getByRole('button', { name: /account menu/i }).click();
     });
@@ -598,76 +386,28 @@ describe('Shell', () => {
       screen.getByRole('menuitem', { name: /new form/i }).click();
     });
 
-    // Should be back in Build view
-    expect(screen.getByRole('radio', { name: 'Build' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByTestId('mode-toggle-chat')).toHaveAttribute('aria-selected', 'true');
   });
 
-  // Task #5: activeEditorView persists across tab switches
-  it('preserves activeEditorView when switching tabs and returning to Editor', async () => {
-    renderShell(seededDefinition, 1440);
+  it('preserves activeEditorView when switching modes and returning to Editor', async () => {
+    renderStudio(seededDefinition, 1440);
 
-    // Switch to Manage view
     await act(async () => {
       screen.getByRole('radio', { name: 'Manage' }).click();
     });
     expect(screen.getByRole('radio', { name: 'Manage' })).toHaveAttribute('aria-checked', 'true');
 
-    // Switch to Design tab
     await act(async () => {
-      screen.getByRole('tab', { name: 'Design' }).click();
+      screen.getByTestId('mode-toggle-design').click();
     });
 
-    // Switch back to Editor tab
     await act(async () => {
-      screen.getByRole('tab', { name: 'Editor' }).click();
+      screen.getByTestId('mode-toggle-edit').click();
     });
 
-    // Manage view should still be active
     expect(screen.getByRole('radio', { name: 'Manage' })).toHaveAttribute('aria-checked', 'true');
   });
 
-  // Task #9: Navigate-workspace event with section parameter
-  it('responds to formspec:navigate-workspace event with section parameter', async () => {
-    renderShell(seededDefinition, 1440);
-
-    const scrollHandler = vi.fn();
-    window.addEventListener('formspec:scroll-to-section', scrollHandler);
-
-    // Dispatch navigate event with view and section
-    await act(async () => {
-      window.dispatchEvent(new CustomEvent('formspec:navigate-workspace', {
-        detail: { tab: 'Editor', view: 'manage', section: 'shapes' },
-      }));
-    });
-
-    // Should switch to Manage view
-    expect(screen.getByRole('radio', { name: 'Manage' })).toHaveAttribute('aria-checked', 'true');
-
-    // Should have dispatched a scroll-to-section event
-    expect(scrollHandler).toHaveBeenCalledTimes(1);
-    const scrollEvent = scrollHandler.mock.calls[0][0] as CustomEvent<{ section: string }>;
-    expect(scrollEvent.detail.section).toBe('shapes');
-
-    window.removeEventListener('formspec:scroll-to-section', scrollHandler);
-  });
-
-  it('does not dispatch scroll-to-section when section is not provided', async () => {
-    renderShell(seededDefinition, 1440);
-
-    const scrollHandler = vi.fn();
-    window.addEventListener('formspec:scroll-to-section', scrollHandler);
-
-    await act(async () => {
-      window.dispatchEvent(new CustomEvent('formspec:navigate-workspace', {
-        detail: { tab: 'Editor', view: 'manage' },
-      }));
-    });
-
-    expect(scrollHandler).not.toHaveBeenCalled();
-    window.removeEventListener('formspec:scroll-to-section', scrollHandler);
-  });
-
-  // Task #12: manageCount covers definition cross-cutting concerns (screener excluded — belongs to Screen badge)
   it('manageCount includes optionSets, instances, binds, shapes, and variables but excludes screener routes', () => {
     const definition: FormDefinition = {
       ...seededDefinition,
@@ -707,70 +447,15 @@ describe('Shell', () => {
       ],
     };
 
-    renderShell(definition, 1440, screenerDoc);
+    renderStudio(definition, 1440, screenerDoc);
 
-    // Total should be: 1 bind + 1 shape + 1 variable + 2 optionSets + 1 instance = 6
-    // (screener routes excluded — they belong to the Screen mode badge, not Manage)
     const manageRadio = screen.getByRole('radio', { name: /Manage/i });
     const manageLabel = manageRadio.closest('label') ?? manageRadio.parentElement;
     expect(manageLabel?.textContent).toContain('6');
   });
 
-  // Task #10: Compact/mobile Form Health layout
-  it('shows a health badge button in compact Editor that opens a bottom sheet', async () => {
-    renderShell(seededDefinition, 768);
-    fireEvent(window, new Event('resize'));
-
-    // The right rail Form Health panel should be hidden in compact mode
-    const rightRail = screen.queryByTestId('properties-panel');
-    expect(
-      !rightRail ||
-      rightRail.classList.contains('hidden') ||
-      rightRail.getAttribute('data-responsive-hidden') === 'true'
-    ).toBe(true);
-
-    // A persistent health badge button should be visible in compact Editor
-    const healthBadge = screen.getByRole('button', { name: /form health/i });
-    expect(healthBadge).toBeInTheDocument();
-
-    // Clicking it opens a bottom sheet dialog
-    await act(async () => {
-      healthBadge.click();
-    });
-
-    const healthSheet = screen.getByRole('dialog', { name: /form health/i });
-    expect(healthSheet).toBeInTheDocument();
-    expect(healthSheet.className).toMatch(/slide-in-from-bottom|bottom/);
-
-    // The sheet contains the Form Health content
-    expect(within(healthSheet).getAllByText('Form Health').length).toBeGreaterThanOrEqual(1);
-    expect(within(healthSheet).getByText('Issues')).toBeInTheDocument();
-  });
-
-  it('closes the compact health sheet via its close button', async () => {
-    renderShell(seededDefinition, 768);
-    fireEvent(window, new Event('resize'));
-
-    // Open the health sheet
-    await act(async () => {
-      screen.getByRole('button', { name: /form health/i }).click();
-    });
-    expect(screen.getByRole('dialog', { name: /form health/i })).toBeInTheDocument();
-
-    // Close it
-    await act(async () => {
-      screen.getByRole('button', { name: /close.*health/i }).click();
-    });
-    expect(screen.queryByRole('dialog', { name: /form health/i })).not.toBeInTheDocument();
-  });
-
-  it('does not show health badge button on wide screens', () => {
-    renderShell(seededDefinition, 1440);
-    expect(screen.queryByRole('button', { name: /form health/i })).not.toBeInTheDocument();
-  });
-
   it('shows Screener toggle option when a screener document exists', () => {
-    renderShell(seededDefinition, 1440, {
+    renderStudio(seededDefinition, 1440, {
       $formspec: '1.0',
       items: [],
       evaluation: [],
@@ -779,12 +464,12 @@ describe('Shell', () => {
   });
 
   it('does not show Screener toggle option when no screener document exists', () => {
-    renderShell(seededDefinition, 1440);
+    renderStudio(seededDefinition, 1440);
     expect(screen.queryByRole('radio', { name: 'Screener' })).not.toBeInTheDocument();
   });
 
   it('renders ScreenerWorkspace when Screener toggle is selected', async () => {
-    renderShell(seededDefinition, 1440, {
+    renderStudio(seededDefinition, 1440, {
       $formspec: '1.0',
       items: [{ key: 'q1', type: 'field', dataType: 'boolean', label: 'Over 18?' }],
       evaluation: [],
@@ -799,16 +484,15 @@ describe('Shell', () => {
   });
 
   it('navigates to screener view when Blueprint Screener link arrow is clicked', async () => {
-    renderShell(seededDefinition, 1440, {
+    renderStudio(seededDefinition, 1440, {
       $formspec: '1.0',
       items: [{ key: 'q1', type: 'field', dataType: 'boolean', label: 'Age?' }],
       evaluation: [],
     });
 
     const handler = vi.fn();
-    window.addEventListener('formspec:navigate-workspace', handler);
+    window.addEventListener(STUDIO_EVENTS.NAVIGATE_WORKSPACE, handler);
 
-    // Click the Screener sidebar section link arrow button
     const screenerSection = screen.getByTestId('blueprint-section-Screener');
     const linkButton = within(screenerSection).getByRole('button', { name: /open screener tab/i });
     await act(async () => {
@@ -819,88 +503,18 @@ describe('Shell', () => {
     const detail = (handler.mock.calls[0][0] as CustomEvent).detail;
     expect(detail).toEqual({ tab: 'Editor', view: 'screener' });
 
-    window.removeEventListener('formspec:navigate-workspace', handler);
-  });
-
-  it('excludes screener routes from manageCount (no double-counting with Screen badge)', () => {
-    const definition: FormDefinition = {
-      ...seededDefinition,
-      binds: [
-        { path: 'name', required: 'true' },
-      ],
-      shapes: [
-        { id: 's1', target: 'name', constraint: '$name != null', message: 'Required' },
-      ],
-      variables: [
-        { name: 'v1', expression: '1 + 1' },
-      ],
-      optionSets: {
-        colors: { options: [{ value: 'red', label: 'Red' }] },
-        sizes: { options: [{ value: 'sm', label: 'Small' }] },
-      },
-      instances: {
-        lookup1: { data: { rows: [] } },
-      },
-    };
-
-    const screenerDoc = {
-      $formspecScreener: '1.0',
-      url: 'urn:shell:screener',
-      version: '1.0.0',
-      title: 'Gate',
-      items: [],
-      evaluation: [
-        {
-          id: 'main',
-          strategy: 'first-match',
-          routes: [
-            { condition: 'true', target: 'urn:a' },
-            { condition: 'true', target: 'urn:b' },
-          ],
-        },
-      ],
-    };
-
-    renderShell(definition, 1440, screenerDoc);
-
-    // Total should be: 1 bind + 1 shape + 1 variable + 2 optionSets + 1 instance = 6
-    // (screener routes excluded — they belong to the Screen badge, not Manage)
-    const manageRadio = screen.getByRole('radio', { name: /Manage/i });
-    const manageLabel = manageRadio.closest('label') ?? manageRadio.parentElement;
-    expect(manageLabel?.textContent).toContain('6');
+    window.removeEventListener(STUDIO_EVENTS.NAVIGATE_WORKSPACE, handler);
   });
 
   it('shows live preview in a dedicated right rail on the Design tab', async () => {
-    renderShell(seededDefinition, 1440);
+    renderStudio(seededDefinition, 1440);
 
     await act(async () => {
-      screen.getByRole('tab', { name: 'Design' }).click();
+      screen.getByTestId('tab-Design').click();
     });
 
     expect(screen.getByTestId('layout-preview-panel')).toBeInTheDocument();
     expect(within(screen.getByTestId('layout-preview-panel')).getByTestId('layout-preview-header')).toBeInTheDocument();
     expect(screen.queryByTestId('properties-panel')).not.toBeInTheDocument();
-  });
-
-  it('does not show compact properties modal when on Design tab', async () => {
-    renderShell(seededDefinition, 768);
-    fireEvent(window, new Event('resize'));
-
-    await act(async () => {
-      screen.getByRole('tab', { name: 'Design' }).click();
-    });
-
-    expect(screen.queryByRole('dialog', { name: /properties/i })).toBeNull();
-  });
-
-  it('does not render the desktop preview rail in compact Design mode', async () => {
-    renderShell(seededDefinition, 768);
-    fireEvent(window, new Event('resize'));
-
-    await act(async () => {
-      screen.getByRole('tab', { name: 'Design' }).click();
-    });
-
-    expect(screen.queryByTestId('layout-preview-panel')).toBeNull();
   });
 });

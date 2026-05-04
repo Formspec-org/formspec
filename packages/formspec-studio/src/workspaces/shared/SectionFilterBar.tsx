@@ -20,7 +20,7 @@ export function SectionFilterBar<T extends string>({
     <div
       role="tablist"
       aria-label={ariaLabel}
-      className="flex items-center gap-1.5 p-1 bg-subtle/50 rounded-[8px] border border-border/50 w-fit"
+      className="flex items-center gap-0.5 p-0.5 bg-subtle rounded-md border border-border w-fit shadow-inner"
     >
       {tabs.map((tab) => (
         <button
@@ -30,10 +30,10 @@ export function SectionFilterBar<T extends string>({
           aria-selected={activeTab === tab.id}
           data-testid={testIdPrefix ? `${testIdPrefix}-${tab.id}` : undefined}
           onClick={() => onTabChange(tab.id)}
-          className={`px-3 py-1.5 text-[12px] font-bold uppercase tracking-wider rounded-[6px] transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 ${
+          className={`px-2.5 py-1 text-[11px] font-bold uppercase tracking-normal rounded-sm transition-all duration-200 focus-ring ${
             activeTab === tab.id
-              ? 'bg-accent text-white shadow-sm'
-              : 'text-muted hover:text-ink hover:bg-subtle'
+              ? 'bg-accent text-surface shadow-sm'
+              : 'text-muted hover:text-ink hover:bg-surface'
           }`}
         >
           {tab.label}

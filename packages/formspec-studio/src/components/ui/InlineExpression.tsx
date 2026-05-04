@@ -26,7 +26,7 @@ const TOKEN_CLASS: Record<FELHighlightToken['kind'], string> = {
   path: 'text-green',
   function: 'text-logic font-semibold',
   literal: 'text-amber',
-  operator: 'text-muted/60',
+  operator: 'text-muted',
   plain: 'text-ink/70',
 };
 
@@ -93,7 +93,7 @@ export function InlineExpression({
       <button
         type="button"
         onClick={enterEdit}
-        className={`inline-flex items-center gap-1 font-mono text-[11px] text-muted/50 italic cursor-pointer hover:text-muted transition-colors group/ie ${className ?? ''}`}
+        className={`inline-flex items-center gap-1 font-mono text-[11px] text-muted italic cursor-pointer hover:text-muted transition-colors group/ie ${className ?? ''}`}
       >
         {placeholder}
         <IconEdit size={10} className="opacity-30 group-hover/ie:opacity-60" />

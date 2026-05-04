@@ -125,7 +125,7 @@ function LayoutStepNavSortablePageRow({
         aria-current={isActive ? 'page' : undefined}
         onClick={() => onSelectPage(page.id)}
         onDoubleClick={() => startRename(page.id)}
-        className={`flex min-w-0 flex-1 items-center gap-1.5 px-2 py-2 text-left text-[12px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/70 ${
+        className={`flex min-w-0 flex-1 items-center gap-1.5 px-2 py-2 text-left text-[12px] font-medium transition-colors focus-ring ${
           isActive ? 'text-ink' : 'text-muted hover:bg-subtle hover:text-ink'
         }`}
       >
@@ -254,7 +254,7 @@ export function LayoutStepNav({
                     setEditingPageId(null);
                   }
                 }}
-                className="min-w-32 shrink-0 rounded-lg border border-accent bg-surface px-3 py-1.5 text-[12px] font-medium text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/70"
+                className="min-w-32 shrink-0 rounded-lg border border-accent bg-surface px-3 py-1.5 text-[12px] font-medium text-ink focus-ring"
               />
             </div>
           ) : (

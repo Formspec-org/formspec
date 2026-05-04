@@ -1,6 +1,7 @@
 /** @filedesc Blueprint section listing computed variables with their FEL expressions and a navigate-to-Manage link. */
 import { useDefinition } from '../../state/useDefinition';
 import { EmptyBlueprintState } from '../shared/EmptyBlueprintState';
+import { dispatchStudioEvent, STUDIO_EVENTS } from '../../studio-events';
 
 export function VariablesList() {
   const definition = useDefinition();
@@ -9,7 +10,7 @@ export function VariablesList() {
   const displayExpression = (expression: string) => expression.replace(/@([A-Za-z_]\w*)/g, '$1');
 
   const navigateToManage = () => {
-    window.dispatchEvent(new CustomEvent('formspec:navigate-workspace', { detail: { tab: 'Editor', view: 'manage' } }));
+    dispatchStudioEvent(STUDIO_EVENTS.NAVIGATE_WORKSPACE, { tab: 'Editor', view: 'manage' });
   };
 
   if (variables.length === 0) {
@@ -25,7 +26,7 @@ export function VariablesList() {
           data-testid={`blueprint-variable-row-${v.name}`}
           aria-label={`Variable ${v.name}, open Manage view`}
           onClick={navigateToManage}
-          className="w-full rounded-[6px] px-2.5 py-1.5 text-left transition-colors hover:bg-subtle hover:text-ink group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+          className="w-full rounded-[6px] px-2.5 py-1.5 text-left transition-colors hover:bg-subtle hover:text-ink group focus-ring"
         >
           <div className="flex items-center justify-between">
             <div className="text-[13px] font-mono text-accent font-medium">@{v.name}</div>

@@ -64,7 +64,7 @@ export function BindCard({ bindType, expression, humanized, message, children, o
                 e.stopPropagation();
                 onRemove();
               }}
-              className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-error/10 hover:text-error text-muted/40 transition-colors"
+              className="w-4 h-4 flex items-center justify-center rounded-full hover:bg-error/10 hover:text-error text-muted transition-colors"
               title={`Remove ${bindType}`}
             >
               <IconClose size={10} strokeWidth={3} />

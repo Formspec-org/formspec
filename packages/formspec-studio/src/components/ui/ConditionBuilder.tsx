@@ -120,7 +120,7 @@ function ConditionRow({
           ))}
         </select>
       ) : (
-        <span className="font-mono text-[11px] text-ink/60 px-1">this value</span>
+        <span className="font-mono text-[11px] text-muted px-1">this value</span>
       )}
 
       <select
@@ -152,7 +152,7 @@ function ConditionRow({
       <button
         type="button"
         onClick={onRemove}
-        className="w-5 h-5 flex items-center justify-center rounded text-muted/40 hover:text-error hover:bg-error/10 transition-colors shrink-0"
+        className="w-5 h-5 flex items-center justify-center rounded text-muted hover:text-error hover:bg-error/10 transition-colors shrink-0"
         aria-label="Remove condition"
       >
         <IconTrash size={12} />
@@ -291,7 +291,7 @@ export function ConditionBuilder({
 
           {felPreview && (
             <div
-              className="font-mono text-[10px] text-muted/60 bg-subtle/50 px-1.5 py-0.5 rounded truncate"
+              className="font-mono text-[10px] text-muted bg-subtle/50 px-1.5 py-0.5 rounded truncate"
               title={felPreview}
             >
               FEL: <HighlightedExpression expression={felPreview} />

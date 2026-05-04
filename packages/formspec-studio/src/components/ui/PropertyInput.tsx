@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { PropertyRow } from './PropertyRow';
 
-const INPUT_CLASS = 'w-full rounded-[4px] border border-border bg-surface px-2 py-1 text-[12px] font-mono text-ink outline-none transition-colors placeholder:text-muted/40 focus:border-accent';
+const INPUT_CLASS = 'w-full rounded-[4px] border border-border bg-surface px-2 py-1 text-[12px] font-mono text-ink outline-none transition-colors placeholder:text-muted focus:border-accent';
 const SELECT_CLASS = 'w-full rounded-[4px] border border-border bg-surface px-2 py-1 text-[12px] font-mono text-ink outline-none transition-colors focus:border-accent';
 
 export function TextPropertyInput({

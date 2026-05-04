@@ -17,13 +17,13 @@ describe('Pill', () => {
   it('renders small variant', () => {
     render(<Pill text="Type" size="sm" />);
     const pill = screen.getByText('Type');
-    expect(pill.className).toContain('text-xs');
+    expect(pill.className).toContain('text-[9px]');
   });
 
   it('defaults to normal size', () => {
     render(<Pill text="Label" />);
     const pill = screen.getByText('Label');
-    expect(pill.className).not.toContain('text-xs');
+    expect(pill.className).not.toContain('text-[9px]');
   });
 
   it('renders title attribute for spec-term discoverability', () => {
@@ -47,7 +47,7 @@ describe('Pill', () => {
   it('applies warning border class when warn is true', () => {
     render(<Pill text="formula" warn />);
     const pill = screen.getByText(/formula/);
-    expect(pill.className).toContain('border-amber');
+    expect(pill.className).toMatch(/ring-amber/);
   });
 
   it('does not append warning indicator when warn is false or omitted', () => {

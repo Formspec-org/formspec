@@ -424,36 +424,36 @@ export function ItemListEditor({ config }: { config: ItemListEditorConfig }) {
 
   return (
     <WorkspacePage maxWidth="max-w-none" className="w-full">
-      <WorkspacePageSection padding="px-0" className="flex justify-center pt-6 pb-24">
+      <WorkspacePageSection padding="px-0" className="flex justify-center pt-8 pb-32">
         <div
           ref={surfaceRef}
           data-testid={surfaceTestId}
-          className="flex w-full max-w-[1020px] flex-col gap-6 rounded-[32px] border border-border/40 bg-surface/95 px-8 py-8 shadow-premium backdrop-blur-xl sm:px-10 md:px-12 md:py-10 transition-all duration-300"
+          className="flex w-full max-w-[1020px] flex-col gap-6 rounded border border-border bg-surface p-4 sm:p-6 md:p-8 transition-all duration-200"
           onClick={(event) => {
             if (event.target === event.currentTarget) deselect();
           }}
         >
-          <div className="flex flex-col gap-4 border-b border-border/50 pb-6 md:flex-row md:items-end md:justify-between">
+          <div className="flex flex-col gap-4 border-b border-border/10 pb-6 md:flex-row md:items-end md:justify-between">
             <div className="min-w-0 space-y-1">
-              <h1 className="text-[26px] font-semibold tracking-tight text-ink font-display">
+              <h1 className="text-[20px] font-bold tracking-tight text-ink font-display leading-tight">
                 {selectedSummary ? selectedSummary.label : headerTitle}
               </h1>
               <p
                 aria-live="polite"
                 aria-atomic="true"
-                className="text-[14px] leading-relaxed text-muted/80 max-w-2xl"
+                className="text-[12px] leading-normal text-muted max-w-2xl"
               >
                 {selectedSummary
-                  ? `${selectedSummary.typeLabel} key ${selectedSummary.key} in ${selectedSummary.parentPath}. Edit details inline below.`
+                  ? `${selectedSummary.typeLabel} key ${selectedSummary.key} in ${selectedSummary.parentPath}`
                   : headerDescription}
               </p>
             </div>
-            <div className="flex shrink-0 items-center gap-2.5 self-start md:self-auto">
-              <div className="rounded-full border border-border/60 bg-subtle/50 px-3.5 py-1.5 font-ui text-[11px] uppercase tracking-widest text-muted font-semibold">
+            <div className="flex shrink-0 items-center gap-2 self-start md:self-auto">
+              <div className="rounded-sm border border-border bg-subtle px-2 py-0.5 text-[9px] font-bold uppercase tracking-normal text-muted">
                 {selectedSummary?.typeLabel ?? 'Canvas'}
               </div>
               {selectedSummary && (
-                <div className="rounded-full border border-accent/20 bg-accent/[0.08] px-3.5 py-1.5 font-ui text-[11px] uppercase tracking-widest text-accent font-bold animate-in fade-in zoom-in duration-300">
+                <div className="rounded-sm border border-accent/20 bg-accent/5 px-2 py-0.5 text-[9px] font-bold uppercase tracking-normal text-accent animate-onboarding-enter">
                   Selected
                 </div>
               )}
@@ -474,12 +474,12 @@ export function ItemListEditor({ config }: { config: ItemListEditorConfig }) {
             {items.length === 0 ? (
               <div
                 data-testid="editor-empty-state"
-                className="rounded-2xl border border-border/40 bg-subtle/30 px-6 py-12 text-center"
+                 className="rounded border border-dashed border-border bg-subtle p-8 text-center"
               >
                 <div className="mx-auto max-w-md space-y-4">
-                  <div className="text-[12px] font-semibold tracking-wider text-muted/60 uppercase">Canvas</div>
-                  <h2 className="text-[24px] font-semibold tracking-tight text-ink">{emptyStateTitle}</h2>
-                  <p className="text-[13px] leading-6 text-muted">
+                  <div className="text-[9px] font-bold tracking-normal text-muted uppercase">Empty Canvas</div>
+                   <h2 className="text-[16px] font-bold tracking-tight text-ink font-display">{emptyStateTitle}</h2>
+                  <p className="text-[12px] leading-normal text-muted opacity-60">
                     {emptyStateDescription}
                   </p>
                 </div>
@@ -490,14 +490,14 @@ export function ItemListEditor({ config }: { config: ItemListEditorConfig }) {
           </EditorDndProvider>
           <button
             data-testid="add-item"
-            className="group/add mt-8 flex min-h-[64px] items-center justify-center gap-3 rounded-2xl border border-dashed border-border/80 bg-subtle/30 py-4 font-ui text-[15px] font-semibold text-muted transition-all cursor-pointer hover:border-accent/50 hover:bg-accent/[0.04] hover:text-accent hover:scale-[1.01] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+             className="group/add mt-6 flex min-h-[52px] items-center justify-center gap-2.5 rounded-md border-2 border-dashed border-border bg-subtle py-3 text-[12px] font-bold text-muted transition-all cursor-pointer hover:border-accent/40 hover:bg-accent/5 hover:text-accent"
             onClick={() => {
               setAddParentPath(null);
               setShowPicker(!showPicker);
             }}
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-subtle/50 text-accent group-hover/add:bg-accent group-hover/add:text-surface transition-colors duration-300">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+             <div className="flex h-7 w-7 items-center justify-center rounded bg-surface border border-border text-accent shadow-sm group-hover/add:bg-accent group-hover/add:text-surface group-hover/add:border-accent transition-all duration-200">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="12" y1="5" x2="12" y2="19" />
                 <line x1="5" y1="12" x2="19" y2="12" />
               </svg>

@@ -67,7 +67,7 @@ export function PublishDialog({ open, onClose }: PublishDialogProps): ReactEleme
           <button
             type="button"
             aria-label="Close"
-            className="rounded p-1 hover:bg-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+            className="rounded p-1 hover:bg-subtle focus-ring"
             onClick={onClose}
           >
             ✕

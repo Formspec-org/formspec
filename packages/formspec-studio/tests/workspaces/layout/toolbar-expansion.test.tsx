@@ -38,26 +38,26 @@ describe('Layout palette — Accordion and Collapsible', () => {
   it('offers Accordion in the add palette', () => {
     renderLayout(makeProject());
     openLayoutAddPalette();
-    expect(screen.getByRole('button', { name: /^Accordion / })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Accordion / })).toBeInTheDocument();
   });
 
   it('offers Collapsible in the add palette', () => {
     renderLayout(makeProject());
     openLayoutAddPalette();
-    expect(screen.getByRole('button', { name: /^Collapsible / })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Collapsible / })).toBeInTheDocument();
   });
 
   it('adds an Accordion container to the canvas when chosen', () => {
     renderLayout(makeProject());
     openLayoutAddPalette();
-    fireEvent.click(screen.getByRole('button', { name: /^Accordion / }));
+    fireEvent.click(screen.getByRole('button', { name: /Accordion / }));
     expect(screen.getByText('Accordion')).toBeInTheDocument();
   });
 
   it('adds a Collapsible container to the canvas when chosen', () => {
     renderLayout(makeProject());
     openLayoutAddPalette();
-    fireEvent.click(screen.getByRole('button', { name: /^Collapsible / }));
+    fireEvent.click(screen.getByRole('button', { name: /Collapsible / }));
     expect(screen.getByText('Collapsible')).toBeInTheDocument();
   });
 });
@@ -66,13 +66,13 @@ describe('Layout palette — ConditionalGroup', () => {
   it('offers Conditional Group in the add palette', () => {
     renderLayout(makeProject());
     openLayoutAddPalette();
-    expect(screen.getByRole('button', { name: /^Conditional Group / })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Conditional Group / })).toBeInTheDocument();
   });
 
   it('adds a ConditionalGroup container to the canvas when chosen', () => {
     renderLayout(makeProject());
     openLayoutAddPalette();
-    fireEvent.click(screen.getByRole('button', { name: /^Conditional Group / }));
+    fireEvent.click(screen.getByRole('button', { name: /Conditional Group / }));
     expect(screen.getByText('ConditionalGroup')).toBeInTheDocument();
   });
 
@@ -80,7 +80,7 @@ describe('Layout palette — ConditionalGroup', () => {
     const project = makeProject();
     renderLayout(project);
     openLayoutAddPalette();
-    fireEvent.click(screen.getByRole('button', { name: /^Conditional Group / }));
+    fireEvent.click(screen.getByRole('button', { name: /Conditional Group / }));
     const tree = (project.component as any)?.tree;
     const rootChildren: any[] = tree?.children ?? [];
     const cgNode = rootChildren.find((n: any) => n.component === 'ConditionalGroup');

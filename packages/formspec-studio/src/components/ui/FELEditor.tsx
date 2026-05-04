@@ -15,6 +15,7 @@ import {
 } from '@formspec-org/studio-core';
 import { useOptionalDefinition } from '../../state/useDefinition';
 import { useFELAutocomplete, type AutocompleteOption } from '../../hooks/useFELAutocomplete';
+import { dispatchStudioEvent, STUDIO_EVENTS } from '../../studio-events';
 import { FELHighlightOverlay } from './FELHighlightOverlay';
 import { FELAutocompleteMenu } from './FELAutocompleteMenu';
 
@@ -51,9 +52,9 @@ export function FELEditor({ value, onSave, onCancel, placeholder, className, aut
 
   function navigateToEditor() {
     if (itemKey) {
-      window.dispatchEvent(new CustomEvent('formspec:navigate-workspace', {
-        detail: { tab: 'Editor', view: 'bindings', section: itemKey },
-      }));
+      dispatchStudioEvent(STUDIO_EVENTS.NAVIGATE_WORKSPACE, {
+        tab: 'Editor', view: 'bindings', section: itemKey,
+      });
     }
   }
 
@@ -209,7 +210,7 @@ export function FELEditor({ value, onSave, onCancel, placeholder, className, aut
               <strong>Rendering visibility only.</strong> This condition controls whether the field is shown. Use the <strong>"relevant"</strong> binding in the Editor workspace to include/exclude data.
             </div>
             {itemKey && (
-              <button type="button" data-testid="when-configure-in-editor" onClick={navigateToEditor} className="shrink-0 ml-2 font-semibold text-info hover:text-info/80 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-info/50 whitespace-nowrap">
+              <button type="button" data-testid="when-configure-in-editor" onClick={navigateToEditor} className="shrink-0 ml-2 font-semibold text-info hover:text-info/80 transition-colors focus-ring whitespace-nowrap">
                 Configure in Editor →
               </button>
             )}
@@ -254,7 +255,7 @@ export function FELEditor({ value, onSave, onCancel, placeholder, className, aut
         )}
 
         {!syntaxError && (
-          <div className="text-[10px] text-muted/40 mt-0.5 px-1 select-none">
+          <div className="text-[10px] text-muted mt-0.5 px-1 select-none">
             <kbd className="font-mono">&#8984;&#9166;</kbd> save &middot; <kbd className="font-mono">Esc</kbd> cancel
           </div>
         )}

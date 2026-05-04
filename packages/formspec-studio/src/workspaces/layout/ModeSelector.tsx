@@ -19,7 +19,7 @@ export function ModeSelector({ mode, onSetMode }: ModeSelectorProps) {
       data-testid="mode-selector"
       role="tablist"
       aria-label="Layout mode"
-      className="inline-flex items-center gap-1 rounded-[14px] border border-border bg-surface p-1 shadow-sm"
+      className="inline-flex items-center gap-1 rounded-md border border-border bg-surface p-1 shadow-sm"
     >
       {modes.map((entry) => (
         <button
@@ -28,9 +28,9 @@ export function ModeSelector({ mode, onSetMode }: ModeSelectorProps) {
           role="tab"
           aria-selected={mode === entry.id}
           onClick={() => onSetMode(entry.id)}
-          className={`rounded-[10px] px-3.5 py-1.5 text-[12px] font-semibold tracking-wide transition-colors ${
+          className={`rounded-sm px-3 py-1 text-[11px] font-bold tracking-normal transition-colors ${
             mode === entry.id
-              ? 'bg-accent text-white'
+              ? 'bg-accent text-surface shadow-sm'
               : 'text-muted hover:bg-subtle hover:text-ink'
           }`}
         >

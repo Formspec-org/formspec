@@ -1,4 +1,5 @@
 /** @filedesc Single telemetry provider emitting all studio_* events (PRD §9). */
+import { addStudioEventListener, STUDIO_EVENTS, type StudioModeLiteral } from '../studio-events';
 
 /** Studio telemetry event types — closed taxonomy. */
 export type StudioEventType =
@@ -70,7 +71,7 @@ class TelemetryAdapter {
     };
 
     // Mode changes
-    addHandler('formspec:mode-changed', ((e: CustomEvent<{ from: string; to: string }>) => {
+    addHandler(STUDIO_EVENTS.MODE_CHANGED, ((e: CustomEvent<{ from: StudioModeLiteral; to: StudioModeLiteral }>) => {
       this.emit('studio_mode_changed', { from: e.detail.from, to: e.detail.to });
     }) as EventListener);
 

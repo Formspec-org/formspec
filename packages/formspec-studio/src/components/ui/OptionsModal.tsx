@@ -32,7 +32,7 @@ function RowGutter({ index }: { index: number }) {
       aria-hidden="true"
     >
       <span
-        className="text-[11px] font-mono tabular-nums text-ink/28 select-none"
+        className="text-[11px] font-mono tabular-nums text-muted select-none"
         style={{ letterSpacing: '0.02em' }}
       >
         {String(index + 1).padStart(2, '\u2007')}
@@ -54,7 +54,7 @@ function FieldCol({
   return (
     <div className={`flex flex-col gap-[3px] ${className}`}>
       <span
-        className="text-[10px] font-mono uppercase tracking-[0.08em] text-ink/40 select-none pl-[1px]"
+        className="text-[10px] font-mono uppercase tracking-[0.08em] text-muted select-none pl-[1px]"
       >
         {label}
       </span>
@@ -91,7 +91,7 @@ function RowInput({
         'transition-colors duration-100',
         'hover:border-border/60 hover:bg-subtle/60',
         'focus:border-accent/50 focus:bg-surface focus:outline-none',
-        'focus-visible:ring-2 focus-visible:ring-accent/25',
+        'focus-ring',
         mono ? 'font-mono' : 'font-ui',
       ].join(' ')}
     />
@@ -135,8 +135,8 @@ function KeywordsRow({
             'text-[11px] rounded px-1 py-0.5 -ml-1',
             'transition-colors duration-100',
             hasKeywords
-              ? 'text-ink/50 hover:text-ink/70'
-              : 'text-ink/28 hover:text-ink/50',
+              ? 'text-muted hover:text-ink/70'
+              : 'text-muted hover:text-muted',
           ].join(' ')}
           tabIndex={-1}
         >
@@ -167,7 +167,7 @@ function KeywordsRow({
               'bg-transparent border border-border/50',
               'text-ink/70 placeholder:text-ink/25',
               'focus:border-accent/50 focus:bg-surface focus:outline-none',
-              'focus-visible:ring-2 focus-visible:ring-accent/25',
+              'focus-ring',
               'transition-colors duration-100',
             ].join(' ')}
             value={formatCommaSeparatedKeywords(option.keywords)}
@@ -191,7 +191,7 @@ function KeywordsRow({
           <button
             type="button"
             onClick={handleToggle}
-            className="text-[11px] text-ink/30 hover:text-ink/60 transition-colors shrink-0 rounded px-1"
+            className="text-[11px] text-muted hover:text-muted transition-colors shrink-0 rounded px-1"
             tabIndex={-1}
           >
             done
@@ -258,11 +258,11 @@ function OptionRow({
             onClick={onRemove}
             className={[
               'p-1 rounded transition-all duration-100',
-              'text-ink/18 group-hover:text-ink/40',
+              'text-muted group-hover:text-muted',
               'hover:!text-error hover:bg-error/8',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25',
+              'focus-ring',
               // DI-6: Show disabled state visually instead of hiding completely.
-              'disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:!text-ink/18 disabled:hover:bg-transparent',
+              'disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:!text-muted disabled:hover:bg-transparent',
             ].join(' ')}
           >
             <IconClose size={13} />
@@ -389,7 +389,7 @@ export function OptionsModal({
             <h2 className="text-sm font-semibold text-ink leading-tight">
               {itemLabel}
             </h2>
-            <p className="mt-0.5 text-[11px] font-mono text-ink/40 uppercase tracking-widest">
+            <p className="mt-0.5 text-[11px] font-mono text-muted uppercase tracking-widest">
               {options.length} {options.length === 1 ? 'option' : 'options'}
             </p>
           </div>
@@ -398,7 +398,7 @@ export function OptionsModal({
             type="button"
             onClick={onClose}
             aria-label="Close options editor"
-            className="p-1.5 -mr-1 rounded-lg text-ink/30 hover:text-ink/70 hover:bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25"
+            className="p-1.5 -mr-1 rounded-lg text-muted hover:text-ink/70 hover:bg-subtle transition-colors focus-ring"
           >
             <IconClose size={14} />
           </button>
@@ -408,11 +408,11 @@ export function OptionsModal({
         <div className="flex items-center gap-0 px-5 pb-2 shrink-0 border-b border-border/40">
           {/* gutter offset */}
           <div className="w-7 shrink-0" />
-          <div className="flex-1 text-[10px] font-mono uppercase tracking-[0.08em] text-ink/30 pl-2.5">
+          <div className="flex-1 text-[10px] font-mono uppercase tracking-[0.08em] text-muted pl-2.5">
             Stored value
           </div>
           <div className="w-px mx-1" />
-          <div className="flex-1 text-[10px] font-mono uppercase tracking-[0.08em] text-ink/30 pl-2.5">
+          <div className="flex-1 text-[10px] font-mono uppercase tracking-[0.08em] text-muted pl-2.5">
             Display label
           </div>
           {/* remove button placeholder */}
@@ -445,9 +445,9 @@ export function OptionsModal({
             className={[
               'group flex items-center gap-2 w-full',
               'px-4 py-2.5 mt-1',
-              'text-xs text-ink/35 hover:text-ink/60',
+              'text-xs text-muted hover:text-muted',
               'transition-colors duration-100',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25 rounded',
+              'focus-ring rounded',
             ].join(' ')}
           >
             {/* Plus in gutter position */}
@@ -472,7 +472,7 @@ export function OptionsModal({
               'text-xs font-semibold text-surface',
               'bg-ink/80 hover:bg-ink',
               'transition-colors duration-100',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35',
+              'focus-ring',
             ].join(' ')}
           >
             Done

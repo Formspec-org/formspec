@@ -51,19 +51,19 @@ export function FieldTypeRules() {
   return (
     <div className="space-y-3">
       <div className="flex justify-between items-center mb-1">
-        <h4 className="text-[12px] font-bold text-muted uppercase tracking-wider">Selector Rules</h4>
+        <h4 className="text-[11px] font-bold text-muted uppercase tracking-normal">Selector Rules</h4>
         <button
           data-testid="selector-rule-add"
           type="button"
           onClick={addRule}
-          className="text-[11px] text-accent hover:text-accent-hover font-bold uppercase tracking-wider transition-colors"
+          className="text-[11px] text-accent hover:text-accent-hover font-bold uppercase tracking-normal transition-colors"
         >
           + New Rule
         </button>
       </div>
 
       {selectors.length === 0 && (
-        <div className="py-2 text-xs text-muted italic">
+        <div className="py-2 text-[11px] text-muted italic">
           No styling rules defined. Rules automatically apply widgets and styles based on field type.
         </div>
       )}
@@ -82,28 +82,28 @@ export function FieldTypeRules() {
           <div
             key={index}
             data-testid={`selector-rule-${index}`}
-            className="border border-border rounded-lg bg-surface overflow-hidden"
+            className="border border-border rounded bg-surface overflow-hidden"
           >
             {/* Collapsed header */}
             <div
               data-testid={`selector-rule-header-${index}`}
-              className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-subtle/50 transition-colors"
+              className="flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-subtle/50 transition-colors"
               onClick={() => setExpandedIndex(isExpanded ? null : index)}
             >
               <span className="text-[10px] font-mono text-muted w-6">#{index + 1}</span>
-              <span className="text-[13px] font-bold text-ink flex-1">{summary}</span>
+              <span className="text-[12px] font-bold text-ink flex-1">{summary}</span>
               {widgetName && (
-                <span className="text-[11px] text-muted font-mono">{widgetName}</span>
+                <span className="text-[10px] text-muted font-mono">{widgetName}</span>
               )}
             </div>
 
             {/* Expanded detail */}
             {isExpanded && (
-              <div className="border-t border-border p-3 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
+              <div className="border-t border-border p-2 space-y-3">
                 {/* Match section */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label htmlFor={`rule-type-${index}`} className="font-mono text-[10px] text-muted uppercase tracking-wider block">
+                    <label htmlFor={`rule-type-${index}`} className="font-mono text-[9px] text-muted uppercase tracking-normal block">
                       Item Type
                     </label>
                     <select
@@ -116,7 +116,7 @@ export function FieldTypeRules() {
                         if (!newMatch.type) delete newMatch.type;
                         setSelector(index, newMatch);
                       }}
-                      className="w-full px-2 py-1 text-[13px] font-mono border border-border rounded-[4px] bg-surface outline-none focus:border-accent"
+                      className="w-full px-2 py-1 text-[12px] font-mono border border-border rounded bg-surface outline-none focus:border-accent"
                     >
                       <option value="">Any</option>
                       <option value="field">field</option>
@@ -125,7 +125,7 @@ export function FieldTypeRules() {
                     </select>
                   </div>
                   <div className="space-y-1">
-                    <label htmlFor={`rule-dataType-${index}`} className="font-mono text-[10px] text-muted uppercase tracking-wider block">
+                    <label htmlFor={`rule-dataType-${index}`} className="font-mono text-[9px] text-muted uppercase tracking-normal block">
                       Data Type
                     </label>
                     <select
@@ -137,7 +137,7 @@ export function FieldTypeRules() {
                         if (!newMatch.dataType) delete newMatch.dataType;
                         setSelector(index, newMatch);
                       }}
-                      className="w-full px-2 py-1 text-[13px] font-mono border border-border rounded-[4px] bg-surface outline-none focus:border-accent"
+                      className="w-full px-2 py-1 text-[12px] font-mono border border-border rounded bg-surface outline-none focus:border-accent"
                     >
                       <option value="">Any</option>
                       {['string', 'integer', 'decimal', 'boolean', 'date', 'time', 'dateTime', 'money', 'email', 'url', 'phone', 'binary', 'text'].map((dt) => (
@@ -149,7 +149,7 @@ export function FieldTypeRules() {
 
                 {/* Apply section */}
                 <div className="space-y-1">
-                  <label htmlFor={`rule-widget-${index}`} className="font-mono text-[10px] text-muted uppercase tracking-wider block">
+                  <label htmlFor={`rule-widget-${index}`} className="font-mono text-[9px] text-muted uppercase tracking-normal block">
                     Widget
                   </label>
                   <input
@@ -164,19 +164,19 @@ export function FieldTypeRules() {
                       const v = e.target.value.trim();
                       setSelector(index, undefined, { ...rule.apply, widget: v || undefined });
                     }}
-                    className="w-full px-2 py-1 text-[13px] font-mono border border-border rounded-[4px] bg-surface outline-none focus:border-accent transition-colors"
+                    className="w-full px-2 py-1 text-[12px] font-mono border border-border rounded bg-surface outline-none focus:border-accent transition-colors"
                   />
                 </div>
 
                 {/* Actions */}
                 <div className="flex justify-between items-center pt-1">
-                  <div className="flex gap-2">
+                  <div className="flex gap-3">
                     <button
                       type="button"
                       aria-label="Move up"
                       disabled={index === 0}
                       onClick={() => reorder(index, 'up')}
-                      className="text-[10px] font-mono uppercase tracking-wider transition-colors disabled:opacity-30 text-muted hover:text-ink"
+                      className="text-[9px] font-bold uppercase tracking-normal transition-colors disabled:opacity-30 text-muted hover:text-ink"
                     >
                       Move Up
                     </button>
@@ -185,7 +185,7 @@ export function FieldTypeRules() {
                       aria-label="Move down"
                       disabled={index === selectors.length - 1}
                       onClick={() => reorder(index, 'down')}
-                      className="text-[10px] font-mono uppercase tracking-wider transition-colors disabled:opacity-30 text-muted hover:text-ink"
+                      className="text-[9px] font-bold uppercase tracking-normal transition-colors disabled:opacity-30 text-muted hover:text-ink"
                     >
                       Move Down
                     </button>
@@ -194,7 +194,7 @@ export function FieldTypeRules() {
                     type="button"
                     aria-label="Delete"
                     onClick={() => deleteSelector(index)}
-                    className="text-[10px] text-muted hover:text-error font-bold uppercase tracking-wider transition-colors"
+                    className="text-[9px] text-muted hover:text-error font-bold uppercase tracking-normal transition-colors"
                   >
                     Delete
                   </button>

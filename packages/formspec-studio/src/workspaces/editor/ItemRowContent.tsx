@@ -109,15 +109,15 @@ function IdentityColumn({ identity, editState, actions, layout }: ItemRowContent
   const showEditMark = selected && editable;
 
   return (
-    <div className='flex min-w-0 gap-3'>
+    <div className='flex min-w-0 gap-5'>
       {isField && dt && (
-        <div className='flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-bg-default/85'>
-          <FieldIcon dataType={dataType!} className={`shrink-0 ${dt.color}`} />
+        <div className='flex h-10 w-10 shrink-0 items-center justify-center rounded bg-accent/[0.04] border border-border shadow-sm'>
+          <FieldIcon dataType={dataType!} className={`shrink-0 ${dt.color} opacity-90`} />
         </div>
       )}
       {!isField && (
-        <div className='flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-bg-default/85'>
-          <span className='text-accent font-mono shrink-0'>
+        <div className='flex h-10 w-10 shrink-0 items-center justify-center rounded bg-indigo-500/[0.04] border border-border shadow-sm'>
+          <span className='text-accent font-display shrink-0 font-bold text-[16px]'>
             {widgetHint === 'heading'
               ? 'H'
               : widgetHint === 'divider'
@@ -127,7 +127,7 @@ function IdentityColumn({ identity, editState, actions, layout }: ItemRowContent
         </div>
       )}
 
-      <div className='min-w-0'>
+      <div className='min-w-0 flex-1 flex flex-col justify-center gap-1'>
         {isField ? (
           <>
             {activeIdentityField === 'key' ? (
@@ -136,7 +136,7 @@ function IdentityColumn({ identity, editState, actions, layout }: ItemRowContent
                 type='text'
                 autoFocus
                 value={draftKey}
-                className='w-full rounded-[6px] border border-accent/35 bg-surface px-2.5 py-1.5 text-[17px] font-semibold font-mono leading-6 text-ink outline-none transition-shadow focus:border-accent focus:ring-2 focus:ring-accent/30 shadow-[0_1px_2px_rgba(0,0,0,0.03)] md:text-[18px]'
+                className='w-full rounded border border-accent bg-surface px-3 py-1 text-[14px] font-bold font-mono text-ink outline-none shadow-sm focus:ring-2 focus:ring-accent/10 transition-all'
                 onClick={(event) => event.stopPropagation()}
                 onChange={(event) =>
                   onDraftKeyChange(event.currentTarget.value)
@@ -145,10 +145,10 @@ function IdentityColumn({ identity, editState, actions, layout }: ItemRowContent
                 onKeyDown={onHandleIdentityKeyDown('key')}
               />
             ) : (
-              <div className='flex flex-wrap items-center gap-x-2 gap-y-1 text-[17px] font-semibold leading-6 md:text-[18px]'>
+              <div className='flex flex-wrap items-center gap-x-3 gap-y-1'>
                 <div
                   {...(insideButton ? {} : { role: 'heading', 'aria-level': 2 })}
-                  className={`inline-flex max-w-full items-center font-mono text-ink ${showEditMark ? 'group cursor-text' : ''}`}
+                  className={`inline-flex max-w-full items-center font-mono text-[14px] font-bold tracking-tight text-ink ${showEditMark ? 'group cursor-text' : ''}`}
                   onClick={(event) => {
                     if (!showEditMark) return;
                     event.stopPropagation();
@@ -156,14 +156,14 @@ function IdentityColumn({ identity, editState, actions, layout }: ItemRowContent
                   }}
                 >
                   {groupPrefix && (
-                    <span className='text-ink/35'>{groupPrefix}</span>
+                    <span className='text-muted mr-0.5'>{groupPrefix}</span>
                   )}
                   <span className='truncate'>{itemKey}</span>
                   {showEditMark ? <EditMark testId={`${testId}-key-edit`} /> : null}
                 </div>
                 {dataType && (
                   <span
-                    className={`font-mono text-[12px] font-normal tracking-[0.08em] ${dt?.color ?? 'text-muted'}`}
+                    className={`font-display text-[9px] font-bold uppercase tracking-normal px-1.5 py-0.5 rounded bg-subtle ${dt?.color ?? 'text-muted'}`}
                   >
                     {dataType}
                   </span>
@@ -171,14 +171,14 @@ function IdentityColumn({ identity, editState, actions, layout }: ItemRowContent
               </div>
             )}
             {(labelForDescription || selected) && (
-              <div className='mt-1 max-w-full'>
+              <div className='max-w-full'>
                 {activeIdentityField === 'label' ? (
                   <input
                     aria-label='Inline label'
                     type='text'
                     autoFocus
                     value={draftLabel}
-                    className='w-full rounded-[6px] border border-border/80 bg-surface px-2.5 py-1.5 text-[14px] font-normal leading-snug tracking-normal text-ink outline-none transition-shadow focus:border-accent focus:ring-2 focus:ring-accent/30 shadow-[0_1px_2px_rgba(0,0,0,0.03)] md:text-[15px]'
+                    className='w-full rounded border border-accent bg-surface px-3 py-1 text-[12px] font-bold text-ink outline-none shadow-sm focus:ring-2 focus:ring-accent/10 transition-all'
                     onClick={(event) => event.stopPropagation()}
                     onChange={(event) =>
                       onDraftLabelChange(event.currentTarget.value)
@@ -188,7 +188,7 @@ function IdentityColumn({ identity, editState, actions, layout }: ItemRowContent
                   />
                 ) : (
                   <div
-                    className={`text-[14px] font-normal leading-snug tracking-normal text-ink/80 md:text-[15px] ${showEditMark ? 'group inline-flex cursor-text flex-wrap items-center gap-x-1' : ''}`}
+                    className={`text-[12px] font-bold tracking-tight text-muted ${showEditMark ? 'group inline-flex cursor-text flex-wrap items-center gap-x-1.5' : ''}`}
                     onClick={(event) => {
                       if (!showEditMark) return;
                       event.stopPropagation();
@@ -197,10 +197,10 @@ function IdentityColumn({ identity, editState, actions, layout }: ItemRowContent
                   >
                     <span
                       className={
-                        labelForDescription ? '' : 'italic text-ink/50'
+                        labelForDescription ? '' : 'italic text-muted font-medium'
                       }
                     >
-                      {labelForDescription ?? 'Add a display label\u2026'}
+                      {labelForDescription ?? 'Add display label\u2026'}
                     </span>
                     {showEditMark ? (
                       <EditMark testId={`${testId}-label-edit`} />
@@ -218,7 +218,7 @@ function IdentityColumn({ identity, editState, actions, layout }: ItemRowContent
                 type='text'
                 autoFocus
                 value={draftLabel}
-                className='w-full rounded-[6px] border border-accent/35 bg-surface px-2.5 py-1.5 text-[17px] font-semibold leading-6 text-ink outline-none transition-shadow focus:border-accent focus:ring-2 focus:ring-accent/30 shadow-[0_1px_2px_rgba(0,0,0,0.03)] md:text-[18px]'
+                className='w-full rounded border border-accent bg-surface px-3 py-1 text-[14px] font-bold text-ink outline-none shadow-sm focus:ring-2 focus:ring-accent/10 transition-all'
                 onClick={(event) => event.stopPropagation()}
                 onChange={(event) =>
                   onDraftLabelChange(event.currentTarget.value)
@@ -228,12 +228,12 @@ function IdentityColumn({ identity, editState, actions, layout }: ItemRowContent
               />
             ) : (
               <>
-                <div className='flex flex-wrap items-center gap-x-2 gap-y-1 text-[17px] font-semibold leading-6 text-ink md:text-[18px]'>
+                <div className='flex flex-wrap items-center gap-x-3 gap-y-1'>
                   <span
                     className={
                       showEditMark
-                        ? 'group inline-flex max-w-full items-center cursor-text text-ink'
-                        : 'inline-flex max-w-full items-center text-ink'
+                        ? 'group inline-flex max-w-full items-center cursor-text text-ink font-bold text-[14px]'
+                        : 'inline-flex max-w-full items-center text-ink font-bold text-[14px]'
                     }
                     onClick={(event) => {
                       if (!showEditMark) return;
@@ -247,19 +247,19 @@ function IdentityColumn({ identity, editState, actions, layout }: ItemRowContent
                     ) : null}
                   </span>
                   {widgetHint && (
-                    <span className='font-mono text-[12px] tracking-[0.08em] text-accent/80'>
+                    <span className='font-display text-[9px] font-bold uppercase tracking-normal px-1.5 py-0.5 rounded bg-accent/[0.04] text-accent/60'>
                       {widgetHint}
                     </span>
                   )}
                 </div>
-                <div className='mt-1 flex flex-wrap items-center gap-x-3 gap-y-1'>
+                <div className='flex flex-wrap items-center gap-x-4 gap-y-1'>
                   {activeIdentityField === 'key' ? (
                     <input
                       aria-label='Inline key'
                       type='text'
                       autoFocus
                       value={draftKey}
-                      className='w-full max-w-[16rem] rounded-[6px] border border-border/80 bg-surface px-2 py-1.5 font-mono text-[12px] tracking-[0.08em] text-ink outline-none transition-shadow focus:border-accent focus:ring-2 focus:ring-accent/30 shadow-[0_1px_2px_rgba(0,0,0,0.03)]'
+                      className='w-full max-w-[16rem] rounded border border-accent bg-surface px-3 py-1 font-mono text-[11px] font-bold text-ink outline-none shadow-sm focus:ring-2 focus:ring-accent/10 transition-all'
                       onClick={(event) => event.stopPropagation()}
                       onChange={(event) =>
                         onDraftKeyChange(event.currentTarget.value)
@@ -268,12 +268,12 @@ function IdentityColumn({ identity, editState, actions, layout }: ItemRowContent
                       onKeyDown={onHandleIdentityKeyDown('key')}
                     />
                   ) : (
-                    <span className='inline-flex items-center gap-1.5'>
-                      <span className='font-mono text-[11px] tracking-[0.12em] text-ink/60'>
-                        Key
+                    <span className='inline-flex items-center gap-2'>
+                      <span className='font-display text-[9px] font-bold uppercase tracking-normal text-muted'>
+                        ID
                       </span>
                       <span
-                        className={`group inline-flex items-center font-mono text-[12px] tracking-[0.08em] text-ink/68 ${showEditMark ? 'cursor-text' : ''}`}
+                        className={`group inline-flex items-center font-mono text-[11px] font-bold tracking-tight text-muted ${showEditMark ? 'cursor-text' : ''}`}
                         onClick={(event) => {
                           if (!showEditMark) return;
                           event.stopPropagation();
@@ -281,7 +281,7 @@ function IdentityColumn({ identity, editState, actions, layout }: ItemRowContent
                         }}
                       >
                         {groupPrefix && (
-                          <span className='text-ink/35'>{groupPrefix}</span>
+                          <span className='text-muted mr-0.5 font-medium'>{groupPrefix}</span>
                         )}
                         {itemKey}
                         {showEditMark ? (
@@ -323,7 +323,7 @@ function SummaryColumn({
     actions;
 
   return (
-    <div className='min-w-0 flex flex-col gap-3'>
+    <div className='min-w-0 flex flex-col gap-4'>
       {(() => {
         let visibleCategories: [string, string][];
         if (isField) {
@@ -346,7 +346,7 @@ function SummaryColumn({
         return (
           <dl
             data-testid={`${testId}-summary`}
-            className={`grid gap-x-5 gap-y-3 ${visibleCategories.length <= 2 ? 'grid-cols-2' : visibleCategories.length <= 4 ? 'grid-cols-4' : 'grid-cols-5'}`}
+            className={`grid gap-2 ${visibleCategories.length <= 2 ? 'grid-cols-2' : visibleCategories.length <= 4 ? 'grid-cols-4' : 'grid-cols-5'}`}
           >
             {visibleCategories.map(([category, value]) => (
               <CategoryCell
@@ -377,6 +377,7 @@ function SummaryColumn({
               size='sm'
               title={pill.specTerm}
               warn={pill.warn}
+              className="px-2 py-0.5 font-bold text-[9px] uppercase tracking-normal"
             />
           ))}
         </div>
@@ -385,21 +386,21 @@ function SummaryColumn({
       {categoryEditor}
 
       {supportingText.length > 0 && (
-        <dl className='grid gap-x-5 gap-y-3 sm:grid-cols-2'>
+        <dl className='grid gap-4 sm:grid-cols-2'>
           {supportingText.map((entry) => (
             <div
               key={entry.label}
-              className='min-w-0 border-l border-border/65 pl-3'
+              className='min-w-0 bg-subtle rounded border border-border p-3 transition-all'
             >
-              <dt className='font-mono text-[11px] tracking-[0.14em] text-ink/72'>
+              <dt className='font-display text-[9px] font-bold uppercase tracking-normal text-muted mb-1'>
                 {entry.label}
               </dt>
               {activeInlineSummary === entry.label ? (
-                <input
+                <textarea
                   aria-label={summaryInputLabel(entry.label)}
-                  type={summaryInputType(entry.label)}
                   autoFocus
-                  className={summaryInputClassName}
+                  rows={2}
+                  className={`w-full rounded border border-accent bg-surface px-3 py-1.5 text-[12px] font-bold text-ink outline-none shadow-sm focus:ring-2 focus:ring-accent/10 transition-all resize-none`}
                   value={summaryInputValue(entry.label)}
                   onClick={(event) => event.stopPropagation()}
                   onChange={(event) =>
@@ -407,7 +408,10 @@ function SummaryColumn({
                   }
                   onBlur={onCloseInlineSummary}
                   onKeyDown={(event) => {
-                    if (event.key === 'Enter') onCloseInlineSummary();
+                    if (event.key === 'Enter' && !event.shiftKey) {
+                      event.preventDefault();
+                      onCloseInlineSummary();
+                    }
                     if (event.key === 'Escape') {
                       event.preventDefault();
                       // SI-4: Revert to original value on Escape.
@@ -417,7 +421,7 @@ function SummaryColumn({
                 />
               ) : (
                 <dd
-                  className={`group mt-1 inline-flex max-w-full items-center truncate text-[14px] font-medium leading-5 text-ink/94 md:text-[15px] ${showEditMark ? 'cursor-text' : ''}`}
+                  className={`group inline-flex w-full items-center truncate text-[12px] font-bold leading-normal text-ink/70 ${showEditMark ? 'cursor-text' : ''}`}
                   onClick={(event) => {
                     if (!showEditMark) return;
                     event.stopPropagation();
@@ -425,11 +429,11 @@ function SummaryColumn({
                   }}
                 >
                   <span
-                    className={`truncate ${entry.value ? '' : 'text-ink/56 italic'}`}
+                    className={`truncate ${entry.value ? '' : 'text-muted italic font-medium'}`}
                   >
                     {entry.value ||
                       (selected
-                        ? `Click to add ${entry.label.toLowerCase()}`
+                        ? `Add ${entry.label.toLowerCase()}\u2026`
                         : '\u2014')}
                   </span>
                   {showEditMark ? (

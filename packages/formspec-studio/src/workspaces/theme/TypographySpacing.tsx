@@ -37,7 +37,7 @@ function TokenInput({
     <div className="space-y-1">
       <label
         htmlFor={`token-${tokenKey}`}
-        className="font-mono text-[10px] text-muted uppercase tracking-wider block"
+        className="font-mono text-[9px] text-muted uppercase tracking-normal block"
       >
         {label}
       </label>
@@ -51,7 +51,7 @@ function TokenInput({
           const v = e.target.value.trim();
           if (v !== value) onSave(tokenKey, v);
         }}
-        className="w-full px-2 py-1 text-[13px] font-mono border border-border rounded-[4px] bg-surface outline-none focus:border-accent transition-colors"
+        className="w-full px-2 py-1 text-[12px] font-mono border border-border rounded bg-surface outline-none focus:border-accent transition-colors"
       />
     </div>
   );
@@ -72,7 +72,7 @@ export function TypographySpacing() {
     <div className="space-y-6">
       {/* Typography */}
       <div className="space-y-3">
-        <h4 className="text-[12px] font-bold text-muted uppercase tracking-wider">Typography</h4>
+        <h4 className="text-[11px] font-bold text-muted uppercase tracking-normal">Typography</h4>
         {TYPOGRAPHY_FIELDS.map((f) => (
           <TokenInput
             key={f.key}
@@ -87,7 +87,7 @@ export function TypographySpacing() {
 
       {/* Spacing */}
       <div className="space-y-3">
-        <h4 className="text-[12px] font-bold text-muted uppercase tracking-wider">Spacing</h4>
+        <h4 className="text-[11px] font-bold text-muted uppercase tracking-normal">Spacing</h4>
         <div className="grid grid-cols-3 gap-2">
           {SPACING_FIELDS.map((f) => (
             <TokenInput
@@ -104,7 +104,7 @@ export function TypographySpacing() {
 
       {/* Radius */}
       <div className="space-y-3">
-        <h4 className="text-[12px] font-bold text-muted uppercase tracking-wider">Radius</h4>
+        <h4 className="text-[11px] font-bold text-muted uppercase tracking-normal">Radius</h4>
         <div className="grid grid-cols-2 gap-3">
           {RADIUS_FIELDS.map((f) => (
             <TokenInput

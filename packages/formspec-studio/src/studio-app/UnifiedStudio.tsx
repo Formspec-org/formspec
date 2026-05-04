@@ -1,4 +1,4 @@
-/** @filedesc Unified Studio surface — single component replacing the studioView toggle. */
+/** @filedesc Segmented mode switcher for the four primary Studio modes. */
 import { useState, useEffect, useCallback, useMemo, type ReactElement } from 'react';
 import { useMode, type StudioMode } from './ModeProvider';
 import { useProject } from '../state/useProject';
@@ -9,8 +9,10 @@ import { useShellLayout } from '../hooks/useShellLayout';
 import { useShellPanels } from '../hooks/useShellPanels';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useEditorState } from '../hooks/useEditorState';
+import { useWorkspaceRouter } from '../providers/WorkspaceRouterProvider';
 import { type Project, buildDefLookup, createProject } from '@formspec-org/studio-core';
-import { isOnboardingCompleted } from '../onboarding/onboarding-storage';
+import { isOnboardingCompleted, shouldShowOnboarding } from '../onboarding/onboarding-storage';
+import { OnboardingOverlay } from '../onboarding/OnboardingOverlay';
 import { exportProjectZip } from '../lib/export-zip';
 import { Header } from '../components/Header';
 import { StatusBar } from '../components/StatusBar';
@@ -23,8 +25,7 @@ import { BlueprintSidebar } from '../components/shell/BlueprintSidebar';
 import { WorkspaceContent } from '../components/shell/WorkspaceContent';
 import { ShellDialogs } from '../components/shell/ShellDialogs';
 import { useBlueprintSectionResolution } from '../components/shell/useBlueprintSectionResolution';
-import { BLUEPRINT_SECTIONS_BY_TAB } from '../components/shell/ShellConstants';
-import { getShellBackgroundImage } from '../components/shell/shell-background-image';
+
 import { ChatSessionControllerProvider } from '../state/ChatSessionControllerContext';
 import { ActiveGroupProvider } from '../state/useActiveGroup';
 import { CanvasTargetsProvider } from '../state/useCanvasTargets';
@@ -39,46 +40,49 @@ import { LayoutCanvas } from '../workspaces/layout/LayoutCanvas';
 import { LayoutLivePreviewSection } from '../workspaces/layout/LayoutLivePreviewSection';
 import { FormHealthPanel } from '../workspaces/editor/FormHealthPanel';
 import type { StudioUIHandlers } from '../components/chat/studio-ui-tools';
-import type { EditorView } from '../workspaces/editor/BuildManageToggle';
-import type { MappingTabId } from '../workspaces/mapping/MappingTab';
-import type { Viewport } from '../workspaces/preview/ViewportSwitcher';
-import type { PreviewMode } from '../workspaces/preview/PreviewTab';
+import { dispatchStudioEvent, addStudioEventListener, STUDIO_EVENTS } from '../studio-events';
 
 import {
   IconActivity,
   IconChevronRight,
   IconChevronLeft,
   IconMonitor,
+  IconClock,
+  IconGrid,
+  IconSparkle,
 } from '../components/icons';
-
-/** Map Studio modes to workspace tab names for backward compatibility with existing components. */
-function modeToWorkspaceTab(mode: StudioMode): string {
-  switch (mode) {
-    case 'chat': return 'Editor'; // Chat mode uses Editor workspace as canvas context
-    case 'edit': return 'Editor';
-    case 'design': return 'Design';
-    case 'preview': return 'Preview';
-  }
-}
-
-const ADVANCED_WORKSPACE_TABS = new Set(['Evidence', 'Mapping']);
-const VALID_MAPPING_TAB_IDS = new Set<string>(['all', 'config', 'rules', 'adapter', 'preview']);
-const VALID_EDITOR_VIEWS = new Set<string>(['build', 'manage', 'screener', 'health']);
 
 export function UnifiedStudio(): ReactElement {
   const project = useProject();
-  const { mode, setMode } = useMode();
+  const [showOnboarding, setShowOnboarding] = useState(() => shouldShowOnboarding());
+  const { mode } = useMode();
   const colorScheme = useColorScheme();
   const { primaryKey, primaryKeyForTab, deselect, select, reveal, selectionScopeTab } = useSelection();
-  const [advancedTab, setAdvancedTab] = useState<string | null>(null);
-  const [activeSection, setActiveSection] = useState<string>('Structure');
-  const [activeMappingTab, setActiveMappingTab] = useState<MappingTabId>('all');
-  const [mappingConfigOpen, setMappingConfigOpen] = useState(true);
-  const [previewViewport, setPreviewViewport] = useState<Viewport>('desktop');
-  const [previewMode, setPreviewMode] = useState<PreviewMode>('form');
-  const [activeEditorView, setActiveEditorView] = useState<EditorView>('build');
+  const [chatRailElement, setChatRailElement] = useState<HTMLDivElement | null>(null);
 
-  // Layout
+  const router = useWorkspaceRouter();
+  const {
+    activeTab,
+    activeSection,
+    setActiveSection,
+    activeEditorView,
+    setActiveEditorView,
+    activeMappingTab,
+    setActiveMappingTab,
+    mappingConfigOpen,
+    setMappingConfigOpen,
+    previewViewport,
+    setPreviewViewport,
+    previewMode,
+    setPreviewMode,
+    advancedTab,
+    leftTab,
+    setLeftTab,
+    leftCollapsed,
+    setLeftCollapsed,
+    setStudioMode,
+  } = router;
+
   const layout = useShellLayout();
   const {
     compactLayout,
@@ -94,11 +98,7 @@ export function UnifiedStudio(): ReactElement {
     overlayOpen,
   } = layout;
 
-  // Workspace tab compatibility
-  const activeTab = advancedTab ?? modeToWorkspaceTab(mode);
-
-  // Editor state
-  const editor = useEditorState(activeTab, compactLayout);
+  const editor = useEditorState();
   const {
     manageCount,
     showRightPanel,
@@ -107,7 +107,6 @@ export function UnifiedStudio(): ReactElement {
     setShowHealthSheet,
   } = editor;
 
-  // Panels
   const panels = useShellPanels();
   const {
     showPalette,
@@ -121,6 +120,7 @@ export function UnifiedStudio(): ReactElement {
     showPreview,
     setShowPreview,
     assistantOpen,
+    setAssistantOpen,
   } = panels;
 
   const scopedSelectedKey = primaryKeyForTab(activeTab.toLowerCase());
@@ -128,11 +128,6 @@ export function UnifiedStudio(): ReactElement {
 
   // Blueprint sidebar
   const { visibleSections, resolvedSection } = useBlueprintSectionResolution(activeTab, activeSection);
-
-  const setStudioMode = useCallback((nextMode: StudioMode) => {
-    setAdvancedTab(null);
-    setMode(nextMode);
-  }, [setMode]);
 
   useEffect(() => {
     if (resolvedSection !== activeSection) {
@@ -161,7 +156,7 @@ export function UnifiedStudio(): ReactElement {
       if (mode === 'chat') {
         return { ok: false, reason: 'Preview companion is only available in edit/design modes.' };
       }
-      window.dispatchEvent(new CustomEvent('formspec:toggle-preview-companion', { detail: { open } }));
+      dispatchStudioEvent(STUDIO_EVENTS.TOGGLE_PREVIEW_COMPANION, { open });
       return { ok: true };
     },
     switchMode: (newMode: string) => {
@@ -169,7 +164,7 @@ export function UnifiedStudio(): ReactElement {
       if (!valid.includes(newMode)) {
         return { ok: false, reason: `Invalid mode "${newMode}". Must be one of: ${valid.join(', ')}` };
       }
-      setStudioMode(newMode as StudioMode);
+      router.setStudioMode(newMode as StudioMode);
       return { ok: true };
     },
     highlightField: (path: string) => {
@@ -180,10 +175,10 @@ export function UnifiedStudio(): ReactElement {
       return { ok: true, reason: `Highlighted "${path}" on canvas.` };
     },
     openPreview: () => {
-      setStudioMode('preview');
+      router.setStudioMode('preview');
       return { ok: true };
     },
-  }), [project, reveal, mode, setStudioMode]);
+  }), [project, reveal, mode, router]);
 
   // Chat session controller
   const controller = useChatSessionController({
@@ -205,87 +200,38 @@ export function UnifiedStudio(): ReactElement {
   // Handlers
   const handleNewForm = useCallback(() => {
     project.loadBundle(createProject().exportBundle());
-    setAdvancedTab(null);
-    setStudioMode('chat');
-    setActiveSection('Structure');
-    setActiveEditorView('build');
-    setActiveMappingTab('all');
-    setMappingConfigOpen(true);
-    setPreviewViewport('desktop');
-    setPreviewMode('form');
+    router.setAdvancedTab(null);
+    router.setStudioMode('chat');
+    router.setActiveSection('Structure');
+    router.setActiveEditorView('build');
+    router.setActiveMappingTab('all');
+    router.setMappingConfigOpen(true);
+    router.setPreviewViewport('desktop');
+    router.setPreviewMode('form');
     setShowPalette(false);
     setShowImport(false);
     deselect();
     if (!isOnboardingCompleted()) {
-      window.dispatchEvent(new CustomEvent('formspec:restart-onboarding'));
+      dispatchStudioEvent(STUDIO_EVENTS.RESTART_ONBOARDING);
     }
-  }, [project, setStudioMode, setShowPalette, setShowImport, deselect]);
+  }, [project, router, setShowPalette, setShowImport, deselect]);
 
   const openDefinitionInEditor = useCallback(
     (defPath: string, kind: DefinitionEditorItemKind) => {
-      setStudioMode('edit');
-      setActiveEditorView('build');
+      router.setStudioMode('edit');
+      router.setActiveEditorView('build');
       select(defPath, kind, { tab: 'editor', focusInspector: true });
       setShowRightPanel(true);
     },
-    [select, setStudioMode, setShowRightPanel],
+    [select, router, setShowRightPanel],
   );
 
   useEffect(() => {
-    const onNavigateWorkspace = (event: Event) => {
-      const detail = (event as CustomEvent<Record<string, unknown>>).detail;
-      if (!detail || typeof detail !== 'object') return;
-
-      const tab = typeof detail.tab === 'string' ? detail.tab : undefined;
-      const view = typeof detail.view === 'string' ? detail.view : undefined;
-      const subTab = typeof detail.subTab === 'string' ? detail.subTab : undefined;
-      const section = typeof detail.section === 'string' ? detail.section : undefined;
-
-      if (tab === 'Theme' || tab === 'Design' || tab === 'Layout') {
-        setAdvancedTab(null);
-        setMode('design');
-        setActiveSection(section ?? 'Colors');
-        return;
-      }
-
-      if (tab === 'Preview' || tab === 'Playthrough') {
-        setAdvancedTab(null);
-        setMode('preview');
-        return;
-      }
-
-      if (tab === 'Editor') {
-        setAdvancedTab(null);
-        setMode('edit');
-        if (view && VALID_EDITOR_VIEWS.has(view)) {
-          setActiveEditorView(view as EditorView);
-          // Only reset blueprint to Structure when entering Build; Manage/Screener/Health
-          // should keep the user's sidebar section (e.g. Variables when opening Manage).
-          if (view === 'build') {
-            setActiveSection('Structure');
-          } else if (
-            section &&
-            BLUEPRINT_SECTIONS_BY_TAB.Editor.includes(section)
-          ) {
-            setActiveSection(section);
-          }
-        }
-        return;
-      }
-
-      if (tab && ADVANCED_WORKSPACE_TABS.has(tab)) {
-        setMode('edit');
-        setAdvancedTab(tab);
-        setActiveSection(tab === 'Mapping' ? 'Mappings' : 'Structure');
-        if (subTab && tab === 'Mapping' && VALID_MAPPING_TAB_IDS.has(subTab)) {
-          setActiveMappingTab(subTab as MappingTabId);
-        }
-      }
+    const handleRestartOnboarding = () => {
+      setShowOnboarding(true);
     };
-
-    window.addEventListener('formspec:navigate-workspace', onNavigateWorkspace);
-    return () => window.removeEventListener('formspec:navigate-workspace', onNavigateWorkspace);
-  }, [setMode]);
+    return addStudioEventListener(STUDIO_EVENTS.RESTART_ONBOARDING, handleRestartOnboarding);
+  }, []);
 
   const handleExport = async () => {
     await exportProjectZip(project.exportBundle());
@@ -312,8 +258,7 @@ export function UnifiedStudio(): ReactElement {
       project.setMetadata({ status: 'active' });
       telemetry.emit('studio_publish_completed', { fieldCount: project.statistics().fieldCount });
     };
-    window.addEventListener('formspec:publish-project', handlePublish);
-    return () => window.removeEventListener('formspec:publish-project', handlePublish);
+    return addStudioEventListener(STUDIO_EVENTS.PUBLISH_PROJECT, handlePublish);
   }, [handleExport, project]);
 
   const handlePreviewFieldClick = useCallback(
@@ -322,7 +267,7 @@ export function UnifiedStudio(): ReactElement {
   );
 
   const hasScreener = project.state.screener !== null;
-  const shellBackgroundImage = getShellBackgroundImage(colorScheme?.resolvedTheme ?? 'light');
+
 
   // Chat mode: chat is primary, canvas is context
   const isChatMode = mode === 'chat';
@@ -334,26 +279,32 @@ export function UnifiedStudio(): ReactElement {
   // Show chat rail in edit/design modes (collapsible)
   const showChatRail = (isEditMode || isDesignMode) && panels.assistantOpen;
 
+  useEffect(() => {
+    if (assistantOpen && !isChatMode) {
+      setLeftTab('chat');
+      setLeftCollapsed(false);
+    } else if (!assistantOpen && !isChatMode && leftTab === 'chat') {
+      setLeftTab('blueprint');
+    }
+  }, [assistantOpen, isChatMode, leftTab]);
+
+  const activeLeftTab = isChatMode 
+    ? (leftTab === 'chat' ? 'history' : leftTab) 
+    : (leftTab === 'history' ? 'blueprint' : leftTab);
+
   return (
     <ActiveGroupProvider>
       <ChatSessionControllerProvider controller={controller}>
         <div
           data-testid="shell"
           className="relative flex h-screen flex-col overflow-hidden bg-bg-default text-ink font-ui"
-          style={{ backgroundImage: shellBackgroundImage }}
+
         >
           <UnloadGuard project={project} />
+          {/* Full shell: mode switcher plus workspace tabs so Evidence/Mapping stay reachable from the header. */}
           <Header
             activeTab={activeTab}
-            onTabChange={(tab) => {
-              if (tab === 'Editor') setStudioMode('edit');
-              else if (tab === 'Layout' || tab === 'Design') setStudioMode('design');
-              else if (tab === 'Preview') setStudioMode('preview');
-              else if (ADVANCED_WORKSPACE_TABS.has(tab)) {
-                setMode('edit');
-                setAdvancedTab(tab);
-              }
-            }}
+            onTabChange={router.setActiveTab}
             onNew={handleNewForm}
             onExport={handleExport}
             onImport={() => setShowImport(true)}
@@ -376,20 +327,126 @@ export function UnifiedStudio(): ReactElement {
               className={`relative flex flex-1 min-h-0 overflow-hidden ${isEditMode ? 'bg-bg-default' : ''}`}
               aria-hidden={overlayOpen ? true : undefined}
             >
-              {/* Left sidebar — visible for editable project workspaces */}
-              {(isEditMode || isAdvancedWorkspace || isDesignMode || isPreviewMode) && !compactLayout && (
+              {/* Left sidebar — visible for editable project workspaces OR chat mode */}
+              {(isEditMode || isAdvancedWorkspace || isDesignMode || isPreviewMode || isChatMode) && !compactLayout && (
                 <>
-                  <div className="glass h-full shadow-premium">
-                    <BlueprintSidebar
-                      activeTab={activeTab}
-                      activeSection={activeSection}
-                      onSectionChange={setActiveSection}
-                      activeEditorView={activeEditorView}
-                      compactLayout={compactLayout}
-                      leftWidth={leftWidth}
-                    />
-                  </div>
-                  <ResizeHandle side="left" onResize={onResizeLeft} />
+                  {leftCollapsed ? (
+                    <aside className="flex w-16 shrink-0 flex-col items-center gap-6 border-r border-border/40 bg-subtle/10 backdrop-blur-xl py-8 h-full z-10">
+                      {!isChatMode && (
+                        <button
+                          type="button"
+                          onClick={() => { setLeftTab('chat'); setAssistantOpen(true); setLeftCollapsed(false); }}
+                          className={`flex items-center justify-center w-10 h-10 rounded-2xl border border-border/40 text-[11px] font-black shadow-premium-sm transition-all ${
+                            activeLeftTab === 'chat' ? 'bg-accent/10 text-accent border-accent/40' : 'bg-surface text-muted hover:text-accent hover:border-accent/40'
+                          }`}
+                          aria-label="Expand Chat"
+                          title="Chat"
+                        >
+                          <IconSparkle size={16} />
+                        </button>
+                      )}
+                      {isChatMode && (
+                        <button
+                          type="button"
+                          onClick={() => { setLeftTab('history'); setLeftCollapsed(false); }}
+                          className={`flex items-center justify-center w-10 h-10 rounded-2xl border border-border/40 text-[11px] font-black shadow-premium-sm transition-all ${
+                            activeLeftTab === 'history' ? 'bg-accent/10 text-accent border-accent/40' : 'bg-surface text-muted hover:text-accent hover:border-accent/40'
+                          }`}
+                          aria-label="Expand History"
+                          title="History"
+                        >
+                          <IconClock size={16} />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => { setLeftTab('blueprint'); setLeftCollapsed(false); }}
+                        className={`flex items-center justify-center w-10 h-10 rounded-2xl border border-border/40 text-[11px] font-black shadow-premium-sm transition-all ${
+                          activeLeftTab === 'blueprint' ? 'bg-accent/10 text-accent border-accent/40' : 'bg-surface text-muted hover:text-accent hover:border-accent/40'
+                        }`}
+                        aria-label="Expand Blueprint"
+                        title="Blueprint"
+                      >
+                        <IconGrid size={16} />
+                      </button>
+                    </aside>
+                  ) : (
+                    <>
+                      <div 
+                        className="flex shrink-0 flex-col overflow-y-auto border-r border-border/40 glass h-full"
+                        style={{ width: `clamp(200px, ${leftWidth}px, calc(50vw - 300px))` }}
+                      >
+                        <div className="flex items-center gap-2 p-3 border-b border-border/20 bg-surface/50 shrink-0">
+                          {isChatMode ? (
+                            <button
+                              className={`flex-1 rounded-lg px-3 py-1.5 text-[11px] font-bold transition-all ${
+                                activeLeftTab === 'history' ? 'bg-accent/10 text-accent shadow-sm' : 'text-muted hover:bg-subtle'
+                              }`}
+                              onClick={() => setLeftTab('history')}
+                            >
+                              History
+                            </button>
+                          ) : (
+                            <button
+                              className={`flex-1 rounded-lg px-3 py-1.5 text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 ${
+                                activeLeftTab === 'chat' ? 'bg-accent/10 text-accent shadow-sm' : 'text-muted hover:bg-subtle'
+                              }`}
+                              onClick={() => { setLeftTab('chat'); setAssistantOpen(true); }}
+                            >
+                              <IconSparkle size={12} />
+                              Chat
+                            </button>
+                          )}
+                          <button
+                            className={`flex-1 rounded-lg px-3 py-1.5 text-[11px] font-bold transition-all ${
+                              activeLeftTab === 'blueprint' ? 'bg-accent/10 text-accent shadow-sm' : 'text-muted hover:bg-subtle'
+                            }`}
+                            onClick={() => setLeftTab('blueprint')}
+                          >
+                            Blueprint
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setLeftCollapsed(true)}
+                            className="flex shrink-0 items-center justify-center w-7 h-7 rounded-full border border-border/40 text-muted hover:bg-surface hover:text-accent hover:border-accent/40 transition-all shadow-sm ml-1"
+                            aria-label="Collapse sidebar"
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                          </button>
+                        </div>
+                        
+                        <div 
+                          className={`flex-1 min-h-0 overflow-y-auto scrollbar-none flex flex-col ${activeLeftTab !== 'history' ? 'hidden' : ''}`} 
+                          ref={setChatRailElement} 
+                        />
+                        
+                        <div className={`flex-1 min-h-0 flex flex-col ${activeLeftTab !== 'blueprint' ? 'hidden' : ''}`}>
+                          <BlueprintSidebar
+                            activeTab={activeTab}
+                            activeSection={activeSection}
+                            onSectionChange={setActiveSection}
+                            activeEditorView={activeEditorView}
+                            compactLayout={compactLayout}
+                            leftWidth={leftWidth}
+                            embedded={true}
+                          />
+                        </div>
+
+                        {!isChatMode && (
+                          <div className={`flex-1 min-h-0 flex flex-col ${activeLeftTab !== 'chat' ? 'hidden' : ''}`}>
+                            <ChatPanel
+                              project={project}
+                              surfaceLayout="rail"
+                              hideHeader={true}
+                              workspaceRail={{ attach: 'omit' }}
+                              onClose={() => { setLeftTab('blueprint'); setAssistantOpen(false); }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                      <ResizeHandle side="left" onResize={onResizeLeft} />
+                    </>
+                  )}
                 </>
               )}
 
@@ -402,11 +459,12 @@ export function UnifiedStudio(): ReactElement {
                       <ChatPanel
                         project={project}
                         surfaceLayout="primary"
+                        workspaceRail={{ attach: 'portal', portalContainer: chatRailElement ?? undefined }}
                       />
                     </div>
                     {/* Live canvas context — right (desktop only) */}
                     {!compactLayout && showPreview && (
-                      <div className="glass w-[380px] shrink-0 shadow-premium">
+                      <div className="glass w-[380px] shrink-0">
                         <PreviewCompanionPanel
                           width={380}
                           appearance={colorScheme?.resolvedTheme ?? 'light'}
@@ -436,44 +494,14 @@ export function UnifiedStudio(): ReactElement {
                         deselect();
                       }}
                     />
-	                    <WorkspaceContent
-	                      activeTab={activeTab}
-                      activeEditorView={activeEditorView}
-                      setActiveEditorView={setActiveEditorView}
-                      manageCount={manageCount}
-                      hasScreener={hasScreener}
-                      activeMappingTab={activeMappingTab}
-                      setActiveMappingTab={setActiveMappingTab}
-                      mappingConfigOpen={mappingConfigOpen}
-                      setMappingConfigOpen={setMappingConfigOpen}
-                      previewViewport={previewViewport}
-                      setPreviewViewport={setPreviewViewport}
-                      previewMode={previewMode}
-                      setPreviewMode={setPreviewMode}
-                      appearance={colorScheme?.resolvedTheme ?? 'light'}
-                    />
+	                    <WorkspaceContent />
                   </div>
                 )}
 
 
                 {isAdvancedWorkspace && (
                   <div className="h-full flex flex-col" data-testid={`workspace-${activeTab}`}>
-                    <WorkspaceContent
-                      activeTab={activeTab}
-                      activeEditorView={activeEditorView}
-                      setActiveEditorView={setActiveEditorView}
-                      manageCount={manageCount}
-                      hasScreener={hasScreener}
-                      activeMappingTab={activeMappingTab}
-                      setActiveMappingTab={setActiveMappingTab}
-                      mappingConfigOpen={mappingConfigOpen}
-                      setMappingConfigOpen={setMappingConfigOpen}
-                      previewViewport={previewViewport}
-                      setPreviewViewport={setPreviewViewport}
-                      previewMode={previewMode}
-                      setPreviewMode={setPreviewMode}
-                      appearance={colorScheme?.resolvedTheme ?? 'light'}
-                    />
+                    <WorkspaceContent />
                   </div>
                 )}
 
@@ -492,22 +520,7 @@ export function UnifiedStudio(): ReactElement {
 
                 {isPreviewMode && (
                   <div className="h-full flex flex-col" data-testid="workspace-Preview">
-                    <WorkspaceContent
-                      activeTab="Preview"
-                      activeEditorView="build"
-                      setActiveEditorView={() => {}}
-                      manageCount={0}
-                      hasScreener={false}
-                      activeMappingTab="all"
-                      setActiveMappingTab={setActiveMappingTab}
-                      mappingConfigOpen={mappingConfigOpen}
-                      setMappingConfigOpen={setMappingConfigOpen}
-                      previewViewport={previewViewport}
-                      setPreviewViewport={setPreviewViewport}
-                      previewMode={previewMode}
-                      setPreviewMode={setPreviewMode}
-                      appearance={colorScheme?.resolvedTheme ?? 'light'}
-                    />
+                    <WorkspaceContent />
                   </div>
                 )}
               </main>
@@ -517,7 +530,7 @@ export function UnifiedStudio(): ReactElement {
                 <>
                   <ResizeHandle side="right" onResize={onResizeRight} />
                   <aside
-                    className="flex flex-col overflow-hidden shrink-0 border-l border-border/70 bg-surface"
+                    className="panel-aside"
                     style={{ width: `clamp(200px, ${rightWidth}px, calc(50vw - 340px))` }}
                     data-testid="properties-panel"
                   >
@@ -525,7 +538,7 @@ export function UnifiedStudio(): ReactElement {
                       <button
                         type="button"
                         aria-label="Hide panel"
-                        className="rounded p-1 text-muted hover:text-ink hover:bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+                        className="panel-close-btn"
                         onClick={() => setShowRightPanel(false)}
                       >
                         <IconChevronRight size={14} />
@@ -543,7 +556,7 @@ export function UnifiedStudio(): ReactElement {
                   <>
                     <ResizeHandle side="right" onResize={onResizeRight} />
                     <aside
-                      className="flex shrink-0 flex-col overflow-hidden border-l border-border/70 bg-surface"
+                      className="panel-aside"
                       style={{ width: `clamp(280px, ${rightWidth}px, calc(50vw - 260px))` }}
                       data-testid="layout-preview-panel"
                       aria-label="Layout live preview"
@@ -552,14 +565,14 @@ export function UnifiedStudio(): ReactElement {
                         <button
                           type="button"
                           aria-label="Hide layout preview panel"
-                          className="rounded p-1 text-muted transition-colors hover:bg-subtle hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+                          className="panel-close-btn"
                           onClick={() => setShowLayoutPreviewPanel(false)}
                         >
                           <IconChevronRight size={14} />
                         </button>
                       </div>
                       <div className="min-h-0 flex-1 px-3 pb-3">
-                        <div className="h-full overflow-hidden rounded-[22px] border border-border/70 bg-surface/80">
+                        <div className="h-full overflow-hidden rounded-lg border border-border bg-surface">
                           <LayoutLivePreviewSection
                             width="100%"
                             className="h-full"
@@ -573,7 +586,7 @@ export function UnifiedStudio(): ReactElement {
                   <button
                     type="button"
                     aria-label="Show layout preview panel"
-                    className="shrink-0 border-l border-border/70 bg-surface px-1.5 py-3 text-muted transition-colors hover:bg-subtle hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+                    className="shrink-0 border-l border-border/70 bg-surface px-1.5 py-3 text-muted transition-colors hover:bg-subtle hover:text-ink focus-ring"
                     onClick={() => setShowLayoutPreviewPanel(true)}
                   >
                     <IconChevronLeft size={14} />
@@ -581,28 +594,14 @@ export function UnifiedStudio(): ReactElement {
                 )
               )}
 
-              {/* Chat rail in edit/design modes */}
-              {showChatRail && (
-                <div
-                  id="chat-panel-container"
-                  data-testid="chat-rail"
-                  aria-label="AI assistant"
-                  className="flex w-[360px] shrink-0 min-h-0 flex-col border-l border-border/70 bg-surface"
-                >
-                  <ChatPanel
-                    project={project}
-                    surfaceLayout="rail"
-                    onClose={() => panels.setAssistantOpen(false)}
-                  />
-                </div>
-              )}
+
 
               {/* Preview floating chat pill */}
               {isPreviewMode && !compactLayout && (
                 <button
                   type="button"
                   aria-label="Open AI assistant"
-                  className="fixed bottom-20 right-6 z-30 rounded-full bg-accent px-4 py-3 text-white shadow-lg hover:bg-accent/90 transition-colors"
+                  className="fixed bottom-20 right-6 z-30 rounded-md bg-accent px-4 py-3 text-surface shadow-lg hover:bg-accent/90 transition-colors"
                   onClick={() => setStudioMode('chat')}
                 >
                   Ask AI
@@ -625,6 +624,12 @@ export function UnifiedStudio(): ReactElement {
             showAppSettings={showAppSettings}
             setShowAppSettings={setShowAppSettings}
           />
+          {showOnboarding && (
+            <OnboardingOverlay 
+              project={project} 
+              onComplete={() => setShowOnboarding(false)} 
+            />
+          )}
         </div>
       </ChatSessionControllerProvider>
     </ActiveGroupProvider>

@@ -189,7 +189,7 @@ export const ItemRowCategoryPanel = forwardRef<
             <h3 className='text-[13px] font-semibold tracking-[0.06em] text-ink/80'>
               {intro.title}
             </h3>
-            <p className='mt-0.5 text-[10px] leading-snug text-ink/50'>
+            <p className='mt-0.5 text-[10px] leading-snug text-muted'>
               {intro.hint}
             </p>
           </div>
@@ -245,7 +245,7 @@ export const ItemRowCategoryPanel = forwardRef<
             <h3 className='text-[13px] font-semibold tracking-[0.06em] text-ink/80'>
               {intro.title}
             </h3>
-            <p className='mt-0.5 text-[10px] leading-snug text-ink/50'>
+            <p className='mt-0.5 text-[10px] leading-snug text-muted'>
               {intro.hint}
             </p>
           </div>

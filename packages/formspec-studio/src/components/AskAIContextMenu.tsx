@@ -88,7 +88,7 @@ export function AskAIContextMenu({
             key={action.label}
             type="button"
             role="menuitem"
-            className="w-full text-left px-3 py-2 text-[13px] text-ink hover:bg-accent/5 hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 focus-visible:ring-inset"
+            className="w-full text-left px-3 py-2 text-[13px] text-ink hover:bg-accent/5 hover:text-accent transition-colors focus-ring"
             onClick={() => {
               onAskAI(action.prompt(ctx));
               onClose();
@@ -101,7 +101,7 @@ export function AskAIContextMenu({
           <button
             type="button"
             role="menuitem"
-            className="w-full text-left px-3 py-2 text-[13px] text-muted hover:text-ink hover:bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 focus-visible:ring-inset"
+            className="w-full text-left px-3 py-2 text-[13px] text-muted hover:text-ink hover:bg-subtle transition-colors focus-ring"
             onClick={() => {
               onAskAI(`Help me with the "${fieldLabel ?? fieldPath}" field.`);
               onClose();

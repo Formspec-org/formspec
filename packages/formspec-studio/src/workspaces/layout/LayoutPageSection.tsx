@@ -23,7 +23,7 @@ export function LayoutPageSection({ title, pageId, active = false, onSelect, chi
         type="button"
         onClick={() => onSelect?.(pageId)}
         aria-pressed={active}
-        className="flex w-full items-center border-b border-border px-4 py-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/70"
+        className="flex w-full items-center border-b border-border px-4 py-2.5 text-left focus-ring"
       >
         <span className="text-[14px] font-semibold text-ink">{title}</span>
       </button>

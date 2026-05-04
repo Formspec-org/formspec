@@ -8,6 +8,7 @@ import {
   clearProviderConfig,
 } from '../lib/provider-config-storage.js';
 import { useEscapeKey } from '../hooks/useEscapeKey';
+import { dispatchStudioEvent, STUDIO_EVENTS } from '../studio-events';
 
 interface AppSettingsDialogProps {
   open: boolean;
@@ -15,7 +16,7 @@ interface AppSettingsDialogProps {
 }
 
 function dispatchOpenAssistantWorkspace(detail: { resetFirstRun?: boolean } = {}): void {
-  window.dispatchEvent(new CustomEvent('formspec:open-assistant-workspace', { detail }));
+  dispatchStudioEvent(STUDIO_EVENTS.OPEN_ASSISTANT_WORKSPACE, detail);
 }
 
 /** Returns the currently saved provider config, or null. */
@@ -155,7 +156,7 @@ export function AppSettingsDialog({ open, onClose }: AppSettingsDialogProps) {
               type="button"
               data-testid="app-settings-open-assistant"
               onClick={handleOpenAssistantWorkspaceOnly}
-              className="w-full px-3 py-1.5 text-[12px] font-medium rounded-[4px] border border-border hover:bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              className="w-full px-3 py-1.5 text-[12px] font-medium rounded-[4px] border border-border hover:bg-subtle transition-colors focus-ring"
             >
               Open AI authoring surface
             </button>
@@ -168,7 +169,7 @@ export function AppSettingsDialog({ open, onClose }: AppSettingsDialogProps) {
                 type="button"
                 data-testid="app-settings-reset-first-run-open-assistant"
                 onClick={handleResetFirstRunAndOpenAssistant}
-                className="mt-2 w-full px-3 py-1.5 text-[12px] font-medium rounded-[4px] border border-border text-ink hover:bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+                className="mt-2 w-full px-3 py-1.5 text-[12px] font-medium rounded-[4px] border border-border text-ink hover:bg-subtle transition-colors focus-ring"
               >
                 Reset first-run tips &amp; open assistant
               </button>
@@ -183,7 +184,7 @@ export function AppSettingsDialog({ open, onClose }: AppSettingsDialogProps) {
               <button
                 type="button"
                 onClick={handleClear}
-                className="px-3 py-1.5 text-[12px] font-medium rounded-[4px] border border-error/30 text-error hover:bg-error/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error/40"
+                className="px-3 py-1.5 text-[12px] font-medium rounded-[4px] border border-error/30 text-error hover:bg-error/5 transition-colors focus-ring"
               >
                 Disconnect
               </button>
@@ -193,14 +194,14 @@ export function AppSettingsDialog({ open, onClose }: AppSettingsDialogProps) {
             <button
               type="button"
               onClick={onClose}
-              className="px-3 py-1.5 text-[12px] font-medium rounded-[4px] border border-border hover:bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              className="px-3 py-1.5 text-[12px] font-medium rounded-[4px] border border-border hover:bg-subtle transition-colors focus-ring"
             >
               Cancel
             </button>
             <button
               type="button"
               onClick={handleSave}
-              className="px-3 py-1.5 text-[12px] font-semibold rounded-[4px] bg-accent text-white hover:bg-accent/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              className="px-3 py-1.5 text-[12px] font-semibold rounded-[4px] bg-accent text-white hover:bg-accent/90 transition-colors focus-ring"
             >
               Save
             </button>

@@ -1,14 +1,13 @@
-/** @filedesc Layout tab blueprint: theme authoring sections in the left rail for both workspace modes. */
-import { render, screen, fireEvent, within, act } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { render, screen, fireEvent, within, act, cleanup } from '@testing-library/react';
+import { describe, it, expect, afterEach } from 'vitest';
 import type { FormDefinition } from '@formspec-org/types';
 import { createProject } from '@formspec-org/studio-core';
 import { ProjectProvider } from '../../src/state/ProjectContext';
 import { SelectionProvider } from '../../src/state/useSelection';
-import { ActiveGroupProvider } from '../../src/state/useActiveGroup';
-import { Shell } from '../../src/components/Shell';
+import { ModeProvider } from '../../src/studio-app/ModeProvider';
+import { ShellProviders } from '../../src/providers/ShellProviders';
+import { UnifiedStudio } from '../../src/studio-app/UnifiedStudio';
 
-/** Mirrors Shell THEME_MODE_BLUEPRINT_SECTIONS (Layout tab left rail). */
 const LAYOUT_TAB_THEME_SECTIONS = [
   'Colors',
   'Typography',
@@ -29,41 +28,47 @@ const seededDefinition: FormDefinition = {
   ],
 };
 
-function renderLayoutShell() {
-  Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 1440 });
-  Object.defineProperty(document.documentElement, 'clientWidth', { writable: true, configurable: true, value: 1440 });
-  const project = createProject({ seed: { definition: seededDefinition } });
+function renderStudio(definition?: FormDefinition, width = 1440) {
+  Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: width });
+  Object.defineProperty(document.documentElement, 'clientWidth', { writable: true, configurable: true, value: width });
+  const project = createProject({ seed: { definition: definition ?? seededDefinition } });
   render(
     <ProjectProvider project={project}>
       <SelectionProvider>
-        <ActiveGroupProvider>
-          <Shell />
-        </ActiveGroupProvider>
+        <ModeProvider defaultMode="edit">
+          <ShellProviders>
+            <UnifiedStudio />
+          </ShellProviders>
+        </ModeProvider>
       </SelectionProvider>
     </ProjectProvider>,
   );
   return project;
 }
 
-function goToLayoutTab() {
-  fireEvent.click(screen.getByRole('tab', { name: 'Design' }));
+function goToDesignMode() {
+  fireEvent.click(screen.getByTestId('tab-Design'));
 }
 
 function blueprintSidebar() {
   return screen.getByTestId('blueprint-sidebar');
 }
 
-/** Clicks the primary nav button inside a blueprint row (not the external-link or settings-edit chip). */
 function selectBlueprintSection(name: string) {
   const row = screen.getByTestId(`blueprint-section-${name}`);
   fireEvent.click(within(row).getByRole('button', { name }));
 }
 
+afterEach(() => {
+  cleanup();
+  localStorage.clear();
+});
+
 describe('Blueprint — Layout workspace', () => {
   it('lists theme authoring sections on Layout tab (layout workspace mode)', async () => {
-    renderLayoutShell();
+    renderStudio();
     await act(async () => {
-      goToLayoutTab();
+      goToDesignMode();
     });
 
     for (const name of LAYOUT_TAB_THEME_SECTIONS) {
@@ -76,9 +81,9 @@ describe('Blueprint — Layout workspace', () => {
   });
 
   it('uses only the theme authoring blueprint on Layout tab (no separate Theme workspace toggle)', async () => {
-    renderLayoutShell();
+    renderStudio();
     await act(async () => {
-      goToLayoutTab();
+      goToDesignMode();
     });
 
     expect(screen.getByTestId('blueprint-section-Colors')).toBeInTheDocument();
@@ -88,14 +93,13 @@ describe('Blueprint — Layout workspace', () => {
   });
 
   it('does not list Component Tree or Theme on Editor tab', () => {
-    renderLayoutShell();
+    renderStudio();
     expect(screen.queryByTestId('blueprint-section-Component Tree')).not.toBeInTheDocument();
     expect(screen.queryByTestId('blueprint-section-Theme')).not.toBeInTheDocument();
     expect(screen.getByTestId('blueprint-section-Mappings')).toBeInTheDocument();
   });
 
   it('Design canvas still shows the seeded field while blueprint is theme-focused', async () => {
-    // Define formspec-render if not already defined (mock for test)
     if (!customElements.get('formspec-render')) {
       class MockFormspecRender extends HTMLElement {
         connectedCallback() {
@@ -105,9 +109,9 @@ describe('Blueprint — Layout workspace', () => {
       customElements.define('formspec-render', MockFormspecRender);
     }
 
-    renderLayoutShell();
+    renderStudio();
     await act(async () => {
-      goToLayoutTab();
+      goToDesignMode();
     });
 
     const workspace = screen.getByTestId('workspace-Design');
@@ -115,19 +119,22 @@ describe('Blueprint — Layout workspace', () => {
   });
 
   it('Colors panel shows in the blueprint sidebar', async () => {
-    renderLayoutShell();
+    renderStudio();
     await act(async () => {
-      goToLayoutTab();
+      goToDesignMode();
     });
-    selectBlueprintSection('Colors');
+
+    await act(async () => {
+      selectBlueprintSection('Colors');
+    });
 
     expect(within(blueprintSidebar()).getByRole('heading', { name: 'Colors' })).toBeInTheDocument();
   });
 
   it('Typography panel shows typography controls', async () => {
-    renderLayoutShell();
+    renderStudio();
     await act(async () => {
-      goToLayoutTab();
+      goToDesignMode();
     });
     selectBlueprintSection('Typography');
 
@@ -137,9 +144,9 @@ describe('Blueprint — Layout workspace', () => {
   });
 
   it('Field Defaults panel is reachable from the blueprint', async () => {
-    renderLayoutShell();
+    renderStudio();
     await act(async () => {
-      goToLayoutTab();
+      goToDesignMode();
     });
     selectBlueprintSection('Field Defaults');
 
@@ -147,9 +154,9 @@ describe('Blueprint — Layout workspace', () => {
   });
 
   it('Settings in the theme blueprint shows form title', async () => {
-    renderLayoutShell();
+    renderStudio();
     await act(async () => {
-      goToLayoutTab();
+      goToDesignMode();
     });
     selectBlueprintSection('Settings');
 
@@ -158,10 +165,10 @@ describe('Blueprint — Layout workspace', () => {
     expect(within(panel).getByText('Blueprint Layout Test')).toBeInTheDocument();
   });
 
-  it('keeps the selected theme subsection after click (no Shell coercion bug)', async () => {
-    renderLayoutShell();
+  it('keeps the selected theme subsection after click (no coercion bug)', async () => {
+    renderStudio();
     await act(async () => {
-      goToLayoutTab();
+      goToDesignMode();
     });
 
     selectBlueprintSection('Typography');
@@ -175,9 +182,9 @@ describe('Blueprint — Layout workspace', () => {
   });
 
   it('marks the active blueprint section with aria-current', async () => {
-    renderLayoutShell();
+    renderStudio();
     await act(async () => {
-      goToLayoutTab();
+      goToDesignMode();
     });
 
     const colorsRow = screen.getByTestId('blueprint-section-Colors');

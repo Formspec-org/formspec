@@ -23,9 +23,9 @@ export function IconChat({ className, size = 16 }: SvgProps = {}) {
   );
 }
 
-export function IconArrowUp({ size = 18 }: { size?: number | string } = {}) {
+export function IconArrowUp({ className, size = 18 }: SvgProps = {}) {
   return (
-    <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg width={size} height={size} viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={className}>
       <path d="M9 14V4M5 8l4-4 4 4" />
     </svg>
   );

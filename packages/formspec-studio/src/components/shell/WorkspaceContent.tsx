@@ -1,51 +1,38 @@
-import React from 'react';
-import { BuildManageToggle, type EditorView } from '../../workspaces/editor/BuildManageToggle';
 import { DefinitionTreeEditor } from '../../workspaces/editor/DefinitionTreeEditor';
 import { ScreenerWorkspace } from '../../workspaces/editor/ScreenerWorkspace';
 import { ManageView } from '../../workspaces/editor/ManageView';
-import { MappingTab, type MappingTabId } from '../../workspaces/mapping/MappingTab';
+import { BuildManageToggle } from '../../workspaces/editor/BuildManageToggle';
+import { MappingTab } from '../../workspaces/mapping/MappingTab';
 import { PreviewTab } from '../../workspaces/preview/PreviewTab';
 import { WORKSPACES } from './ShellConstants';
-import type { Viewport } from '../../workspaces/preview/ViewportSwitcher';
-import type { PreviewMode } from '../../workspaces/preview/PreviewTab';
+import { useWorkspaceRouter } from '../../providers/WorkspaceRouterProvider';
+import { useEditorState } from '../../hooks/useEditorState';
+import { useProjectState } from '../../state/useProjectState';
+import { useColorScheme } from '../../hooks/useColorScheme';
 
-interface WorkspaceContentProps {
-  activeTab: string;
-  activeEditorView: EditorView | undefined;
-  setActiveEditorView: (view: EditorView) => void;
-  manageCount: number;
-  hasScreener: boolean;
-  activeMappingTab: MappingTabId;
-  setActiveMappingTab: (tab: MappingTabId) => void;
-  mappingConfigOpen: boolean;
-  setMappingConfigOpen: (open: boolean) => void;
-  previewViewport: Viewport;
-  setPreviewViewport: (viewport: Viewport) => void;
-  previewMode: PreviewMode;
-  setPreviewMode: (mode: PreviewMode) => void;
-  appearance: 'light' | 'dark';
-}
+export function WorkspaceContent() {
+  const {
+    activeTab,
+    activeEditorView,
+    setActiveEditorView,
+    activeMappingTab,
+    setActiveMappingTab,
+    mappingConfigOpen,
+    setMappingConfigOpen,
+    previewViewport,
+    setPreviewViewport,
+    previewMode,
+    setPreviewMode,
+  } = useWorkspaceRouter();
 
-export function WorkspaceContent({
-  activeTab,
-  activeEditorView,
-  setActiveEditorView,
-  manageCount,
-  hasScreener,
-  activeMappingTab,
-  setActiveMappingTab,
-  mappingConfigOpen,
-  setMappingConfigOpen,
-  previewViewport,
-  setPreviewViewport,
-  previewMode,
-  setPreviewMode,
-  appearance,
-}: WorkspaceContentProps) {
+  const { manageCount } = useEditorState();
+  const hasScreener = useProjectState().screener !== null;
+  const appearance = useColorScheme().resolvedTheme;
+
   if (activeTab === 'Editor') {
     return (
       <div className="flex-1 overflow-y-auto flex flex-col">
-        <div className="px-3 pt-3 md:px-6 md:pt-4 xl:px-8">
+        <div className="mb-4">
           <BuildManageToggle activeView={activeEditorView || 'build'} onViewChange={setActiveEditorView} manageCount={manageCount} showScreener={hasScreener} />
         </div>
         <div key={activeEditorView} className="flex-1 animate-in fade-in duration-150">

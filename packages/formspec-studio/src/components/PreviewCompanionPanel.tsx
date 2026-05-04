@@ -14,7 +14,7 @@ export interface PreviewCompanionPanelProps {
 export function PreviewCompanionPanel({ width, appearance, highlightFieldPath, onClose, onFieldClick }: PreviewCompanionPanelProps) {
   return (
     <aside
-      className="flex flex-col overflow-hidden shrink-0 border-l border-border/70 bg-surface"
+      className="panel-aside"
       style={{ width: `clamp(280px, ${width}px, calc(50vw - 260px))` }}
       data-testid="preview-companion-panel"
       aria-label="Live preview companion"
@@ -26,7 +26,7 @@ export function PreviewCompanionPanel({ width, appearance, highlightFieldPath, o
         <button
           type="button"
           aria-label="Hide preview companion"
-          className="rounded p-1 text-muted hover:text-ink hover:bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+          className="panel-close-btn"
           onClick={onClose}
         >
           <IconChevronRight size={14} />

@@ -189,7 +189,7 @@ export function ChangesetReviewSection(props: ChangesetReviewSectionProps) {
               <button
                 type="button"
                 aria-label="Close details"
-                className="rounded p-1 text-muted hover:text-ink hover:bg-subtle transition-colors"
+                className="panel-close-btn"
                 onClick={() => setDrawerOpen(false)}
               >
                 ✕

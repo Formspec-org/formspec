@@ -1,4 +1,4 @@
-/** @filedesc Pill-style mode switcher for the four primary Studio modes. */
+/** @filedesc Segmented mode switcher for the four primary Studio modes. */
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { type StudioMode, MODE_ORDER } from '../studio-app/ModeProvider';
 
@@ -33,7 +33,7 @@ export function ModeToggle({ mode, onModeChange, compact = false }: ModeTogglePr
     setPillStyle({
       left: btnRect.left - containerRect.left,
       width: btnRect.width,
-      transition: 'left 200ms cubic-bezier(0.4, 0, 0.2, 1), width 200ms cubic-bezier(0.4, 0, 0.2, 1)',
+      transition: 'left var(--transition-fast), width var(--transition-fast)',
     });
   }, [mode]);
 
@@ -55,13 +55,13 @@ export function ModeToggle({ mode, onModeChange, compact = false }: ModeTogglePr
   return (
     <div
       ref={containerRef}
-      className="relative flex items-center rounded-full border border-border/40 bg-subtle/40 p-1 shadow-inner backdrop-blur-sm"
+      className="relative flex items-center rounded-md border border-border bg-subtle p-0.5 shadow-inner"
       role="tablist"
       aria-label="Studio modes"
     >
-      {/* Animated pill indicator */}
+      {/* Animated segment indicator */}
       <div
-        className="absolute top-1 bottom-1 rounded-full bg-surface shadow-premium-lg border border-border/10 pointer-events-none"
+        className="absolute top-0.5 bottom-0.5 rounded-sm bg-surface shadow-sm border border-border/50 pointer-events-none"
         style={pillStyle}
         aria-hidden="true"
       />
@@ -79,11 +79,11 @@ export function ModeToggle({ mode, onModeChange, compact = false }: ModeTogglePr
             tabIndex={isActive ? 0 : -1}
             data-testid={`mode-toggle-${id}`}
             title={help}
-            className={`relative z-10 px-4 py-1.5 text-[13.5px] font-medium rounded-full transition-all cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 focus-visible:ring-inset ${
+            className={`relative z-10 px-3 py-1 text-[13px] font-medium rounded-sm transition-all cursor-pointer whitespace-nowrap focus-ring ${
               isActive
                 ? 'text-ink font-semibold'
-                : 'text-muted/80 hover:text-ink'
-            } ${compact ? 'px-3 py-1 text-[12px]' : ''}`}
+                : 'text-muted hover:text-ink'
+            } ${compact ? 'px-2 py-0.5 text-[12px]' : ''}`}
             onClick={() => onModeChange(id)}
             onKeyDown={(e) => handleKeyDown(e, index)}
           >

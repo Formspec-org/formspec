@@ -47,7 +47,7 @@ export function FallbackRoute({ route, routeIndex, phaseId }: FallbackRouteProps
         </span>
         <span className="text-[13px] font-bold text-ink">{displayLabel}</span>
       </div>
-      <p className="text-[11px] text-muted/70 italic ml-7">Fallback — always matches</p>
+      <p className="text-[11px] text-muted italic ml-7">Fallback — always matches</p>
 
       {/* Target */}
       <div className="space-y-1.5 ml-7">
