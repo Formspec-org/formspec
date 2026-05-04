@@ -24,7 +24,7 @@ JSON-native declarative form specification with dual reference implementations (
 
 Three spec tiers (distinct from the `formspec-core` package below): **Core** (data & logic), **Theme** (presentation), **Components** (interaction). FEL (Formspec Expression Language) handles calculated values and conditional logic.
 
-Submodules: `trellis/` (event-ledger crates), `wos-spec/` (Workflow Orchestration Standard).
+Sibling layers (via `formspec-stack`): `trellis/` (event-ledger crates), `wos-spec/` (Workflow Orchestration Standard). Coupled via filesystem-sibling paths under `formspec-stack`; `formspec` carries no submodules.
 
 ## Operating Context
 
@@ -34,7 +34,7 @@ Decisions cross spec boundaries; owner preferences override generic defaults. **
 2. **[`.claude/user_profile.md`](.claude/user_profile.md)** — Owner's economic model (priority = `(Importance + User Value) × Future Tech/Architectural Debt`; minutes-not-days; tokens unlimited; think big, deliver tractable; elegance + minimum conceptual debt as the optimization target), design philosophy (opinionated, closed taxonomies, named seams), terse communication, maximalist one-shot delivery.
 3. **[`VISION.md`](VISION.md)** — Stack-wide architectural vision (internal companion to STACK.md): foundational Q1-Q4 answers, platform end-state commitments, trust postures, cross-spec bindings, per-spec settled commitments, the rejection list. Consult before any decision crossing more than one subsystem or spec boundary, or re-opening a foundational question.
 4. **[`thoughts/specs/2026-04-22-platform-decisioning-forks-and-options.md`](thoughts/specs/2026-04-22-platform-decisioning-forks-and-options.md)** — Platform decision register: end-state commitments, leans, forks, kill criteria. Consult before changing cross-layer architecture, proof posture, signing semantics, custody, durable-runtime assumptions, or product-vs-engineering proof claims.
-5. **[`wos-spec/crates/wos-server/VISION.md`](wos-spec/crates/wos-server/VISION.md)** — WOS Server reference architecture: crate cluster, ports/adapters, EventStore composing Trellis crates, per-class client-side decryption, wos-server-specific invariants, build sequence DAG. Consult before any wos-server architectural decision. (Stack-wide trust postures and cross-spec bindings live in `/VISION.md`.)
+5. **[`../wos-spec/crates/wos-server/VISION.md`](../wos-spec/crates/wos-server/VISION.md)** — WOS Server reference architecture: crate cluster, ports/adapters, EventStore composing Trellis crates, per-class client-side decryption, wos-server-specific invariants, build sequence DAG. Consult before any wos-server architectural decision. (Path is relative from `formspec-stack` root, where `wos-spec` is a sibling. Stack-wide trust postures and cross-spec bindings live in `/VISION.md`.)
 
 Public-facing stack framing (partners, procurement, investors): [`STACK.md`](STACK.md). Lookup-only.
 
@@ -91,7 +91,7 @@ Every source file ships a one-line description harvested by `scripts/generate-fi
 Full target list: [`Makefile`](Makefile). Key invocations:
 
 - `make build` — full monorepo (Rust + npm + pip).
-- `make test` — unit + python + rust + e2e + studio-e2e + submodule.
+- `make test` — unit + python + rust + e2e + studio-e2e.
 - `make test-rust` — Rust workspace via `cargo nextest run --workspace`. Required runner — do not use bare `cargo test`.
 - `npm run build` — TypeScript packages only.
 - `npm run docs:generate` / `npm run docs:check` — schema-driven artifacts + doc gate.
@@ -110,7 +110,7 @@ Full target list: [`Makefile`](Makefile). Key invocations:
 - `cargo nextest run -p <crate> --test <integration_file>` — single integration-test file under `tests/`.
 - `cargo nextest run -E 'test(/<regex>/)'` — filter expression across the workspace.
 
-Submodules (`trellis/`, `wos-spec/`) follow the same rule — `cargo nextest run --workspace` from the submodule root.
+Sibling layers (`trellis/`, `wos-spec/` — accessed via `formspec-stack`) follow the same rule — `cargo nextest run --workspace` from the layer root.
 
 ## Package layering
 
