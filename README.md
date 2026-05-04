@@ -12,7 +12,7 @@ Formspec separates *what data to collect* from *how it behaves* from *how it loo
 
 Formspec is also the intake layer in a three-spec stack with [WOS](wos-spec/README.md) and [Trellis](trellis/README.md). The stack target is one portable governed case record: Formspec captures the canonical response and `IntakeHandoff` for governed-case scope, WOS records how the decision was governed, and Trellis makes the record signed, durable, and verifiable offline without the original vendor runtime.
 
-For the stack-level architecture, start with [STACK.md](STACK.md). For active platform leans, forks, kill criteria, and end-state commitments, see the [platform decisioning register](thoughts/specs/2026-04-22-platform-decisioning-forks-and-options.md).
+For the stack-level architecture, start with [`STACK.md`](../STACK.md) in `formspec-stack/`. For active platform leans, forks, kill criteria, and end-state commitments, see the platform decisioning register in `formspec-stack/thoughts/specs/2026-04-22-platform-decisioning-forks-and-options.md`.
 
 ## The Stack
 

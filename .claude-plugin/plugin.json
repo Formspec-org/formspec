@@ -1,5 +1,0 @@
-{
-  "name": "formspec-specs",
-  "version": "2.3.1",
-  "description": "Formspec specification navigator with spec-expert, architecture scout, and craftsman agents. Provides structured reference maps for 625K+ of spec content and 8K lines of JSON schemas."
-}

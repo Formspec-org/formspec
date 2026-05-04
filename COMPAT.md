@@ -1,6 +1,6 @@
 # Formspec Compatibility Matrix
 
-> **Current Status:** The npm release pipeline is now split into four per-tier jobs (kernel / foundation / integration / ai) that run sequentially on `main`. Each tier publishes under its own dist-tag (`<tier>-latest`) and opens its own `changeset-release/<tier>` PR. See [ADR 0063](./thoughts/adr/0063-release-trains-by-tier.md) and [Authoring a changeset](#authoring-a-changeset-tier-aware) below.
+> **Current Status:** The npm release pipeline is now split into four per-tier jobs (kernel / foundation / integration / ai) that run sequentially on `main`. Each tier publishes under its own dist-tag (`<tier>-latest`) and opens its own `changeset-release/<tier>` PR. See ADR 0063 (release-trains-by-tier, now in `formspec-stack/thoughts/adr/`) and [Authoring a changeset](#authoring-a-changeset-tier-aware) below.
 
 Formspec is a multi-language monorepo (TypeScript packages, Rust crates, a Python package) whose components mature at different rates. The stable kernel types evolve slowly — most of the engine runtime moves quarterly, and the AI/authoring surface is still pre-1.0 and moves monthly. To let consumers pin risk appropriately, packages are grouped into **velocity tiers**. Once release-train split is active, a vendor may — for example — pin `@formspec-org/types@1.x` for long-term stability while tracking `@formspec-org/chat@0.x` on a faster cadence.
 
