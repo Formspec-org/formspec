@@ -7,7 +7,7 @@ Paired docs:
 - **[`/TODO.md`](TODO.md)** — Formspec-specific tactical work (Formspec spec/runtime/Studio/conformance).
 - **[`/PLANNING.md`](PLANNING.md)** — Atomic PLN-* rows for cross-ADR backlog (this file's rollups point into PLANNING.md for detailed row schemas).
 - **[`wos-spec/TODO.md`](wos-spec/TODO.md)** — WOS-spec-internal backlog.
-- **[`wos-spec/crates/wos-server/TODO.md`](wos-spec/crates/wos-server/TODO.md)** — wos-server crate execution.
+- **[`flowspec-server/crates/wos-server/TODO.md`](flowspec-server/crates/wos-server/TODO.md)** — wos-server crate execution.
 - **[`trellis/TODO.md`](trellis/TODO.md)** — Trellis tactical work.
 - **[`/VISION.md`](VISION.md)** — Stack-wide architectural vision; **[`/STACK.md`](STACK.md)** — public-facing.
 
@@ -47,7 +47,7 @@ Historical completion notes and resolved items moved to [`COMPLETED.md`](COMPLET
   - **WOS:** six provenance/record kinds, Facts vs Narrative tiering, governance policy fields, runtime/lint/fixtures, and `wos-export` mappings.
   - **Trellis:** `supersedes_chain_id` §6.7 registration + correction/amendment/rescission vectors (one chain); cross-chain supersession runtime + graph export/verifier (sequential follow-on ADR when cross-chain composition lands).
   - **Cross-repo:** shared fixture bundle `005-amendment-and-supersession`; align ADR 0072 binding composition once shapes land.
-  - **Execution home:** [`wos-spec/TODO.md`](wos-spec/TODO.md#adr-0066-exec-checklist), [`trellis/TODO.md`](trellis/TODO.md) item `12`, [`wos-spec/crates/wos-server/TODO.md`](wos-spec/crates/wos-server/TODO.md) `WS-072`.
+  - **Execution home:** [`wos-spec/TODO.md`](wos-spec/TODO.md#adr-0066-exec-checklist), [`trellis/TODO.md`](trellis/TODO.md) item `12`, [`flowspec-server/crates/wos-server/TODO.md`](flowspec-server/crates/wos-server/TODO.md) `WS-072`.
   - **Gate:** owner probe.
 
 - **ADR 0067 — statutory clocks** `[7 / 5 / 5]` (**35**) — [`thoughts/adr/0067-stack-statutory-clocks.md`](thoughts/adr/0067-stack-statutory-clocks.md)
@@ -56,7 +56,7 @@ Historical completion notes and resolved items moved to [`COMPLETED.md`](COMPLET
   - **Formspec:** Statute-trigger emit path via Respondent Ledger.
   - **Trellis:** `open-clocks.json`, advisory verifier for expired-unresolved clocks, pause-segment accumulation, append vectors `014`-`017`.
   - **Cross-repo:** shared fixture bundle `006-statutory-clock-fires`; optional ADR 0069 `clock_source`.
-  - **Execution home:** [`wos-spec/TODO.md`](wos-spec/TODO.md#adr-0067-exec-checklist), [`trellis/TODO.md`](trellis/TODO.md) item `13`, [`wos-spec/crates/wos-server/TODO.md`](wos-spec/crates/wos-server/TODO.md) `WS-073`.
+  - **Execution home:** [`wos-spec/TODO.md`](wos-spec/TODO.md#adr-0067-exec-checklist), [`trellis/TODO.md`](trellis/TODO.md) item `13`, [`flowspec-server/crates/wos-server/TODO.md`](flowspec-server/crates/wos-server/TODO.md) `WS-073`.
   - **Gate:** owner probe.
 
 - **ADR 0068 — tenant and scope composition** `[8 / 4 / 6]` (**48**) — [`thoughts/adr/0068-stack-tenant-and-scope-composition.md`](thoughts/adr/0068-stack-tenant-and-scope-composition.md)
@@ -153,7 +153,7 @@ Historical completion notes and resolved items moved to [`COMPLETED.md`](COMPLET
 - **Wave 19 (2026-04-27):** AEAD nonce determinism — Core §9.4 + §17 amendment (parent **PLN-0383**, signature-stack-relevant — silent retry-determinism class on signed events). Plus interop-sidecar reservation scaffold (precursor to Wave 20).
 - **Wave 20 (2026-04-27):** ADR 0008 interop sidecar reservation — lock-off only (`scitt-receipt` / `vc-jose-cose-event` / `c2pa-manifest` / `did-key-view` adapter implementations are sequential follow-on ADRs tracked per parent **PLN-0313**); empty crates `trellis-interop-{scitt,vc,c2pa,did}` + cargo-deny config forbidding ecosystem libs from `trellis-core` / `trellis-verify` / `trellis-types` (ADR 0008 ISC-05 hygiene contract).
 - **Wave 21 (closed 2026-04-28):** ADR 0005 Stages 2-5 fully landed in a 9-commit train (`c13282f` slot collision + R16 deprecated tombstone + conformance deprecated-vector skip; `1c09786` Rust verifier extension; `465dff1` Python parity; `cb85344` tamper vectors `append/017..019`; `95d5bd4` export bundle `export/009-erasure-evidence-inline` + 432-line generator; `b4c4abb` CLI `erase-key` initial stub; `75f750c` Companion §27.1 prose; `58dd8a4` matrix promotion TR-OP-105 + TR-OP-107 prose → `test-vector`; `1b00a9a` TODO + COMPLETED closeout). Slot collision resolved per lean (b) — `export/009-intake-handoffs-public-create-empty-outputs` renumbered to `export/013-...` (preserves Trellis item #4 cert-of-completion's reservation of `export/010` per ADR 0007 *Fixture plan*); R16 lifecycle marker is a deprecated tombstone manifest at slot 009 with `status = "deprecated"` + `deprecated_at = "2026-04-28"`. TR-OP-106/108/109/113 unchanged in this wave — their promotions gate on follow-on tamper vectors per ADR 0005 *Fixture plan*. **This closes parent PLN-0312 (foundational crypto execution bundle) entirely.** See [`trellis/COMPLETED.md`](trellis/COMPLETED.md) Wave 21 entry.
-- **Architectural correction landed:** `trellis-store-postgres` owns the canonical-side schema; wos-server `EventStore` composes it + an in-database `projections` schema. Reconciliation of [`wos-spec/crates/wos-server/TODO.md`](wos-spec/crates/wos-server/TODO.md) **WS-020** + **WS-090** (currently a two-port `Storage` + `AuditSink` split that VISION.md §VIII rejects) is owed wos-server-side.
+- **Architectural correction landed:** `trellis-store-postgres` owns the canonical-side schema; wos-server `EventStore` composes it + an in-database `projections` schema. Reconciliation of [`flowspec-server/crates/wos-server/TODO.md`](flowspec-server/crates/wos-server/TODO.md) **WS-020** + **WS-090** (currently a two-port `Storage` + `AuditSink` split that VISION.md §VIII rejects) is owed wos-server-side.
 
 - **Stack-level ADR cross-check lint** — **RESCOPED 2026-04-28 (LARGER-THAN-CLAIMED).** Cross-stack-scout validation found no ADR carries a structured `Cross-references:` section the lint can grep — refs are inline narrative across `thoughts/adr/` (parent, 30+ files), `wos-spec/thoughts/adr/`, and `trellis/thoughts/adr/`. "Seam-touching" has no concrete definition. The lint itself is trivial; the work is the **convention** — adding a structured `## Cross-references` block (or YAML frontmatter) to the ADR template, which is a stack-wide convention change requiring owner sign-off, not single-session. Re-file as a two-step (template revision → lint) once the convention is decided.
 
