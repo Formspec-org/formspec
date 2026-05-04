@@ -443,15 +443,19 @@ export function ItemRow({
       data-testid={testId}
       data-editor-path={itemPath}
       className={[
-        'group rounded-[18px] border px-3 py-4 transition-[border-color,background-color,box-shadow] md:px-4',
+        'group relative rounded-[22px] border px-4 py-5 transition-all duration-300 ease-out md:px-5',
         selected
-          ? 'border-accent/50 bg-accent/[0.09] shadow-[0_14px_34px_rgba(59,130,246,0.12)]'
-          : 'border-transparent hover:border-border/70 hover:bg-bg-default/56',
+          ? 'border-accent/40 bg-surface shadow-premium-lg translate-x-1'
+          : 'border-transparent hover:border-border/60 hover:bg-bg-default/40 hover:-translate-y-0.5',
       ].join(' ')}
-      style={{ paddingLeft: depth * 20 + 14 }}
+      style={{ marginLeft: depth * 20 }}
       onClick={onClick}
       onContextMenu={onContextMenu}
     >
+      {selected && (
+        <div className="absolute left-0 top-3 bottom-3 w-1 rounded-full bg-accent animate-in fade-in slide-in-from-left-1 duration-300" />
+      )}
+
       <div className='flex items-start gap-3'>
         <DragHandle
           ref={dragHandleRef}

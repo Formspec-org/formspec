@@ -164,31 +164,31 @@ export function EditorPropertiesPanel({ showActions = true }: { showActions?: bo
   ).length;
 
   return (
-    <div className="h-full flex flex-col bg-surface overflow-hidden">
-      <div className="border-b border-border/80 bg-surface px-5 py-4 shrink-0">
-        <div className="flex items-center gap-2 mb-1">
+    <div className="h-full flex flex-col glass overflow-hidden shadow-premium">
+      <div className="border-b border-border/40 bg-surface/40 px-6 py-6 shrink-0 backdrop-blur-md">
+        <div className="flex items-center gap-3 mb-2">
           {info && (
-            <div className={`flex h-8 w-8 items-center justify-center rounded-[10px] bg-bg-default font-mono font-bold text-[10px] ${info.color}`}>
+            <div className={`flex h-10 w-10 items-center justify-center rounded-[14px] bg-bg-default shadow-sm font-mono font-bold text-[12px] ${info.color}`}>
               {info.icon}
             </div>
           )}
-          <h2 className="text-[17px] font-semibold text-ink tracking-tight font-ui">Advanced Details</h2>
+          <h2 className="text-[20px] font-bold text-ink tracking-tight font-display">Properties</h2>
         </div>
-        <div className="text-[13px] text-muted truncate">
+        <div className="text-[14px] font-medium text-ink/80 truncate">
           {(item.label as string) || currentKey}
         </div>
-        <div data-testid="properties-selection-path" className="mt-2 font-mono text-[10px] tracking-[0.08em] text-muted/80">
+        <div data-testid="properties-selection-path" className="mt-2 font-mono text-[10px] font-semibold tracking-[0.12em] uppercase text-accent/80">
           {selectionPath}
         </div>
-        <p className="mt-2 max-w-[28rem] text-[12px] leading-5 text-muted">
-          Use the rows for fast edits. This rail is for deeper configuration and advanced behavior.
+        <p className="mt-3 max-w-[28rem] text-[12px] leading-relaxed text-muted/70 italic">
+          Deep configuration and advanced behavioral logic for this {isGroup ? 'group' : 'field'}.
         </p>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-1.5 md:px-5">
+      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-8 md:px-7">
         <Section title="Identity">
-          <div className="mb-3 space-y-2">
-            <label className="block text-[12px] font-medium text-muted">
+          <div className="mb-4 space-y-2">
+            <label className="block text-[11px] font-bold uppercase tracking-[0.1em] text-muted/60">
               <HelpTip text={propertyHelp.key}>Key</HelpTip>
             </label>
             <input
@@ -196,20 +196,21 @@ export function EditorPropertiesPanel({ showActions = true }: { showActions?: bo
               ref={keyInputRef}
               type="text"
               aria-label="Key"
-              className="w-full h-8 px-2.5 text-[13px] font-mono border border-border/80 rounded-[6px] bg-surface outline-none transition-shadow focus:border-accent focus:ring-2 focus:ring-accent/30 shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
+              className="w-full h-10 px-3 text-[14px] font-mono border border-border/60 rounded-[10px] bg-surface/50 outline-none transition-all focus:border-accent focus:ring-4 focus:ring-accent/15 shadow-sm"
               defaultValue={currentKey}
             />
           </div>
-          <div className="mb-3 space-y-2">
-            <label className="block text-[12px] font-medium text-muted">
+          <div className="mb-4 space-y-2">
+            <label className="block text-[11px] font-bold uppercase tracking-[0.1em] text-muted/60">
               <HelpTip text={propertyHelp.label}>Label</HelpTip>
             </label>
             <input
               key={`${path}-label`}
               type="text"
               aria-label="Label"
-              className="w-full h-8 px-2.5 text-[13px] border border-border/80 rounded-[6px] bg-surface outline-none transition-shadow focus:border-accent focus:ring-2 focus:ring-accent/30 shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
+              className="w-full h-10 px-3 text-[14px] border border-border/60 rounded-[10px] bg-surface/50 outline-none transition-all focus:border-accent focus:ring-4 focus:ring-accent/15 shadow-sm"
               defaultValue={(item.label as string) || ''}
+
               onBlur={(event) => {
                 project.updateItem(path, { label: event.currentTarget.value || null });
                 recordManualPatchAndProvenance(project, {
@@ -278,18 +279,18 @@ export function EditorPropertiesPanel({ showActions = true }: { showActions?: bo
       </div>
 
       {showActions && (
-        <div className="shrink-0 border-t border-border/80 bg-bg-default/65 p-4 pb-6 sm:p-4">
-          <div className="flex gap-2">
+        <div className="shrink-0 border-t border-border/40 bg-surface/60 p-6 pb-8 backdrop-blur-md">
+          <div className="flex gap-3">
           <button
             type="button"
-            className="flex-1 rounded-[12px] border border-border/80 bg-surface px-3 py-2 text-[11px] font-mono font-semibold uppercase tracking-[0.18em] text-ink transition-all cursor-pointer hover:bg-surface-hover hover:border-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25"
+            className="flex-1 rounded-[14px] border border-border/80 bg-surface px-4 py-3 text-[12px] font-bold uppercase tracking-[0.15em] text-ink transition-all cursor-pointer hover:bg-subtle/80 hover:border-muted/30 hover:scale-[1.02] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25 shadow-sm"
             onClick={() => handleDuplicate(path)}
           >
             Duplicate
           </button>
           <button
             type="button"
-            className="rounded-[12px] border border-border/70 bg-surface px-3 py-2 text-[11px] font-mono font-semibold uppercase tracking-[0.18em] text-muted transition-all cursor-pointer hover:border-error/35 hover:bg-error/5 hover:text-error focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error/20"
+            className="rounded-[14px] border border-border/80 bg-surface px-4 py-3 text-[12px] font-bold uppercase tracking-[0.15em] text-muted/60 transition-all cursor-pointer hover:border-error/40 hover:bg-error/[0.03] hover:text-error hover:scale-[1.02] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error/20 shadow-sm"
             onClick={() => handleDelete(path)}
           >
             Delete
@@ -297,6 +298,7 @@ export function EditorPropertiesPanel({ showActions = true }: { showActions?: bo
           </div>
         </div>
       )}
+
     </div>
   );
 }

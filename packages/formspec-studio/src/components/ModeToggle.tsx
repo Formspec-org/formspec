@@ -55,16 +55,17 @@ export function ModeToggle({ mode, onModeChange, compact = false }: ModeTogglePr
   return (
     <div
       ref={containerRef}
-      className="relative flex items-center rounded-full border border-border/40 bg-subtle/50 p-1"
+      className="relative flex items-center rounded-full border border-border/40 bg-subtle/40 p-1 shadow-inner backdrop-blur-sm"
       role="tablist"
       aria-label="Studio modes"
     >
       {/* Animated pill indicator */}
       <div
-        className="absolute top-1 bottom-1 rounded-full bg-surface shadow-sm border border-border/20 pointer-events-none"
+        className="absolute top-1 bottom-1 rounded-full bg-surface shadow-premium-lg border border-border/10 pointer-events-none"
         style={pillStyle}
         aria-hidden="true"
       />
+
 
       {MODES.map(({ id, label, help }, index) => {
         const isActive = mode === id;

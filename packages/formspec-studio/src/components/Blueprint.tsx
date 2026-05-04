@@ -68,28 +68,28 @@ export function Blueprint({ activeSection, onSectionChange, sections, activeEdit
 
   return (
     <div className="flex flex-col shrink-0">
-      <div className="px-3 pt-4 pb-2">
-        <h2 className="mb-2 px-1 text-[13px] font-semibold text-muted/80">
+      <div className="px-4 pt-6 pb-4">
+        <h2 className="mb-4 px-2 text-[11px] font-bold uppercase tracking-[0.15em] text-muted/60">
           Blueprint
         </h2>
-
+ 
         <nav
           data-testid="blueprint"
           aria-label="Blueprint sections"
-          className="flex flex-col gap-0.5"
+          className="flex flex-col gap-1"
         >
           {SECTIONS.filter(({ name }) => (!visibleSections || visibleSections.has(name)) && !['Mappings', 'Evidence', 'Screener'].includes(name)).map(({ name, label, countFn, help, link }) => {
              return renderSection(name, label, countFn, help, link);
           })}
         </nav>
-
+ 
         {/* Advanced Section */}
         {(!visibleSections || ['Mappings', 'Evidence', 'Screener'].some(s => visibleSections.has(s))) && (
-          <div className="mt-8 pt-4">
-            <h3 className="mb-2 px-1 text-[12px] font-semibold text-muted/40">
+          <div className="mt-10 pt-6 border-t border-border/30">
+            <h3 className="mb-4 px-2 text-[11px] font-bold uppercase tracking-[0.15em] text-muted/40">
               Advanced
             </h3>
-            <nav className="flex flex-col gap-0.5">
+            <nav className="flex flex-col gap-1">
               {SECTIONS.filter(({ name }) => ['Mappings', 'Evidence', 'Screener'].includes(name) && (!visibleSections || visibleSections.has(name))).map(({ name, label, countFn, help, link }) => {
                 return renderSection(name, label, countFn, help, link);
               })}
@@ -98,6 +98,7 @@ export function Blueprint({ activeSection, onSectionChange, sections, activeEdit
         )}
       </div>
     </div>
+
   );
 
   function renderSection(name: string, label: string | undefined, countFn: any, help: string, link: any) {
@@ -107,18 +108,19 @@ export function Blueprint({ activeSection, onSectionChange, sections, activeEdit
 
     return (
       <div
+
         key={name}
         data-testid={`blueprint-section-${name}`}
         title={help}
-        className={`group flex items-center justify-between rounded-lg px-3 py-1.5 text-[14px] text-left transition-all focus-within:ring-2 focus-within:ring-accent/35 ${
+        className={`group flex items-center justify-between rounded-xl px-3 py-2 text-[14px] text-left transition-all duration-200 focus-within:ring-2 focus-within:ring-accent/35 ${
           isActive
-            ? 'bg-subtle/80 text-ink'
-            : 'text-muted/90 hover:text-ink hover:bg-subtle/40'
+            ? 'bg-accent/[0.08] text-ink font-semibold shadow-sm'
+            : 'text-muted/80 hover:text-ink hover:bg-subtle/50'
         }`}
       >
         <button
           aria-current={isActive ? 'page' : undefined}
-          className="min-w-0 flex-1 truncate rounded-[6px] text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+          className="min-w-0 flex-1 truncate rounded-[8px] text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
           onClick={() => {
             onSectionChange(name);
             if (link?.view && activeTab === 'Editor' && activeEditorView !== link.view) {
@@ -128,48 +130,51 @@ export function Blueprint({ activeSection, onSectionChange, sections, activeEdit
         >
           {label ?? name}
         </button>
-        {name === 'Settings' && (
-          <button
-            type="button"
-            data-testid="settings-edit-btn"
-            aria-label="Edit settings"
-            className="rounded p-0.5 shrink-0 text-muted/40 transition-colors hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
-            onClick={(e) => {
-              e.stopPropagation();
-              window.dispatchEvent(new CustomEvent('formspec:open-settings'));
-            }}
-          >
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-              <path d="m15 5 4 4" />
-            </svg>
-          </button>
-        )}
-        {link && !(activeTab === 'Editor' && link.tab === 'Editor' && link.view && activeEditorView === link.view) && (
-          <button
-            type="button"
-              aria-label={`Open ${name} tab`}
-            className="rounded p-0.5 shrink-0 opacity-0 text-muted/40 transition-colors group-hover:opacity-100 group-focus-within:opacity-100 hover:text-accent focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
-            onClick={(e) => {
-              e.stopPropagation();
-              window.dispatchEvent(new CustomEvent('formspec:navigate-workspace', { detail: link }));
-            }}
-          >
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M7 17 17 7" /><path d="M7 7h10v10" />
-            </svg>
-          </button>
-        )}
-        {count !== null && hasData && (
-          <span className={`shrink-0 rounded-full px-2 py-0.5 font-mono text-[11px] tabular-nums transition-colors ${
-            isActive
-              ? 'bg-accent text-surface'
-              : 'bg-border/40 text-muted/80'
-          }`}>
-            {count}
-          </span>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {name === 'Settings' && (
+            <button
+              type="button"
+              data-testid="settings-edit-btn"
+              aria-label="Edit settings"
+              className="rounded-md p-1 shrink-0 text-muted/30 transition-colors hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+              onClick={(e) => {
+                e.stopPropagation();
+                window.dispatchEvent(new CustomEvent('formspec:open-settings'));
+              }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                <path d="m15 5 4 4" />
+              </svg>
+            </button>
+          )}
+          {link && !(activeTab === 'Editor' && link.tab === 'Editor' && link.view && activeEditorView === link.view) && (
+            <button
+              type="button"
+                aria-label={`Open ${name} tab`}
+              className="rounded-md p-1 shrink-0 opacity-0 text-muted/30 transition-colors group-hover:opacity-100 group-focus-within:opacity-100 hover:text-accent focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+              onClick={(e) => {
+                e.stopPropagation();
+                window.dispatchEvent(new CustomEvent('formspec:navigate-workspace', { detail: link }));
+              }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M7 17 17 7" /><path d="M7 7h10v10" />
+              </svg>
+            </button>
+          )}
+          {count !== null && hasData && (
+            <span className={`shrink-0 rounded-full px-2 py-0.5 font-mono text-[10px] font-bold tabular-nums transition-all ${
+              isActive
+                ? 'bg-accent text-surface scale-110 shadow-sm'
+                : 'bg-border/30 text-muted/60 group-hover:bg-border/50 group-hover:text-muted'
+            }`}>
+              {count}
+            </span>
+          )}
+        </div>
       </div>
     );
   }
 }
+

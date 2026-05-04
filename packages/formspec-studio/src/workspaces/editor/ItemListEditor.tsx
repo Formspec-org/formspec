@@ -424,41 +424,42 @@ export function ItemListEditor({ config }: { config: ItemListEditorConfig }) {
 
   return (
     <WorkspacePage maxWidth="max-w-none" className="w-full">
-      <WorkspacePageSection padding="px-0" className="flex justify-center pt-3 pb-20">
+      <WorkspacePageSection padding="px-0" className="flex justify-center pt-6 pb-24">
         <div
           ref={surfaceRef}
           data-testid={surfaceTestId}
-          className="flex w-full max-w-[980px] flex-col gap-5 rounded-3xl border border-border/40 bg-surface/98 px-6 py-6 shadow-premium-lg backdrop-blur sm:px-8 md:px-10 md:py-8"
+          className="flex w-full max-w-[1020px] flex-col gap-6 rounded-[32px] border border-border/40 bg-surface/95 px-8 py-8 shadow-premium backdrop-blur-xl sm:px-10 md:px-12 md:py-10 transition-all duration-300"
           onClick={(event) => {
             if (event.target === event.currentTarget) deselect();
           }}
         >
-          <div className="flex flex-col gap-3 border-b border-border/65 pb-4 md:flex-row md:items-end md:justify-between">
-            <div className="min-w-0">
-              <h1 className="text-[22px] font-semibold tracking-tight text-ink">
+          <div className="flex flex-col gap-4 border-b border-border/50 pb-6 md:flex-row md:items-end md:justify-between">
+            <div className="min-w-0 space-y-1">
+              <h1 className="text-[26px] font-semibold tracking-tight text-ink font-display">
                 {selectedSummary ? selectedSummary.label : headerTitle}
               </h1>
               <p
                 aria-live="polite"
                 aria-atomic="true"
-                className="mt-1 text-[13px] leading-6 text-muted/90"
+                className="text-[14px] leading-relaxed text-muted/80 max-w-2xl"
               >
                 {selectedSummary
                   ? `${selectedSummary.typeLabel} key ${selectedSummary.key} in ${selectedSummary.parentPath}. Edit details inline below.`
                   : headerDescription}
               </p>
             </div>
-            <div className="flex shrink-0 items-center gap-2 self-start md:self-auto">
-              <div className="rounded-full border border-border/50 bg-subtle/40 px-3 py-1.5 font-ui text-[11px] uppercase tracking-wider text-muted font-medium">
+            <div className="flex shrink-0 items-center gap-2.5 self-start md:self-auto">
+              <div className="rounded-full border border-border/60 bg-subtle/50 px-3.5 py-1.5 font-ui text-[11px] uppercase tracking-widest text-muted font-semibold">
                 {selectedSummary?.typeLabel ?? 'Canvas'}
               </div>
               {selectedSummary && (
-                <div className="rounded-full border border-accent/20 bg-accent/[0.06] px-3 py-1.5 font-ui text-[11px] uppercase tracking-wider text-accent/90 font-medium">
-                  Active selection
+                <div className="rounded-full border border-accent/20 bg-accent/[0.08] px-3.5 py-1.5 font-ui text-[11px] uppercase tracking-widest text-accent font-bold animate-in fade-in zoom-in duration-300">
+                  Selected
                 </div>
               )}
             </div>
           </div>
+
           <AddItemPalette
             open={showPicker}
             title={addTargetLabel}
@@ -489,15 +490,21 @@ export function ItemListEditor({ config }: { config: ItemListEditorConfig }) {
           </EditorDndProvider>
           <button
             data-testid="add-item"
-            className="mt-6 flex min-h-14 items-center justify-center gap-2 rounded-xl border border-border/60 bg-subtle/40 py-4 font-ui text-[14px] font-medium text-muted transition-all cursor-pointer hover:border-accent/40 hover:bg-subtle/60 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+            className="group/add mt-8 flex min-h-[64px] items-center justify-center gap-3 rounded-2xl border border-dashed border-border/80 bg-subtle/30 py-4 font-ui text-[15px] font-semibold text-muted transition-all cursor-pointer hover:border-accent/50 hover:bg-accent/[0.04] hover:text-accent hover:scale-[1.01] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
             onClick={() => {
               setAddParentPath(null);
               setShowPicker(!showPicker);
             }}
           >
-            <span className="text-accent text-lg">+</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-subtle/50 text-accent group-hover/add:bg-accent group-hover/add:text-surface transition-colors duration-300">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            </div>
             {addButtonLabel}
           </button>
+
         </div>
       </WorkspacePageSection>
 

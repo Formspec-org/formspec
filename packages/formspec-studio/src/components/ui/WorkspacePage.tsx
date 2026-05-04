@@ -18,11 +18,12 @@ export function WorkspacePage({
 }: WorkspacePageProps) {
   return (
     <div 
-      className={`flex flex-col min-h-full w-full ${maxWidth} mx-auto ${className}`}
+      className={`flex flex-col min-h-full w-full ${maxWidth} mx-auto animate-in fade-in slide-in-from-bottom-2 duration-500 ease-out ${className}`}
       {...props}
     >
       {children}
     </div>
+
   );
 }
 

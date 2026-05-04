@@ -225,34 +225,41 @@ export function GroupNode({
     <div
       data-testid={`group-${itemKey}`}
       data-editor-path={itemPath}
-      style={{ paddingLeft: depth * 20 }}
+      style={{ marginLeft: depth * 20 }}
       className={[
-        'rounded-[20px] border transition-[border-color,background-color,box-shadow]',
+        'group relative mb-2 rounded-[24px] border transition-all duration-300 ease-out',
         selected
-          ? 'border-accent/55 bg-accent/[0.09] shadow-[0_8px_20px_rgba(37,99,235,0.18)]'
-          : 'border-transparent hover:border-border/65 hover:bg-bg-default/40',
+          ? 'border-accent/40 bg-surface shadow-premium-lg translate-x-1'
+          : 'border-transparent hover:border-border/60 hover:bg-bg-default/40',
+        expanded && !selected ? 'bg-bg-default/20 border-border/30' : '',
       ].join(' ')}
       onClick={onClick}
       onContextMenu={onContextMenu}
     >
-      <div className="rounded-[20px] px-3 py-4 md:px-4">
+      {selected && (
+        <div className="absolute left-0 top-3 bottom-3 w-1 rounded-full bg-accent animate-in fade-in slide-in-from-left-1 duration-300" />
+      )}
+      <div className="rounded-[24px] px-4 py-5 md:px-5">
         <div className="flex items-start justify-between gap-4">
           <div className="flex min-w-0 flex-1 items-start gap-4">
-            <DragHandle ref={dragHandleRef} label={`Reorder ${resolvedLabel}`} className="h-9 self-start" />
+            <DragHandle ref={dragHandleRef} label={`Reorder ${resolvedLabel}`} className="h-10 self-start" />
             <button
               type="button"
               aria-label={`${expanded ? 'Collapse' : 'Expand'} ${resolvedLabel}`}
               aria-expanded={expanded}
               aria-controls={`group-panel-${itemKey}`}
               data-testid={`toggle-${itemKey}`}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border/80 bg-surface text-[12px] text-ink/80 shadow-sm transition-colors hover:border-accent/40 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border/80 bg-surface text-[14px] text-ink/80 shadow-sm transition-all hover:border-accent/40 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/35 ${expanded ? 'rotate-90' : ''}`}
               onClick={(e) => {
                 e.stopPropagation();
                 setExpanded(!expanded);
               }}
             >
-              {expanded ? '\u25BE' : '\u25B8'}
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
             </button>
+
             <button
               type="button"
               aria-label={`Select group ${resolvedLabel}`}

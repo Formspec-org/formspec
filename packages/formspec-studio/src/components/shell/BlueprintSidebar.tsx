@@ -45,12 +45,13 @@ export function BlueprintSidebar({
       data-testid="blueprint-sidebar"
       className={
         embedded
-          ? 'flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto border-0 bg-[linear-gradient(180deg,rgba(255,252,247,0.94),rgba(248,241,231,0.88))] dark:bg-[linear-gradient(180deg,rgba(26,35,47,0.94),rgba(32,44,59,0.92))] backdrop-blur-sm'
-          : 'flex shrink-0 flex-col overflow-y-auto border-r border-border/70 bg-[linear-gradient(180deg,rgba(255,252,247,0.94),rgba(248,241,231,0.88))] dark:bg-[linear-gradient(180deg,rgba(26,35,47,0.94),rgba(32,44,59,0.92))] backdrop-blur-sm'
+          ? 'flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto border-0 glass'
+          : 'flex shrink-0 flex-col overflow-y-auto border-r border-border/40 glass'
       }
-      style={embedded ? undefined : { width: `clamp(140px, ${leftWidth}px, calc(50vw - 340px))` }}
+      style={embedded ? undefined : { width: `clamp(200px, ${leftWidth}px, calc(50vw - 300px))` }}
       aria-label="Blueprint sidebar"
     >
+
       <Blueprint activeSection={resolvedSection} onSectionChange={onSectionChange} sections={visibleSections} activeEditorView={activeEditorView} activeTab={activeTab} />
       <div className="flex-1 overflow-y-auto px-3 py-4">
         {SidebarComponent && <SidebarComponent />}

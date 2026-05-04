@@ -178,12 +178,18 @@ html {
   --font-display: var(--studio-font-display);
   --font-mono: var(--studio-font-mono);
   --radius-sm: 4px;
-  --radius-DEFAULT: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  --radius-DEFAULT: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
   
-  --shadow-premium: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
-  --shadow-premium-lg: 0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+  --shadow-premium: 
+    0 1px 2px 0 rgb(0 0 0 / 0.05),
+    0 4px 12px -2px rgb(0 0 0 / 0.05),
+    0 12px 24px -4px rgb(0 0 0 / 0.02);
+  --shadow-premium-lg: 
+    0 4px 6px -1px rgb(0 0 0 / 0.02),
+    0 10px 15px -3px rgb(0 0 0 / 0.03),
+    0 20px 40px -10px rgb(0 0 0 / 0.05);
 }
 
 /* Dark mode — neutral charcoal surfaces */
@@ -191,72 +197,82 @@ html {
   color-scheme: dark;
   --studio-color-ink: #f5f5f3;
   --studio-color-foreground: #f5f5f3;
-  --studio-color-bg-default: #0f0f10;
-  --studio-color-surface: #18181b;
-  --studio-color-border: #27272a;
-  --studio-color-accent: #748ffc;
+  --studio-color-bg-default: #09090b;
+  --studio-color-surface: #121214;
+  --studio-color-border: #232326;
+  --studio-color-accent: #818cf8;
   --studio-color-logic: #8ec5c9;
   --studio-color-error: #f87171;
   --studio-color-muted: #a1a1aa;
-  --studio-color-subtle: #202023;
-  --studio-color-panel: #1e1e20;
+  --studio-color-subtle: #1c1c1f;
+  --studio-color-panel: #161618;
   --studio-color-green: #34d399;
   --studio-color-amber: #fbbf24;
   --studio-color-teal: #94d8db;
   --studio-color-brass: #d9c19d;
   --studio-color-warm-border: #3f3f46;
-  --studio-color-warm-subtle: #1c1c1e;
+  --studio-color-warm-subtle: #141416;
   --studio-color-rust: #fca5a5;
-  --studio-color-focus-ring: #91a7ff;
+  --studio-color-focus-ring: #6366f1;
 }
 
 body {
   background:
-    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--color-accent) 5%, transparent) 0, transparent 40%),
-    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--color-teal) 4%, transparent) 0, transparent 40%),
+    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--color-accent) 7%, transparent) 0, transparent 45%),
+    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--color-teal) 5%, transparent) 0, transparent 40%),
+    radial-gradient(circle at 50% 100%, color-mix(in srgb, var(--color-brass) 3%, transparent) 0, transparent 40%),
     var(--color-bg-default);
   color: var(--color-ink);
   font-family: var(--font-ui);
+  letter-spacing: -0.011em;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 .dark body {
   background:
-    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--color-accent) 8%, transparent) 0, transparent 35%),
-    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--color-teal) 5%, transparent) 0, transparent 35%),
+    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--color-accent) 10%, transparent) 0, transparent 40%),
+    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--color-teal) 6%, transparent) 0, transparent 35%),
     #09090b;
 }
 
 /* Glassmorphism utility */
 @utility glass {
-  background: color-mix(in srgb, var(--color-surface) 70%, transparent);
-  backdrop-filter: blur(12px);
-  border: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
+  background: color-mix(in srgb, var(--color-surface) 82%, transparent);
+  backdrop-filter: blur(16px) saturate(120%);
+  border: 1px solid color-mix(in srgb, var(--color-border) 45%, transparent);
+  box-shadow: inset 0 1px 1px 0 rgb(255 255 255 / 0.05);
+}
+
+.dark .glass {
+  box-shadow: inset 0 1px 1px 0 rgb(255 255 255 / 0.02);
 }
 
 /* Premium pill toggle */
 .pill-toggle {
   display: inline-flex;
-  padding: 3px;
-  background: var(--color-subtle);
+  padding: 4px;
+  background: color-mix(in srgb, var(--color-subtle) 80%, var(--color-border));
   border-radius: 9999px;
   gap: 2px;
+  box-shadow: inset 0 1px 2px 0 rgb(0 0 0 / 0.05);
 }
 
 .pill-toggle-item {
-  padding: 4px 12px;
+  padding: 5px 14px;
   border-radius: 9999px;
   font-size: 13px;
   font-weight: 500;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   color: var(--color-muted);
 }
 
 .pill-toggle-item[data-active="true"] {
   background: var(--color-surface);
   color: var(--color-ink);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  box-shadow: 
+    0 1px 3px rgba(0,0,0,0.1),
+    0 1px 1px rgba(0,0,0,0.05);
 }
 
 /* Soft Canvas border */
@@ -264,8 +280,16 @@ body {
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-premium);
+  box-shadow: var(--shadow-premium-lg);
+  transition: box-shadow 0.3s ease;
 }
+
+.soft-canvas:hover {
+  box-shadow: 
+    0 10px 25px -5px rgb(0 0 0 / 0.06), 
+    0 8px 10px -6px rgb(0 0 0 / 0.04);
+}
+
 
 /* ChangesetReviewSection — JS picks compact-vs-full based on container width (ResizeObserver). CSS only owns the compact bar's chrome. */
 .changeset-compact-bar {

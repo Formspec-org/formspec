@@ -370,29 +370,29 @@ export function Header({
   return (
     <header
       data-testid="header"
-      className="relative flex min-h-[72px] shrink-0 items-center gap-5 border-b border-border bg-surface px-4 py-3"
+      className="glass sticky top-0 z-40 flex min-h-[72px] shrink-0 items-center gap-5 px-6 py-3 transition-all duration-300 shadow-premium"
     >
       {/* Left: App Mark + Title */}
       <button
         type="button"
         aria-label="The Stack home"
-        className="flex items-center gap-3 mr-4 shrink-0 text-left"
+        className="group flex items-center gap-3.5 mr-6 shrink-0 text-left focus-visible:outline-none"
         onClick={() => { onTabChange('Editor'); onHome?.(); }}
       >
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-accent text-surface" aria-hidden="true">
-          <IconStack size={16} className="text-surface" />
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-accent text-surface shadow-md group-hover:scale-105 group-hover:rotate-3 transition-all duration-300" aria-hidden="true">
+          <IconStack size={18} className="text-surface" />
         </div>
-        <div className="space-y-1">
-          <div className="font-display text-[31px] tracking-[-0.05em] leading-none text-ink">The Stack</div>
-          <div className="font-ui text-[11px] text-muted/80 tracking-wider uppercase">
-            <>{formTitle} · FORMSPEC {definition.$formspec} · {definition.status || 'DRAFT'}</>
+        <div className="space-y-0.5">
+          <div className="font-display text-[32px] tracking-[-0.06em] leading-none text-ink group-hover:text-accent transition-colors duration-300">The Stack</div>
+          <div className="font-ui text-[10px] font-medium text-muted/70 tracking-[0.1em] uppercase">
+            <>{formTitle} · {definition.status || 'DRAFT'}</>
           </div>
         </div>
       </button>
 
       {/* Mode toggle or workspace tabs */}
       {mode && onModeChange ? (
-        <div className="flex h-12 items-end self-stretch pb-1">
+        <div className="flex h-12 items-center">
           <ModeToggle mode={mode} onModeChange={onModeChange} />
         </div>
       ) : (
@@ -407,3 +407,4 @@ export function Header({
     </header>
   );
 }
+

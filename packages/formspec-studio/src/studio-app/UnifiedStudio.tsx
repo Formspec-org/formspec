@@ -379,20 +379,22 @@ export function UnifiedStudio(): ReactElement {
               {/* Left sidebar — visible for editable project workspaces */}
               {(isEditMode || isAdvancedWorkspace || isDesignMode || isPreviewMode) && !compactLayout && (
                 <>
-                  <BlueprintSidebar
-                    activeTab={activeTab}
-                    activeSection={activeSection}
-                    onSectionChange={setActiveSection}
-                    activeEditorView={activeEditorView}
-                    compactLayout={compactLayout}
-                    leftWidth={leftWidth}
-                  />
+                  <div className="glass h-full shadow-premium">
+                    <BlueprintSidebar
+                      activeTab={activeTab}
+                      activeSection={activeSection}
+                      onSectionChange={setActiveSection}
+                      activeEditorView={activeEditorView}
+                      compactLayout={compactLayout}
+                      leftWidth={leftWidth}
+                    />
+                  </div>
                   <ResizeHandle side="left" onResize={onResizeLeft} />
                 </>
               )}
 
               {/* Main content area */}
-              <main className="flex min-h-0 flex-1 shrink-0 min-w-0 flex-col overflow-y-auto bg-bg-default">
+              <main className="flex min-h-0 flex-1 shrink-0 min-w-0 flex-col overflow-y-auto">
                 {isChatMode && (
                   <div className="flex h-full">
                     {/* Chat thread — center */}
@@ -404,9 +406,9 @@ export function UnifiedStudio(): ReactElement {
                     </div>
                     {/* Live canvas context — right (desktop only) */}
                     {!compactLayout && showPreview && (
-                      <div className="w-[360px] shrink-0 border-l border-border/70">
+                      <div className="glass w-[380px] shrink-0 shadow-premium">
                         <PreviewCompanionPanel
-                          width={360}
+                          width={380}
                           appearance={colorScheme?.resolvedTheme ?? 'light'}
                           highlightFieldPath={primaryKey}
                           onFieldClick={handlePreviewFieldClick}
@@ -420,7 +422,7 @@ export function UnifiedStudio(): ReactElement {
                 {isEditMode && (
                   <div
                     data-testid="workspace-Editor"
-                    className="h-full flex flex-col px-3 py-3 md:px-6 md:py-5 xl:px-8"
+                    className="h-full flex flex-col px-4 py-4 md:px-8 md:py-6 lg:px-12 lg:py-8 xl:px-16"
                     onClick={(event) => {
                       if (event.target === event.currentTarget) deselect();
                     }}
@@ -452,6 +454,7 @@ export function UnifiedStudio(): ReactElement {
                     />
                   </div>
                 )}
+
 
                 {isAdvancedWorkspace && (
                   <div className="h-full flex flex-col" data-testid={`workspace-${activeTab}`}>

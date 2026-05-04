@@ -20,11 +20,12 @@ interface PillProps {
 
 export function Pill({ text, color = 'muted', size = 'md', title, warn }: PillProps) {
   const colorClasses = colorMap[color] || colorMap.muted;
-  const sizeClasses = size === 'sm' ? 'text-xs px-1.5 py-0' : 'text-sm px-2 py-0.5';
-  const warnClasses = warn ? ' border-amber/40' : '';
+  const sizeClasses = size === 'sm' ? 'text-[10px] px-2 py-0.5 font-bold uppercase tracking-wider' : 'text-[12px] px-2.5 py-1 font-semibold';
+  const warnClasses = warn ? ' ring-1 ring-amber/30' : '';
   return (
-    <span className={`inline-flex items-center rounded-sm border font-ui ${colorClasses} ${sizeClasses}${warnClasses}`} title={title}>
-      {text}{warn ? <span aria-hidden="true">{' \u26A0'}</span> : ''}
+    <span className={`inline-flex items-center rounded-full border transition-all ${colorClasses} ${sizeClasses}${warnClasses}`} title={title}>
+      {text}{warn ? <span aria-hidden="true" className="ml-1">{' \u26A0'}</span> : ''}
     </span>
   );
 }
+
