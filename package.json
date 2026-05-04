@@ -9,13 +9,11 @@
   },
   "workspaces": [
     "packages/*",
-    "examples/refrences",
-    "site"
+    "examples/refrences"
   ],
   "scripts": {
     "build": "npm run build --workspace=@formspec-org/types && npm run build --workspace=@formspec-org/layout && npm run build --workspace=@formspec-org/engine && npm run build --workspace=@formspec-org/assist && npm run build --workspace=@formspec-org/core && npm run build --workspace=@formspec-org/webcomponent && npm run build --workspace=@formspec-org/adapters && npm run build --workspace=@formspec-org/studio-core && npm run build --workspace=@formspec-org/mcp && npm run build --workspace=@formspec-org/studio",
     "test:serve": "vite --port 8080 --host 127.0.0.1",
-    "start:site": "npm run dev --workspace=formspec-site",
     "start:stories": "npm run dev --workspace=formspec-stories",
     "storybook": "storybook dev -p 6006",
     "test:storybook:dom": "playwright test -c playwright.storybook.config.ts tests/storybook/uswds-grant-story-dom.spec.ts",
@@ -57,9 +55,6 @@
     "docs:formspec-lint": "cargo doc-md -p formspec-lint --no-deps -o target/doc-md-formspec-lint && node scripts/bundle-rustdoc-md.mjs formspec-lint doc-md-formspec-lint formspec_lint crates/formspec-lint/docs/rustdoc-md/API.md && cargo doc -p formspec-lint --no-deps",
     "docs:formspec-eval": "cargo doc-md -p formspec-eval --no-deps -o target/doc-md-formspec-eval && node scripts/bundle-rustdoc-md.mjs formspec-eval doc-md-formspec-eval formspec_eval crates/formspec-eval/docs/rustdoc-md/API.md && cargo doc -p formspec-eval --no-deps",
     "start:references": "npm run build --workspace=@formspec-org/engine && npm run build --workspace=@formspec-org/layout && npm run build --workspace=@formspec-org/webcomponent && npm run dev --workspace=formspec-references",
-    "build:hosting": "bash scripts/build-hosting.sh",
-    "deploy": "npm run build:hosting && npx -y firebase-tools@latest deploy --only hosting",
-    "deploy:preview": "npm run build:hosting && npx -y firebase-tools@latest hosting:channel:deploy preview",
     "changeset": "changeset",
     "version": "changeset version",
     "release": "npm run build && changeset publish"
