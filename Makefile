@@ -7,28 +7,35 @@ SPECS_DIR = specs
 
 all: build
 
-spec-artifacts:
+# npm install gate: refreshed when package-lock.json changes. Every target
+# that calls `npm run` depends on this so a clean checkout's `make build`
+# (or `make test`) installs deps automatically.
+node_modules: package-lock.json package.json
+	npm ci
+	@touch node_modules
+
+spec-artifacts: node_modules
 	npm run docs:generate
 
-docs-check:
+docs-check: node_modules
 	npm run docs:check
 
 test-unit: build-js
 	npm run test:unit
 
-test-e2e:
+test-e2e: node_modules
 	npm run test:e2e
 
-test-studio-e2e:
+test-studio-e2e: node_modules
 	npm run test:studio:e2e
 
 test-python: build-python
 	python3 -m pytest tests/
 
-test-scripts:
+test-scripts: node_modules
 	npm run test:scripts
 
-build-wasm:
+build-wasm: node_modules
 	npm run build:wasm --workspace=@formspec-org/engine
 
 # Full compile: Rust workspace + npm workspaces (WASM via formspec-engine) +
@@ -38,7 +45,7 @@ build: build-rust build-js build-python
 build-rust:
 	cargo build --workspace
 
-build-js:
+build-js: node_modules
 	npm run build
 
 
