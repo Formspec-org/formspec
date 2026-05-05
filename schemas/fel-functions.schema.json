@@ -114,6 +114,7 @@
     }
   },
   "version": "1.0",
+  "x-generated-from": "fel-core (https://github.com/Formspec-org/fel-core) — regenerate via `cargo run -p fel-core --bin emit-fel-schema > formspec/schemas/fel-functions.schema.json`",
   "functions": [
     {
       "name": "sum",
