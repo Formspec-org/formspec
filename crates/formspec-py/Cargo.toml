@@ -13,7 +13,7 @@ name = "formspec_rust"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-fel-core = { path = "../fel-core" }
+fel-core = { path = "../../../fel-core" }
 formspec-core = { path = "../formspec-core" }
 formspec-eval = { path = "../formspec-eval" }
 formspec-lint = { path = "../formspec-lint" }
