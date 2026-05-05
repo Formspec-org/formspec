@@ -1,19 +1,19 @@
 # ADR 0077: Canonical Kernel Extension Seams
 
-**Status:** Implemented — all 5 decisions landed. Six canonical seams enumerated in Kernel §10 (`actorExtension`, `contractHook`, `provenanceLayer`, `lifecycleHook`, `custodyHook`, `extensions`/`x-`). Five invented seam names retired. CI lint gate (`check-canonical-seams.py`) wired into `.github/workflows/schema-regression.yml`. `wos-spec/TODO.md` confirms "fully implemented."
+**Status:** Implemented — all 5 decisions landed. Six canonical seams enumerated in Kernel §10 (`actorExtension`, `contractHook`, `provenanceLayer`, `lifecycleHook`, `custodyHook`, `extensions`/`x-`). Five invented seam names retired. CI lint gate (`check-canonical-seams.py`) wired into `.github/workflows/schema-regression.yml`. `work-spec/TODO.md` confirms "fully implemented."
 **Date:** 2026-04-24
 **Scope:** WOS Kernel
-**Related:** [`wos-spec/specs/kernel/spec.md`](../../wos-spec/specs/kernel/spec.md) §10; [`wos-spec/CLAUDE.md`](../../wos-spec/CLAUDE.md) Q3 heuristic; [`wos-spec/counter-proposal-disposition.md`](../../wos-spec/counter-proposal-disposition.md) rows FP-02, E1, E7, architectural-posture on `formRef`; [`wos-spec/thoughts/2026-04-24-standards-absorption-gap-analysis.md`](../../wos-spec/thoughts/2026-04-24-standards-absorption-gap-analysis.md) §Refactor Target; [`wos-spec/schemas/kernel/wos-kernel.schema.json`](../../wos-spec/schemas/kernel/wos-kernel.schema.json)
+**Related:** [`work-spec/specs/kernel/spec.md`](../../work-spec/specs/kernel/spec.md) §10; [`work-spec/CLAUDE.md`](../../work-spec/CLAUDE.md) Q3 heuristic; [`work-spec/counter-proposal-disposition.md`](../../work-spec/counter-proposal-disposition.md) rows FP-02, E1, E7, architectural-posture on `formRef`; [`work-spec/thoughts/2026-04-24-standards-absorption-gap-analysis.md`](../../work-spec/thoughts/2026-04-24-standards-absorption-gap-analysis.md) §Refactor Target; [`work-spec/schemas/kernel/wos-kernel.schema.json`](../../work-spec/schemas/kernel/wos-kernel.schema.json)
 
 ## Context
 
-Three WOS working documents name the kernel extension seams with non-matching vocabularies. The named-seams invariant in `wos-spec/CLAUDE.md` (Q3: "Inventing new seams is a Q3 violation") requires one canonical enumeration; without it, disposition landings and absorption waves cannot tell whether a new extension point attaches to an existing seam or creates a new one.
+Three WOS working documents name the kernel extension seams with non-matching vocabularies. The named-seams invariant in `work-spec/CLAUDE.md` (Q3: "Inventing new seams is a Q3 violation") requires one canonical enumeration; without it, disposition landings and absorption waves cannot tell whether a new extension point attaches to an existing seam or creates a new one.
 
 The three sources:
 
 | Source | Seam names used |
 |---|---|
-| `wos-spec/CLAUDE.md` "Six kernel seams are the only extension surface" | `actorExtension`, `attachmentExtension`, `caseFieldExtension`, `eventExtension`, `outcomeExtension`, `sidecarExtension` |
+| `work-spec/CLAUDE.md` "Six kernel seams are the only extension surface" | `actorExtension`, `attachmentExtension`, `caseFieldExtension`, `eventExtension`, `outcomeExtension`, `sidecarExtension` |
 | `counter-proposal-disposition.md` (rows FP-02, architectural-posture, E7) | `contractHook`, `lifecycleHook` |
 | `thoughts/2026-04-24-standards-absorption-gap-analysis.md` §Refactor Target | `lifecycleHook`, `contractHook`, `provenanceLayer` |
 
@@ -78,7 +78,7 @@ No schema gap. The schema matches Kernel §10 once the distinction between "top-
 
 This ADR lands two edits in-session:
 
-1. `wos-spec/CLAUDE.md` "Six kernel seams are the only extension surface: ..." line — replaced with the Kernel §10 enumeration. Count stays six; names change.
+1. `work-spec/CLAUDE.md` "Six kernel seams are the only extension surface: ..." line — replaced with the Kernel §10 enumeration. Count stays six; names change.
 
 Two edits are flagged for separate follow-up passes, **not** touched by this ADR:
 
@@ -113,4 +113,4 @@ Two edits are flagged for separate follow-up passes, **not** touched by this ADR
 
 ## Lint rule candidate
 
-A future lint rule SHOULD reject any WOS specification prose or schema comment that names a seam identifier other than one of the canonical six: `actorExtension`, `contractHook`, `provenanceLayer`, `lifecycleHook`, `custodyHook`, or `extensions`. Scope: markdown files under `wos-spec/specs/**` and `$comment` / `description` text in `wos-spec/schemas/**`. Implementation is out of scope for this ADR; capture as a WOS-lint backlog entry.
+A future lint rule SHOULD reject any WOS specification prose or schema comment that names a seam identifier other than one of the canonical six: `actorExtension`, `contractHook`, `provenanceLayer`, `lifecycleHook`, `custodyHook`, or `extensions`. Scope: markdown files under `work-spec/specs/**` and `$comment` / `description` text in `work-spec/schemas/**`. Implementation is out of scope for this ADR; capture as a WOS-lint backlog entry.

@@ -5,11 +5,11 @@
 High-confidence compatibility surfaces from the finish plan:
 
 - WOS:
-  - `wos-spec/studio/src/services/KernelToDesigner.ts`
-  - `wos-spec/crates/wos-authoring/src/raw.rs`
-  - `wos-spec/crates/wos-conformance/src/engine.rs`
-  - `wos-spec/crates/wos-runtime/src/companion.rs`
-  - `wos-spec/crates/wos-lint/src/rules/tier2.rs`
+  - `work-spec/studio/src/services/KernelToDesigner.ts`
+  - `work-spec/crates/wos-authoring/src/raw.rs`
+  - `work-spec/crates/wos-conformance/src/engine.rs`
+  - `work-spec/crates/wos-runtime/src/companion.rs`
+  - `work-spec/crates/wos-lint/src/rules/tier2.rs`
 - Packages (high-confidence compat paths):
   - `packages/formspec-studio/src/components/chat/chat-thread-repository.ts`
   - `packages/formspec-react/src/screener/use-screener.ts`

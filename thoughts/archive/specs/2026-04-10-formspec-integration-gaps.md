@@ -3,17 +3,17 @@ title: Formspec Integration Gaps -- Design Specification
 date: 2026-04-10
 status: superseded
 author: WOS Working Group
-merged_into: wos-spec/thoughts/specs/2026-04-11-formspec-wos-phase11-integration-master.md
-superseded_by: wos-spec/thoughts/specs/2026-04-11-formspec-wos-phase11-integration-master.md
+merged_into: work-spec/thoughts/specs/2026-04-11-formspec-wos-phase11-integration-master.md
+superseded_by: work-spec/thoughts/specs/2026-04-11-formspec-wos-phase11-integration-master.md
 ---
 
-> **Merged handoff:** [`wos-spec/thoughts/specs/2026-04-11-formspec-wos-phase11-integration-master.md`](../../../wos-spec/thoughts/specs/2026-04-11-formspec-wos-phase11-integration-master.md) consolidates this gaps doc, the Phase 11 plan, and the S15 coprocessor proposal (2026-04-11).
+> **Merged handoff:** [`work-spec/thoughts/specs/2026-04-11-formspec-wos-phase11-integration-master.md`](../../../work-spec/thoughts/specs/2026-04-11-formspec-wos-phase11-integration-master.md) consolidates this gaps doc, the Phase 11 plan, and the S15 coprocessor proposal (2026-04-11).
 
 # Formspec Integration Gaps -- Design Specification
 
 **Status:** Proposed
 **Date:** 2026-04-10
-**References:** `wos-spec/TODO.md` (Formspec Coprocessor gap, Formspec dependencies); WOS Kernel Specification v1.0; WOS Runtime Companion v1.0; WOS Workflow Governance Specification v1.0; Formspec Core Specification v1.0; Formspec Mapping DSL v1.0; Respondent Ledger Add-On Specification v0.1
+**References:** `work-spec/TODO.md` (Formspec Coprocessor gap, Formspec dependencies); WOS Kernel Specification v1.0; WOS Runtime Companion v1.0; WOS Workflow Governance Specification v1.0; Formspec Core Specification v1.0; Formspec Mapping DSL v1.0; Respondent Ledger Add-On Specification v0.1
 
 ---
 
@@ -93,7 +93,7 @@ The processor MUST reject a `submitTaskResponse` where the Response's `definitio
 
 On receiving a `submitTaskResponse`, the processor MUST execute validation before advancing workflow state. The validation sequence:
 
-1. **Formspec validation.** Validate the **full Response document** (envelope per `response.schema.json`, VP-01 tuple match, then Definition evaluation over **`data`**) via an extended host operation (concrete proposal: **`validateFormspecTaskResponse`** on Runtime S12.3 — see `wos-spec/thoughts/archive/specs/2026-04-11-wos-s15-formspec-coprocessor-proposal.md`). The Formspec-conformant processor (Core S1.4) evaluates Binds and Shapes per Core §5.5. The WOS wrapper result aggregates envelope, pin, and definition validity (**`ValidationOutcome`** — not a single Formspec `ValidationResult`).
+1. **Formspec validation.** Validate the **full Response document** (envelope per `response.schema.json`, VP-01 tuple match, then Definition evaluation over **`data`**) via an extended host operation (concrete proposal: **`validateFormspecTaskResponse`** on Runtime S12.3 — see `work-spec/thoughts/archive/specs/2026-04-11-wos-s15-formspec-coprocessor-proposal.md`). The Formspec-conformant processor (Core S1.4) evaluates Binds and Shapes per Core §5.5. The WOS wrapper result aggregates envelope, pin, and definition validity (**`ValidationOutcome`** — not a single Formspec `ValidationResult`).
 
 2. **Pipeline validation (if configured).** If a data validation pipeline (Governance S5) is attached to this contract via the `contractHook` seam, execute the pipeline stages. Pipeline assertion gates (Governance S5.4) run after Formspec validation, using the validated Response data as input.
 
@@ -270,7 +270,7 @@ Processor: validateFormspecTaskResponse (full Response + pin) / Formspec process
 
 ### 1.3 Delivery Vehicle
 
-New section **S15: Formspec Coprocessor Protocol** in the Runtime Companion (`wos-spec/specs/companions/runtime.md`). This is the right home because:
+New section **S15: Formspec Coprocessor Protocol** in the Runtime Companion (`work-spec/specs/companions/runtime.md`). This is the right home because:
 
 - The protocol defines runtime behavioral contracts (what the processor does), not document structure.
 - It depends on host interfaces already defined in Runtime S12.
@@ -371,7 +371,7 @@ If Formspec Core does not accept these additions, WOS MUST define them as a regi
 {
   "extensions": [
     {
-      "namespace": "https://wos-spec.org/extensions/fel/1.0",
+      "namespace": "https://work-spec.org/extensions/fel/1.0",
       "functions": [
         { "name": "every", "params": [{"name": "array", "type": "array"}, {"name": "predicate", "type": "boolean"}], "returns": "boolean" },
         { "name": "some", "params": [{"name": "array", "type": "array"}, {"name": "predicate", "type": "boolean"}], "returns": "boolean" },
@@ -396,7 +396,7 @@ Under this path:
 ### 2.3 Delivery Vehicle
 
 - **Path A:** Formspec Core specification revision. The functions would be added to Core S3.5 (built-in functions), in a new "Quantifier Functions" subsection alongside the existing "Aggregate Functions" subsection.
-- **Path B:** New section in the WOS Kernel Specification (proposed S7.5: WOS Extension Functions) plus a standalone extension function registration document in `wos-spec/specs/extensions/`.
+- **Path B:** New section in the WOS Kernel Specification (proposed S7.5: WOS Extension Functions) plus a standalone extension function registration document in `work-spec/specs/extensions/`.
 
 In either path, the WOS Kernel S7.4 rejected-alternative paragraph MUST be updated. Currently it says "the same capabilities are achieved without grammar changes: `every` and `some` as built-in functions (Core S3.5)." Under Path A, this becomes accurate. Under Path B, it must be rewritten to reference extension functions.
 

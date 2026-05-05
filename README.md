@@ -10,24 +10,6 @@ Built by [Michael Deeb](https://www.linkedin.com/in/michael-deeb/), [TealWolf Co
 
 Formspec separates *what data to collect* from *how it behaves* from *how it looks*. A single definition drives validation, computed fields, conditional logic, and repeatable sections across any runtime — browser, server, mobile, offline. Every artifact is a JSON document backed by a JSON Schema, so the entire system is machine-readable.
 
-Formspec is also the intake layer in a three-spec stack with [WOS](wos-spec/README.md) and [Trellis](trellis/README.md). The stack target is one portable governed case record: Formspec captures the canonical response and `IntakeHandoff` for governed-case scope, WOS records how the decision was governed, and Trellis makes the record signed, durable, and verifiable offline without the original vendor runtime.
-
-For the stack-level architecture, start with [`STACK.md`](../STACK.md) in `formspec-stack/`. For active platform leans, forks, kill criteria, and end-state commitments, see the platform decisioning register in `formspec-stack/thoughts/specs/2026-04-22-platform-decisioning-forks-and-options.md`.
-
-## The Stack
-
-Formspec stands alone as a portable form runtime and authoring substrate, but it composes with two sibling specs when the workflow needs governed decisions and durable proof.
-
-| Layer | Spec | Responsibility |
-|---|---|---|
-| Intake | **Formspec** | Definitions, FEL, validation, canonical responses, intake handoffs, respondent-ledger event shape |
-| Governance | **WOS** | Workflow semantics, AI constraints, review protocols, provenance, signature workflow meaning |
-| Integrity | **Trellis** | Signed event envelopes, checkpoint seals, export bundles, offline verification |
-
-The stack has a strict center/adapter split. The center owns meaning: response shape, governance events, evidence bindings, identity and signature attestations, amendments, statutory clocks, migration pins, and verifier behavior. Adapters own replaceable machinery: renderers, workflow engines, identity providers, storage engines, KMS, and witness or anchor targets.
-
-The end-state proof is not a dashboard. It is a verifier-facing package: specs, schemas or byte grammars, vectors, and verifier behavior that can reproduce the case record without a SaaS login. Product demos and buyer evidence matter, but they do not replace offline verification.
-
 ## Architecture
 
 ### The Specification as Abstraction Boundary
@@ -70,12 +52,8 @@ Formspec inverts the usual dependency between frontend and backend. Neither impl
    │                   │    │                      │
    │  <formspec-render>│    │  Command model       │
    │  35 plugin types  │    │  Queries & diagnostics│
-   │  Theme resolver   │    │  Undo/redo, replay   │
-   └──────────────────┘    └──────────┬────────────┘
-                                      │
-                        ┌─────┬───────┼───────┬──────┐
-                        ▼     ▼       ▼       ▼      ▼
-                      MCP   Chat   CLI tool  Studio  LLM
+    │  Theme resolver   │    │  Undo/redo, replay   │
+    └──────────────────┘    └─────────────────────┘
 ```
 
 The specification — 20 JSON Schemas, normative prose, and FEL grammar — is the stable abstraction that all implementations conform to. A Rust shared kernel (7 crates, ~47,000 lines, 1,533 tests) owns all spec business logic: FEL evaluation, assembly, linting, mapping, registry, changelog, and definition evaluation. The TypeScript engine keeps Preact Signals for reactive UI state and calls Rust via WASM. Python calls Rust via PyO3. One implementation, every platform.
@@ -84,7 +62,7 @@ This inversion runs deeper than just client/server. The TypeScript side itself h
 
 The **web component** is a presentation adapter — it reads engine signals and dispatches to a plugin registry. Each input component uses a headless behavior/adapter split: behavior hooks own reactive state and ARIA management, render adapters own DOM structure. The default adapter reproduces standard Formspec markup; design-system adapters in `formspec-adapters` provide alternative DOM without touching behavior. The engine drives any rendering surface: a React component tree (via `formspec-react`), a SwiftUI form (via `formspec-swift`), a PDF generator, or a server-rendered page. Build a new presentation layer by subscribing to engine signals; the behavioral core stays constant.
 
-**Studio Core** is an authoring adapter — it uses the engine's FEL compiler, dependency analysis, and schema validation to power a command-based editing model for creating Formspec artifacts. Every edit is a serializable command with undo/redo, replay, and cross-artifact diagnostics. Studio Core produces the definition, theme, component, and mapping documents that the engine and web component consume at runtime. It has no UI of its own — CLI tools, LLM agents, and visual editors like Studio all drive it through the same command API.
+An **authoring adapter** layer (Studio Core, in the `formspec-studio` sibling repo) uses the engine's FEL compiler, dependency analysis, and schema validation to power a command-based editing model for creating Formspec artifacts. It produces the definition, theme, component, and mapping documents that the engine and web component consume at runtime.
 
 ### Document Layers
 
@@ -190,10 +168,6 @@ Neither runtime imports or wraps the other. They deploy and test independently, 
 
 `specs/` — Normative Formspec specifications organized by tier
 
-[`wos-spec/`](wos-spec/README.md) — **WOS (Workflow Orchestration Standard):** JSON-native governance for rights-impacting workflows — deontic constraints on agents, structured human oversight, provenance tiers, signature workflow semantics, and conformance-checked Rust runtime crates. Composes with Formspec artifacts; durable execution stays behind adapters while WOS defines the protections that bind transitions and AI behavior.
-
-[`trellis/`](trellis/README.md) — **Trellis:** cryptographic integrity layer for content-addressed signed events, checkpoint seals, export bundles, and offline verification. Trellis concretizes the Respondent Ledger integrity seams and consumes WOS custody hooks so the portable case record survives without the original system.
-
 `registries/` — Extension registries (common: email, phone, currency, SSN, etc.)
 
 ### TypeScript Packages
@@ -208,10 +182,6 @@ Neither runtime imports or wraps the other. They deploy and test independently, 
 | [`formspec-core`](packages/formspec-core/README.md) | 2 | Project core — 17 handlers, normalization, page resolution, theme cascade |
 | [`formspec-react`](packages/formspec-react/README.md) | 2 | React hooks and auto-renderer — use any component library with FormEngine |
 | [`formspec-adapters`](packages/formspec-adapters/README.md) | 3 | Render adapter library — design-system-specific DOM for `<formspec-render>` components |
-| [`formspec-studio-core`](packages/formspec-studio-core/README.md) | 3 | Authoring core — command model, undo/redo, queries, diagnostics |
-| [`formspec-mcp`](packages/formspec-mcp/README.md) | 4 | MCP server — 48 typed tools for LLM-driven form authoring (stdio transport) |
-| [`formspec-chat`](packages/formspec-chat/README.md) | 5 | Chat core — conversational form builder logic, AI adapter interface, issue queue |
-| [`formspec-studio`](packages/formspec-studio/README.md) | 6 | Visual form editor (React 19) — desktop-first authoring, inspector, logic builders |
 
 `formspec-swift` — Swift package (iOS 17+, macOS 14+, visionOS) — bridges FormEngine via a WKWebView host.
 
@@ -255,11 +225,8 @@ Most spec logic has migrated to Rust and is called via PyO3 (`formspec._native`)
 ### Other
 
 ```
-site/                           Formspec.org (Astro 5.0, Tailwind CSS v4)
 docs/                           Generated HTML specs and API reference (Pandoc, pdoc, TypeDoc)
 thoughts/                       ADRs, research, and design artifacts
-wos-spec/                       WOS specs, schemas, Rust runtime & conformance (see wos-spec/README.md)
-trellis/                        Trellis integrity specs, Rust crates, vectors, and verifier (see trellis/README.md)
 
 tests/
   unit/                         Pure logic unit tests (Python)
@@ -397,4 +364,4 @@ Created by [Michael Deeb](https://www.linkedin.com/in/michael-deeb/) at [TealWol
 Open-core model — see [LICENSING.md](LICENSING.md) for details.
 
 - **Runtime** (engine, renderers, FEL, linter, schemas, specs): [Apache-2.0](LICENSE)
-- **Authoring tools** (studio, MCP, chat): [BSL 1.1](LICENSE-BSL) — converts to Apache-2.0 on April 7, 2030
+- **Authoring tools** (core, assist, changeset): [BSL 1.1](LICENSE-BSL) — converts to Apache-2.0 on April 7, 2030

@@ -32,7 +32,7 @@ revisions:
       (h) cite ADR-0074 §4 bucketed Response wire shape at IntakeHandoff / three-planes / agent-sdk seams;
       (i) IntakeHandoff = typed artifact (schema-backed); transport (gRPC vs in-process) orthogonal;
       (j) custody-hook-encoding.md added as center commitment;
-      (k) wos-server-eventstore-embedded clarified to live in wos-spec/crates/, not Trellis;
+      (k) wos-server-eventstore-embedded clarified to live in work-spec/crates/, not Trellis;
       (l) cite WOS signature.md §2.3/§2.10 for multi-party signing-order;
       (m) §S4/§S5 → §4/§5 for AI Integration citations (cosmetic);
       (n) "fel-core byte authority" → "grammar + evaluator authority";
@@ -131,7 +131,7 @@ WOS (governance semantics — owns meaning, not bytes)
 │     - ESIGN/UETA/eIDAS posture mapping (SCOPE REOPEN — currently §1.3 carves these
 │       out as out-of-scope; lead-wedge customer requires reopening)
 │   Importable as signature-profile-only deployment when wos-runtime is absent
-│   (aligns with existing Signature Shortcut Rule in wos-spec/CLAUDE.md)
+│   (aligns with existing Signature Shortcut Rule in work-spec/CLAUDE.md)
 ├── wos-runtime: in-memory + conformance oracle + browser WASM
 │   Governance overlay on agent-sdk (deontic + autonomy)
 │   Stack-coined "independent-first review protocol" (UX-enforcement of Governance §4 Review Protocols;
@@ -139,7 +139,7 @@ WOS (governance semantics — owns meaning, not bytes)
 │   Agent-action provenance via custodyHook (Kernel §10.5)
 ├── wos-server: production runtime + DurableRuntime adapter (Restate default)
 │   EventStore composes trellis-store-postgres (existing crate; rustdoc names this composer)
-│   wos-server-eventstore-embedded (NEW; lives in wos-spec/crates/, not Trellis)
+│   wos-server-eventstore-embedded (NEW; lives in work-spec/crates/, not Trellis)
 │     sibling to trellis-store-postgres + trellis-store-memory
 │     embedded posture is wos-server deployment concern, not Trellis envelope
 ├── custody-hook-encoding.md (Kernel §10.5 companion — center commitment)
@@ -221,7 +221,7 @@ PEER LIBRARY
     └── every AI feature MUST declare a degradation mode
 ```
 
-`wos-signature-emit` (a synthesis-internal proposal) is dropped. Attestation *bytes/manifests* live in Trellis (byte authority). Attestation *meaning* (signing-intent URI registry, signer-authority claim shape, legal posture mapping) lives in `wos-core` Signature Profile. The signing configuration is a **signature-profile-only deployment** that imports wos-core schemas without standing up wos-runtime governance kernel — this aligns with the existing Signature Shortcut Rule in wos-spec/CLAUDE.md ("workflow-lite paths over the same SignatureAffirmation semantics"). Preserves "one meaning of signing" per VISION §X. Three concerns, three homes; no overlapping authority and no parallel meanings.
+`wos-signature-emit` (a synthesis-internal proposal) is dropped. Attestation *bytes/manifests* live in Trellis (byte authority). Attestation *meaning* (signing-intent URI registry, signer-authority claim shape, legal posture mapping) lives in `wos-core` Signature Profile. The signing configuration is a **signature-profile-only deployment** that imports wos-core schemas without standing up wos-runtime governance kernel — this aligns with the existing Signature Shortcut Rule in work-spec/CLAUDE.md ("workflow-lite paths over the same SignatureAffirmation semantics"). Preserves "one meaning of signing" per VISION §X. Three concerns, three homes; no overlapping authority and no parallel meanings.
 
 Composition flow: Formspec authoredSignatures (S2.1.6 — consent + document-hash + intent URI populated) → WOS SignatureAffirmation provenance record (signature.md §2.8 — references attesting IdentityAttestation) → Trellis custodyHook append (Kernel §10.5 + custody-hook-encoding.md) → Trellis envelope (Core §6.6, §7) → optional Trellis Attestation extension wrap (proposed) → optional Certificate-of-completion (Trellis ADR 0007) at workflow close. Three artifacts, four edges, one byte story.
 

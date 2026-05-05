@@ -249,7 +249,7 @@ Formspec separates concerns into independent, composable sidecar documents — f
 
 ## WOS Relationship
 
-Formspec now has a sibling specification in this repository: **WOS (Workflow Orchestration Standard)**, under [`wos-spec/`](wos-spec/README.md). WOS governs what happens after data collection in rights-impacting and audit-heavy workflows: lifecycle state, actor authority, due process, structured review, AI constraints, provenance, and runtime conformance.
+Formspec now has a sibling specification in this repository: **WOS (Workflow Orchestration Standard)**, under [`work-spec/`](work-spec/README.md). WOS governs what happens after data collection in rights-impacting and audit-heavy workflows: lifecycle state, actor authority, due process, structured review, AI constraints, provenance, and runtime conformance.
 
 The relationship is deliberate:
 

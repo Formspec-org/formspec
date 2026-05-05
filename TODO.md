@@ -19,7 +19,7 @@ Docs every agent reads before any task. Drift here compounds through every futur
 
 - **Doc restructure: 9 → 7 files, single ownership** `[6 / 3 / 5]` (**30**)
   - Plan: [`thoughts/plans/2026-04-28-doc-restructure.md`](thoughts/plans/2026-04-28-doc-restructure.md).
-  - Eliminates `.claude/operating-mode.md` (→ `user_profile.md§Behavioral interrupts`) and `wos-spec/POSITIONING.md` (→ `wos-spec/CLAUDE.md§Identity`).
+  - Eliminates `.claude/operating-mode.md` (→ `user_profile.md§Behavioral interrupts`) and `work-spec/POSITIONING.md` (→ `work-spec/CLAUDE.md§Identity`).
   - Collapses VISION.md §IX/X/XI to per-spec framing pointers; promotes root `CLAUDE.md` to canonical home for Formspec heuristics (split by topic across §Decision heuristics + §Testing philosophy) and submodule conventions; adds ownership headers (Owns / Does not own / Update when) to all 7 surviving files.
   - Today: economic model restated in 4+ places; wos-server architecture in 3; per-spec commitments in both VISION.md and submodule `CLAUDE.md` files.
   - Single commit + submodule pointer bumps (per the §Submodule conventions the plan adds).
@@ -31,8 +31,8 @@ Work in the Formspec spec and runtime itself that other layers depend on. Lives 
 
 - **WOS Formspec-Coprocessor integrator alignment (P11-BL-051)** `[5 / 3 / 3]` (**15**)
   - Keep Core §2.1.6 + `schemas/.../response.schema.json` examples aligned with full Response-envelope validation (`additionalProperties: false` at root, open `data`).
-  - Ensure integrator-facing docs cite the canonical home: `wos-spec/specs/kernel/spec.md` §13 Formspec Coprocessor (post-ADR-0076 absorption 2026-04-28; was Runtime Companion §15 — companion file retained as redirect-stub).
-  - Processor/rejection/hook ordering implementation lives in [`wos-spec/TODO.md`](wos-spec/TODO.md) item `#66`.
+  - Ensure integrator-facing docs cite the canonical home: `work-spec/specs/kernel/spec.md` §13 Formspec Coprocessor (post-ADR-0076 absorption 2026-04-28; was Runtime Companion §15 — companion file retained as redirect-stub).
+  - Processor/rejection/hook ordering implementation lives in [`work-spec/TODO.md`](work-spec/TODO.md) item `#66`.
 
 - **`ResponseCorrection` event in Respondent Ledger §6** `[6 / 3 / 4]` (**24**)
   - Introduce correction event referencing prior `ResponseSubmitted.canonical_event_hash` with declared corrected-field subset.

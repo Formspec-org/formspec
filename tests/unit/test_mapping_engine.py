@@ -207,13 +207,13 @@ class TestCoerce:
 # ===========================================================================
 
 class TestValueMap:
-    def test_shorthand_map(self):
+    def test_forward_only_map(self):
         doc = _make_doc([
             {
                 'sourcePath': 'status',
                 'targetPath': 'state',
                 'transform': 'valueMap',
-                'valueMap': {'active': 'A', 'inactive': 'I'},
+                'valueMap': {'forward': {'active': 'A', 'inactive': 'I'}},
             },
         ])
         assert execute_mapping(doc, {'status': 'active'}, "forward").output['state'] == 'A'

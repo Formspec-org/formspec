@@ -9,7 +9,7 @@
   "targetSchema": {
     "format": "json",
     "name": "WOS SignatureAffirmation Evidence Seed",
-    "url": "https://wos-spec.example/schemas/signature-affirmation-evidence-seed.json"
+    "url": "https://work-spec.example/schemas/signature-affirmation-evidence-seed.json"
   },
   "rules": [
     {

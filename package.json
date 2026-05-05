@@ -9,7 +9,8 @@
   },
   "workspaces": [
     "packages/*",
-    "examples/refrences"
+    "examples/refrences",
+    "examples/react-demo"
   ],
   "scripts": {
     "build": "npm run build --workspace=@formspec-org/types && npm run build --workspace=@formspec-org/layout && npm run build --workspace=@formspec-org/engine && npm run build --workspace=@formspec-org/assist && npm run build --workspace=@formspec-org/core && npm run build --workspace=@formspec-org/webcomponent && npm run build --workspace=@formspec-org/adapters && npm run build --workspace=@formspec-org/react && npm run build --workspace=@formspec-org/chat",

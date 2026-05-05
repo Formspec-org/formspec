@@ -2,7 +2,7 @@
 
 **Status:** Implemented — all 4 crates shipped with 1:1 Formspec layering. `wos-authoring` (25+ intent helpers, `WosProject` facade), `wos-mcp` (22 tools, dual-entry dispatch), `wos-synth-core` (synthesis loop + `Prompter` trait), `wos-synth-cli` (binary wiring). Minor: `McpToolContext` wiring and `wos-synth-spike` vestige remain.
 **Date:** 2026-04-17
-**Scope:** `wos-spec/` submodule — crate architecture for authoring and AI integration
+**Scope:** `work-spec/` submodule — crate architecture for authoring and AI integration
 **Related:** [ADR 0064 (WOS granularity + AI-native positioning)](./0064-wos-granularity-and-ai-native-positioning.md), [ADR 0063 (Release trains by tier)](./0063-release-trains-by-tier.md)
 
 ## Context
@@ -115,7 +115,7 @@ Each of the four new crates (`wos-authoring`, `wos-mcp`, `wos-synth-core`, `wos-
 - Each layer independently consumable. A vendor embedding WOS authoring into their product can use `wos-authoring` directly without pulling in MCP or LLM client. A user authoring via Claude Desktop doesn't need Rust-side LLM client code at all. A benchmark harness uses `wos-synth-mock` with no network.
 - DIP is honored at crate boundaries, not feature flags. The loop crate stays pure and build-fast for tests. Provider churn (Anthropic SDK updates, new providers) doesn't cascade through the loop.
 - Mirrors parent-repo mental model. Contributors familiar with `formspec-chat` / `formspec-mcp` / `formspec-studio-core` map onto WOS crates 1:1. Muscle memory transfers.
-- Unblocks a future `wos-openai` / `wos-llamacpp` provider crate per [open-questions Q2](../../wos-spec/thoughts/archive/reviews/2026-04-16-architecture-review-open-questions.md#q2-should-wos-synth-live-in-wos-spec-or-a-sibling-repo) extraction trigger — each is ~100 LOC implementing `Prompter`.
+- Unblocks a future `wos-openai` / `wos-llamacpp` provider crate per [open-questions Q2](../../work-spec/thoughts/archive/reviews/2026-04-16-architecture-review-open-questions.md#q2-should-wos-synth-live-in-work-spec-or-a-sibling-repo) extraction trigger — each is ~100 LOC implementing `Prompter`.
 
 ### Negative
 
@@ -139,8 +139,8 @@ Each of the four new crates (`wos-authoring`, `wos-mcp`, `wos-synth-core`, `wos-
 
 ## References
 
-- Open questions Q1, Q2, Q6 — [resolved 2026-04-17](../../wos-spec/thoughts/archive/reviews/2026-04-16-architecture-review-open-questions.md).
-- Plans affected: `wos-spec/thoughts/plans/2026-04-16-wos-synth-crate.md` (rewritten), `wos-spec/thoughts/plans/2026-04-17-wos-authoring-crate.md` (new), `wos-spec/thoughts/plans/2026-04-17-wos-mcp-crate.md` (new).
+- Open questions Q1, Q2, Q6 — [resolved 2026-04-17](../../work-spec/thoughts/archive/reviews/2026-04-16-architecture-review-open-questions.md).
+- Plans affected: `work-spec/thoughts/plans/2026-04-16-wos-synth-crate.md` (rewritten), `work-spec/thoughts/plans/2026-04-17-wos-authoring-crate.md` (new), `work-spec/thoughts/plans/2026-04-17-wos-mcp-crate.md` (new).
 - Formspec prior art (verbatim layer mapping target):
   - `packages/formspec-core/README.md` — `RawProject` + IProjectCore + commands + pipeline.
   - `packages/formspec-studio-core/README.md` — `Project` class + authoring helpers over IProjectCore.

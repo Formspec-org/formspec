@@ -50,11 +50,9 @@ The following are licensed under the [Business Source License 1.1](LICENSE-BSL):
 
 **TypeScript authoring packages:**
 - `@formspec-org/core` — Project model, handlers, normalization
-- `@formspec-org/studio-core` — Authoring helpers and evaluation layer
-- `@formspec-org/studio` — Visual form designer
-- `@formspec-org/chat` — Conversational form-filling interface
-- `@formspec-org/mcp` — MCP server for AI-driven form authoring
 - `@formspec-org/assist` — Assist interoperability implementation
+
+_Note: `@formspec-org/studio-core`, `@formspec-org/studio`, `@formspec-org/chat`, and `@formspec-org/mcp` are also BSL-1.1 but live in the `formspec-studio` sibling repo._
 
 **Rust crates:**
 - `formspec-changeset` — Changeset dependency analysis

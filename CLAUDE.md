@@ -24,7 +24,7 @@ JSON-native declarative form specification with dual reference implementations (
 
 Three spec tiers (distinct from the `formspec-core` package below): **Core** (data & logic), **Theme** (presentation), **Components** (interaction). FEL (Formspec Expression Language) handles calculated values and conditional logic.
 
-Sibling layers (via `formspec-stack`): `trellis/` (event-ledger crates), `wos-spec/` (Workflow Orchestration Standard). Coupled via filesystem-sibling paths under `formspec-stack`; `formspec` carries no submodules.
+Sibling layers (via `formspec-stack`): `trellis/` (event-ledger crates), `work-spec/` (Workflow Orchestration Standard). Coupled via filesystem-sibling paths under `formspec-stack`; `formspec` carries no submodules.
 
 ## Operating Context
 
@@ -34,7 +34,7 @@ Decisions cross spec boundaries; owner preferences override generic defaults. **
 2. **[`../user_profile.md`](../user_profile.md)** — Owner's economic model (lives in `formspec-stack/`; priority = `(Importance + User Value) × Future Tech/Architectural Debt`; minutes-not-days; tokens unlimited; think big, deliver tractable; elegance + minimum conceptual debt as the optimization target), design philosophy (opinionated, closed taxonomies, named seams), terse communication, maximalist one-shot delivery.
 3. **[`../VISION.md`](../VISION.md)** — Stack-wide architectural vision (lives in `formspec-stack/`; internal companion to STACK.md): foundational Q1-Q4 answers, platform end-state commitments, trust postures, cross-spec bindings, per-spec settled commitments, the rejection list. Consult before any decision crossing more than one subsystem or spec boundary, or re-opening a foundational question.
 4. **Platform decision register** (`formspec-stack/thoughts/specs/2026-04-22-platform-decisioning-forks-and-options.md`) — End-state commitments, leans, forks, kill criteria. Consult before changing cross-layer architecture, proof posture, signing semantics, custody, durable-runtime assumptions, or product-vs-engineering proof claims.
-5. **[`../flowspec-server/crates/wos-server/VISION.md`](../flowspec-server/crates/wos-server/VISION.md)** — WOS Server reference architecture: crate cluster, ports/adapters, EventStore composing Trellis crates, per-class client-side decryption, wos-server-specific invariants, build sequence DAG. Consult before any wos-server architectural decision. (Path is relative from `formspec-stack` root, where `wos-spec` is a sibling. Stack-wide trust postures and cross-spec bindings live in `/VISION.md`.)
+5. **[`../workspec-server/crates/wos-server/VISION.md`](../workspec-server/crates/wos-server/VISION.md)** — WOS Server reference architecture: crate cluster, ports/adapters, EventStore composing Trellis crates, per-class client-side decryption, wos-server-specific invariants, build sequence DAG. Consult before any wos-server architectural decision. (Path is relative from `formspec-stack` root, where `work-spec` is a sibling. Stack-wide trust postures and cross-spec bindings live in `/VISION.md`.)
 
 Public-facing stack framing (partners, procurement, investors): [`../STACK.md`](../STACK.md) (lives in `formspec-stack/`). Lookup-only.
 
@@ -110,7 +110,7 @@ Full target list: [`Makefile`](Makefile). Key invocations:
 - `cargo nextest run -p <crate> --test <integration_file>` — single integration-test file under `tests/`.
 - `cargo nextest run -E 'test(/<regex>/)'` — filter expression across the workspace.
 
-Sibling layers (`trellis/`, `wos-spec/` — accessed via `formspec-stack`) follow the same rule — `cargo nextest run --workspace` from the layer root.
+Sibling layers (`trellis/`, `work-spec/` — accessed via `formspec-stack`) follow the same rule — `cargo nextest run --workspace` from the layer root.
 
 ## Package layering
 
@@ -123,8 +123,7 @@ Enforced by `npm run check:deps`. Layer N may depend only on layers strictly bel
 | 2 | `formspec-webcomponent`, `formspec-core` |
 | 3 | `formspec-adapters`, `formspec-studio-core` |
 | 4 | `formspec-mcp` |
-| 5 | `formspec-chat` |
-| 6 | `formspec-studio` |
+| 5 | `formspec-studio` |
 
 Fence checker: [`scripts/check-dep-fences.mjs`](scripts/check-dep-fences.mjs).
 

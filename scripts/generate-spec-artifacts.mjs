@@ -623,7 +623,7 @@ function main() {
     specs = config.specs.filter((e) => path.resolve(ROOT_DIR, e.spec) === onlyAbs || e.spec === onlyRaw);
     if (specs.length === 0) {
       console.error(
-        `No config entry matches --only=${onlyRaw} (use a path like wos-spec/specs/kernel/spec.md)`
+        `No config entry matches --only=${onlyRaw} (use a path like work-spec/specs/kernel/spec.md)`
       );
       process.exit(1);
     }

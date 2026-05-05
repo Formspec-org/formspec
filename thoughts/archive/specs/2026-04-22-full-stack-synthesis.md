@@ -26,8 +26,8 @@ sources:
   - thoughts/adr/0056-click-to-sign-attestation-component.md
   - thoughts/adr/0059-unified-ledger-as-canonical-event-store.md
   - trellis/thoughts/formspec/adrs/0059-unified-ledger-as-canonical-event-store.md
-  - wos-spec/thoughts/plans/0059-unified-ledger-as-canonical-event-store.md
-  - wos-spec/research/compass_artifact_wf-91189436-c8d3-4e27-9159-57565301cb69_text_markdown.md
+  - work-spec/thoughts/plans/0059-unified-ledger-as-canonical-event-store.md
+  - work-spec/research/compass_artifact_wf-91189436-c8d3-4e27-9159-57565301cb69_text_markdown.md
 ---
 
 # Stack synthesis — integrity narrative, build map, and forks (2026-04-22)
@@ -84,13 +84,13 @@ Older marketing/status prose can lag **[`trellis/ratification/`](../../../trelli
 |-------|---------------------|--------|
 | **Formspec engine** | `packages/formspec-engine/tests/`; kernel deployable | TS `FormEngine` + Rust/WASM/Python paths |
 | **Formspec webcomponent** | `packages/formspec-webcomponent/tests/` | `<formspec-render>` working |
-| **WOS** | `wos-lint` `ALL_LINT_RULES` (`wos-spec/crates/wos-lint/src/rules/registry.rs`); `wos-spec/fixtures/`; `SIG-*` in `wos-spec/crates/wos-conformance/tests/fixtures/` | 13 crates; T1–T3 complete per `wos-spec/COMPLETED.md`; T4 WOS-side done, **cross-repo** T4 glue still in flight |
+| **WOS** | `wos-lint` `ALL_LINT_RULES` (`work-spec/crates/wos-lint/src/rules/registry.rs`); `work-spec/fixtures/`; `SIG-*` in `work-spec/crates/wos-conformance/tests/fixtures/` | 13 crates; T1–T3 complete per `work-spec/COMPLETED.md`; T4 WOS-side done, **cross-repo** T4 glue still in flight |
 | **Trellis** | `trellis/fixtures/vectors/`; G-5 stranger corpus | Phase 1 ratified posture; **45/45** stranger pass at last `trellis-py` BYTE-MATCH report — corpus has since gained more vector dirs |
 | **E2E** | `tests/e2e/browser/**/*.spec.ts` + `packages/formspec-studio/tests/e2e/playwright/` + other package Playwright | Browser ↔ server paths exercised |
 
 **Scale:** Rust dominates (Formspec engine + WOS + Trellis); Studio adds large TS surface. **Not a prototype.**
 
-**Drift guard:** Inline LOC counts rot. **`ct_merkle`:** recommended Merkle posture; **not** yet listed in root or `wos-spec` workspace `Cargo.toml` (Trellis is not a Rust workspace root here).
+**Drift guard:** Inline LOC counts rot. **`ct_merkle`:** recommended Merkle posture; **not** yet listed in root or `work-spec` workspace `Cargo.toml` (Trellis is not a Rust workspace root here).
 
 ### 3.2 Decided enough to build on
 
@@ -98,7 +98,7 @@ Canonical framing: **[`STACK.md`](../../../STACK.md)** and **[`.claude/vision-mo
 
 ### 3.3 Recently landed (snapshot)
 
-- **WOS-T1** `custodyHook` ([WOS ADR 0061 — custody hook wire](../../../wos-spec/thoughts/adr/0061-custody-hook-trellis-wire-format.md), TypeIDs).
+- **WOS-T1** `custodyHook` ([WOS ADR 0061 — custody hook wire](../../../work-spec/thoughts/adr/0061-custody-hook-trellis-wire-format.md), TypeIDs).
 - **WOS-T3** Restate selected.
 - **WOS-T4** Signature Profile WOS-side: spec, schema, `SIG-*` lint + fixtures.
 - **ProvenanceKind** tier-typing (#22a).
@@ -162,13 +162,13 @@ ADR-0056 (`ClickToSign`) stays **Tier 3** — group of normal fields, optional `
 
 **Sequencing:** ship **export + verifier + custody** first; unify taxonomy and append API before swapping immutable stores; **do not** populate reserved federation slots early (ADR 0003).
 
-Cross-link [WOS 0059 plan](../../../wos-spec/thoughts/plans/0059-unified-ledger-as-canonical-event-store.md) and [monorepo ADR 0059](../../../thoughts/adr/0059-unified-ledger-as-canonical-event-store.md). **Trellis mirror** [`trellis/thoughts/formspec/adrs/0059-unified-ledger-as-canonical-event-store.md`](../../../trellis/thoughts/formspec/adrs/0059-unified-ledger-as-canonical-event-store.md) may lag — **canonical narrative** for the parent repo is the monorepo ADR unless the submodule promotes parity.
+Cross-link [WOS 0059 plan](../../../work-spec/thoughts/plans/0059-unified-ledger-as-canonical-event-store.md) and [monorepo ADR 0059](../../../thoughts/adr/0059-unified-ledger-as-canonical-event-store.md). **Trellis mirror** [`trellis/thoughts/formspec/adrs/0059-unified-ledger-as-canonical-event-store.md`](../../../trellis/thoughts/formspec/adrs/0059-unified-ledger-as-canonical-event-store.md) may lag — **canonical narrative** for the parent repo is the monorepo ADR unless the submodule promotes parity.
 
 ---
 
 ## 7. Compass research and WOS depth
 
-The [compass artifact](../../../wos-spec/research/compass_artifact_wf-91189436-c8d3-4e27-9159-57565301cb69_text_markdown.md) is **not normative** but informs WOS 1.0 depth:
+The [compass artifact](../../../work-spec/research/compass_artifact_wf-91189436-c8d3-4e27-9159-57565301cb69_text_markdown.md) is **not normative** but informs WOS 1.0 depth:
 
 - **Hybrid layered model** — statechart lifecycle + DMN-style decisions + human-task layer + case file + CloudEvents integration + PROV-shaped audit + abstract durable guarantees.
 - **Traps to avoid** — BPMN gigantism, transport coupling (BPEL lesson), interchange without execution (XPDL lesson), flowchart-only rigidity for investigations.
@@ -290,7 +290,7 @@ Milestones **B** and **C** prove the technical claim. [Product vision](../../../
 | T5 | **0070** `stalled` remediation | Before `DurableRuntime` prod |
 | T6 | **0062** `RawProject` middleware | Before Studio ship |
 
-**Staleness trap:** archives under `trellis/thoughts/archive/`, older unified-ledger docs, some `wos-spec/thoughts/plans` still cite **immudb**, **Temporal**, **JCS** — read next to [`trellis/ratification/`](../../../trellis/ratification/) and §13.4.
+**Staleness trap:** archives under `trellis/thoughts/archive/`, older unified-ledger docs, some `work-spec/thoughts/plans` still cite **immudb**, **Temporal**, **JCS** — read next to [`trellis/ratification/`](../../../trellis/ratification/) and §13.4.
 
 ---
 
@@ -314,7 +314,7 @@ Milestones **B** and **C** prove the technical claim. [Product vision](../../../
 
 **Proposed:** **0066–0071**.
 
-**Numbering collisions:** **`0061`** — WOS **custody hook → Trellis** ([`0061-custody-hook-trellis-wire-format.md`](../../../wos-spec/thoughts/adr/0061-custody-hook-trellis-wire-format.md); load-bearing for T1) vs Formspec **authoring runtime** (`thoughts/adr/0061-current-state-*`; table row below). **`0062`** — Formspec **post-split follow-ups** ([`0062-post-split-follow-ups.md`](../../../thoughts/adr/0062-post-split-follow-ups.md)) vs WOS **Signature Profile workflow** ([`0062-signature-profile-workflow-semantics.md`](../../../wos-spec/thoughts/adr/0062-signature-profile-workflow-semantics.md)).
+**Numbering collisions:** **`0061`** — WOS **custody hook → Trellis** ([`0061-custody-hook-trellis-wire-format.md`](../../../work-spec/thoughts/adr/0061-custody-hook-trellis-wire-format.md); load-bearing for T1) vs Formspec **authoring runtime** (`thoughts/adr/0061-current-state-*`; table row below). **`0062`** — Formspec **post-split follow-ups** ([`0062-post-split-follow-ups.md`](../../../thoughts/adr/0062-post-split-follow-ups.md)) vs WOS **Signature Profile workflow** ([`0062-signature-profile-workflow-semantics.md`](../../../work-spec/thoughts/adr/0062-signature-profile-workflow-semantics.md)).
 
 | ADR | Title | Status | Cross-layer? | Blocks / blocked by |
 |-----|-------|--------|----------------|---------------------|
@@ -361,9 +361,9 @@ Trellis **F6** + **O-3/O-4/O-5**; model-check `tr-core-*`. WOS **sidecar** gaps,
 | [`thoughts/adr/0061-current-state-authoring-runtime.md`](../../../thoughts/adr/0061-current-state-authoring-runtime.md) | Pre-split package | `formspec-core` + `formspec-studio-core` |
 | [`thoughts/adr/0061-current-state-authoring-runtime-tasks.md`](../../../thoughts/adr/0061-current-state-authoring-runtime-tasks.md) | Pre-split | Same |
 | [`CLAUDE.md`](../../../CLAUDE.md), [`thoughts/README.md`](../../README.md) | “Next free id: **0061**” while **0061–0072** exist on disk | Refresh ADR index lines after each ADR batch |
-| [`wos-spec/thoughts/archive/drafts/wos-core-v2.md`](../../../wos-spec/thoughts/archive/drafts/wos-core-v2.md) … [`v6`](../../../wos-spec/thoughts/archive/drafts/wos-core-v6.md); [`v7-kernel`](../../../wos-spec/thoughts/archive/drafts/wos-core-v7-kernel.md), [`v7-proposal`](../../../wos-spec/thoughts/archive/drafts/wos-core-v7-proposal.md) | Drafts | Historical; no single `wos-core-v7.md` |
-| [`wos-spec/thoughts/plans/0059-unified-ledger-as-canonical-event-store.md`](../../../wos-spec/thoughts/plans/0059-unified-ledger-as-canonical-event-store.md) | immudb/Trillian | Postgres + `ct_merkle` |
-| [`wos-spec/thoughts/reviews/2026-04-21-wos-t3-durable-runtime-temporal-restate-spike.md`](../../../wos-spec/thoughts/reviews/2026-04-21-wos-t3-durable-runtime-temporal-restate-spike.md) | Title Temporal-Restate | Restate |
+| [`work-spec/thoughts/archive/drafts/wos-core-v2.md`](../../../work-spec/thoughts/archive/drafts/wos-core-v2.md) … [`v6`](../../../work-spec/thoughts/archive/drafts/wos-core-v6.md); [`v7-kernel`](../../../work-spec/thoughts/archive/drafts/wos-core-v7-kernel.md), [`v7-proposal`](../../../work-spec/thoughts/archive/drafts/wos-core-v7-proposal.md) | Drafts | Historical; no single `wos-core-v7.md` |
+| [`work-spec/thoughts/plans/0059-unified-ledger-as-canonical-event-store.md`](../../../work-spec/thoughts/plans/0059-unified-ledger-as-canonical-event-store.md) | immudb/Trillian | Postgres + `ct_merkle` |
+| [`work-spec/thoughts/reviews/2026-04-21-wos-t3-durable-runtime-temporal-restate-spike.md`](../../../work-spec/thoughts/reviews/2026-04-21-wos-t3-durable-runtime-temporal-restate-spike.md) | Title Temporal-Restate | Restate |
 
 ---
 
@@ -393,6 +393,6 @@ Trellis **F6** + **O-3/O-4/O-5**; model-check `tr-core-*`. WOS **sidecar** gaps,
 4. [Phase-1 MVP format ADRs](../../../trellis/thoughts/specs/2026-04-20-trellis-phase-1-mvp-principles-and-format-adrs.md)
 5. [Technology survey](../../../trellis/thoughts/research/2026-04-10-unified-ledger-technology-survey.md) + [ledger risk reduction](../../../trellis/thoughts/research/ledger-risk-reduction.md)
 6. ADRs [0054](../../../thoughts/adr/0054-privacy-preserving-client-server-ledger-chain.md), [0056](../../../thoughts/adr/0056-click-to-sign-attestation-component.md), [0059](../../../thoughts/adr/0059-unified-ledger-as-canonical-event-store.md)
-7. [Compass workflow research](../../../wos-spec/research/compass_artifact_wf-91189436-c8d3-4e27-9159-57565301cb69_text_markdown.md)
+7. [Compass workflow research](../../../work-spec/research/compass_artifact_wf-91189436-c8d3-4e27-9159-57565301cb69_text_markdown.md)
 
 **Maintain with:** vision-model, STACK, submodule ratification. Refresh **§13** after ADR moves; refresh **§3** if automated LOC/lint stats return.

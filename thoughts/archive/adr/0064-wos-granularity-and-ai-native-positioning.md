@@ -2,12 +2,12 @@
 
 **Status:** Superseded by [ADR 0076](0076-product-tier-consolidation.md) — D-1 (18 fine-grained schemas) collapsed to 1 core + 2 sidecars; D-3 (named sidecars) restructured into embedded blocks; D-4 (companion split) absorbed into single `kernel/spec.md` (grew 741 → 2196 lines). D-2 (AI normative layer) survives structurally intact: `actorExtension` seam, `agents[]` block, 53 codebase references.
 **Date:** 2026-04-16
-**Scope:** `wos-spec/` submodule
+**Scope:** `work-spec/` submodule
 **Supersedes:** prior-reviewer recommendations to collapse schemas and demote the AI layer (see §7 of the handoff reference below)
 
 ## Context
 
-An external architecture review of `wos-spec/` ([`architecture-review-handoff.md`](../../wos-spec/thoughts/archive/reviews/2026-04-16-architecture-review-handoff.md)) opened with two structural critiques and retracted both after maintainer pushback:
+An external architecture review of `work-spec/` ([`architecture-review-handoff.md`](../../work-spec/thoughts/archive/reviews/2026-04-16-architecture-review-handoff.md)) opened with two structural critiques and retracted both after maintainer pushback:
 
 1. **"Collapse 18 schemas to 4."** The reviewer read the fine-grained schema split (kernel / companions / governance / ai / advanced / profiles / sidecars / assurance, 18 files total) as bloat.
 2. **"Demote AI from normative to informative."** The reviewer read the 666-line AI Integration spec as scope creep from a governance standard.
@@ -18,7 +18,7 @@ The handoff document itself covers the full review (both the retracted critiques
 
 ## Decision
 
-The following four architectural properties of `wos-spec/` are accepted as load-bearing and MUST NOT be restructured without a superseding ADR.
+The following four architectural properties of `work-spec/` are accepted as load-bearing and MUST NOT be restructured without a superseding ADR.
 
 ### D-1. Fine-grained schemas are load-bearing for the development loop
 
@@ -34,7 +34,7 @@ The granularity is a feature of the methodology, not incidental overhead. Any fu
 
 ### D-2. AI Integration stays a first-class normative layer
 
-The AI Integration spec (`specs/ai/*`) defines agents as first-class runtime actors via the kernel's `actorExtension` seam — autonomy levels, confidence gates, deontic constraints, drift monitoring. This is one of the two load-bearing claims behind WOS (see [POSITIONING.md](../../wos-spec/POSITIONING.md)): agents as runtime actors (Claim B). Demoting it to informative would undercut the pitch and the competitive differentiation against BPMN and SCXML, neither of which can retrofit the seam.
+The AI Integration spec (`specs/ai/*`) defines agents as first-class runtime actors via the kernel's `actorExtension` seam — autonomy levels, confidence gates, deontic constraints, drift monitoring. This is one of the two load-bearing claims behind WOS (see [POSITIONING.md](../../work-spec/POSITIONING.md)): agents as runtime actors (Claim B). Demoting it to informative would undercut the pitch and the competitive differentiation against BPMN and SCXML, neither of which can retrofit the seam.
 
 Layer 3 (advanced governance, equity, formal verification) remains appropriately labelled as research-grade optional — that disclosure is a feature of piecemeal adoption, not a reason to demote the AI layer beside it.
 
@@ -52,7 +52,7 @@ Layer 3 (advanced governance, equity, formal verification) remains appropriately
 
 - Future reviewers have a written anchor for the "why 18 schemas, why AI normative" decisions. The answer is not "legacy" — it is "the methodology requires it."
 - Plans and backlog items derived from the handoff (the §4 hygiene fixes and §5 LLM-authoring work) inherit this framing: they *extend* the granularity and AI-nativity, they do not attempt to roll it back.
-- The Claim A / Claim B separation in [POSITIONING.md](../../wos-spec/POSITIONING.md) and [README.md](../../wos-spec/README.md) is consistent with D-2: Claim A (LLM-authored workflows) leverages the schema granularity D-1 mandates; Claim B (agent runtime actors) depends on the AI layer D-2 preserves.
+- The Claim A / Claim B separation in [POSITIONING.md](../../work-spec/POSITIONING.md) and [README.md](../../work-spec/README.md) is consistent with D-2: Claim A (LLM-authored workflows) leverages the schema granularity D-1 mandates; Claim B (agent runtime actors) depends on the AI layer D-2 preserves.
 
 **Negative:**
 
@@ -71,9 +71,9 @@ Layer 3 (advanced governance, equity, formal verification) remains appropriately
 
 ## References
 
-- [architecture-review-handoff.md](../../wos-spec/thoughts/archive/reviews/2026-04-16-architecture-review-handoff.md) — the review that prompted this ADR
-- [POSITIONING.md](../../wos-spec/POSITIONING.md) — Claim A / Claim B framing
-- [README.md](../../wos-spec/README.md) — public-facing two-line pitch
-- `wos-spec/LINT-MATRIX.md` — rule registry that benefits from D-1
-- `wos-spec/specs/ai/` — the AI Integration layer preserved by D-2
-- `wos-spec/specs/companions/{lifecycle-detail,runtime}.md` — the split preserved by D-4
+- [architecture-review-handoff.md](../../work-spec/thoughts/archive/reviews/2026-04-16-architecture-review-handoff.md) — the review that prompted this ADR
+- [POSITIONING.md](../../work-spec/POSITIONING.md) — Claim A / Claim B framing
+- [README.md](../../work-spec/README.md) — public-facing two-line pitch
+- `work-spec/LINT-MATRIX.md` — rule registry that benefits from D-1
+- `work-spec/specs/ai/` — the AI Integration layer preserved by D-2
+- `work-spec/specs/companions/{lifecycle-detail,runtime}.md` — the split preserved by D-4
