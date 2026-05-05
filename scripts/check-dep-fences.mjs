@@ -16,10 +16,10 @@ const LAYERS = {
   '@formspec-org/core':         2,
   '@formspec-org/react':        2,
   '@formspec-org/adapters':     3,
-  '@formspec-org/studio-core':  3,
-  '@formspec-org/mcp':          4,
   '@formspec-org/chat':         5,
-  '@formspec-org/studio':       6,
+  // @formspec-org/studio-core, /mcp, /studio extracted to sibling
+  // formspec-studio repo (2026-05-04). Layer enforcement for those
+  // packages now lives in formspec-studio/.
 };
 
 const PACKAGES_DIR = new URL('../packages/', import.meta.url).pathname;

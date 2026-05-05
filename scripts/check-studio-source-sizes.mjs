@@ -6,9 +6,11 @@ import { fileURLToPath } from 'node:url';
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
 const THRESHOLD = parseInt(process.env.STUDIO_FILE_LINE_WARN ?? '1000', 10);
 
+// Studio source moved to sibling formspec-studio repo on 2026-05-04. The size
+// advisory now scans the sibling repo when it's checked out under formspec-stack.
 const SCAN_ROOTS = [
-  join(ROOT, 'packages/formspec-studio/src'),
-  join(ROOT, 'packages/formspec-studio-core/src'),
+  join(ROOT, '../formspec-studio/packages/formspec-studio/src'),
+  join(ROOT, '../formspec-studio/packages/formspec-studio-core/src'),
 ];
 
 const EXT = new Set(['.ts', '.tsx']);
