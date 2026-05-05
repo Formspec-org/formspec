@@ -1,7 +1,7 @@
+# formspec-local cargo config.
+# Stack-wide settings (sccache wrapper, incremental build) live in
+# `formspec-stack/.cargo/config.toml` and merge automatically when cargo
+# walks parent directories.
+
 [target.wasm32-unknown-unknown]
 rustflags = ['--cfg', 'getrandom_backend="wasm_js"']
-
-[build]
-# Favor faster local iteration in large workspaces.
-incremental = true
-rustc-wrapper = "sccache"
