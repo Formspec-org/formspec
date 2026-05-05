@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-**New agent? Read [`../operating-mode.md`](../operating-mode.md) and [`../user_profile.md`](../user_profile.md) (in `formspec-stack/`) first. Spec questions → `formspec-specs` skill. Navigation → [`filemap.json`](filemap.json).**
+**New agent? Read [`../.claude/operating-mode.md`](../.claude/operating-mode.md) and [`../.claude/user_profile.md`](../.claude/user_profile.md) (in `formspec-stack/.claude/`) first. Spec questions → `formspec-specs` skill. Navigation → [`filemap.json`](filemap.json).**
 
 ## HIGH PRIORITY — Semantic density
 
@@ -30,19 +30,19 @@ Sibling layers (via `formspec-stack`): `trellis/` (event-ledger crates), `work-s
 
 Decisions cross spec boundaries; owner preferences override generic defaults. **Items 1-2 are universal — always read them, every task, before anything else.** Items 3-5 are topical gates — consult based on the decision in front of you, after 1-2 have framed your reading.
 
-1. **[`../operating-mode.md`](../operating-mode.md)** — Behavioral interrupts (lives in `formspec-stack/`). Default agent training pushes toward time-estimation, phased delivery, option-proposing, hedging; this file interrupts those patterns. Read first.
-2. **[`../user_profile.md`](../user_profile.md)** — Owner's economic model (lives in `formspec-stack/`; priority = `(Importance + User Value) × Future Tech/Architectural Debt`; minutes-not-days; tokens unlimited; think big, deliver tractable; elegance + minimum conceptual debt as the optimization target), design philosophy (opinionated, closed taxonomies, named seams), terse communication, maximalist one-shot delivery.
+1. **[`../.claude/operating-mode.md`](../.claude/operating-mode.md)** — Behavioral interrupts (lives in `formspec-stack/.claude/`). Default agent training pushes toward time-estimation, phased delivery, option-proposing, hedging; this file interrupts those patterns. Read first.
+2. **[`../.claude/user_profile.md`](../.claude/user_profile.md)** — Owner's economic model (lives in `formspec-stack/.claude/`; priority = `(Importance + User Value) × Future Tech/Architectural Debt`; minutes-not-days; tokens unlimited; think big, deliver tractable; elegance + minimum conceptual debt as the optimization target), design philosophy (opinionated, closed taxonomies, named seams), terse communication, maximalist one-shot delivery.
 3. **[`../VISION.md`](../VISION.md)** — Stack-wide architectural vision (lives in `formspec-stack/`; internal companion to STACK.md): foundational Q1-Q4 answers, platform end-state commitments, trust postures, cross-spec bindings, per-spec settled commitments, the rejection list. Consult before any decision crossing more than one subsystem or spec boundary, or re-opening a foundational question.
 4. **Platform decision register** (`formspec-stack/thoughts/specs/2026-04-22-platform-decisioning-forks-and-options.md`) — End-state commitments, leans, forks, kill criteria. Consult before changing cross-layer architecture, proof posture, signing semantics, custody, durable-runtime assumptions, or product-vs-engineering proof claims.
 5. **[`../workspec-server/crates/wos-server/VISION.md`](../workspec-server/crates/wos-server/VISION.md)** — WOS Server reference architecture: crate cluster, ports/adapters, EventStore composing Trellis crates, per-class client-side decryption, wos-server-specific invariants, build sequence DAG. Consult before any wos-server architectural decision. (Path is relative from `formspec-stack` root, where `work-spec` is a sibling. Stack-wide trust postures and cross-spec bindings live in `/VISION.md`.)
 
 Public-facing stack framing (partners, procurement, investors): [`../STACK.md`](../STACK.md) (lives in `formspec-stack/`). Lookup-only.
 
-**Conflict resolution:** [`../operating-mode.md`](../operating-mode.md).
+**Conflict resolution:** [`../.claude/operating-mode.md`](../.claude/operating-mode.md).
 
 ## Development Philosophy — Formspec-specific
 
-Frame lives in `formspec-stack/user_profile.md` and `formspec-stack/operating-mode.md`. Formspec additions:
+Frame lives in `formspec-stack/.claude/user_profile.md` and `formspec-stack/.claude/operating-mode.md`. Formspec additions:
 
 - **The spec is the source of truth — directional, not infallible.** Pipeline: ADR/thought → spec → schema → feature/lint matrix → lint tools → runtimes. Each layer derives from or validates against the one above. **Don't drift downstream silently** (no `choicesFrom` when `OptionSet` exists; non-spec code paths leak into core structs, demand `None` initializers in every test, and outlive their use case). **Do let discoveries flow back upstream** — when schema/lint/runtime work reveals something the spec missed, update the spec first, then regenerate everything below. That's discovery, not drift. **The test for any change:** does it add user value, or is it change/hallucination? User value earns its way into the spec; hallucination gets reverted. The economic frame: dev/code/time is cheap, so updating the spec + propagating is cheap; silent disagreement between layers is architectural debt, the only expensive thing. When unclear, consult `formspec-specs:spec-expert`.
 - **Extension points where the spec demands them, nowhere else.** Build the seams the spec calls for; do not manufacture new ones.
