@@ -158,7 +158,19 @@ pub fn analyze_fel(expression: &str) -> FelAnalysis {
 fn check_function_arity(calls: &[(String, usize)]) -> Vec<FelAnalysisWarning> {
     let catalog: HashMap<&str, (usize, Option<usize>)> = builtin_function_catalog()
         .iter()
-        .map(|entry| (entry.name, parse_signature_arity(entry.signature)))
+        .map(|entry| {
+            let min = entry
+                .parameters
+                .iter()
+                .filter(|p| p.required && !p.variadic)
+                .count();
+            let max = if entry.parameters.iter().any(|p| p.variadic) {
+                None
+            } else {
+                Some(entry.parameters.len())
+            };
+            (entry.name, (min, max))
+        })
         .collect();
 
     let mut warnings = Vec::new();
