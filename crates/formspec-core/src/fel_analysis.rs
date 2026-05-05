@@ -8,10 +8,11 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
 use std::collections::{HashMap, HashSet};
+use std::sync::LazyLock;
 
 use fel_core::ast::{BinaryOp, Expr, PathSegment, UnaryOp};
 use fel_core::extensions::builtin_function_catalog;
-use fel_core::{Error, parse};
+use fel_core::{Error, FelType, parse};
 use serde_json::{Value, json};
 
 /// Callback that rewrites a single string reference, returning `None` to keep the original.
@@ -167,6 +168,33 @@ enum CoarseType {
     Unknown,
 }
 
+/// Built-in function name → declared return type, sourced from the FEL catalog.
+///
+/// Lazily materialized so the lookup is O(1) per `FunctionCall` during analysis.
+/// The catalog is the single source of truth — adding a new builtin to fel-core
+/// automatically widens this map.
+static CATALOG_RETURNS: LazyLock<HashMap<&'static str, FelType>> = LazyLock::new(|| {
+    builtin_function_catalog()
+        .iter()
+        .map(|e| (e.name, e.returns))
+        .collect()
+});
+
+/// Map a fel-core `FelType` to this module's coarser typing taxonomy.
+///
+/// `CoarseType` collapses `Date`/`DateTime`/`Time` (all date-shaped) and treats
+/// `Array`/`Any`/`Null` as `Unknown` (no useful comparison-time signal).
+fn fel_type_to_coarse(t: FelType) -> CoarseType {
+    match t {
+        FelType::String => CoarseType::String,
+        FelType::Number => CoarseType::Number,
+        FelType::Boolean => CoarseType::Boolean,
+        FelType::Date | FelType::DateTime | FelType::Time => CoarseType::Date,
+        FelType::Money => CoarseType::Money,
+        FelType::Array | FelType::Any | FelType::Null => CoarseType::Unknown,
+    }
+}
+
 /// Infer the coarse type of an expression using field data types, literal types,
 /// and known function return types. Returns `Unknown` when the type is ambiguous
 /// or depends on runtime values.
@@ -201,19 +229,11 @@ fn infer_coarse_type(expr: &Expr, field_types: &HashMap<String, String>) -> Coar
             }
         }
 
-        Expr::FunctionCall { name, .. } => match name.as_str() {
-            "today" | "now" | "date" | "dateAdd" => CoarseType::Date,
-            "moneyAmount" | "number" | "sum" | "count" | "avg" | "min" | "max" | "length"
-            | "round" | "floor" | "ceil" | "abs" | "power" | "year" | "month" | "day" | "hours"
-            | "minutes" | "seconds" | "dateDiff" | "timeDiff" => CoarseType::Number,
-            "money" | "moneyAdd" | "moneySum" => CoarseType::Money,
-            "contains" | "startsWith" | "endsWith" | "matches" | "empty" | "present"
-            | "isNumber" | "isString" | "isDate" | "isNull" | "selected" | "valid" | "relevant"
-            | "readonly" | "required" => CoarseType::Boolean,
-            "string" | "upper" | "lower" | "trim" | "substring" | "replace" | "format"
-            | "moneyCurrency" | "typeOf" | "locale" | "time" => CoarseType::String,
-            _ => CoarseType::Unknown,
-        },
+        Expr::FunctionCall { name, .. } => CATALOG_RETURNS
+            .get(name.as_str())
+            .copied()
+            .map(fel_type_to_coarse)
+            .unwrap_or(CoarseType::Unknown),
 
         Expr::UnaryOp {
             op: UnaryOp::Neg, ..
