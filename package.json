@@ -12,7 +12,7 @@
     "examples/refrences"
   ],
   "scripts": {
-    "build": "npm run build --workspace=@formspec-org/types && npm run build --workspace=@formspec-org/layout && npm run build --workspace=@formspec-org/engine && npm run build --workspace=@formspec-org/assist && npm run build --workspace=@formspec-org/core && npm run build --workspace=@formspec-org/webcomponent && npm run build --workspace=@formspec-org/adapters",
+    "build": "npm run build --workspace=@formspec-org/types && npm run build --workspace=@formspec-org/layout && npm run build --workspace=@formspec-org/engine && npm run build --workspace=@formspec-org/assist && npm run build --workspace=@formspec-org/core && npm run build --workspace=@formspec-org/webcomponent && npm run build --workspace=@formspec-org/adapters && npm run build --workspace=@formspec-org/react && npm run build --workspace=@formspec-org/chat",
     "test:serve": "vite --port 8080 --host 127.0.0.1",
     "start:stories": "npm run dev --workspace=formspec-stories",
     "storybook": "storybook dev -p 6006",
