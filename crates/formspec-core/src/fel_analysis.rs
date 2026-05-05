@@ -89,7 +89,9 @@ pub fn analyze_fel(expression: &str) -> FelAnalysis {
                 &mut function_calls,
             );
 
-            let warnings = check_function_arity(&function_calls);
+            let mut warnings = check_function_arity(&function_calls);
+            let empty_field_types: HashMap<String, String> = HashMap::new();
+            check_parameter_types(&expr, &empty_field_types, &mut warnings);
 
             FelAnalysis {
                 valid: true,
@@ -361,22 +363,168 @@ fn check_comparison_types(
     }
 }
 
+/// Check each `FunctionCall` arg against its declared `fel_type` in the catalog.
+///
+/// Emits a warning for concrete type mismatches (both sides known, different).
+/// Skips `Any` parameters, unknown inferred types, and args past a variadic param.
+/// Special-cases enum-restricted string params (e.g. dateAdd/dateDiff `unit`):
+/// if the arg is a string literal, validates it against `allowed_values`.
+fn check_parameter_types(
+    expr: &Expr,
+    field_types: &HashMap<String, String>,
+    warnings: &mut Vec<FelAnalysisWarning>,
+) {
+    match expr {
+        Expr::FunctionCall { name, args } => {
+            // Look up catalog entry by name.
+            if let Some(entry) = builtin_function_catalog().iter().find(|e| e.name == name.as_str()) {
+                // Find the index of the first variadic param (if any).
+                let variadic_pos = entry.parameters.iter().position(|p| p.variadic);
+
+                for (i, arg) in args.iter().enumerate() {
+                    // Stop pairing once we hit a variadic param position.
+                    if variadic_pos.is_some_and(|vp| i >= vp) {
+                        // Past variadic — no per-position check possible.
+                        break;
+                    }
+
+                    let Some(param) = entry.parameters.get(i) else {
+                        break;
+                    };
+
+                    let pos = i + 1; // 1-based for messages
+
+                    // Skip Any params — they accept everything.
+                    if param.fel_type == FelType::Any {
+                        continue;
+                    }
+
+                    // Enum-restricted string param: if arg is a literal, validate against allowed_values.
+                    if param.fel_type == FelType::String
+                        && let Some(allowed) = param.allowed_values
+                    {
+                        if let Expr::String(s) = arg
+                            && !allowed.contains(&s.as_str())
+                        {
+                            let vals = allowed.join(", ");
+                            warnings.push(FelAnalysisWarning {
+                                message: format!(
+                                    "{name}() arg {pos} value '{s}' not in allowed values [{vals}]"
+                                ),
+                            });
+                        }
+                        // Non-literal arg against enum param: can't statically check, skip.
+                        continue;
+                    }
+
+                    // Standard coarse-type mismatch check.
+                    let inferred = infer_coarse_type(arg, field_types);
+                    let expected = fel_type_to_coarse(param.fel_type);
+
+                    if expected != CoarseType::Unknown
+                        && inferred != CoarseType::Unknown
+                        && inferred != expected
+                    {
+                        let expected_str = coarse_type_name(expected);
+                        let inferred_str = coarse_type_name(inferred);
+                        warnings.push(FelAnalysisWarning {
+                            message: format!(
+                                "{name}() arg {pos} expected {expected_str}, got {inferred_str}"
+                            ),
+                        });
+                    }
+                }
+            }
+
+            // Recurse into args regardless.
+            for arg in args {
+                check_parameter_types(arg, field_types, warnings);
+            }
+        }
+        Expr::BinaryOp { left, right, .. } => {
+            check_parameter_types(left, field_types, warnings);
+            check_parameter_types(right, field_types, warnings);
+        }
+        Expr::UnaryOp { operand, .. } => {
+            check_parameter_types(operand, field_types, warnings);
+        }
+        Expr::Ternary {
+            condition,
+            then_branch,
+            else_branch,
+        }
+        | Expr::IfThenElse {
+            condition,
+            then_branch,
+            else_branch,
+        } => {
+            check_parameter_types(condition, field_types, warnings);
+            check_parameter_types(then_branch, field_types, warnings);
+            check_parameter_types(else_branch, field_types, warnings);
+        }
+        Expr::Membership {
+            value, container, ..
+        } => {
+            check_parameter_types(value, field_types, warnings);
+            check_parameter_types(container, field_types, warnings);
+        }
+        Expr::NullCoalesce { left, right } => {
+            check_parameter_types(left, field_types, warnings);
+            check_parameter_types(right, field_types, warnings);
+        }
+        Expr::LetBinding { value, body, .. } => {
+            check_parameter_types(value, field_types, warnings);
+            check_parameter_types(body, field_types, warnings);
+        }
+        Expr::Array(elems) => {
+            for e in elems {
+                check_parameter_types(e, field_types, warnings);
+            }
+        }
+        Expr::Object(entries) => {
+            for (_, v) in entries {
+                check_parameter_types(v, field_types, warnings);
+            }
+        }
+        Expr::PostfixAccess { expr, .. } => {
+            check_parameter_types(expr, field_types, warnings);
+        }
+        _ => {}
+    }
+}
+
+/// Lowercase display name for a `CoarseType` (used in warning messages).
+fn coarse_type_name(t: CoarseType) -> &'static str {
+    match t {
+        CoarseType::Number => "number",
+        CoarseType::String => "string",
+        CoarseType::Date => "date",
+        CoarseType::Money => "money",
+        CoarseType::Boolean => "boolean",
+        CoarseType::Unknown => "unknown",
+    }
+}
+
 /// Analyze a FEL expression with field data type context for type-aware warnings.
 ///
 /// `field_types` maps field path (e.g. "revenue") to data type (e.g. "money").
 /// Produces the same output as [`analyze_fel`] plus additional warnings for
-/// type-mismatched comparisons (money vs number, date vs string).
+/// type-mismatched comparisons (money vs number, date vs string) and
+/// type-mismatched function arguments.
 pub fn analyze_fel_with_field_types(
     expression: &str,
     field_types: &HashMap<String, String>,
 ) -> FelAnalysis {
     let mut result = analyze_fel(expression);
-    if result.valid && !field_types.is_empty() {
-        if let Ok(expr) = parse(expression) {
-            let mut type_warnings = Vec::new();
+    if result.valid
+        && let Ok(expr) = parse(expression)
+    {
+        let mut type_warnings = Vec::new();
+        if !field_types.is_empty() {
             check_comparison_types(&expr, field_types, &mut type_warnings);
-            result.warnings.extend(type_warnings);
         }
+        check_parameter_types(&expr, field_types, &mut type_warnings);
+        result.warnings.extend(type_warnings);
     }
     result
 }
@@ -1591,6 +1739,339 @@ mod tests {
                 .iter()
                 .any(|w| w.message.contains("moneyAmount")),
             "should detect money vs number in nested if() comparison, got: {:?}",
+            result.warnings
+        );
+    }
+
+    // ── Parameter type checking ───────────────────────────────────────────────
+
+    /// `length(42)` — arg 1 expects String, got Number.
+    #[test]
+    fn param_type_mismatch_concrete_int_for_string() {
+        let result = analyze_fel("length(42)");
+        assert!(result.valid);
+        assert!(
+            result
+                .warnings
+                .iter()
+                .any(|w| w.message.contains("length")
+                    && w.message.contains("arg 1")
+                    && w.message.contains("string")
+                    && w.message.contains("number")),
+            "expected type mismatch warning for length(42), got: {:?}",
+            result.warnings
+        );
+    }
+
+    /// `dateAdd("not-a-date", 1, "days")` — arg 1 expects Date, got String.
+    #[test]
+    fn param_type_mismatch_string_for_date() {
+        let result = analyze_fel("dateAdd(\"not-a-date\", 1, \"days\")");
+        assert!(result.valid);
+        assert!(
+            result
+                .warnings
+                .iter()
+                .any(|w| w.message.contains("dateAdd")
+                    && w.message.contains("arg 1")
+                    && w.message.contains("date")
+                    && w.message.contains("string")),
+            "expected date/string mismatch for dateAdd arg 1, got: {:?}",
+            result.warnings
+        );
+    }
+
+    /// `coalesce("a", 42)` — variadic Any param: no type warnings.
+    #[test]
+    fn param_type_any_arg_skipped() {
+        let result = analyze_fel("coalesce(\"a\", 42)");
+        assert!(result.valid);
+        let type_warnings: Vec<_> = result
+            .warnings
+            .iter()
+            .filter(|w| w.message.contains("coalesce") && w.message.contains("arg"))
+            .collect();
+        assert!(
+            type_warnings.is_empty(),
+            "coalesce Any param should not warn, got: {:?}",
+            type_warnings
+        );
+    }
+
+    /// `format("{0}={1}", 1, "x", true)` — only template (arg 1 = String) checked; past
+    /// variadic, no per-position checks.
+    #[test]
+    fn param_variadic_stops_pairing() {
+        // arg 1 is template (String) — literal "pattern" is fine, no mismatch.
+        // args 2+ are variadic Any — no checks.
+        let result = analyze_fel("format(\"{0}={1}\", 1, \"x\", true)");
+        assert!(result.valid);
+        let type_warnings: Vec<_> = result
+            .warnings
+            .iter()
+            .filter(|w| w.message.contains("format") && w.message.contains("arg"))
+            .collect();
+        assert!(
+            type_warnings.is_empty(),
+            "format variadic args should not warn, got: {:?}",
+            type_warnings
+        );
+    }
+
+    /// `dateAdd(d, 1, "weeks")` — enum mismatch: 'weeks' not in [days, months, years].
+    #[test]
+    fn param_enum_invalid_literal() {
+        // Use a date field so arg 1 (date) is Unknown (field ref with no types), still arg 3 should be caught.
+        let result = analyze_fel("dateAdd(today(), 1, \"weeks\")");
+        assert!(result.valid);
+        assert!(
+            result
+                .warnings
+                .iter()
+                .any(|w| w.message.contains("dateAdd")
+                    && w.message.contains("arg 3")
+                    && w.message.contains("weeks")
+                    && w.message.contains("not in allowed values")),
+            "expected enum invalid literal warning, got: {:?}",
+            result.warnings
+        );
+    }
+
+    /// `dateAdd(today(), 1, $unit)` — enum param with non-literal arg: skip.
+    #[test]
+    fn param_enum_dynamic_arg_skipped() {
+        // $unit is a FieldRef — can't statically check against enum.
+        let result = analyze_fel("dateAdd(today(), 1, $unit)");
+        assert!(result.valid);
+        let enum_warnings: Vec<_> = result
+            .warnings
+            .iter()
+            .filter(|w| w.message.contains("not in allowed values"))
+            .collect();
+        assert!(
+            enum_warnings.is_empty(),
+            "dynamic arg should not trigger enum check, got: {:?}",
+            enum_warnings
+        );
+    }
+
+    /// `length($someField)` with no field_types entry: Unknown inferred type, no warning.
+    #[test]
+    fn param_unknown_inferred_skipped() {
+        // $someField has Unknown coarse type without a field_types map entry.
+        let result = analyze_fel("length($someField)");
+        assert!(result.valid);
+        let type_warnings: Vec<_> = result
+            .warnings
+            .iter()
+            .filter(|w| w.message.contains("length") && w.message.contains("arg"))
+            .collect();
+        assert!(
+            type_warnings.is_empty(),
+            "unknown inferred type should not warn, got: {:?}",
+            type_warnings
+        );
+    }
+
+    /// `length(power("abc", 2))` — warns for BOTH power arg 1 (String for Number)
+    /// AND length arg 1 (Number return from power, for String param).
+    #[test]
+    fn nested_function_call_arg_checked() {
+        let result = analyze_fel("length(power(\"abc\", 2))");
+        assert!(result.valid);
+        // power() arg 1 expects Number, got String
+        assert!(
+            result
+                .warnings
+                .iter()
+                .any(|w| w.message.contains("power")
+                    && w.message.contains("arg 1")
+                    && w.message.contains("number")
+                    && w.message.contains("string")),
+            "expected power arg1 type warning, got: {:?}",
+            result.warnings
+        );
+        // length() arg 1 expects String, got Number (power returns Number)
+        assert!(
+            result
+                .warnings
+                .iter()
+                .any(|w| w.message.contains("length")
+                    && w.message.contains("arg 1")
+                    && w.message.contains("string")
+                    && w.message.contains("number")),
+            "expected length arg1 type warning from power return, got: {:?}",
+            result.warnings
+        );
+    }
+
+    /// `power(2, 10)` — both Number args: no type warning.
+    #[test]
+    fn valid_call_no_warning() {
+        let result = analyze_fel("power(2, 10)");
+        assert!(result.valid);
+        let type_warnings: Vec<_> = result
+            .warnings
+            .iter()
+            .filter(|w| w.message.contains("arg"))
+            .collect();
+        assert!(
+            type_warnings.is_empty(),
+            "power(2,10) should produce no type warnings, got: {:?}",
+            type_warnings
+        );
+    }
+
+    /// `if(cond, then, else)`: only cond (Boolean) is checked; then/else are Any.
+    #[test]
+    fn param_if_only_cond_checked() {
+        // Condition is a Number literal — should warn about Boolean expected.
+        let result = analyze_fel("if(42, \"yes\", \"no\")");
+        assert!(result.valid);
+        assert!(
+            result
+                .warnings
+                .iter()
+                .any(|w| w.message.contains("if")
+                    && w.message.contains("arg 1")
+                    && w.message.contains("boolean")
+                    && w.message.contains("number")),
+            "if() should warn when cond is not Boolean, got: {:?}",
+            result.warnings
+        );
+        // then/else are Any — no extra warnings from those
+        let then_else_warn: Vec<_> = result
+            .warnings
+            .iter()
+            .filter(|w| {
+                w.message.contains("if")
+                    && (w.message.contains("arg 2") || w.message.contains("arg 3"))
+            })
+            .collect();
+        assert!(
+            then_else_warn.is_empty(),
+            "then/else (Any) should not warn, got: {:?}",
+            then_else_warn
+        );
+    }
+
+    /// `selected(42, "active")` — value is Any, option is String: only option warns if wrong type.
+    #[test]
+    fn param_selected_any_value_string_option() {
+        // option is a String literal — no type mismatch.
+        let result = analyze_fel("selected(42, \"active\")");
+        assert!(result.valid);
+        // No warning expected: value is Any (skip), option is String literal (ok).
+        let type_warnings: Vec<_> = result
+            .warnings
+            .iter()
+            .filter(|w| w.message.contains("selected") && w.message.contains("arg"))
+            .collect();
+        assert!(
+            type_warnings.is_empty(),
+            "selected(42, string) should not warn, got: {:?}",
+            type_warnings
+        );
+        // But if option is a number literal, it should warn.
+        let result2 = analyze_fel("selected($field, 42)");
+        assert!(result2.valid);
+        assert!(
+            result2
+                .warnings
+                .iter()
+                .any(|w| w.message.contains("selected")
+                    && w.message.contains("arg 2")
+                    && w.message.contains("string")
+                    && w.message.contains("number")),
+            "selected($field, 42) should warn about number for String option, got: {:?}",
+            result2.warnings
+        );
+    }
+
+    /// `dateDiff` also has enum-restricted unit: 'weeks' triggers warning.
+    #[test]
+    fn param_date_diff_enum_invalid() {
+        let result = analyze_fel("dateDiff(today(), today(), \"weeks\")");
+        assert!(result.valid);
+        assert!(
+            result
+                .warnings
+                .iter()
+                .any(|w| w.message.contains("dateDiff")
+                    && w.message.contains("arg 3")
+                    && w.message.contains("weeks")
+                    && w.message.contains("not in allowed values")),
+            "expected dateDiff enum warning, got: {:?}",
+            result.warnings
+        );
+    }
+
+    /// `time("a", "b", "c")` — all three params are Number; String args warn.
+    #[test]
+    fn param_time_string_for_number() {
+        let result = analyze_fel("time(\"a\", \"b\", \"c\")");
+        assert!(result.valid);
+        assert!(
+            result
+                .warnings
+                .iter()
+                .any(|w| w.message.contains("time") && w.message.contains("arg 1")),
+            "time arg 1 should warn, got: {:?}",
+            result.warnings
+        );
+        assert!(
+            result
+                .warnings
+                .iter()
+                .any(|w| w.message.contains("time") && w.message.contains("arg 2")),
+            "time arg 2 should warn, got: {:?}",
+            result.warnings
+        );
+        assert!(
+            result
+                .warnings
+                .iter()
+                .any(|w| w.message.contains("time") && w.message.contains("arg 3")),
+            "time arg 3 should warn, got: {:?}",
+            result.warnings
+        );
+    }
+
+    /// field_types path: `length($name)` where $name is "string" → Unknown for length arg (string matches) → no warn.
+    #[test]
+    fn param_type_check_with_field_types_correct() {
+        let mut field_types = HashMap::new();
+        field_types.insert("name".to_string(), "string".to_string());
+        let result = analyze_fel_with_field_types("length($name)", &field_types);
+        assert!(result.valid);
+        let type_warnings: Vec<_> = result
+            .warnings
+            .iter()
+            .filter(|w| w.message.contains("length") && w.message.contains("arg"))
+            .collect();
+        assert!(
+            type_warnings.is_empty(),
+            "length($name:string) should not warn, got: {:?}",
+            type_warnings
+        );
+    }
+
+    /// field_types path: `length($count)` where $count is "number" → warns.
+    #[test]
+    fn param_type_check_with_field_types_mismatch() {
+        let mut field_types = HashMap::new();
+        field_types.insert("count".to_string(), "number".to_string());
+        let result = analyze_fel_with_field_types("length($count)", &field_types);
+        assert!(result.valid);
+        assert!(
+            result
+                .warnings
+                .iter()
+                .any(|w| w.message.contains("length")
+                    && w.message.contains("arg 1")
+                    && w.message.contains("string")
+                    && w.message.contains("number")),
+            "length($count:number) should warn, got: {:?}",
             result.warnings
         );
     }
