@@ -72,46 +72,6 @@ pub struct NavigationTarget {
     pub name: String,
 }
 
-/// Parse a catalog signature like `"sum(array<number>) -> number"` into `(min_args, max_args)`.
-///
-/// Conventions: `param?` = optional, `...param` = variadic (unbounded), `()` = zero args.
-fn parse_signature_arity(signature: &str) -> (usize, Option<usize>) {
-    // Extract the parameter list between ( and )
-    let Some(open) = signature.find('(') else {
-        return (0, Some(0));
-    };
-    let Some(close) = signature.find(')') else {
-        return (0, Some(0));
-    };
-    let params_str = signature[open + 1..close].trim();
-    if params_str.is_empty() {
-        return (0, Some(0));
-    }
-
-    let params: Vec<&str> = params_str.split(',').map(str::trim).collect();
-    let mut min = 0usize;
-    let mut has_variadic = false;
-
-    for param in &params {
-        if param.starts_with("...") {
-            has_variadic = true;
-            // Variadic counts as at least 0 additional args
-        } else if param.ends_with('?') {
-            // Optional — doesn't increase min
-        } else {
-            min += 1;
-        }
-    }
-
-    let max = if has_variadic {
-        None // unbounded
-    } else {
-        Some(params.len()) // all params including optionals
-    };
-
-    (min, max)
-}
-
 /// Analyze a FEL expression string, extracting structural information.
 pub fn analyze_fel(expression: &str) -> FelAnalysis {
     match parse(expression) {
