@@ -53,25 +53,30 @@ build-js: node_modules
 # Installs maturin (build backend for formspec-py) and the test extras up front
 # so vitest's globalSetup `pip install --no-build-isolation ./crates/formspec-py`
 # (in packages/formspec-core/tests/python.ts) finds maturin in the venv.
-.venv: pyproject.toml crates/formspec-py/Cargo.toml
-	python3 -m venv .venv
+#
+# Keyed off `.venv/.deps-stamp` rather than `.venv/` itself so a pre-existing
+# venv created without these deps still triggers re-provisioning. Removing
+# the stamp (or bumping pyproject.toml / formspec-py Cargo.toml) re-runs the
+# install steps without recreating the venv from scratch.
+.venv/.deps-stamp: pyproject.toml crates/formspec-py/Cargo.toml
+	@if [ ! -d .venv ]; then python3 -m venv .venv; fi
 	.venv/bin/pip install --upgrade pip
 	.venv/bin/pip install maturin
 	.venv/bin/pip install -e '.[test]'
 	.venv/bin/pip install --no-build-isolation ./crates/formspec-py
-	@touch .venv
+	@touch .venv/.deps-stamp
 
 # Builds the Rust extension and places the .so into the source tree for editable installs.
 # Uses maturin develop so the in-tree _native.so stays current (pip install writes to
 # site-packages, which is shadowed by the editable src/formspec/ on sys.path).
-build-python: .venv
+build-python: .venv/.deps-stamp
 	.venv/bin/maturin develop --release --manifest-path crates/formspec-py/Cargo.toml
 
 # Force-rebuild the Python extension from scratch. Use this when tests pick up
 # stale bindings — typical symptom: a function signature was changed in Rust
 # but Python still sees the old shape.
 # maturin develop with python-source="src" places the .so directly in src/formspec/.
-rebuild-python: .venv
+rebuild-python: .venv/.deps-stamp
 	rm -f src/formspec/_native*.so
 	.venv/bin/maturin develop --release --manifest-path crates/formspec-py/Cargo.toml
 
@@ -159,7 +164,7 @@ $(DOCS_DIR)/locale-spec.html: $(SPECS_DIR)/locale/locale-spec.md $(TEMPLATE)
 $(DOCS_DIR)/grant-application.html: docs/grant-application-guide.md $(TEMPLATE)
 	$(PANDOC) -s --toc --template=$(TEMPLATE) --metadata title="Grant Application — Formspec Walkthrough" -o $@ $<
 
-setup: .venv
+setup: .venv/.deps-stamp
 	.venv/bin/pip install pre-commit
 	.venv/bin/pre-commit install
 

@@ -197,9 +197,9 @@
       ]
     },
     {
-      "spec": "wos-spec/specs/kernel/spec.md",
-      "schema": "wos-spec/schemas/wos-workflow.schema.json",
-      "llm": "wos-spec/specs/kernel/spec.llm.md",
+      "spec": "../wos-spec/specs/kernel/spec.md",
+      "schema": "../wos-spec/schemas/wos-workflow.schema.json",
+      "llm": "../wos-spec/specs/kernel/spec.llm.md",
       "llmCriticalRoots": [
         "#/properties/$wosWorkflow",
         "#/properties/url",
@@ -235,8 +235,8 @@
       ]
     },
     {
-      "spec": "wos-spec/specs/governance/workflow-governance.md",
-      "schema": "wos-spec/schemas/wos-workflow.schema.json",
+      "spec": "../wos-spec/specs/governance/workflow-governance.md",
+      "schema": "../wos-spec/schemas/wos-workflow.schema.json",
       "behaviorEssentials": [
         "Workflow Governance sidecars attach to kernel workflows via semantic tags (lifecycleHook) and data contracts (contractHook).",
         "Due process requirements (notice, explanation, appeal) are normative for rights-impacting or safety-impacting impact levels.",
@@ -250,8 +250,8 @@
       ]
     },
     {
-      "spec": "wos-spec/specs/ai/ai-integration.md",
-      "schema": "wos-spec/schemas/wos-workflow.schema.json",
+      "spec": "../wos-spec/specs/ai/ai-integration.md",
+      "schema": "../wos-spec/schemas/wos-workflow.schema.json",
       "behaviorEssentials": [
         "AI Integration sidecars register agents as actors and impose deontic constraints (Permission, Prohibition, Obligation, Right) on their behavior.",
         "Effective autonomy levels for agent actions are capped by the kernel impactLevel; rights-impacting workflows default to assistive.",
@@ -265,8 +265,8 @@
       ]
     },
     {
-      "spec": "wos-spec/specs/kernel/correspondence-metadata.md",
-      "schema": "wos-spec/schemas/wos-workflow.schema.json",
+      "spec": "../wos-spec/specs/kernel/correspondence-metadata.md",
+      "schema": "../wos-spec/schemas/wos-workflow.schema.json",
       "behaviorEssentials": [
         "Declare structured metadata for correspondence stored in case state without adding new event types.",
         "Use entry templates to define channel, direction, and actorType requirements for categories of communication.",
@@ -280,8 +280,8 @@
       ]
     },
     {
-      "spec": "wos-spec/specs/governance/policy-parameters.md",
-      "schema": "wos-spec/schemas/wos-workflow.schema.json",
+      "spec": "../wos-spec/specs/governance/policy-parameters.md",
+      "schema": "../wos-spec/schemas/wos-workflow.schema.json",
       "behaviorEssentials": [
         "Externalize date-indexed business rules as temporal parameters resolved against a date in the case state.",
         "Support value-over-time resolution (OpenFisca-style) for both scalar parameters and document bindings (URIs).",
@@ -295,8 +295,8 @@
       ]
     },
     {
-      "spec": "wos-spec/specs/ai/drift-monitor.md",
-      "schema": "wos-spec/schemas/wos-workflow.schema.json",
+      "spec": "../wos-spec/specs/ai/drift-monitor.md",
+      "schema": "../wos-spec/schemas/wos-workflow.schema.json",
       "behaviorEssentials": [
         "Monitor agent behavioral stability over time using statistical metrics (PSI, KS) and performance benchmarks (accuracy).",
         "Detect 'rubber-stamping' where human reviewers agree with agent output at rates or speeds that indicate a lack of engagement.",
@@ -310,8 +310,8 @@
       ]
     },
     {
-      "spec": "wos-spec/specs/profiles/semantic.md",
-      "schema": "wos-spec/schemas/wos-workflow.schema.json",
+      "spec": "../wos-spec/specs/profiles/semantic.md",
+      "schema": "../wos-spec/schemas/wos-workflow.schema.json",
       "behaviorEssentials": [
         "Standardize semantic alignments between WOS case state and global vocabularies (JSON-LD, Schema.org).",
         "Map WOS provenance records to PROV-O RDF shapes for cross-organizational audit exchange.",
@@ -325,8 +325,8 @@
       ]
     },
     {
-      "spec": "wos-spec/specs/profiles/signature.md",
-      "schema": "wos-spec/schemas/wos-workflow.schema.json",
+      "spec": "../wos-spec/specs/profiles/signature.md",
+      "schema": "../wos-spec/schemas/wos-workflow.schema.json",
       "behaviorEssentials": [
         "Signature ceremonies bind signer roles, signing order, routed vs free-for-all flows, and evidence requirements to workflow transitions.",
         "Intent capture, identity binding, and document binding align with Trellis attestation and export-bundle composition.",
