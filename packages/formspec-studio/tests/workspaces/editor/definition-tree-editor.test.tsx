@@ -88,8 +88,8 @@ describe('DefinitionTreeEditor', () => {
 
     expect(row.getByText('Description')).toBeInTheDocument();
     expect(row.getByText('Hint')).toBeInTheDocument();
-    expect(row.getByText('Click to add description')).toBeInTheDocument();
-    expect(row.getByText('Click to add hint')).toBeInTheDocument();
+    expect(row.getByText('Add description\u2026')).toBeInTheDocument();
+    expect(row.getByText('Add hint\u2026')).toBeInTheDocument();
     expect(row.getByTestId('field-email-category-Visibility')).toBeInTheDocument();
     fireEvent.click(row.getByTestId('field-email-category-Visibility'));
     expect(row.getByRole('region', { name: 'Field details' })).toBeInTheDocument();
@@ -122,8 +122,8 @@ describe('DefinitionTreeEditor', () => {
     // Selected: empty Description/Hint slots should appear with placeholders
     expect(row.getByText('Description')).toBeInTheDocument();
     expect(row.getByText('Hint')).toBeInTheDocument();
-    expect(row.getByText('Click to add description')).toBeInTheDocument();
-    expect(row.getByText('Click to add hint')).toBeInTheDocument();
+    expect(row.getByText('Add description\u2026')).toBeInTheDocument();
+    expect(row.getByText('Add hint\u2026')).toBeInTheDocument();
   });
 
   it('shows populated description and hides empty hint row when unselected (partial metadata)', () => {
@@ -150,7 +150,7 @@ describe('DefinitionTreeEditor', () => {
     // Select the row: now Hint slot appears too with a placeholder
     fireEvent.click(row.getByRole('button', { name: 'Select Name' }));
     expect(row.getByText('Hint')).toBeInTheDocument();
-    expect(row.getByText('Click to add hint')).toBeInTheDocument();
+    expect(row.getByText('Add hint\u2026')).toBeInTheDocument();
   });
 
   it('shows populated description and hint slots when the field already has validation binds', () => {
@@ -441,8 +441,8 @@ describe('DefinitionTreeEditor', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Select Full Name' }));
 
     expect(screen.getByRole('heading', { name: 'Full Name' })).toBeInTheDocument();
-    expect(screen.getByText('Field key name in Root. Edit details inline below.')).toBeInTheDocument();
-    expect(screen.getByText('Active selection')).toBeInTheDocument();
+    expect(screen.getByText('Field key name in Root')).toBeInTheDocument();
+    expect(screen.getByText('Selected')).toBeInTheDocument();
   });
 
   it('renders nested groups with deeply nested fields', () => {
@@ -654,7 +654,7 @@ describe('DefinitionTreeEditor', () => {
     expect(section.children).toHaveLength(1);
     expect(section.children[0].type).toBe('field');
     expect(screen.getByTestId(`field-${section.children[0].key}`)).toBeInTheDocument();
-    expect(screen.getByTestId(`field-${section.children[0].key}`).className).toContain('border-accent/50');
+    expect(screen.getByTestId(`field-${section.children[0].key}`).className).toContain('border-accent/40');
   });
 
   it('edits the label inline without opening the key editor and saves on blur', () => {
@@ -807,13 +807,13 @@ describe('DefinitionTreeEditor', () => {
       const { project } = renderTree(definition);
 
       fireEvent.click(within(screen.getByTestId('field-name')).getByRole('button', { name: 'Select Full Name' }));
-      fireEvent.click(within(screen.getByTestId('field-name')).getByText('Click to add description'));
+      fireEvent.click(within(screen.getByTestId('field-name')).getByText('Add description\u2026'));
 
       fireEvent.change(within(screen.getByTestId('field-name')).getByLabelText('Inline description'), { target: { value: 'Used for household identity.' } });
       // SI-5: Description/Hint writes are debounced — flush the timer before asserting.
       vi.advanceTimersByTime(300);
       fireEvent.blur(within(screen.getByTestId('field-name')).getByLabelText('Inline description'));
-      fireEvent.click(within(screen.getByTestId('field-name')).getByText('Click to add hint'));
+      fireEvent.click(within(screen.getByTestId('field-name')).getByText('Add hint\u2026'));
       fireEvent.change(within(screen.getByTestId('field-name')).getByLabelText('Inline hint'), { target: { value: 'First middle last' } });
       vi.advanceTimersByTime(300);
       fireEvent.blur(within(screen.getByTestId('field-name')).getByLabelText('Inline hint'));
@@ -1007,7 +1007,7 @@ describe('DefinitionTreeEditor', () => {
       // Hint is in the content rows and editable inline
       fireEvent.click(row.getByText('XXX-XX-XXXX'));
       const hintInput = row.getByLabelText('Inline hint');
-      expect(hintInput.tagName).toBe('INPUT');
+      expect(hintInput.tagName).toBe('TEXTAREA');
       expect(hintInput).toHaveFocus();
       fireEvent.change(hintInput, { target: { value: '999-99-9999' } });
       // SI-5: Hint writes are debounced — flush the timer before asserting.
