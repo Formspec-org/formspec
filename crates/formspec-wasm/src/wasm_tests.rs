@@ -2,7 +2,7 @@
 
 #[cfg(test)]
 mod tests {
-    use fel_core::{FelValue, fel_to_json, json_to_fel};
+    use fel_core::{Value as FelVal, fel_to_json, json_to_fel};
     use rust_decimal::Decimal;
     use rust_decimal::prelude::*;
     use serde_json::{Value, json};
@@ -13,7 +13,7 @@ mod tests {
         apply_migrations_to_response_data_wasm, resolve_option_sets_on_definition_wasm,
     };
     use crate::evaluate::evaluate_definition_inner;
-    use crate::fel::{eval_fel_inner, eval_fel_with_trace_inner, prepare_fel_expression_inner};
+    use crate::fel::{eval_fel_inner, eval_fel_with_trace_inner, prepare_expression_inner};
     #[cfg(feature = "fel-authoring")]
     use crate::fel::{rewrite_fel_for_assembly_inner, tokenize_fel_inner};
     #[cfg(feature = "mapping-api")]
@@ -313,12 +313,12 @@ mod tests {
     }
 
     #[test]
-    fn prepare_fel_expression_inner_repeat_aliases_from_values_by_path() {
+    fn prepare_expression_inner_repeat_aliases_from_values_by_path() {
         let opt = json!({
             "expression": "rows.score",
             "valuesByPath": { "rows[0].score": 1, "rows[1].score": 2 },
         });
-        let out = prepare_fel_expression_inner(&opt.to_string()).unwrap();
+        let out = prepare_expression_inner(&opt.to_string()).unwrap();
         assert_eq!(out, "$rows[*].score");
     }
 
@@ -770,7 +770,7 @@ mod tests {
     /// Decimal cannot represent NaN or Infinity.
     #[test]
     fn fel_to_json_decimal_max_produces_number() {
-        let val = FelValue::Number(Decimal::MAX);
+        let val = FelVal::Number(Decimal::MAX);
         let json = fel_to_json(&val);
         // Decimal::MAX has zero fract, so to_i64() is tried first — but fails (too large).
         // Then to_f64() succeeds (7.9e28), and from_f64() accepts it (finite).
@@ -792,7 +792,7 @@ mod tests {
     #[test]
     fn json_fel_roundtrip_large_integer_precision_loss() {
         let d = Decimal::MAX;
-        let json = fel_to_json(&FelValue::Number(d));
+        let json = fel_to_json(&FelVal::Number(d));
         let f64_val = json.as_f64().unwrap();
 
         // The f64 value is finite but outside the Decimal representable range
@@ -851,17 +851,17 @@ mod tests {
     #[test]
     fn json_to_fel_null() {
         let val = json_to_fel(&json!(null));
-        assert!(matches!(val, FelValue::Null));
+        assert!(matches!(val, FelVal::Null));
         assert_eq!(fel_to_json(&val), json!(null));
     }
 
     /// Verify boolean roundtrip.
     #[test]
     fn json_to_fel_boolean() {
-        assert!(matches!(json_to_fel(&json!(true)), FelValue::Boolean(true)));
+        assert!(matches!(json_to_fel(&json!(true)), FelVal::Boolean(true)));
         assert!(matches!(
             json_to_fel(&json!(false)),
-            FelValue::Boolean(false)
+            FelVal::Boolean(false)
         ));
     }
 
@@ -877,7 +877,7 @@ mod tests {
     #[test]
     fn json_to_fel_string() {
         let val = json_to_fel(&json!("hello"));
-        assert!(matches!(val, FelValue::String(ref s) if s == "hello"));
+        assert!(matches!(val, FelVal::String(ref s) if s == "hello"));
         assert_eq!(fel_to_json(&val), json!("hello"));
     }
 

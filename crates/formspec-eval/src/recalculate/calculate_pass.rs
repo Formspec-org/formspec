@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use fel_core::{FelValue, FormspecEnvironment, evaluate, fel_to_json, parse};
+use fel_core::{Value as EnvVal, FormspecEnvironment, evaluate, fel_to_json, parse};
 use serde_json::Value;
 
 use super::json_fel::{coerce_calculated_json, json_to_runtime_fel};
@@ -93,7 +93,7 @@ fn calculate_pass_repeat_children_with_aliases(
     let mut current_instance: Option<String> = None;
     let mut alias_names: Vec<String> = Vec::new();
     let mut nested_groups: Vec<String> = Vec::new();
-    let mut saved_values: HashMap<String, Option<FelValue>> = HashMap::new();
+    let mut saved_values: HashMap<String, Option<EnvVal>> = HashMap::new();
     let mut repeat_context_active = false;
 
     for item in children.iter_mut() {

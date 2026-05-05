@@ -2,8 +2,8 @@
 
 use std::collections::HashMap;
 
-use fel_core::{FelValue, FormspecEnvironment};
-use serde_json::Value;
+use fel_core::{Value, FormspecEnvironment};
+use serde_json::Value as JsonValue;
 
 use super::json_fel::json_to_runtime_fel;
 use crate::types::ItemInfo;
@@ -11,7 +11,7 @@ use crate::types::ItemInfo;
 pub(crate) fn restore_instance_aliases(
     env: &mut FormspecEnvironment,
     alias_names: &[String],
-    saved_values: &mut HashMap<String, Option<FelValue>>,
+    saved_values: &mut HashMap<String, Option<Value>>,
 ) {
     for name in alias_names {
         match saved_values.remove(name) {
@@ -26,8 +26,8 @@ pub(crate) fn restore_instance_aliases(
 pub(crate) fn apply_instance_aliases(
     instance_prefix: &str,
     env: &mut FormspecEnvironment,
-    values: &HashMap<String, Value>,
-    saved_values: &mut HashMap<String, Option<FelValue>>,
+    values: &HashMap<String, JsonValue>,
+    saved_values: &mut HashMap<String, Option<Value>>,
 ) -> (Vec<String>, Vec<String>) {
     let mut alias_names = Vec::new();
     let mut nested_groups = Vec::new();
@@ -68,7 +68,7 @@ pub(crate) fn refresh_nested_group_aliases(
     instance_prefix: &str,
     nested_groups: &[String],
     env: &mut FormspecEnvironment,
-    values: &HashMap<String, Value>,
+    values: &HashMap<String, JsonValue>,
 ) {
     for group_name in nested_groups {
         let group_path = format!("{instance_prefix}.{group_name}");
@@ -94,13 +94,13 @@ fn parse_repeat_instance_prefix(prefix: &str) -> Option<(String, usize)> {
 pub(crate) fn push_repeat_context_for_instance(
     instance_prefix: &str,
     env: &mut FormspecEnvironment,
-    values: &HashMap<String, Value>,
+    values: &HashMap<String, JsonValue>,
 ) -> bool {
     let Some((group_path, index)) = parse_repeat_instance_prefix(instance_prefix) else {
         return false;
     };
     let Some(array) = build_repeat_group_array(&group_path, values).and_then(|value| match value {
-        Value::Array(entries) => Some(entries),
+        JsonValue::Array(entries) => Some(entries),
         _ => None,
     }) else {
         return false;
@@ -111,7 +111,7 @@ pub(crate) fn push_repeat_context_for_instance(
     let collection = array
         .iter()
         .map(json_to_runtime_fel)
-        .collect::<Vec<FelValue>>();
+        .collect::<Vec<Value>>();
     env.push_repeat(
         json_to_runtime_fel(&current),
         index + 1,
@@ -123,7 +123,7 @@ pub(crate) fn push_repeat_context_for_instance(
 
 pub(crate) fn populate_repeat_group_arrays(
     items: &[ItemInfo],
-    values: &HashMap<String, Value>,
+    values: &HashMap<String, JsonValue>,
     env: &mut FormspecEnvironment,
 ) {
     for item in items {
@@ -138,8 +138,8 @@ pub(crate) fn populate_repeat_group_arrays(
 
 pub(crate) fn build_repeat_group_array(
     group_path: &str,
-    values: &HashMap<String, Value>,
-) -> Option<Value> {
+    values: &HashMap<String, JsonValue>,
+) -> Option<JsonValue> {
     let count = crate::rebuild::detect_repeat_count(group_path, values);
     if count == 0 {
         return None;
@@ -148,7 +148,7 @@ pub(crate) fn build_repeat_group_array(
     let mut rows = Vec::with_capacity(count);
     for index in 0..count {
         let prefix = format!("{group_path}[{index}].");
-        let mut row = Value::Object(serde_json::Map::new());
+        let mut row = JsonValue::Object(serde_json::Map::new());
         let mut has_values = false;
         for (path, value) in values {
             if let Some(relative) = path.strip_prefix(&prefix) {
@@ -159,14 +159,14 @@ pub(crate) fn build_repeat_group_array(
         rows.push(if has_values {
             row
         } else {
-            Value::Object(serde_json::Map::new())
+            JsonValue::Object(serde_json::Map::new())
         });
     }
 
-    Some(Value::Array(rows))
+    Some(JsonValue::Array(rows))
 }
 
-pub(crate) fn set_nested_json_path(target: &mut Value, path: &str, value: Value) {
+pub(crate) fn set_nested_json_path(target: &mut JsonValue, path: &str, value: JsonValue) {
     let tokens = tokenize_json_path(path);
     if tokens.is_empty() {
         *target = value;
@@ -179,30 +179,30 @@ pub(crate) fn set_nested_json_path(target: &mut Value, path: &str, value: Value)
         match &tokens[index] {
             JsonPathToken::Key(key) => {
                 if !current.is_object() {
-                    *current = Value::Object(serde_json::Map::new());
+                    *current = JsonValue::Object(serde_json::Map::new());
                 }
                 let map = current.as_object_mut().expect("object ensured above");
                 current = map.entry(key.clone()).or_insert_with(|| {
                     if next_is_index {
-                        Value::Array(vec![])
+                        JsonValue::Array(vec![])
                     } else {
-                        Value::Object(serde_json::Map::new())
+                        JsonValue::Object(serde_json::Map::new())
                     }
                 });
             }
             JsonPathToken::Index(array_index) => {
                 if !current.is_array() {
-                    *current = Value::Array(vec![]);
+                    *current = JsonValue::Array(vec![]);
                 }
                 let array = current.as_array_mut().expect("array ensured above");
                 while array.len() <= *array_index {
-                    array.push(Value::Null);
+                    array.push(JsonValue::Null);
                 }
                 if array[*array_index].is_null() {
                     array[*array_index] = if next_is_index {
-                        Value::Array(vec![])
+                        JsonValue::Array(vec![])
                     } else {
-                        Value::Object(serde_json::Map::new())
+                        JsonValue::Object(serde_json::Map::new())
                     };
                 }
                 current = &mut array[*array_index];
@@ -213,7 +213,7 @@ pub(crate) fn set_nested_json_path(target: &mut Value, path: &str, value: Value)
     match &tokens[tokens.len() - 1] {
         JsonPathToken::Key(key) => {
             if !current.is_object() {
-                *current = Value::Object(serde_json::Map::new());
+                *current = JsonValue::Object(serde_json::Map::new());
             }
             current
                 .as_object_mut()
@@ -222,11 +222,11 @@ pub(crate) fn set_nested_json_path(target: &mut Value, path: &str, value: Value)
         }
         JsonPathToken::Index(array_index) => {
             if !current.is_array() {
-                *current = Value::Array(vec![]);
+                *current = JsonValue::Array(vec![]);
             }
             let array = current.as_array_mut().expect("array ensured above");
             while array.len() <= *array_index {
-                array.push(Value::Null);
+                array.push(JsonValue::Null);
             }
             array[*array_index] = value;
         }

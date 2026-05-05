@@ -3,7 +3,7 @@
 
 use fel_core::error::{Diagnostic, Severity};
 use fel_core::{
-    EvalResult, FelValue, FormspecEnvironment, evaluate, expr_is_interpolation_static_literal,
+    EvalResult, Value, FormspecEnvironment, evaluate, expr_is_interpolation_static_literal,
     parse,
 };
 
@@ -41,7 +41,7 @@ pub(super) fn evaluate_shape_expression(expr: &str, env: &FormspecEnvironment) -
     match parse(expr) {
         Ok(parsed) => evaluate(&parsed, env),
         Err(e) => EvalResult {
-            value: FelValue::Null,
+            value: Value::Null,
             diagnostics: vec![Diagnostic::error(format!(
                 "FEL parse error in constraint: {e}"
             ))],
@@ -129,20 +129,20 @@ fn find_closing_braces(s: &str, start: usize) -> Option<usize> {
     None
 }
 
-/// Coerce a FelValue to its display string for message interpolation.
-fn fel_value_to_display(value: &FelValue) -> String {
+/// Coerce a Value to its display string for message interpolation.
+fn fel_value_to_display(value: &Value) -> String {
     match value {
-        FelValue::Null => String::new(),
-        FelValue::Boolean(b) => if *b { "true" } else { "false" }.to_string(),
-        FelValue::Number(n) => fel_core::types::format_number(*n),
-        FelValue::String(s) => s.clone(),
-        FelValue::Date(d) => d.format_iso(),
-        FelValue::Money(m) => format!(
+        Value::Null => String::new(),
+        Value::Boolean(b) => if *b { "true" } else { "false" }.to_string(),
+        Value::Number(n) => fel_core::types::format_number(*n),
+        Value::String(s) => s.clone(),
+        Value::Date(d) => d.format_iso(),
+        Value::Money(m) => format!(
             "{} {}",
             fel_core::types::format_number(m.amount),
             m.currency
         ),
-        FelValue::Array(_) | FelValue::Object(_) => String::new(),
+        Value::Array(_) | Value::Object(_) => String::new(),
     }
 }
 
@@ -158,7 +158,7 @@ mod tests {
         // When an expression produces Null because of an eval error (e.g. undefined function),
         // the diagnostics contain the error signal. constraint_passes should return false.
         let result = EvalResult {
-            value: FelValue::Null,
+            value: Value::Null,
             diagnostics: vec![Diagnostic::error("undefined function: bogusFunc")],
         };
         assert!(
@@ -172,7 +172,7 @@ mod tests {
         // When a field is simply not filled in, the expression yields Null with no diagnostics.
         // This should still pass (the required bind enforces non-emptiness, not constraint).
         let result = EvalResult {
-            value: FelValue::Null,
+            value: Value::Null,
             diagnostics: vec![],
         };
         assert!(
@@ -185,7 +185,7 @@ mod tests {
     fn constraint_passes_true_with_diagnostics_still_passes() {
         // If the expression evaluates to true but has warnings, it should still pass.
         let result = EvalResult {
-            value: FelValue::Boolean(true),
+            value: Value::Boolean(true),
             diagnostics: vec![Diagnostic::warning("some warning")],
         };
         assert!(
@@ -197,7 +197,7 @@ mod tests {
     #[test]
     fn constraint_passes_false_is_a_failure() {
         let result = EvalResult {
-            value: FelValue::Boolean(false),
+            value: Value::Boolean(false),
             diagnostics: vec![],
         };
         assert!(
@@ -208,11 +208,11 @@ mod tests {
 
     fn make_env() -> FormspecEnvironment {
         let mut env = FormspecEnvironment::new();
-        env.set_field("budget", FelValue::Number(Decimal::from(1000)));
-        env.set_field("limit", FelValue::Number(Decimal::from(500)));
-        env.set_field("name", FelValue::String("Alice".to_string()));
-        env.set_field("empty", FelValue::Null);
-        env.set_field("flag", FelValue::Boolean(true));
+        env.set_field("budget", Value::Number(Decimal::from(1000)));
+        env.set_field("limit", Value::Number(Decimal::from(500)));
+        env.set_field("name", Value::String("Alice".to_string()));
+        env.set_field("empty", Value::Null);
+        env.set_field("flag", Value::Boolean(true));
         env
     }
 
@@ -282,8 +282,8 @@ mod tests {
     #[test]
     fn non_recursive() {
         let mut env = FormspecEnvironment::new();
-        env.set_field("trick", FelValue::String("{{$budget}}".to_string()));
-        env.set_field("budget", FelValue::Number(Decimal::from(999)));
+        env.set_field("trick", Value::String("{{$budget}}".to_string()));
+        env.set_field("budget", Value::Number(Decimal::from(999)));
         let result = interpolate_message("Got {{$trick}}", &env);
         assert_eq!(result, "Got {{$budget}}");
     }

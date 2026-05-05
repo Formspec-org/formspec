@@ -8,8 +8,8 @@ use pyo3::types::PyDict;
 use fel_core::{
     JsonWireStyle, MapEnvironment, builtin_function_catalog_json_value,
     dependencies_to_json_value_styled, evaluate, evaluate_with_trace, extract_dependencies,
-    fel_diagnostics_to_json_value, parse, prepare_fel_expression_owned,
-    prepare_fel_host_options_from_json_map,
+    fel_diagnostics_to_json_value, parse, prepare,
+    host_options_from_json,
 };
 use formspec_core::{
     analyze_fel, assembly_fel_rewrite_map_from_value, fel_analysis_to_json_value,
@@ -179,14 +179,14 @@ pub fn list_builtin_functions(py: Python) -> PyResult<PyObject> {
 ///         `replace_self_ref` / `replaceSelfRef`, `repeat_counts` / `repeatCounts`,
 ///         and `values_by_path` / `valuesByPath` or `field_paths` / `fieldPaths`.
 #[pyfunction]
-pub fn prepare_fel_expression(options: &Bound<'_, PyAny>) -> PyResult<String> {
+pub fn prepare_expression(options: &Bound<'_, PyAny>) -> PyResult<String> {
     let v: Value = depythonize_json(options)?;
     let m = v.as_object().ok_or_else(|| {
-        pyo3::exceptions::PyTypeError::new_err("prepare_fel_expression options must be a dict")
+        pyo3::exceptions::PyTypeError::new_err("prepare_expression options must be a dict")
     })?;
-    let owned = prepare_fel_host_options_from_json_map(m)
+    let owned = host_options_from_json(m)
         .map_err(|e| pyo3::exceptions::PyValueError::new_err(e))?;
-    Ok(prepare_fel_expression_owned(&owned))
+    Ok(prepare(&owned))
 }
 
 /// Rewrite FEL using definition-assembly RewriteMap (fragment + host keys, same as TS `rewriteFEL`).

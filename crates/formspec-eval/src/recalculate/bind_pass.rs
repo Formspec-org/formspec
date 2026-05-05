@@ -2,8 +2,8 @@
 
 use std::collections::{HashMap, HashSet};
 
-use fel_core::{FelValue, FormspecEnvironment, MipState, evaluate, fel_to_json, parse};
-use serde_json::Value;
+use fel_core::{Value, FormspecEnvironment, MipState, evaluate, fel_to_json, parse};
+use serde_json::Value as JsonValue;
 
 use super::json_fel::{coerce_calculated_json, json_to_runtime_fel};
 use super::repeats::{
@@ -16,17 +16,17 @@ use crate::types::{ItemInfo, WhitespaceMode, resolve_qualified_repeat_refs};
 /// Apply whitespace normalization to all items that have a whitespace bind.
 pub(crate) fn apply_whitespace_to_items(
     items: &mut [ItemInfo],
-    values: &mut HashMap<String, Value>,
+    values: &mut HashMap<String, JsonValue>,
 ) {
     for item in items.iter_mut() {
         if let Some(ref ws) = item.whitespace {
             let mode = WhitespaceMode::from_str_lossy(ws);
             if mode != WhitespaceMode::Preserve
-                && let Some(Value::String(s)) = values.get(&item.path)
+                && let Some(JsonValue::String(s)) = values.get(&item.path)
             {
                 let transformed = mode.apply(s);
-                values.insert(item.path.clone(), Value::String(transformed.clone()));
-                item.value = Value::String(transformed);
+                values.insert(item.path.clone(), JsonValue::String(transformed.clone()));
+                item.value = JsonValue::String(transformed);
             }
         }
         apply_whitespace_to_items(&mut item.children, values);
@@ -38,8 +38,8 @@ pub(crate) fn eval_bool(expr: &str, env: &FormspecEnvironment, default: bool) ->
         Ok(parsed) => {
             let result = evaluate(&parsed, env);
             match result.value {
-                FelValue::Boolean(b) => b,
-                FelValue::Null => default,
+                Value::Boolean(b) => b,
+                Value::Null => default,
                 _ => default,
             }
         }
@@ -51,7 +51,7 @@ pub(crate) fn eval_bool(expr: &str, env: &FormspecEnvironment, default: bool) ->
 pub(crate) fn evaluate_single_item(
     item: &mut ItemInfo,
     env: &mut FormspecEnvironment,
-    values: &mut HashMap<String, Value>,
+    values: &mut HashMap<String, JsonValue>,
     parent_relevant: bool,
     parent_readonly: bool,
     invalid_paths: &HashSet<String>,
@@ -71,8 +71,8 @@ pub(crate) fn evaluate_single_item(
     if item.relevant && !was_relevant {
         let current = values.get(&item.path);
         let is_empty = match current {
-            None | Some(Value::Null) => true,
-            Some(Value::String(s)) => s.is_empty(),
+            None | Some(JsonValue::Null) => true,
+            Some(JsonValue::String(s)) => s.is_empty(),
             _ => false,
         };
         if is_empty {
@@ -97,7 +97,7 @@ pub(crate) fn evaluate_single_item(
         && let Some(ref ev) = item.excluded_value
         && ev == "null"
     {
-        env.set_field(&item.path, FelValue::Null);
+        env.set_field(&item.path, Value::Null);
     }
 
     let own_readonly = if let Some(ref expr) = item.readonly_expr {
@@ -146,7 +146,7 @@ pub(crate) fn evaluate_single_item(
 pub(crate) fn evaluate_items_with_inheritance(
     items: &mut [ItemInfo],
     env: &mut FormspecEnvironment,
-    values: &mut HashMap<String, Value>,
+    values: &mut HashMap<String, JsonValue>,
     parent_relevant: bool,
     parent_readonly: bool,
     invalid_paths: &HashSet<String>,
@@ -187,16 +187,16 @@ pub(crate) fn evaluate_items_with_inheritance(
 fn evaluate_repeat_children_with_aliases(
     children: &mut [ItemInfo],
     env: &mut FormspecEnvironment,
-    values: &mut HashMap<String, Value>,
+    values: &mut HashMap<String, JsonValue>,
     parent_relevant: bool,
     parent_readonly: bool,
-    scoped_vars: Option<&HashMap<String, Value>>,
+    scoped_vars: Option<&HashMap<String, JsonValue>>,
     invalid_paths: &HashSet<String>,
 ) {
     let mut current_instance: Option<String> = None;
     let mut alias_names: Vec<String> = Vec::new();
     let mut nested_groups: Vec<String> = Vec::new();
-    let mut saved_values: HashMap<String, Option<FelValue>> = HashMap::new();
+    let mut saved_values: HashMap<String, Option<Value>> = HashMap::new();
     let mut repeat_context_active = false;
 
     for item in children.iter_mut() {
@@ -282,10 +282,10 @@ fn evaluate_repeat_children_with_aliases(
 pub(crate) fn evaluate_items_with_inheritance_scoped(
     items: &mut [ItemInfo],
     env: &mut FormspecEnvironment,
-    values: &mut HashMap<String, Value>,
+    values: &mut HashMap<String, JsonValue>,
     parent_relevant: bool,
     parent_readonly: bool,
-    scoped_vars: &HashMap<String, Value>,
+    scoped_vars: &HashMap<String, JsonValue>,
     invalid_paths: &HashSet<String>,
 ) {
     for item in items.iter_mut() {

@@ -4,7 +4,7 @@
 // Rust guideline compliant 2026-02-21
 
 use fel_core::ast::{BinaryOp, Expr, PathSegment, UnaryOp};
-use fel_core::{FelError, parse, print_expr};
+use fel_core::{Error, parse, print_expr};
 use serde_json::{Value, json};
 
 /// JSON result for [`try_lift_condition_group`]: `lifted` with `logic` + `conditions`, or `unlifted`.
@@ -14,7 +14,7 @@ pub fn try_lift_condition_group(expression: &str) -> Value {
         Err(e) => json!({
             "status": "unlifted",
             "reason": match e {
-                FelError::Parse(m) | FelError::Eval(m) => m,
+                Error::Parse(m) | Error::Eval(m) => m,
             },
             "valid": false,
         }),

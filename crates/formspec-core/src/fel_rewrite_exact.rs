@@ -5,7 +5,7 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
 use fel_core::lexer::{Lexer, SpannedToken, Token};
-use fel_core::{FelError, parse};
+use fel_core::{Error, parse};
 
 use crate::fel_analysis::RewriteOptions;
 
@@ -113,36 +113,36 @@ impl<'a> ExactRewriteParser<'a> {
         tok
     }
 
-    fn expect(&mut self, expected: &Token) -> Result<(), FelError> {
+    fn expect(&mut self, expected: &Token) -> Result<(), Error> {
         if self.peek() == expected {
             self.advance();
             Ok(())
         } else {
-            Err(FelError::Parse(format!(
+            Err(Error::Parse(format!(
                 "expected {expected:?}, got {:?}",
                 self.peek()
             )))
         }
     }
 
-    fn eat_identifier(&mut self) -> Result<(String, SpannedToken), FelError> {
+    fn eat_identifier(&mut self) -> Result<(String, SpannedToken), Error> {
         match self.peek().clone() {
             Token::Identifier(name) => {
                 let token = self.advance().clone();
                 Ok((name, token))
             }
-            _ => Err(FelError::Parse(format!(
+            _ => Err(Error::Parse(format!(
                 "expected identifier, got {:?}",
                 self.peek()
             ))),
         }
     }
 
-    fn parse_expression(&mut self) -> Result<(), FelError> {
+    fn parse_expression(&mut self) -> Result<(), Error> {
         self.parse_let_or_if()
     }
 
-    fn parse_let_or_if(&mut self) -> Result<(), FelError> {
+    fn parse_let_or_if(&mut self) -> Result<(), Error> {
         if matches!(self.peek(), Token::Let) {
             self.advance();
             self.eat_identifier()?;
@@ -186,7 +186,7 @@ impl<'a> ExactRewriteParser<'a> {
         false
     }
 
-    fn parse_ternary(&mut self) -> Result<(), FelError> {
+    fn parse_ternary(&mut self) -> Result<(), Error> {
         self.parse_logical_or()?;
         if matches!(self.peek(), Token::Question) {
             self.advance();
@@ -197,7 +197,7 @@ impl<'a> ExactRewriteParser<'a> {
         Ok(())
     }
 
-    fn parse_logical_or(&mut self) -> Result<(), FelError> {
+    fn parse_logical_or(&mut self) -> Result<(), Error> {
         self.parse_logical_and()?;
         while matches!(self.peek(), Token::Or) {
             self.advance();
@@ -206,7 +206,7 @@ impl<'a> ExactRewriteParser<'a> {
         Ok(())
     }
 
-    fn parse_logical_and(&mut self) -> Result<(), FelError> {
+    fn parse_logical_and(&mut self) -> Result<(), Error> {
         self.parse_equality()?;
         while matches!(self.peek(), Token::And) {
             self.advance();
@@ -215,7 +215,7 @@ impl<'a> ExactRewriteParser<'a> {
         Ok(())
     }
 
-    fn parse_equality(&mut self) -> Result<(), FelError> {
+    fn parse_equality(&mut self) -> Result<(), Error> {
         self.parse_comparison()?;
         while matches!(self.peek(), Token::Eq | Token::NotEq) {
             self.advance();
@@ -224,7 +224,7 @@ impl<'a> ExactRewriteParser<'a> {
         Ok(())
     }
 
-    fn parse_comparison(&mut self) -> Result<(), FelError> {
+    fn parse_comparison(&mut self) -> Result<(), Error> {
         self.parse_membership()?;
         while matches!(
             self.peek(),
@@ -236,7 +236,7 @@ impl<'a> ExactRewriteParser<'a> {
         Ok(())
     }
 
-    fn parse_membership(&mut self) -> Result<(), FelError> {
+    fn parse_membership(&mut self) -> Result<(), Error> {
         self.parse_null_coalesce()?;
         if self.no_in_depth > 0 {
             return Ok(());
@@ -260,7 +260,7 @@ impl<'a> ExactRewriteParser<'a> {
         Ok(())
     }
 
-    fn parse_null_coalesce(&mut self) -> Result<(), FelError> {
+    fn parse_null_coalesce(&mut self) -> Result<(), Error> {
         self.parse_addition()?;
         while matches!(self.peek(), Token::DoubleQuestion) {
             self.advance();
@@ -269,7 +269,7 @@ impl<'a> ExactRewriteParser<'a> {
         Ok(())
     }
 
-    fn parse_addition(&mut self) -> Result<(), FelError> {
+    fn parse_addition(&mut self) -> Result<(), Error> {
         self.parse_multiplication()?;
         while matches!(self.peek(), Token::Plus | Token::Minus | Token::Ampersand) {
             self.advance();
@@ -278,7 +278,7 @@ impl<'a> ExactRewriteParser<'a> {
         Ok(())
     }
 
-    fn parse_multiplication(&mut self) -> Result<(), FelError> {
+    fn parse_multiplication(&mut self) -> Result<(), Error> {
         self.parse_unary()?;
         while matches!(self.peek(), Token::Star | Token::Slash | Token::Percent) {
             self.advance();
@@ -287,7 +287,7 @@ impl<'a> ExactRewriteParser<'a> {
         Ok(())
     }
 
-    fn parse_unary(&mut self) -> Result<(), FelError> {
+    fn parse_unary(&mut self) -> Result<(), Error> {
         if matches!(self.peek(), Token::Not) {
             if self.pos + 1 < self.tokens.len()
                 && matches!(self.tokens[self.pos + 1].token, Token::In)
@@ -306,7 +306,7 @@ impl<'a> ExactRewriteParser<'a> {
         self.parse_postfix()
     }
 
-    fn parse_postfix(&mut self) -> Result<(), FelError> {
+    fn parse_postfix(&mut self) -> Result<(), Error> {
         self.parse_atom()?;
         loop {
             match self.peek() {
@@ -321,7 +321,7 @@ impl<'a> ExactRewriteParser<'a> {
                             self.advance();
                         }
                         _ => {
-                            return Err(FelError::Parse(format!(
+                            return Err(Error::Parse(format!(
                                 "expected number or * in brackets, got {:?}",
                                 self.peek()
                             )));
@@ -335,7 +335,7 @@ impl<'a> ExactRewriteParser<'a> {
         Ok(())
     }
 
-    fn parse_atom(&mut self) -> Result<(), FelError> {
+    fn parse_atom(&mut self) -> Result<(), Error> {
         match self.peek().clone() {
             Token::Number(_)
             | Token::StringLit(_)
@@ -379,19 +379,19 @@ impl<'a> ExactRewriteParser<'a> {
                 if matches!(self.peek(), Token::LParen) {
                     self.parse_function_call("if".to_string())
                 } else {
-                    Err(FelError::Parse(
+                    Err(Error::Parse(
                         "unexpected 'if' — use if...then...else or if(...)".into(),
                     ))
                 }
             }
-            _ => Err(FelError::Parse(format!(
+            _ => Err(Error::Parse(format!(
                 "unexpected token {:?}",
                 self.peek()
             ))),
         }
     }
 
-    fn parse_field_ref(&mut self, start: usize) -> Result<(), FelError> {
+    fn parse_field_ref(&mut self, start: usize) -> Result<(), Error> {
         let mut parts: Vec<String> = Vec::new();
         let mut has_name = false;
         let mut end = start + 1;
@@ -422,7 +422,7 @@ impl<'a> ExactRewriteParser<'a> {
                             format!("[{n}]")
                         }
                         _ => {
-                            return Err(FelError::Parse(format!(
+                            return Err(Error::Parse(format!(
                                 "expected number or * in field ref brackets, got {:?}",
                                 self.peek()
                             )));
@@ -453,7 +453,7 @@ impl<'a> ExactRewriteParser<'a> {
         Ok(())
     }
 
-    fn parse_context_ref(&mut self, _start: usize) -> Result<(), FelError> {
+    fn parse_context_ref(&mut self, _start: usize) -> Result<(), Error> {
         let (name, name_token) = self.eat_identifier()?;
         let mut arg_token: Option<SpannedToken> = None;
         let mut arg_value: Option<String> = None;
@@ -468,7 +468,7 @@ impl<'a> ExactRewriteParser<'a> {
                     arg_token = Some(self.advance().clone());
                 }
                 _ => {
-                    return Err(FelError::Parse(format!(
+                    return Err(Error::Parse(format!(
                         "expected string literal, got {:?}",
                         self.peek()
                     )));
@@ -537,7 +537,7 @@ impl<'a> ExactRewriteParser<'a> {
         Ok(())
     }
 
-    fn parse_function_call(&mut self, name: String) -> Result<(), FelError> {
+    fn parse_function_call(&mut self, name: String) -> Result<(), Error> {
         self.expect(&Token::LParen)?;
         let mut first_arg_range: Option<(usize, usize)> = None;
         if !matches!(self.peek(), Token::RParen) {
@@ -610,7 +610,7 @@ impl<'a> ExactRewriteParser<'a> {
         });
     }
 
-    fn parse_array_literal(&mut self) -> Result<(), FelError> {
+    fn parse_array_literal(&mut self) -> Result<(), Error> {
         self.expect(&Token::LBracket)?;
         if !matches!(self.peek(), Token::RBracket) {
             self.parse_expression()?;
@@ -623,7 +623,7 @@ impl<'a> ExactRewriteParser<'a> {
         Ok(())
     }
 
-    fn parse_object_literal(&mut self) -> Result<(), FelError> {
+    fn parse_object_literal(&mut self) -> Result<(), Error> {
         self.expect(&Token::LBrace)?;
         if !matches!(self.peek(), Token::RBrace) {
             self.parse_object_entry()?;
@@ -639,13 +639,13 @@ impl<'a> ExactRewriteParser<'a> {
         Ok(())
     }
 
-    fn parse_object_entry(&mut self) -> Result<(), FelError> {
+    fn parse_object_entry(&mut self) -> Result<(), Error> {
         match self.peek().clone() {
             Token::Identifier(_) | Token::StringLit(_) => {
                 self.advance();
             }
             _ => {
-                return Err(FelError::Parse(format!(
+                return Err(Error::Parse(format!(
                     "expected object key, got {:?}",
                     self.peek()
                 )));

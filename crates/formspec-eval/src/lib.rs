@@ -7,7 +7,7 @@
 //! 3. [`mod@revalidate`] — required/type/constraint, extensions, shapes ([`revalidate()`])
 //! 4. [`mod@nrb`] — output shaping for non-relevant fields
 //!
-//! Cross-cutting: [`mod@convert`] (path resolution), private `fel_json` (money-aware JSON→`FelValue` for env fields),
+//! Cross-cutting: [`mod@convert`] (path resolution), private `fel_json` (money-aware JSON→`Value` for env fields),
 //! private `runtime_seed` (prePopulate / previous non-relevant). [`mod@screener_eval`] evaluates standalone screener documents.
 //!
 //! ## Documentation

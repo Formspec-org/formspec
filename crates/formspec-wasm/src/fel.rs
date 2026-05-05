@@ -10,8 +10,8 @@ use fel_core::{
 use fel_core::{
     evaluate, evaluate_with_trace, expr_is_interpolation_static_literal,
     fel_diagnostics_to_json_value, fel_to_json, field_map_from_json_str,
-    formspec_environment_from_json_map, has_error_diagnostics, parse, prepare_fel_expression_owned,
-    prepare_fel_host_options_from_json_map, reject_undefined_functions,
+    formspec_environment_from_json_map, has_error_diagnostics, parse, prepare,
+    host_options_from_json, reject_undefined_functions,
 };
 #[cfg(feature = "fel-authoring")]
 use formspec_core::try_lift_condition_group;
@@ -285,17 +285,17 @@ pub fn list_builtin_functions() -> Result<String, JsError> {
 /// Normalize FEL source for host evaluation (bare `$`, repeat qualifiers, repeat aliases).
 /// `options_json`: `{ expression, currentItemPath?, replaceSelfRef?, repeatCounts?, valuesByPath? | fieldPaths? }`.
 #[wasm_bindgen(js_name = "prepareFelExpression")]
-pub fn prepare_fel_expression_wasm(options_json: &str) -> Result<String, JsError> {
-    prepare_fel_expression_inner(options_json).map_err(|e| JsError::new(&e))
+pub fn prepare_expression_wasm(options_json: &str) -> Result<String, JsError> {
+    prepare_expression_inner(options_json).map_err(|e| JsError::new(&e))
 }
 
-pub(crate) fn prepare_fel_expression_inner(options_json: &str) -> Result<String, String> {
+pub(crate) fn prepare_expression_inner(options_json: &str) -> Result<String, String> {
     let v: Value = parse_value_str(options_json, "prepareFelExpression options JSON")?;
     let obj = v
         .as_object()
         .ok_or("prepareFelExpression options must be a JSON object")?;
-    let owned = prepare_fel_host_options_from_json_map(obj)?;
-    Ok(prepare_fel_expression_owned(&owned))
+    let owned = host_options_from_json(obj)?;
+    Ok(prepare(&owned))
 }
 
 // ── Path Utils ──────────────────────────────────────────────────

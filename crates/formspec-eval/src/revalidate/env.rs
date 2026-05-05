@@ -3,7 +3,7 @@
 
 use std::collections::HashMap;
 
-use fel_core::{FelValue, FormspecEnvironment, json_to_fel};
+use fel_core::{Value as EnvVal, FormspecEnvironment, json_to_fel};
 use serde_json::Value;
 
 use crate::fel_json::json_to_runtime_fel;
@@ -18,7 +18,7 @@ pub(super) fn apply_excluded_values_to_env(items: &[ItemInfo], env: &mut Formspe
             && let Some(ref ev) = item.excluded_value
             && ev == "null"
         {
-            env.set_field(&item.path, FelValue::Null);
+            env.set_field(&item.path, EnvVal::Null);
         }
         apply_excluded_values_to_env(&item.children, env);
     }
@@ -71,7 +71,7 @@ pub(super) fn bind_repeat_group_arrays(
     env: &mut FormspecEnvironment,
     items: &[ItemInfo],
     values: &HashMap<String, Value>,
-) -> HashMap<String, Option<FelValue>> {
+) -> HashMap<String, Option<EnvVal>> {
     let mut saved = HashMap::new();
     for item in items {
         if item.repeatable
@@ -87,7 +87,7 @@ pub(super) fn bind_repeat_group_arrays(
 
 pub(super) fn restore_repeat_group_arrays(
     env: &mut FormspecEnvironment,
-    saved_arrays: HashMap<String, Option<FelValue>>,
+    saved_arrays: HashMap<String, Option<EnvVal>>,
 ) {
     for (path, previous) in saved_arrays {
         match previous {
@@ -103,7 +103,7 @@ pub(super) fn bind_sibling_aliases(
     env: &mut FormspecEnvironment,
     values: &HashMap<String, Value>,
     concrete_path: &str,
-) -> HashMap<String, Option<FelValue>> {
+) -> HashMap<String, Option<EnvVal>> {
     let Some((row_prefix, _)) = concrete_path.rsplit_once('.') else {
         return HashMap::new();
     };
@@ -123,7 +123,7 @@ pub(super) fn bind_sibling_aliases(
 
 pub(super) fn restore_sibling_aliases(
     env: &mut FormspecEnvironment,
-    saved_aliases: HashMap<String, Option<FelValue>>,
+    saved_aliases: HashMap<String, Option<EnvVal>>,
 ) {
     for (alias, previous) in saved_aliases {
         match previous {

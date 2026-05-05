@@ -623,7 +623,7 @@ mod tests {
     // The following functions use PyO3 types (Python<'_>, PyObject, Bound<'_, PyDict>)
     // and cannot be tested without a live Python interpreter:
     //
-    // python_to_fel(py, obj) → FelValue
+    // python_to_fel(py, obj) → Value
     //   TODO: Test that bool is extracted BEFORE int (Python bool subclasses int).
     //         Test None → Null, int → Number(Decimal), float → Number(Decimal),
     //         str → String, list → Array, dict → Object, unknown → Null.
@@ -638,7 +638,7 @@ mod tests {
     //   TODO: Test all JSON types map correctly. Number edge cases:
     //         i64-representable → int, f64-representable → float, neither → None.
     //
-    // pydict_to_field_map(py, dict) → HashMap<String, FelValue>
+    // pydict_to_field_map(py, dict) → HashMap<String, Value>
     //   TODO: Test mixed-type dict, empty dict, nested structures.
     //
     // All #[pyfunction]s (eval_fel, parse_fel, get_dependencies, extract_deps,

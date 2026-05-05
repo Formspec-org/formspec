@@ -2,7 +2,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use fel_core::{FelValue, FormspecEnvironment, evaluate, extract_dependencies, fel_to_json, parse};
+use fel_core::{Value as EnvVal, FormspecEnvironment, evaluate, extract_dependencies, fel_to_json, parse};
 use serde_json::Value;
 
 use super::json_fel::json_to_runtime_fel;
@@ -110,14 +110,14 @@ fn visible_variables_for_scope(
 fn bind_scope_field_aliases(
     env: &mut FormspecEnvironment,
     scope: &str,
-) -> HashMap<String, Option<FelValue>> {
+) -> HashMap<String, Option<EnvVal>> {
     if scope == "#" {
         return HashMap::new();
     }
 
     let mut saved = HashMap::new();
     let prefix = format!("{scope}.");
-    let entries: Vec<(String, FelValue)> = env
+    let entries: Vec<(String, EnvVal)> = env
         .data
         .iter()
         .map(|(key, value)| (key.clone(), value.clone()))
@@ -137,7 +137,7 @@ fn bind_scope_field_aliases(
 
 fn restore_scope_field_aliases(
     env: &mut FormspecEnvironment,
-    saved_aliases: HashMap<String, Option<FelValue>>,
+    saved_aliases: HashMap<String, Option<EnvVal>>,
 ) {
     for (alias, previous) in saved_aliases {
         match previous {

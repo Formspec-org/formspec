@@ -11,7 +11,7 @@ use std::collections::{HashMap, HashSet};
 
 use fel_core::ast::{BinaryOp, Expr, PathSegment, UnaryOp};
 use fel_core::extensions::builtin_function_catalog;
-use fel_core::{FelError, parse};
+use fel_core::{Error, parse};
 use serde_json::{Value, json};
 
 /// Callback that rewrites a single string reference, returning `None` to keep the original.
@@ -143,7 +143,7 @@ pub fn analyze_fel(expression: &str) -> FelAnalysis {
             valid: false,
             errors: vec![FelAnalysisError {
                 message: match e {
-                    FelError::Parse(m) | FelError::Eval(m) => m,
+                    Error::Parse(m) | Error::Eval(m) => m,
                 },
             }],
             warnings: vec![],

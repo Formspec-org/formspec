@@ -45,7 +45,7 @@ pub fn recalculate(
     }
     let mut values = data.clone();
 
-    // Build path→dataType map for type-aware coercion (spec S2.1.3: date strings → FelDate)
+    // Build path→dataType map for type-aware coercion (spec S2.1.3: date strings → Date)
     let data_types = collect_data_types(items);
 
     for (k, v) in &values {

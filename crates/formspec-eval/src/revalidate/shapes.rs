@@ -3,8 +3,8 @@
 
 use std::collections::{HashMap, HashSet};
 
-use fel_core::{EvalResult, FelValue, FormspecEnvironment, fel_to_json};
-use serde_json::Value;
+use fel_core::{EvalResult, Value, FormspecEnvironment, fel_to_json};
+use serde_json::Value as JsonValue;
 
 use crate::fel_json::json_to_runtime_fel_typed;
 use crate::rebuild::{
@@ -22,10 +22,10 @@ use super::expr::{
 };
 
 pub(super) fn validate_shape(
-    shape: &Value,
-    shapes_by_id: &HashMap<String, &Value>,
+    shape: &JsonValue,
+    shapes_by_id: &HashMap<String, &JsonValue>,
     env: &mut FormspecEnvironment,
-    values: &HashMap<String, Value>,
+    values: &HashMap<String, JsonValue>,
     items: &[ItemInfo],
     results: &mut Vec<ValidationResult>,
 ) {
@@ -116,10 +116,10 @@ pub(super) fn validate_shape(
 
 /// Validate a shape with a wildcard target, evaluating per concrete instance.
 fn validate_wildcard_shape(
-    shape: &Value,
-    _shapes_by_id: &HashMap<String, &Value>,
+    shape: &JsonValue,
+    _shapes_by_id: &HashMap<String, &JsonValue>,
     env: &mut FormspecEnvironment,
-    values: &HashMap<String, Value>,
+    values: &HashMap<String, JsonValue>,
     items: &[ItemInfo],
     results: &mut Vec<ValidationResult>,
 ) {
@@ -228,10 +228,10 @@ fn validate_wildcard_shape(
 }
 
 fn evaluate_shape_context(
-    shape: &Value,
+    shape: &JsonValue,
     env: &FormspecEnvironment,
     wildcard: Option<(&str, usize)>,
-) -> Option<HashMap<String, Value>> {
+) -> Option<HashMap<String, JsonValue>> {
     let context = shape.get("context")?.as_object()?;
     let mut evaluated = HashMap::new();
 
@@ -253,13 +253,13 @@ fn evaluate_shape_context(
 
 fn evaluate_composition_element(
     expr: &str,
-    shapes_by_id: &HashMap<String, &Value>,
+    shapes_by_id: &HashMap<String, &JsonValue>,
     env: &FormspecEnvironment,
     visiting: &mut HashSet<String>,
 ) -> EvalResult {
     if let Some(shape) = shapes_by_id.get(expr) {
         return EvalResult {
-            value: FelValue::Boolean(shape_passes(shape, shapes_by_id, env, visiting)),
+            value: Value::Boolean(shape_passes(shape, shapes_by_id, env, visiting)),
             diagnostics: vec![],
         };
     }
@@ -267,8 +267,8 @@ fn evaluate_composition_element(
 }
 
 fn shape_passes(
-    shape: &Value,
-    shapes_by_id: &HashMap<String, &Value>,
+    shape: &JsonValue,
+    shapes_by_id: &HashMap<String, &JsonValue>,
     env: &FormspecEnvironment,
     visiting: &mut HashSet<String>,
 ) -> bool {

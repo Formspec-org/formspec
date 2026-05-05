@@ -8,9 +8,9 @@ use pythonize::depythonize;
 use rust_decimal::Decimal;
 use rust_decimal::prelude::{FromPrimitive, ToPrimitive};
 use serde::de::DeserializeOwned;
-use serde_json::Value;
+use serde_json::Value as JsonValue;
 
-use fel_core::{FelValue, FormspecEnvironment, MipState};
+use fel_core::{Value, FormspecEnvironment, MipState};
 use formspec_core::extension_analysis::RegistryEntryStatus;
 use formspec_core::registry_client;
 
@@ -23,7 +23,7 @@ pub(crate) fn depythonize_json<T: DeserializeOwned>(obj: &Bound<'_, PyAny>) -> P
     depythonize(obj).map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
 }
 
-/// Parse a FEL source string into an AST; maps [`fel_core::FelError`] to `PyValueError`.
+/// Parse a FEL source string into an AST; maps [`fel_core::Error`] to `PyValueError`.
 pub(crate) fn parse_fel_expr(source: &str) -> PyResult<fel_core::Expr> {
     fel_core::parse(source).map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
 }
@@ -32,7 +32,7 @@ fn merge_fel_dict_into_env(
     py: Python,
     env: &mut FormspecEnvironment,
     dict: &Bound<'_, PyDict>,
-    mut apply: impl FnMut(&mut FormspecEnvironment, &str, FelValue),
+    mut apply: impl FnMut(&mut FormspecEnvironment, &str, Value),
 ) -> PyResult<()> {
     for (key, value) in dict.iter() {
         let k: String = key.extract()?;
@@ -44,7 +44,7 @@ fn merge_fel_dict_into_env(
 pub(crate) fn pydict_to_field_map(
     py: Python,
     dict: &Bound<'_, PyDict>,
-) -> PyResult<HashMap<String, FelValue>> {
+) -> PyResult<HashMap<String, Value>> {
     let mut map = HashMap::new();
     for (key, value) in dict.iter() {
         let k: String = key.extract()?;
@@ -116,31 +116,31 @@ pub(crate) fn pyany_to_mip_state(obj: &Bound<'_, PyAny>) -> PyResult<MipState> {
 }
 
 #[allow(clippy::only_used_in_recursion)]
-pub(crate) fn python_to_fel(py: Python, obj: &Bound<'_, PyAny>) -> PyResult<FelValue> {
+pub(crate) fn python_to_fel(py: Python, obj: &Bound<'_, PyAny>) -> PyResult<Value> {
     if obj.is_none() {
-        return Ok(FelValue::Null);
+        return Ok(Value::Null);
     }
     if let Ok(b) = obj.extract::<bool>() {
-        return Ok(FelValue::Boolean(b));
+        return Ok(Value::Boolean(b));
     }
     if let Ok(i) = obj.extract::<i64>() {
-        return Ok(FelValue::Number(Decimal::from(i)));
+        return Ok(Value::Number(Decimal::from(i)));
     }
     if let Ok(f) = obj.extract::<f64>() {
         return Ok(match Decimal::from_f64(f) {
-            Some(d) => FelValue::Number(d),
-            None => FelValue::Null, // NaN, Infinity → Null, not zero
+            Some(d) => Value::Number(d),
+            None => Value::Null, // NaN, Infinity → Null, not zero
         });
     }
     if let Ok(s) = obj.extract::<String>() {
-        return Ok(FelValue::String(s));
+        return Ok(Value::String(s));
     }
     if let Ok(list) = obj.cast::<PyList>() {
         let mut arr = Vec::new();
         for item in list.iter() {
             arr.push(python_to_fel(py, &item)?);
         }
-        return Ok(FelValue::Array(arr));
+        return Ok(Value::Array(arr));
     }
     if let Ok(dict) = obj.cast::<PyDict>() {
         let tagged_type = dict
@@ -153,8 +153,8 @@ pub(crate) fn python_to_fel(py: Python, obj: &Bound<'_, PyAny>) -> PyResult<FelV
                         && let Ok(text) = raw.extract::<String>()
                     {
                         return Ok(match Decimal::from_str_exact(&text) {
-                            Ok(d) => FelValue::Number(d),
-                            Err(_) => FelValue::Null,
+                            Ok(d) => Value::Number(d),
+                            Err(_) => Value::Null,
                         });
                     }
                 }
@@ -163,10 +163,10 @@ pub(crate) fn python_to_fel(py: Python, obj: &Bound<'_, PyAny>) -> PyResult<FelV
                         && let Ok(text) = raw.extract::<String>()
                     {
                         if let Some(date) = fel_core::parse_datetime_literal(&format!("@{text}")) {
-                            return Ok(FelValue::Date(date));
+                            return Ok(Value::Date(date));
                         }
                         if let Some(date) = fel_core::parse_date_literal(&format!("@{text}")) {
-                            return Ok(FelValue::Date(date));
+                            return Ok(Value::Date(date));
                         }
                     }
                 }
@@ -180,11 +180,11 @@ pub(crate) fn python_to_fel(py: Python, obj: &Bound<'_, PyAny>) -> PyResult<FelV
                         .and_then(|value| value.extract::<String>().ok())
                         .unwrap_or_default();
                     return Ok(match Decimal::from_str_exact(&amount_str) {
-                        Ok(d) => FelValue::Money(fel_core::FelMoney {
+                        Ok(d) => Value::Money(fel_core::Money {
                             amount: d,
                             currency,
                         }),
-                        Err(_) => FelValue::Null,
+                        Err(_) => Value::Null,
                     });
                 }
                 _ => {}
@@ -208,7 +208,7 @@ pub(crate) fn python_to_fel(py: Python, obj: &Bound<'_, PyAny>) -> PyResult<FelV
                 None
             };
             if let Some(amount) = maybe_decimal {
-                return Ok(FelValue::Money(fel_core::FelMoney { amount, currency }));
+                return Ok(Value::Money(fel_core::Money { amount, currency }));
             }
         }
 
@@ -218,16 +218,16 @@ pub(crate) fn python_to_fel(py: Python, obj: &Bound<'_, PyAny>) -> PyResult<FelV
             let val = python_to_fel(py, &v)?;
             entries.push((key, val));
         }
-        return Ok(FelValue::Object(entries));
+        return Ok(Value::Object(entries));
     }
-    Ok(FelValue::Null)
+    Ok(Value::Null)
 }
 
-pub(crate) fn fel_to_python(py: Python, val: &FelValue) -> PyResult<PyObject> {
+pub(crate) fn fel_to_python(py: Python, val: &Value) -> PyResult<PyObject> {
     match val {
-        FelValue::Null => Ok(py.None()),
-        FelValue::Boolean(b) => Ok(PyBool::new(py, *b).to_owned().into_any().unbind()),
-        FelValue::Number(n) => {
+        Value::Null => Ok(py.None()),
+        Value::Boolean(b) => Ok(PyBool::new(py, *b).to_owned().into_any().unbind()),
+        Value::Number(n) => {
             if n.fract().is_zero()
                 && let Some(i) = n.to_i64()
             {
@@ -239,69 +239,69 @@ pub(crate) fn fel_to_python(py: Python, val: &FelValue) -> PyResult<PyObject> {
                 Ok(py.None())
             }
         }
-        FelValue::String(s) => Ok(s.into_pyobject(py)?.into_any().unbind()),
-        FelValue::Date(d) => Ok(d.format_iso().into_pyobject(py)?.into_any().unbind()),
-        FelValue::Array(arr) => {
+        Value::String(s) => Ok(s.into_pyobject(py)?.into_any().unbind()),
+        Value::Date(d) => Ok(d.format_iso().into_pyobject(py)?.into_any().unbind()),
+        Value::Array(arr) => {
             let list = PyList::empty(py);
             for item in arr {
                 list.append(fel_to_python(py, item)?)?;
             }
             Ok(list.into())
         }
-        FelValue::Object(entries) => {
+        Value::Object(entries) => {
             let dict = PyDict::new(py);
             for (k, v) in entries {
                 dict.set_item(k, fel_to_python(py, v)?)?;
             }
             Ok(dict.into())
         }
-        FelValue::Money(m) => {
+        Value::Money(m) => {
             let dict = PyDict::new(py);
-            dict.set_item("amount", fel_to_python(py, &FelValue::Number(m.amount))?)?;
+            dict.set_item("amount", fel_to_python(py, &Value::Number(m.amount))?)?;
             dict.set_item("currency", &m.currency)?;
             Ok(dict.into())
         }
     }
 }
 
-pub(crate) fn fel_to_python_tagged(py: Python, val: &FelValue) -> PyResult<PyObject> {
+pub(crate) fn fel_to_python_tagged(py: Python, val: &Value) -> PyResult<PyObject> {
     match val {
-        FelValue::Null => Ok(py.None()),
-        FelValue::Boolean(b) => Ok(PyBool::new(py, *b).to_owned().into_any().unbind()),
-        FelValue::Number(n) => {
+        Value::Null => Ok(py.None()),
+        Value::Boolean(b) => Ok(PyBool::new(py, *b).to_owned().into_any().unbind()),
+        Value::Number(n) => {
             let dict = PyDict::new(py);
             dict.set_item("__fel_type__", "number")?;
             dict.set_item("value", n.to_string())?;
             Ok(dict.into())
         }
-        FelValue::String(s) => Ok(s.into_pyobject(py)?.into_any().unbind()),
-        FelValue::Date(d) => {
+        Value::String(s) => Ok(s.into_pyobject(py)?.into_any().unbind()),
+        Value::Date(d) => {
             let dict = PyDict::new(py);
             dict.set_item(
                 "__fel_type__",
                 match d {
-                    fel_core::FelDate::Date { .. } => "date",
-                    fel_core::FelDate::DateTime { .. } => "datetime",
+                    fel_core::Date::Date { .. } => "date",
+                    fel_core::Date::DateTime { .. } => "datetime",
                 },
             )?;
             dict.set_item("value", d.format_iso())?;
             Ok(dict.into())
         }
-        FelValue::Array(arr) => {
+        Value::Array(arr) => {
             let list = PyList::empty(py);
             for item in arr {
                 list.append(fel_to_python_tagged(py, item)?)?;
             }
             Ok(list.into())
         }
-        FelValue::Object(entries) => {
+        Value::Object(entries) => {
             let dict = PyDict::new(py);
             for (k, v) in entries {
                 dict.set_item(k, fel_to_python_tagged(py, v)?)?;
             }
             Ok(dict.into())
         }
-        FelValue::Money(m) => {
+        Value::Money(m) => {
             let dict = PyDict::new(py);
             dict.set_item("__fel_type__", "money")?;
             dict.set_item("amount", m.amount.to_string())?;
@@ -311,11 +311,11 @@ pub(crate) fn fel_to_python_tagged(py: Python, val: &FelValue) -> PyResult<PyObj
     }
 }
 
-pub(crate) fn json_to_python(py: Python, val: &Value) -> PyResult<PyObject> {
+pub(crate) fn json_to_python(py: Python, val: &JsonValue) -> PyResult<PyObject> {
     match val {
-        Value::Null => Ok(py.None()),
-        Value::Bool(b) => Ok(PyBool::new(py, *b).to_owned().into_any().unbind()),
-        Value::Number(n) => {
+        JsonValue::Null => Ok(py.None()),
+        JsonValue::Bool(b) => Ok(PyBool::new(py, *b).to_owned().into_any().unbind()),
+        JsonValue::Number(n) => {
             if let Some(i) = n.as_i64() {
                 Ok(i.into_pyobject(py)?.into_any().unbind())
             } else if let Some(f) = n.as_f64() {
@@ -324,15 +324,15 @@ pub(crate) fn json_to_python(py: Python, val: &Value) -> PyResult<PyObject> {
                 Ok(py.None())
             }
         }
-        Value::String(s) => Ok(s.into_pyobject(py)?.into_any().unbind()),
-        Value::Array(arr) => {
+        JsonValue::String(s) => Ok(s.into_pyobject(py)?.into_any().unbind()),
+        JsonValue::Array(arr) => {
             let list = PyList::empty(py);
             for item in arr {
                 list.append(json_to_python(py, item)?)?;
             }
             Ok(list.into())
         }
-        Value::Object(map) => {
+        JsonValue::Object(map) => {
             let dict = PyDict::new(py);
             for (k, v) in map {
                 dict.set_item(k, json_to_python(py, v)?)?;

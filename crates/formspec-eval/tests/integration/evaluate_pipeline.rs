@@ -912,7 +912,7 @@ fn round_trip_object() {
 #[test]
 fn round_trip_money() {
     use rust_decimal::prelude::FromPrimitive;
-    let money = fel_core::FelValue::Money(fel_core::FelMoney {
+    let money = fel_core::Value::Money(fel_core::Money {
         amount: rust_decimal::Decimal::from_f64(99.99).unwrap(),
         currency: "USD".to_string(),
     });
@@ -924,7 +924,7 @@ fn round_trip_money() {
 
 #[test]
 fn round_trip_date() {
-    let date = fel_core::FelValue::Date(fel_core::FelDate::Date {
+    let date = fel_core::Value::Date(fel_core::Date::Date {
         year: 2025,
         month: 6,
         day: 15,
