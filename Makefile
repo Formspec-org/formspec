@@ -26,8 +26,8 @@ test-unit: build-js
 test-e2e: node_modules
 	npm run test:e2e
 
-test-studio-e2e: node_modules
-	npm run test:studio:e2e
+# formspec-studio extracted to sibling repo formspec-stack/formspec-studio/ on 2026-05-04.
+# Its e2e suite is owned there; not run as part of formspec's `make test`.
 
 test-python: build-python
 	.venv/bin/python -m pytest tests/
@@ -83,7 +83,7 @@ rebuild-python: .venv/.deps-stamp
 test-rust:
 	cargo nextest run --workspace
 
-test: test-unit test-python test-rust test-scripts test-e2e test-studio-e2e
+test: test-unit test-python test-rust test-scripts test-e2e
 
 test-engine-isolation: build-js
 	npm run --workspace=@formspec-org/engine test:init-entry-runtime-only
@@ -193,4 +193,4 @@ clean:
 	      packages/formspec-mcp/API.llm.md \
 	      packages/formspec-studio-core/API.llm.md
 
-.PHONY: all spec-artifacts docs-check check docs html-docs api-docs build build-rust build-js build-python rebuild-python build-wasm test test-unit test-engine-isolation test-python test-rust test-scripts test-e2e test-studio-e2e setup serve clean
+.PHONY: all spec-artifacts docs-check check docs html-docs api-docs build build-rust build-js build-python rebuild-python build-wasm test test-unit test-engine-isolation test-python test-rust test-scripts test-e2e setup serve clean
