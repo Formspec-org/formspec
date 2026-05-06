@@ -14,7 +14,7 @@ pub fn try_lift_condition_group(expression: &str) -> Value {
         Err(e) => json!({
             "status": "unlifted",
             "reason": match e {
-                Error::Parse(m) | Error::Eval(m) => m,
+                Error::Parse(m) => m,
             },
             "valid": false,
         }),
@@ -273,6 +273,7 @@ fn lift_comparison(expr: &Expr) -> Option<Value> {
     };
     let field = match left.as_ref() {
         Expr::FieldRef { name, path } => field_ref_to_field_key(name, path)?,
+        Expr::VarRef { name, path } => field_ref_to_field_key(&Some(name.clone()), path)?,
         _ => return None,
     };
     let rhs = print_expr(right.as_ref());
@@ -325,6 +326,7 @@ fn lift_comparison(expr: &Expr) -> Option<Value> {
 fn field_from_simple_ref(expr: &Expr) -> Option<String> {
     match expr {
         Expr::FieldRef { name, path } => field_ref_to_field_key(name, path),
+        Expr::VarRef { name, path } => field_ref_to_field_key(&Some(name.clone()), path),
         _ => None,
     }
 }

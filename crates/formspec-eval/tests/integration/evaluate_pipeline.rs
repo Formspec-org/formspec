@@ -911,15 +911,27 @@ fn round_trip_object() {
 
 #[test]
 fn round_trip_money() {
+    use rust_decimal::Decimal;
     use rust_decimal::prelude::FromPrimitive;
     let money = fel_core::Value::Money(fel_core::Money {
-        amount: rust_decimal::Decimal::from_f64(99.99).unwrap(),
-        currency: "USD".to_string(),
+        amount: Decimal::from_f64(99.99).unwrap(),
+        currency: fel_core::CurrencyCode::parse("USD").expect("USD"),
     });
     let json_val = fel_core::fel_to_json(&money);
     assert_eq!(json_val.get("currency"), Some(&json!("USD")));
-    let amount = json_val.get("amount").and_then(|v| v.as_f64()).unwrap();
-    assert!((amount - 99.99).abs() < 0.01, "money amount round-trip");
+    let amount_json = json_val.get("amount").expect("amount field");
+    let parsed = match amount_json {
+        serde_json::Value::String(s) => Decimal::from_str_exact(s).expect("decimal string"),
+        serde_json::Value::Number(n) => {
+            Decimal::from_f64(n.as_f64().expect("f64")).expect("decimal")
+        }
+        other => panic!("unexpected amount JSON: {other:?}"),
+    };
+    let expected = Decimal::from_f64(99.99).unwrap();
+    assert!(
+        (parsed - expected).abs() < Decimal::from_str_exact("0.01").unwrap(),
+        "money amount round-trip"
+    );
 }
 
 #[test]

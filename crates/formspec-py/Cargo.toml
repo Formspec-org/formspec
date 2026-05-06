@@ -14,6 +14,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 fel-core = { path = "../../../fel-core" }
+indexmap = "2"
 formspec-core = { path = "../formspec-core" }
 formspec-eval = { path = "../formspec-eval" }
 formspec-lint = { path = "../formspec-lint" }

@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 
+use indexmap::IndexMap;
 use pyo3::prelude::*;
 use pyo3::types::{PyBool, PyDict, PyList};
 use pythonize::depythonize;
@@ -179,13 +180,18 @@ pub(crate) fn python_to_fel(py: Python, obj: &Bound<'_, PyAny>) -> PyResult<Valu
                         .get_item("currency")?
                         .and_then(|value| value.extract::<String>().ok())
                         .unwrap_or_default();
-                    return Ok(match Decimal::from_str_exact(&amount_str) {
-                        Ok(d) => Value::Money(fel_core::Money {
-                            amount: d,
-                            currency,
-                        }),
-                        Err(_) => Value::Null,
-                    });
+                    return Ok(
+                        match (
+                            Decimal::from_str_exact(&amount_str).ok(),
+                            fel_core::CurrencyCode::parse(&currency),
+                        ) {
+                            (Some(amount), Some(cc)) => Value::Money(fel_core::Money {
+                                amount,
+                                currency: cc,
+                            }),
+                            _ => Value::Null,
+                        },
+                    );
                 }
                 _ => {}
             }
@@ -208,15 +214,20 @@ pub(crate) fn python_to_fel(py: Python, obj: &Bound<'_, PyAny>) -> PyResult<Valu
                 None
             };
             if let Some(amount) = maybe_decimal {
-                return Ok(Value::Money(fel_core::Money { amount, currency }));
+                if let Some(cc) = fel_core::CurrencyCode::parse(&currency) {
+                    return Ok(Value::Money(fel_core::Money {
+                        amount,
+                        currency: cc,
+                    }));
+                }
             }
         }
 
-        let mut entries = Vec::new();
+        let mut entries = IndexMap::new();
         for (k, v) in dict.iter() {
             let key: String = k.extract()?;
             let val = python_to_fel(py, &v)?;
-            entries.push((key, val));
+            entries.insert(key, val);
         }
         return Ok(Value::Object(entries));
     }
@@ -258,7 +269,7 @@ pub(crate) fn fel_to_python(py: Python, val: &Value) -> PyResult<PyObject> {
         Value::Money(m) => {
             let dict = PyDict::new(py);
             dict.set_item("amount", fel_to_python(py, &Value::Number(m.amount))?)?;
-            dict.set_item("currency", &m.currency)?;
+            dict.set_item("currency", m.currency.as_str())?;
             Ok(dict.into())
         }
     }
@@ -305,7 +316,7 @@ pub(crate) fn fel_to_python_tagged(py: Python, val: &Value) -> PyResult<PyObject
             let dict = PyDict::new(py);
             dict.set_item("__fel_type__", "money")?;
             dict.set_item("amount", m.amount.to_string())?;
-            dict.set_item("currency", &m.currency)?;
+            dict.set_item("currency", m.currency.as_str())?;
             Ok(dict.into())
         }
     }

@@ -12,7 +12,8 @@ use std::sync::LazyLock;
 
 use fel_core::ast::{BinaryOp, Expr, PathSegment, UnaryOp};
 use fel_core::extensions::builtin_function_catalog;
-use fel_core::{Error, FelType, parse};
+use fel_core::extensions::FelType;
+use fel_core::{Error, parse};
 use serde_json::{Value, json};
 
 /// Callback that rewrites a single string reference, returning `None` to keep the original.
@@ -106,7 +107,7 @@ pub fn analyze_fel(expression: &str) -> FelAnalysis {
             valid: false,
             errors: vec![FelAnalysisError {
                 message: match e {
-                    Error::Parse(m) | Error::Eval(m) => m,
+                    Error::Parse(m) => m,
                 },
             }],
             warnings: vec![],
@@ -213,6 +214,26 @@ fn infer_coarse_type(expr: &Expr, field_types: &HashMap<String, String>) -> Coar
             if let Some(n) = name {
                 segments.push(n.clone());
             }
+            for seg in path {
+                match seg {
+                    PathSegment::Dot(s) => segments.push(s.clone()),
+                    PathSegment::Index(_) | PathSegment::Wildcard => {}
+                }
+            }
+            let key = segments.join(".");
+            match field_types.get(&key).map(|s| s.as_str()) {
+                Some("date") => CoarseType::Date,
+                Some("dateTime") => CoarseType::Date,
+                Some("number" | "integer" | "decimal") => CoarseType::Number,
+                Some("money") => CoarseType::Money,
+                Some("string" | "text") => CoarseType::String,
+                Some("boolean") => CoarseType::Boolean,
+                _ => CoarseType::Unknown,
+            }
+        }
+
+        Expr::VarRef { name, path } => {
+            let mut segments = vec![name.clone()];
             for seg in path {
                 match seg {
                     PathSegment::Dot(s) => segments.push(s.clone()),
@@ -584,6 +605,17 @@ fn collect_info(
                 references.insert(segments.join(".").replace(".[", "["));
             }
         }
+        Expr::VarRef { name, path } => {
+            let mut segments = vec![name.clone()];
+            for seg in path {
+                match seg {
+                    PathSegment::Dot(s) => segments.push(s.clone()),
+                    PathSegment::Index(i) => segments.push(format!("[{i}]")),
+                    PathSegment::Wildcard => segments.push("[*]".to_string()),
+                }
+            }
+            references.insert(segments.join(".").replace(".[", "["));
+        }
         Expr::ContextRef {
             name,
             arg: _,
@@ -716,6 +748,23 @@ fn rewrite_expr(expr: &Expr, opts: &RewriteOptions) -> Expr {
                 if let Some(new_path) = rewrite(&original) {
                     // Parse the new path back into name + segments
                     return parse_field_ref_from_path(&new_path);
+                }
+            }
+            expr.clone()
+        }
+        Expr::VarRef { name, path } => {
+            if let Some(ref rewrite) = opts.rewrite_field_path {
+                let mut segments = vec![name.clone()];
+                for seg in path {
+                    match seg {
+                        PathSegment::Dot(s) => segments.push(s.clone()),
+                        PathSegment::Index(i) => segments.push(format!("[{i}]")),
+                        PathSegment::Wildcard => segments.push("[*]".to_string()),
+                    }
+                }
+                let original = segments.join(".").replace(".[", "[");
+                if let Some(new_path) = rewrite(&original) {
+                    return parse_var_ref_from_path(&new_path);
                 }
             }
             expr.clone()
@@ -872,6 +921,36 @@ fn parse_field_ref_from_path(path: &str) -> Expr {
     }
 }
 
+/// Parse a dotted path string back into a bare-identifier [`Expr::VarRef`] node.
+fn parse_var_ref_from_path(path: &str) -> Expr {
+    let parts: Vec<&str> = path.split('.').collect();
+    if parts.is_empty() || parts[0].is_empty() {
+        return Expr::VarRef {
+            name: String::new(),
+            path: vec![],
+        };
+    }
+    let name = parts[0].to_string();
+    let mut segments = Vec::new();
+    for &part in &parts[1..] {
+        if let Some(idx_str) = part.strip_prefix('[').and_then(|s| s.strip_suffix(']')) {
+            if idx_str == "*" {
+                segments.push(PathSegment::Wildcard);
+            } else if let Ok(idx) = idx_str.parse::<usize>() {
+                segments.push(PathSegment::Index(idx));
+            } else {
+                segments.push(PathSegment::Dot(part.to_string()));
+            }
+        } else {
+            segments.push(PathSegment::Dot(part.to_string()));
+        }
+    }
+    Expr::VarRef {
+        name,
+        path: segments,
+    }
+}
+
 fn collect_rewrite_targets(expr: &Expr, targets: &mut FelRewriteTargets) {
     match expr {
         Expr::FieldRef { name, path } => {
@@ -891,6 +970,19 @@ fn collect_rewrite_targets(expr: &Expr, targets: &mut FelRewriteTargets) {
                     .field_paths
                     .insert(segments.join(".").replace(".[", "["));
             }
+        }
+        Expr::VarRef { name, path } => {
+            let mut segments = vec![name.clone()];
+            for seg in path {
+                match seg {
+                    PathSegment::Dot(s) => segments.push(s.clone()),
+                    PathSegment::Index(i) => segments.push(format!("[{i}]")),
+                    PathSegment::Wildcard => segments.push("[*]".to_string()),
+                }
+            }
+            targets
+                .field_paths
+                .insert(segments.join(".").replace(".[", "["));
         }
         Expr::ContextRef { name, arg, tail } => {
             if name == "current" {
