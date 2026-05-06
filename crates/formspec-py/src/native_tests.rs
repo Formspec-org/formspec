@@ -1047,4 +1047,31 @@ mod tests {
             runtime_mapping::TransformType::Coerce(runtime_mapping::CoerceType::String)
         ));
     }
+
+    // ── FEL fel_analysis_to_json_value (analyze_expression) ────────────────
+
+    /// Invalid FEL returns structured `errors` entries (`message`, optional `span`).
+    #[test]
+    fn fel_analysis_json_errors_include_message_and_span_shape() {
+        use formspec_core::{analyze_fel, fel_analysis_to_json_value};
+
+        let result = analyze_fel("$a +");
+        assert!(!result.valid);
+        let v = fel_analysis_to_json_value(&result);
+        let errors = v["errors"].as_array().expect("errors array");
+        assert!(!errors.is_empty(), "{v:?}");
+        let first = &errors[0];
+        assert!(
+            first.get("message").and_then(|m| m.as_str()).is_some(),
+            "{first:?}"
+        );
+        match first.get("span").unwrap_or(&serde_json::Value::Null) {
+            serde_json::Value::Null => {}
+            serde_json::Value::Object(obj) => {
+                assert!(obj.get("start").and_then(|x| x.as_u64()).is_some());
+                assert!(obj.get("end").and_then(|x| x.as_u64()).is_some());
+            }
+            other => panic!("unexpected span: {other:?}"),
+        }
+    }
 }

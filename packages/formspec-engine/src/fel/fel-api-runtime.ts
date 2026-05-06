@@ -18,6 +18,14 @@ import {
 
 export type { FelTraceStep, FelTraceResult } from '../wasm-bridge-runtime.js';
 
+import {
+    lineColumnAtCharOffset,
+    normalizeFelAnalysisError,
+    type WasmFelAnalysisErrorWire,
+} from './normalize-fel-analysis-error.js';
+
+export { lineColumnAtCharOffset, normalizeFelAnalysisError, type WasmFelAnalysisErrorWire };
+
 export const normalizeIndexedPath = wasmNormalizeIndexedPath;
 export const itemAtPath = wasmItemAtPath;
 
@@ -25,9 +33,7 @@ export function analyzeFEL(expression: string): FELAnalysis {
     const raw = wasmAnalyzeFEL(expression);
     return {
         ...raw,
-        errors: raw.errors.map((e: string | { message: string; line?: number; column?: number; offset?: number }) =>
-            typeof e === 'string' ? { message: e, line: 1, column: 1, offset: 0 } : e,
-        ),
+        errors: raw.errors.map(e => normalizeFelAnalysisError(expression, e)),
     };
 }
 
@@ -39,9 +45,7 @@ export function analyzeFELWithFieldTypes(
     const raw = wasmAnalyzeFELWithFieldTypes(expression, fieldTypes);
     return {
         ...raw,
-        errors: raw.errors.map((e: string | { message: string; line?: number; column?: number; offset?: number }) =>
-            typeof e === 'string' ? { message: e, line: 1, column: 1, offset: 0 } : e,
-        ),
+        errors: raw.errors.map(e => normalizeFelAnalysisError(expression, e)),
     };
 }
 

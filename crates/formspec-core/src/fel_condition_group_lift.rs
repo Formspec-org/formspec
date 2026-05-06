@@ -11,11 +11,10 @@ use serde_json::{Value, json};
 pub fn try_lift_condition_group(expression: &str) -> Value {
     match parse(expression) {
         Ok(expr) => lift_parsed(&expr),
-        Err(e) => json!({
+        Err(Error::Parse(pe)) => json!({
             "status": "unlifted",
-            "reason": match e {
-                Error::Parse(m) => m,
-            },
+            "reason": pe.message,
+            "span": pe.span.map(|s| json!({ "start": s.start, "end": s.end })),
             "valid": false,
         }),
     }
@@ -392,6 +391,10 @@ mod tests {
         let v = try_lift_condition_group("$a ==");
         assert_eq!(v["status"], "unlifted");
         assert_eq!(v["valid"], false);
+        assert!(
+            v["span"].is_object(),
+            "parse failure should surface span for tooling: {v:?}"
+        );
     }
 
     #[test]

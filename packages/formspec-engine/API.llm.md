@@ -745,6 +745,7 @@ Whether the tools WASM module has completed initialization.
 #### interface `FELAnalysisError`
 
 - **message**: `string`
+- **span?**: `{ start: number; end: number }` (from Rust lexer; normalized together with line/column)
 - **offset?**: `number`
 - **line?**: `number`
 - **column?**: `number`
@@ -1405,7 +1406,7 @@ Returns a Determination Record (always non-null).
 ## `wasmAnalyzeFEL(expression: string): {
 
     valid: boolean;
-    errors: string[];
+    errors: Array<string | { message: string; span?: { start: number; end: number } | null }>;
     warnings: string[];
     references: string[];
     variables: string[];
@@ -1417,7 +1418,7 @@ Analyze a FEL expression and return structural info.
 ## `wasmAnalyzeFELWithFieldTypes(expression: string, fieldTypes: Record<string, string>): {
 
     valid: boolean;
-    errors: string[];
+    errors: Array<string | { message: string; span?: { start: number; end: number } | null }>;
     warnings: string[];
     references: string[];
     variables: string[];

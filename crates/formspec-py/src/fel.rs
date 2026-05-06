@@ -157,7 +157,12 @@ pub fn extract_deps(py: Python, expression: &str) -> PyResult<PyObject> {
 
 /// Analyze a FEL expression, extracting references, variables, and functions.
 ///
-/// Returns a dict with: valid, errors, references, variables, functions.
+/// Returns a dict with: `valid`, `errors`, `warnings`, `references`, `variables`, `functions`
+/// (same JSON shape as Rust `fel_analysis_to_json_value` / TS `analyzeFEL`).
+///
+/// Each entry in `errors` is a dict with `message` (str) and `span` (`None` or
+/// `{"start": int, "end": int}` — character indices into the expression).
+/// `warnings` is a list of warning message strings (non-fatal arity/type hints).
 #[pyfunction]
 pub fn analyze_expression(py: Python, expression: &str) -> PyResult<PyObject> {
     let result = analyze_fel(expression);

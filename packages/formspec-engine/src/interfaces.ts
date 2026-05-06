@@ -25,6 +25,8 @@ export interface FELBuiltinFunctionCatalogEntry {
 
 export interface FELAnalysisError {
     message: string;
+    /** Byte/char index range in source (matches Rust `ParseError` / fel lexer spans). */
+    span?: { start: number; end: number };
     offset?: number;
     line?: number;
     column?: number;

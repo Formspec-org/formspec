@@ -16,6 +16,13 @@ test('analyzeFEL reports parse errors with location metadata', () => {
   assert.equal(analysis.errors.length > 0, true);
   assert.equal(typeof analysis.errors[0].line, 'number');
   assert.equal(typeof analysis.errors[0].column, 'number');
+  assert.equal(typeof analysis.errors[0].message, 'string');
+  assert.equal(typeof analysis.errors[0].offset, 'number');
+  const span = analysis.errors[0].span;
+  if (span != null) {
+    assert.equal(typeof span.start, 'number');
+    assert.equal(typeof span.end, 'number');
+  }
 });
 
 test('getFELDependencies ignores references inside strings and comments', () => {

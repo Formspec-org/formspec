@@ -156,10 +156,9 @@ Python, and batch evaluators. Human overview: crate `README.md`. Markdown API ex
 Resolves $ref inclusions and assembles self-contained definitions with FEL rewriting.
 
 ## Internal helpers
+
 Private functions walk `items`, merge referenced fragments (`resolve_*`, `perform_assembly`),
 hoist binds/shapes/variables (`import_*`), and rewrite FEL paths (`rewrite_*`, `split_path_segments`).
-
-
 
 ## Module: changelog
 
@@ -170,19 +169,16 @@ produces an ordered list of `Change` records with impact classification.
 
 Private `diff_*` / `merge_*` / `classify_*` helpers implement the section-by-section comparison.
 
-
-
 ## Module: component_tree
 
 Pre-order traversal for component/theme JSON nodes (`component` + `children`).
-
-
 
 ## Module: definition_items
 
 Depth-first traversal of definition `items` / `children` JSON arrays.
 
 Call sites choose [`DefinitionItemKeyPolicy`]:
+
 - **Lint / static analysis** use [`DefinitionItemKeyPolicy::RequireStringKey`]: only visit nodes
   whose `key` is a JSON string (including `""`). Skip other elements and **do not** recurse into
   their `children`.
@@ -210,8 +206,6 @@ Conformant definitions: Item `key` is required with pattern `^[a-zA-Z][a-zA-Z0-9
 walking JSON before or aside from full schema validation: skip ill-formed nodes vs coerce and
 keep descending.
 
-
-
 ## Module: extension_analysis
 
 Validates extension usage in item trees against a registry catalog.
@@ -219,8 +213,6 @@ Validates extension usage in item trees against a registry catalog.
 Checks for unresolved, retired, and deprecated extensions on definition items.
 
 `walk_items` recurses the [`ExtensionItem`] tree; [`JsonDefinitionItem`] is the JSON-backed adapter.
-
-
 
 ## Module: fel_analysis
 
@@ -232,8 +224,6 @@ AST rewriting via callbacks (for `$ref` fragment imports and similar).
 Private walkers (`collect_info`, `rewrite_expr`, `collect_rewrite_targets`, `parse_field_ref_from_path`)
 implement AST traversal; the public API wraps them.
 
-
-
 ## Module: fel_rewrite_exact
 
 Exact-text FEL rewriting that preserves non-reference source text.
@@ -241,21 +231,15 @@ Exact-text FEL rewriting that preserves non-reference source text.
 `ExactRewriteParser` mirrors FEL precedence and records non-overlapping text replacements;
 see `apply_replacements` for how spans are stitched back into the source.
 
-
-
 ## Module: json_artifacts
 
 `serde_json::Value` projections for WASM and Python FFI (use with `json_to_python` on the Py side).
 
 Private `*_str` helpers stringify changelog enums; `change_to_object` builds each change row.
 
-
-
 ## Module: json_util
 
 Small JSON helpers shared across bindings.
-
-
 
 ## Module: path_utils
 
@@ -264,13 +248,9 @@ Dotted path normalization and tree item navigation by path.
 Paths use dot notation: `group.field`, `parent.child.leaf`.
 Indices `[N]` and wildcards `[*]` are stripped during normalization.
 
-
-
 ## Module: registry_client
 
 Registry client — parses registry documents, resolves extensions, validates lifecycle.
-
-
 
 ## Module: runtime_mapping
 
@@ -280,8 +260,6 @@ Executes mapping rules to transform data between Formspec response format and ex
 (forward: Formspec → external, reverse: external → Formspec). Implementation is split across
 `types`, `path`, `env`, `transforms`, `engine`, and `document`.
 
-
-
 ## Module: schema_validator
 
 Schema validation with document type detection and validation dispatch.
@@ -289,8 +267,6 @@ Schema validation with document type detection and validation dispatch.
 Uses dependency inversion: JSON Schema validation is provided by the host via
 [`JsonSchemaValidator`]. This module detects document types, translates paths, and
 plans per-component validation for component trees.
-
-
 
 ## Module: wire_keys
 
@@ -334,6 +310,7 @@ Centralized JSON field names for host bindings (`JsonWireStyle`).
 Failure while resolving `$ref` or merging assembled fragments.
 
 **Variants:**
+
 - `CircularRef(String)` - A `$ref` cycle was detected.
 - `KeyCollision{ key: String, source: String }` - Two sources contributed the same item `key`.
 - `RefNotFound(String)` - `$ref` target was not found in the resolver.
@@ -350,8 +327,6 @@ Failure while resolving `$ref` or merging assembled fragments.
 - **Clone**
   - `fn clone(self: &Self) -> AssemblyError`
 
-
-
 ## formspec_core::assembler::AssemblyProvenance
 
 *Struct*
@@ -359,6 +334,7 @@ Failure while resolving `$ref` or merging assembled fragments.
 Source record for one merged definition fragment (URL, version, optional key prefix).
 
 **Fields:**
+
 - `url: String` - Source document URL or identifier.
 - `version: String` - Version string from the source document.
 - `key_prefix: Option<String>` - Optional key prefix applied when merging items from this fragment.
@@ -375,8 +351,6 @@ Source record for one merged definition fragment (URL, version, optional key pre
 - **Clone**
   - `fn clone(self: &Self) -> AssemblyProvenance`
 
-
-
 ## formspec_core::assembler::AssemblyResult
 
 *Struct*
@@ -384,6 +358,7 @@ Source record for one merged definition fragment (URL, version, optional key pre
 Output of [`assemble_definition`]: merged definition plus warnings, errors, provenance.
 
 **Fields:**
+
 - `definition: serde_json::Value` - Assembled definition JSON (typically includes merged `items`).
 - `warnings: Vec<String>` - Non-fatal issues (e.g. skipped optional refs).
 - `errors: Vec<AssemblyError>` - Fatal assembly problems.
@@ -395,8 +370,6 @@ Output of [`assemble_definition`]: merged definition plus warnings, errors, prov
   - `fn fmt(self: &Self, f: & mut $crate::fmt::Formatter) -> $crate::fmt::Result`
 - **Clone**
   - `fn clone(self: &Self) -> AssemblyResult`
-
-
 
 ## formspec_core::assembler::MapResolver
 
@@ -417,8 +390,6 @@ In-memory [`RefResolver`] backed by a URI → JSON map.
 - **Default**
   - `fn default() -> Self`
 
-
-
 ## formspec_core::assembler::RefResolver
 
 *Trait*
@@ -428,8 +399,6 @@ Resolves a `$ref` URI string to a JSON fragment.
 **Methods:**
 
 - `resolve`: Return the resolved JSON value, or `None` if unknown.
-
-
 
 ## formspec_core::assembler::assemble_definition
 
@@ -443,8 +412,6 @@ templates is rewritten to match merged keys (see `rewrite_fel_source_references`
 ```rust
 fn assemble_definition(definition: &serde_json::Value, resolver: &dyn RefResolver) -> AssemblyResult
 ```
-
-
 
 ## formspec_core::assembler::assembly_result_to_json_value
 
@@ -491,6 +458,7 @@ fn assembly_result_to_json_value(result: &AssemblyResult, style: crate::JsonWire
 A single atomic change between two definition versions.
 
 **Fields:**
+
 - `change_type: ChangeType`
 - `target: ChangeTarget`
 - `path: String`
@@ -501,8 +469,6 @@ A single atomic change between two definition versions.
 - `after: Option<serde_json::Value>`
 - `migration_hint: Option<String>`
 
-
-
 ## formspec_core::changelog::ChangeImpact
 
 *Enum*
@@ -510,6 +476,7 @@ A single atomic change between two definition versions.
 Severity classification of a single change.
 
 **Variants:**
+
 - `Cosmetic`
 - `Compatible`
 - `Breaking`
@@ -529,8 +496,6 @@ Severity classification of a single change.
 - **Clone**
   - `fn clone(self: &Self) -> ChangeImpact`
 
-
-
 ## formspec_core::changelog::ChangeTarget
 
 *Enum*
@@ -538,6 +503,7 @@ Severity classification of a single change.
 Definition subsystem affected by a change.
 
 **Variants:**
+
 - `Item`
 - `Bind`
 - `Shape`
@@ -558,8 +524,6 @@ Definition subsystem affected by a change.
 - **Debug**
   - `fn fmt(self: &Self, f: & mut $crate::fmt::Formatter) -> $crate::fmt::Result`
 
-
-
 ## formspec_core::changelog::ChangeType
 
 *Enum*
@@ -567,6 +531,7 @@ Definition subsystem affected by a change.
 Kind of change between two definition versions.
 
 **Variants:**
+
 - `Added`
 - `Removed`
 - `Modified`
@@ -582,8 +547,6 @@ Kind of change between two definition versions.
 - **PartialEq**
   - `fn eq(self: &Self, other: &ChangeType) -> bool`
 
-
-
 ## formspec_core::changelog::Changelog
 
 *Struct*
@@ -591,13 +554,12 @@ Kind of change between two definition versions.
 Structured diff between two definition versions.
 
 **Fields:**
+
 - `definition_url: String`
 - `from_version: String`
 - `to_version: String`
 - `semver_impact: SemverImpact`
 - `changes: Vec<Change>`
-
-
 
 ## formspec_core::changelog::SemverImpact
 
@@ -606,6 +568,7 @@ Structured diff between two definition versions.
 Semantic version bump implied by the aggregate impact.
 
 **Variants:**
+
 - `Patch`
 - `Minor`
 - `Major`
@@ -620,8 +583,6 @@ Semantic version bump implied by the aggregate impact.
   - `fn clone(self: &Self) -> SemverImpact`
 - **Debug**
   - `fn fmt(self: &Self, f: & mut $crate::fmt::Formatter) -> $crate::fmt::Result`
-
-
 
 ## formspec_core::changelog::generate_changelog
 
@@ -704,6 +665,7 @@ fn visit_component_subtree<F, impl FnMut(&Value, &str)>(node: &serde_json::Value
 How to interpret `item["key"]` when walking definition `items` / `children`.
 
 **Variants:**
+
 - `RequireStringKey` - Only visit objects whose `key` is a JSON string (including `""`).
 - `CoerceNonStringKeyToEmpty` - Missing or non-string `key` is treated as `""`.
 
@@ -718,8 +680,6 @@ How to interpret `item["key"]` when walking definition `items` / `children`.
 - **PartialEq**
   - `fn eq(self: &Self, other: &DefinitionItemKeyPolicy) -> bool`
 
-
-
 ## formspec_core::definition_items::DefinitionItemVisitCtx
 
 *Struct*
@@ -727,9 +687,11 @@ How to interpret `item["key"]` when walking definition `items` / `children`.
 One definition item with canonical paths for diagnostics and binds.
 
 **Generic Parameters:**
+
 - 'a
 
 **Fields:**
+
 - `item: &'a serde_json::Value` - Raw JSON object for this definition item.
 - `key: &'a str` - Resolved key segment (may be `""` when policy coerces).
 - `index: usize` - Index of this node within its parent's `items` or `children` array.
@@ -744,8 +706,6 @@ One definition item with canonical paths for diagnostics and binds.
 - **Clone**
   - `fn clone(self: &Self) -> DefinitionItemVisitCtx<'a>`
 
-
-
 ## formspec_core::definition_items::coerce_definition_item_key_segment
 
 *Function*
@@ -756,8 +716,6 @@ Key segment for runtime item-tree rebuild: missing or non-string `key` → `""`.
 fn coerce_definition_item_key_segment(item: &serde_json::Value) -> &str
 ```
 
-
-
 ## formspec_core::definition_items::definition_item_dotted_path
 
 *Function*
@@ -767,8 +725,6 @@ Dotted bind path from an optional parent prefix and this node's key segment (may
 ```rust
 fn definition_item_dotted_path(parent_dotted: Option<&str>, key_segment: &str) -> String
 ```
-
-
 
 ## formspec_core::definition_items::definition_item_key_segment
 
@@ -782,8 +738,6 @@ string.
 ```rust
 fn definition_item_key_segment(item: &serde_json::Value, policy: DefinitionItemKeyPolicy) -> Option<&str>
 ```
-
-
 
 ## formspec_core::definition_items::extension_item_diagnostic_path_from_dotted
 
@@ -800,8 +754,6 @@ wrapped as `$.items[key=…]`; further segments are appended with dots.
 fn extension_item_diagnostic_path_from_dotted(dotted: &str) -> String
 ```
 
-
-
 ## formspec_core::definition_items::visit_definition_items_from_document
 
 *Function*
@@ -812,8 +764,6 @@ Walk `document["items"]` when present; no-op if missing or not an array.
 fn visit_definition_items_from_document<impl FnMut(&DefinitionItemVisitCtx<'_>)>(document: &serde_json::Value, visitor: & mut impl Trait)
 ```
 
-
-
 ## formspec_core::definition_items::visit_definition_items_json
 
 *Function*
@@ -823,8 +773,6 @@ Visit every object with a string `key` under `items`, depth-first ([`DefinitionI
 ```rust
 fn visit_definition_items_json<impl FnMut(&DefinitionItemVisitCtx<'_>)>(items: &[serde_json::Value], json_array_parent: &str, parent_dotted: Option<&str>, visitor: & mut impl Trait)
 ```
-
-
 
 ## formspec_core::definition_items::visit_definition_items_json_shallow
 
@@ -842,8 +790,6 @@ format!("{}.children", ctx.json_path)`.
 ```rust
 fn visit_definition_items_json_shallow<impl FnMut(&DefinitionItemVisitCtx<'_>)>(items: &[serde_json::Value], json_array_parent: &str, parent_dotted: Option<&str>, policy: DefinitionItemKeyPolicy, visitor: & mut impl Trait)
 ```
-
-
 
 ## formspec_core::definition_items::visit_definition_items_json_with_policy
 
@@ -901,6 +847,7 @@ fn visit_definition_items_json_with_policy<impl FnMut(&DefinitionItemVisitCtx<'_
 Error codes for extension validation.
 
 **Variants:**
+
 - `UnresolvedExtension`
 - `ExtensionRetired`
 - `ExtensionDeprecated`
@@ -920,8 +867,6 @@ Error codes for extension validation.
 - **Debug**
   - `fn fmt(self: &Self, f: & mut $crate::fmt::Formatter) -> $crate::fmt::Result`
 
-
-
 ## formspec_core::extension_analysis::ExtensionItem
 
 *Trait*
@@ -934,8 +879,6 @@ Minimal item interface for extension validation.
 - `declared_extensions`: Extensions declared on this item (extension name → enabled).
 - `children`: Child items.
 
-
-
 ## formspec_core::extension_analysis::ExtensionSeverity
 
 *Enum*
@@ -943,6 +886,7 @@ Minimal item interface for extension validation.
 Severity levels for extension validation issues.
 
 **Variants:**
+
 - `Error`
 - `Warning`
 - `Info`
@@ -962,8 +906,6 @@ Severity levels for extension validation issues.
 - **Debug**
   - `fn fmt(self: &Self, f: & mut $crate::fmt::Formatter) -> $crate::fmt::Result`
 
-
-
 ## formspec_core::extension_analysis::ExtensionUsageIssue
 
 *Struct*
@@ -971,6 +913,7 @@ Severity levels for extension validation issues.
 A single extension usage validation issue.
 
 **Fields:**
+
 - `path: String` - Dotted path to the item declaring the extension.
 - `extension: String` - The extension name (e.g., "x-formspec-url").
 - `severity: ExtensionSeverity` - Severity level.
@@ -983,8 +926,6 @@ A single extension usage validation issue.
   - `fn clone(self: &Self) -> ExtensionUsageIssue`
 - **Debug**
   - `fn fmt(self: &Self, f: & mut $crate::fmt::Formatter) -> $crate::fmt::Result`
-
-
 
 ## formspec_core::extension_analysis::JsonDefinitionItem
 
@@ -1006,8 +947,6 @@ Definition item node parsed from JSON (`key`, `children`, `extensions`, top-leve
   - `fn declared_extensions(self: &Self) -> Vec<String>`
   - `fn children(self: &Self) -> &[Self]`
 
-
-
 ## formspec_core::extension_analysis::MapRegistry
 
 *Struct*
@@ -1026,8 +965,6 @@ Simple HashMap-based registry for testing.
 - **RegistryLookup**
   - `fn lookup(self: &Self, extension_name: &str) -> Option<RegistryEntryInfo>`
 
-
-
 ## formspec_core::extension_analysis::RegistryEntryInfo
 
 *Struct*
@@ -1035,6 +972,7 @@ Simple HashMap-based registry for testing.
 Minimal registry entry info needed for extension validation.
 
 **Fields:**
+
 - `name: String` - Extension name (e.g. `x-formspec-url`).
 - `status: RegistryEntryStatus` - Lifecycle state from the registry document.
 - `display_name: Option<String>` - Optional human-readable title from the registry.
@@ -1047,8 +985,6 @@ Minimal registry entry info needed for extension validation.
 - **Debug**
   - `fn fmt(self: &Self, f: & mut $crate::fmt::Formatter) -> $crate::fmt::Result`
 
-
-
 ## formspec_core::extension_analysis::RegistryEntryStatus
 
 *Enum*
@@ -1056,6 +992,7 @@ Minimal registry entry info needed for extension validation.
 Lifecycle status of a registry entry.
 
 **Variants:**
+
 - `Draft`
 - `Active`
 - `Deprecated`
@@ -1072,8 +1009,6 @@ Lifecycle status of a registry entry.
 - **Clone**
   - `fn clone(self: &Self) -> RegistryEntryStatus`
 
-
-
 ## formspec_core::extension_analysis::RegistryLookup
 
 *Trait*
@@ -1083,8 +1018,6 @@ Callback trait for looking up registry entries.
 **Methods:**
 
 - `lookup`: Return registry metadata for `extension_name`, or `None` if unknown.
-
-
 
 ## formspec_core::extension_analysis::json_definition_items_tree_from_value
 
@@ -1096,8 +1029,6 @@ Parse a JSON value as a root `items` array for extension validation.
 fn json_definition_items_tree_from_value(val: &serde_json::Value) -> Result<Vec<JsonDefinitionItem>, String>
 ```
 
-
-
 ## formspec_core::extension_analysis::map_registry_from_extension_entry_map
 
 *Function*
@@ -1108,8 +1039,6 @@ Build a [`MapRegistry`] from a JSON object mapping extension name → partial en
 ```rust
 fn map_registry_from_extension_entry_map(entries: &std::collections::HashMap<String, serde_json::Value>) -> MapRegistry
 ```
-
-
 
 ## formspec_core::extension_analysis::validate_extension_usage
 
@@ -1134,7 +1063,7 @@ fn validate_extension_usage<I>(items: &[I], registry: &dyn RegistryLookup) -> Ve
 **Structs**
 
 - [`FelAnalysis`](#felanalysis) - Result of statically analyzing a FEL expression.
-- [`FelAnalysisError`](#felanalysiserror) - A parse/analysis error with a human-readable message.
+- [`FelAnalysisError`](#felanalysiserror) - Parse/analysis error (`message`, optional `span`).
 - [`FelRewriteTargets`](#felrewritetargets) - Field/variable/navigation targets that can be rewritten in a FEL expression.
 - [`NavigationTarget`](#navigationtarget) - A literal navigation target passed to `prev` / `next` / `parent`.
 - [`RewriteOptions`](#rewriteoptions) - Options for rewriting references in a FEL expression.
@@ -1143,7 +1072,7 @@ fn validate_extension_usage<I>(items: &[I], registry: &dyn RegistryLookup) -> Ve
 
 - [`analyze_fel`](#analyze_fel) - Analyze a FEL expression string, extracting structural information.
 - [`collect_fel_rewrite_targets`](#collect_fel_rewrite_targets) - Collect every rewriteable target referenced by a FEL expression.
-- [`fel_analysis_to_json_value`](#fel_analysis_to_json_value) - Static analysis result as JSON (`valid`, `errors`, `references`, `variables`, `functions`).
+- [`fel_analysis_to_json_value`](#fel_analysis_to_json_value) - Static analysis result as JSON (`valid`, `errors`, `warnings`, `references`, `variables`, `functions`).
 - [`fel_rewrite_targets_to_json_value`](#fel_rewrite_targets_to_json_value) - [`FelRewriteTargets`] as sorted JSON (camelCase keys) for `collectFELRewriteTargets`.
 - [`get_fel_dependencies`](#get_fel_dependencies) - Extract field dependencies from an expression (safe on parse failure).
 - [`rewrite_fel_references`](#rewrite_fel_references) - Rewrite references in a FEL expression AST.
@@ -1158,8 +1087,10 @@ fn validate_extension_usage<I>(items: &[I], registry: &dyn RegistryLookup) -> Ve
 Result of statically analyzing a FEL expression.
 
 **Fields:**
+
 - `valid: bool` - Whether the expression parsed successfully.
 - `errors: Vec<FelAnalysisError>` - Parse errors, if any.
+- `warnings: Vec<FelAnalysisWarning>` - Non-fatal warnings (e.g. arity or type hints).
 - `references: std::collections::HashSet<String>` - Field path references (e.g., `$name`, `$address.city`).
 - `variables: std::collections::HashSet<String>` - Variable references via `@name` (excluding reserved: current, index, count, instance).
 - `functions: std::collections::HashSet<String>` - Function names called in the expression.
@@ -1171,8 +1102,6 @@ Result of statically analyzing a FEL expression.
 - **Clone**
   - `fn clone(self: &Self) -> FelAnalysis`
 
-
-
 ## formspec_core::fel_analysis::FelAnalysisError
 
 *Struct*
@@ -1180,7 +1109,9 @@ Result of statically analyzing a FEL expression.
 A parse/analysis error with a human-readable message.
 
 **Fields:**
+
 - `message: String` - Error text from the FEL parser or evaluator.
+- `span: Option<Range<usize>>` - Byte range into the expression when the parser attached a span.
 
 **Trait Implementations:**
 
@@ -1189,8 +1120,6 @@ A parse/analysis error with a human-readable message.
 - **Debug**
   - `fn fmt(self: &Self, f: & mut $crate::fmt::Formatter) -> $crate::fmt::Result`
 
-
-
 ## formspec_core::fel_analysis::FelRewriteTargets
 
 *Struct*
@@ -1198,6 +1127,7 @@ A parse/analysis error with a human-readable message.
 Field/variable/navigation targets that can be rewritten in a FEL expression.
 
 **Fields:**
+
 - `field_paths: std::collections::HashSet<String>`
 - `current_paths: std::collections::HashSet<String>`
 - `variables: std::collections::HashSet<String>`
@@ -1213,8 +1143,6 @@ Field/variable/navigation targets that can be rewritten in a FEL expression.
 - **Debug**
   - `fn fmt(self: &Self, f: & mut $crate::fmt::Formatter) -> $crate::fmt::Result`
 
-
-
 ## formspec_core::fel_analysis::NavigationTarget
 
 *Struct*
@@ -1222,6 +1150,7 @@ Field/variable/navigation targets that can be rewritten in a FEL expression.
 A literal navigation target passed to `prev` / `next` / `parent`.
 
 **Fields:**
+
 - `function_name: String`
 - `name: String`
 
@@ -1238,8 +1167,6 @@ A literal navigation target passed to `prev` / `next` / `parent`.
 - **Debug**
   - `fn fmt(self: &Self, f: & mut $crate::fmt::Formatter) -> $crate::fmt::Result`
 
-
-
 ## formspec_core::fel_analysis::RewriteOptions
 
 *Struct*
@@ -1250,13 +1177,12 @@ Each callback receives the current value and returns the replacement.
 Return `None` to keep the original.
 
 **Fields:**
+
 - `rewrite_field_path: Option<Box<dyn Fn>>` - Rewrite `$field.path` references.
 - `rewrite_current_path: Option<Box<dyn Fn>>` - Rewrite the dotted tail of `@current.foo.bar`.
 - `rewrite_variable: Option<Box<dyn Fn>>` - Rewrite `@variable` names.
 - `rewrite_instance_name: Option<Box<dyn Fn>>` - Rewrite `@instance('name')` names.
 - `rewrite_navigation_target: Option<Box<dyn Fn>>` - Rewrite literal field-name arguments to prev()/next()/parent().
-
-
 
 ## formspec_core::fel_analysis::analyze_fel
 
@@ -1268,8 +1194,6 @@ Analyze a FEL expression string, extracting structural information.
 fn analyze_fel(expression: &str) -> FelAnalysis
 ```
 
-
-
 ## formspec_core::fel_analysis::collect_fel_rewrite_targets
 
 *Function*
@@ -1280,19 +1204,15 @@ Collect every rewriteable target referenced by a FEL expression.
 fn collect_fel_rewrite_targets(expression: &str) -> FelRewriteTargets
 ```
 
-
-
 ## formspec_core::fel_analysis::fel_analysis_to_json_value
 
 *Function*
 
-Static analysis result as JSON (`valid`, `errors`, `references`, `variables`, `functions`).
+Static analysis result as JSON (`valid`, `errors`, `references`, `variables`, `functions`). Each `errors[]` item is `{"message": string, "span": {"start": number, "end": number} | null}`.
 
 ```rust
 fn fel_analysis_to_json_value(result: &FelAnalysis) -> serde_json::Value
 ```
-
-
 
 ## formspec_core::fel_analysis::fel_rewrite_targets_to_json_value
 
@@ -1304,8 +1224,6 @@ fn fel_analysis_to_json_value(result: &FelAnalysis) -> serde_json::Value
 fn fel_rewrite_targets_to_json_value(targets: &FelRewriteTargets) -> serde_json::Value
 ```
 
-
-
 ## formspec_core::fel_analysis::get_fel_dependencies
 
 *Function*
@@ -1315,8 +1233,6 @@ Extract field dependencies from an expression (safe on parse failure).
 ```rust
 fn get_fel_dependencies(expression: &str) -> std::collections::HashSet<String>
 ```
-
-
 
 ## formspec_core::fel_analysis::rewrite_fel_references
 
@@ -1329,8 +1245,6 @@ Returns a new AST with transformed references.
 ```rust
 fn rewrite_fel_references(expr: &fel_core::ast::Expr, options: &RewriteOptions) -> fel_core::ast::Expr
 ```
-
-
 
 ## formspec_core::fel_analysis::rewrite_options_from_camel_case_json
 
@@ -1371,8 +1285,6 @@ On parse failure, returns `expression` unchanged.
 fn rewrite_fel_source_references(expression: &str, options: &crate::fel_analysis::RewriteOptions) -> String
 ```
 
-
-
 ## formspec_core::fel_rewrite_exact::rewrite_message_template
 
 *Function*
@@ -1409,8 +1321,6 @@ Serialize a generated changelog for FFI consumers.
 ```rust
 fn changelog_to_json_value(result: &crate::changelog::Changelog, style: JsonWireStyle) -> serde_json::Value
 ```
-
-
 
 ## formspec_core::json_artifacts::extension_usage_issues_to_json_value
 
@@ -1488,10 +1398,12 @@ fn json_object_to_string_map(val: &serde_json::Value) -> std::collections::HashM
 A resolved position in a tree: the parent slice, index within it, and the item itself.
 
 **Generic Parameters:**
+
 - 'a
 - T
 
 **Fields:**
+
 - `parent: &'a [T]` - Sibling slice containing [`Self::item`].
 - `index: usize` - Index of [`Self::item`] within `parent`.
 - `item: &'a T` - The resolved node.
@@ -1500,8 +1412,6 @@ A resolved position in a tree: the parent slice, index within it, and the item i
 
 - **Debug**
   - `fn fmt(self: &Self, f: & mut $crate::fmt::Formatter) -> $crate::fmt::Result`
-
-
 
 ## formspec_core::path_utils::TreeItem
 
@@ -1514,8 +1424,6 @@ A generic tree node shape for path traversal.
 - `key`: Stable segment key for this node (matches one dotted path segment).
 - `children`: Child nodes for the next path segment.
 
-
-
 ## formspec_core::path_utils::definition_item_location_to_json_value
 
 *Function*
@@ -1525,8 +1433,6 @@ A generic tree node shape for path traversal.
 ```rust
 fn definition_item_location_to_json_value(items: &[serde_json::Value], path: &str, style: crate::JsonWireStyle) -> serde_json::Value
 ```
-
-
 
 ## formspec_core::path_utils::item_at_path
 
@@ -1538,8 +1444,6 @@ Find an item by normalized dotted path, walking children at each segment.
 fn item_at_path<'a, T>(items: &'a [T], path: &str) -> Option<&'a T>
 ```
 
-
-
 ## formspec_core::path_utils::item_location_at_path
 
 *Function*
@@ -1549,8 +1453,6 @@ Resolve the location triple (parent, index, item) for a dotted path.
 ```rust
 fn item_location_at_path<'a, T>(items: &'a [T], path: &str) -> Option<ItemLocation<'a, T>>
 ```
-
-
 
 ## formspec_core::path_utils::json_definition_item_at_path
 
@@ -1562,8 +1464,6 @@ Resolve an item in a JSON `items` array by dotted path (`key` / `children` shape
 fn json_definition_item_at_path<'a>(items: &'a [serde_json::Value], path: &str) -> Option<&'a serde_json::Value>
 ```
 
-
-
 ## formspec_core::path_utils::json_definition_item_location_at_path
 
 *Function*
@@ -1573,8 +1473,6 @@ fn json_definition_item_at_path<'a>(items: &'a [serde_json::Value], path: &str) 
 ```rust
 fn json_definition_item_location_at_path<'a>(items: &'a [serde_json::Value], path: &str) -> Option<(usize, &'a serde_json::Value)>
 ```
-
-
 
 ## formspec_core::path_utils::leaf_key
 
@@ -1588,8 +1486,6 @@ Extract the last segment from a dotted path.
 fn leaf_key(path: &str) -> &str
 ```
 
-
-
 ## formspec_core::path_utils::normalize_indexed_path
 
 *Function*
@@ -1601,8 +1497,6 @@ Strip all repeat indices from a dotted path.
 fn normalize_indexed_path(path: &str) -> String
 ```
 
-
-
 ## formspec_core::path_utils::normalize_path_segment
 
 *Function*
@@ -1612,8 +1506,6 @@ Strip repeat indices from a single path segment: `lineItems[0]` → `lineItems`.
 ```rust
 fn normalize_path_segment(segment: &str) -> &str
 ```
-
-
 
 ## formspec_core::path_utils::parent_path
 
@@ -1626,8 +1518,6 @@ Extract the parent path from a dotted path.
 ```rust
 fn parent_path(path: &str) -> &str
 ```
-
-
 
 ## formspec_core::path_utils::split_normalized_path
 
@@ -1669,8 +1559,6 @@ Serialize extension category for JSON / FFI consumers.
 fn extension_category_to_wire(category: ExtensionCategory) -> &'static str
 ```
 
-
-
 ## formspec_core::registry_client::parse_registry_entry_status
 
 *Function*
@@ -1681,8 +1569,6 @@ Parse registry entry status strings (`draft`, `stable`, `active`, …).
 fn parse_registry_entry_status(s: &str) -> Option<crate::extension_analysis::RegistryEntryStatus>
 ```
 
-
-
 ## formspec_core::registry_client::registry_entry_status_to_wire
 
 *Function*
@@ -1692,8 +1578,6 @@ Serialize status for JSON / FFI consumers (`active` → `"stable"`).
 ```rust
 fn registry_entry_status_to_wire(status: crate::extension_analysis::RegistryEntryStatus) -> &'static str
 ```
-
-
 
 ## formspec_core::registry_client::validate_lifecycle_transition
 
@@ -1711,8 +1595,6 @@ retired    → {}  // terminal
 ```rust
 fn validate_lifecycle_transition(from: crate::extension_analysis::RegistryEntryStatus, to: crate::extension_analysis::RegistryEntryStatus) -> bool
 ```
-
-
 
 ## formspec_core::registry_client::well_known_url
 
@@ -1755,6 +1637,7 @@ fn well_known_url(base_url: &str) -> String
 Extension mechanism category.
 
 **Variants:**
+
 - `DataType`
 - `Function`
 - `Constraint`
@@ -1772,8 +1655,6 @@ Extension mechanism category.
 - **Clone**
   - `fn clone(self: &Self) -> ExtensionCategory`
 
-
-
 ## formspec_core::registry_client::types::Parameter
 
 *Struct*
@@ -1781,6 +1662,7 @@ Extension mechanism category.
 Function/constraint parameter declaration.
 
 **Fields:**
+
 - `name: String`
 - `param_type: String`
 - `description: Option<String>`
@@ -1792,8 +1674,6 @@ Function/constraint parameter declaration.
 - **Clone**
   - `fn clone(self: &Self) -> Parameter`
 
-
-
 ## formspec_core::registry_client::types::Publisher
 
 *Struct*
@@ -1801,6 +1681,7 @@ Function/constraint parameter declaration.
 Organization publishing a registry document.
 
 **Fields:**
+
 - `name: String`
 - `url: String`
 - `contact: Option<String>`
@@ -1812,8 +1693,6 @@ Organization publishing a registry document.
 - **Debug**
   - `fn fmt(self: &Self, f: & mut $crate::fmt::Formatter) -> $crate::fmt::Result`
 
-
-
 ## formspec_core::registry_client::types::Registry
 
 *Struct*
@@ -1821,6 +1700,7 @@ Organization publishing a registry document.
 A parsed registry document with indexed entries.
 
 **Fields:**
+
 - `publisher: Publisher`
 - `published: String`
 
@@ -1840,8 +1720,6 @@ A parsed registry document with indexed entries.
 - **Debug**
   - `fn fmt(self: &Self, f: & mut $crate::fmt::Formatter) -> $crate::fmt::Result`
 
-
-
 ## formspec_core::registry_client::types::RegistryEntry
 
 *Struct*
@@ -1849,6 +1727,7 @@ A parsed registry document with indexed entries.
 A single extension record with full metadata.
 
 **Fields:**
+
 - `name: String`
 - `category: ExtensionCategory`
 - `version: String`
@@ -1866,8 +1745,6 @@ A single extension record with full metadata.
 - **Clone**
   - `fn clone(self: &Self) -> RegistryEntry`
 
-
-
 ## formspec_core::registry_client::types::RegistryError
 
 *Enum*
@@ -1875,6 +1752,7 @@ A single extension record with full metadata.
 Errors from registry parsing and validation.
 
 **Variants:**
+
 - `MissingField(String)` - Missing required top-level field.
 - `InvalidField(String)` - Field has wrong type.
 - `InvalidEntry(usize, String)` - Entry-level parse error (index, message).
@@ -1949,8 +1827,6 @@ Entry count from raw registry JSON (`entries` array length).
 fn registry_entry_count_from_raw(val: &serde_json::Value) -> usize
 ```
 
-
-
 ## formspec_core::registry_client::wire_json::registry_entry_to_json_value
 
 *Function*
@@ -1961,8 +1837,6 @@ Single registry entry for `findRegistryEntry` / `find_registry_entry`.
 fn registry_entry_to_json_value(entry: &super::RegistryEntry, style: crate::JsonWireStyle) -> serde_json::Value
 ```
 
-
-
 ## formspec_core::registry_client::wire_json::registry_parse_summary_to_json_value
 
 *Function*
@@ -1972,8 +1846,6 @@ fn registry_entry_to_json_value(entry: &super::RegistryEntry, style: crate::Json
 ```rust
 fn registry_parse_summary_to_json_value(registry: &super::Registry, raw: &serde_json::Value, issues: &[String], style: crate::JsonWireStyle) -> serde_json::Value
 ```
-
-
 
 ## formspec_core::registry_client::wire_json::version_constraint_option
 
@@ -2069,8 +1941,6 @@ The object `"from"` field is ignored for runtime dispatch.
 fn parse_coerce_type(val: &serde_json::Value) -> Option<super::types::CoerceType>
 ```
 
-
-
 ## formspec_core::runtime_mapping::parse::parse_mapping_direction_field
 
 *Function*
@@ -2081,8 +1951,6 @@ Parse optional top-level `"direction"` restriction on a mapping document.
 fn parse_mapping_direction_field(val: &serde_json::Value) -> Option<super::types::MappingDirection>
 ```
 
-
-
 ## formspec_core::runtime_mapping::parse::parse_mapping_document_from_value
 
 *Function*
@@ -2092,8 +1960,6 @@ Parse a full mapping document (rules, defaults, autoMap, optional direction lock
 ```rust
 fn parse_mapping_document_from_value(val: &serde_json::Value) -> Result<super::types::MappingDocument, String>
 ```
-
-
 
 ## formspec_core::runtime_mapping::parse::parse_mapping_rules_from_value
 
@@ -2142,6 +2008,7 @@ fn parse_mapping_rules_from_value(val: &serde_json::Value) -> Result<Vec<super::
 Array iteration descriptor.
 
 **Fields:**
+
 - `mode: ArrayMode` - Iteration mode: "each", "indexed", or "whole".
 - `inner_rules: Vec<MappingRule>` - Sub-rules applied per element (each/indexed modes).
 
@@ -2152,8 +2019,6 @@ Array iteration descriptor.
 - **Debug**
   - `fn fmt(self: &Self, f: & mut $crate::fmt::Formatter) -> $crate::fmt::Result`
 
-
-
 ## formspec_core::runtime_mapping::types::ArrayMode
 
 *Enum*
@@ -2161,6 +2026,7 @@ Array iteration descriptor.
 Array iteration mode.
 
 **Variants:**
+
 - `Each` - Process each element individually.
 - `Indexed` - Access elements by index.
 - `Whole` - Treat the array as a single value (default).
@@ -2176,8 +2042,6 @@ Array iteration mode.
 - **Debug**
   - `fn fmt(self: &Self, f: & mut $crate::fmt::Formatter) -> $crate::fmt::Result`
 
-
-
 ## formspec_core::runtime_mapping::types::CoerceType
 
 *Enum*
@@ -2185,6 +2049,7 @@ Array iteration mode.
 Target types for coercion.
 
 **Variants:**
+
 - `String`
 - `Number`
 - `Integer`
@@ -2204,8 +2069,6 @@ Target types for coercion.
 - **Debug**
   - `fn fmt(self: &Self, f: & mut $crate::fmt::Formatter) -> $crate::fmt::Result`
 
-
-
 ## formspec_core::runtime_mapping::types::MappingDiagnostic
 
 *Struct*
@@ -2213,6 +2076,7 @@ Target types for coercion.
 A diagnostic from mapping execution.
 
 **Fields:**
+
 - `rule_index: usize`
 - `source_path: Option<String>`
 - `target_path: String`
@@ -2226,8 +2090,6 @@ A diagnostic from mapping execution.
 - **Debug**
   - `fn fmt(self: &Self, f: & mut $crate::fmt::Formatter) -> $crate::fmt::Result`
 
-
-
 ## formspec_core::runtime_mapping::types::MappingDirection
 
 *Enum*
@@ -2235,6 +2097,7 @@ A diagnostic from mapping execution.
 Transform direction.
 
 **Variants:**
+
 - `Forward`
 - `Reverse`
 
@@ -2249,8 +2112,6 @@ Transform direction.
 - **Clone**
   - `fn clone(self: &Self) -> MappingDirection`
 
-
-
 ## formspec_core::runtime_mapping::types::MappingDocument
 
 *Struct*
@@ -2258,6 +2119,7 @@ Transform direction.
 A complete mapping document with rules, defaults, and autoMap.
 
 **Fields:**
+
 - `rules: Vec<MappingRule>`
 - `defaults: Option<serde_json::Map<String, serde_json::Value>>` - Key-value defaults pre-populated into the output before rules execute (forward only).
 - `auto_map: bool` - When true, generate synthetic preserve rules for unmapped top-level source keys.
@@ -2270,8 +2132,6 @@ A complete mapping document with rules, defaults, and autoMap.
 - **Debug**
   - `fn fmt(self: &Self, f: & mut $crate::fmt::Formatter) -> $crate::fmt::Result`
 
-
-
 ## formspec_core::runtime_mapping::types::MappingErrorCode
 
 *Enum*
@@ -2279,6 +2139,7 @@ A complete mapping document with rules, defaults, and autoMap.
 Structured error codes for mapping diagnostics.
 
 **Variants:**
+
 - `UnmappedValue`
 - `CoerceFailure`
 - `FelRuntime`
@@ -2299,8 +2160,6 @@ Structured error codes for mapping diagnostics.
 - **Debug**
   - `fn fmt(self: &Self, f: & mut $crate::fmt::Formatter) -> $crate::fmt::Result`
 
-
-
 ## formspec_core::runtime_mapping::types::MappingResult
 
 *Struct*
@@ -2308,6 +2167,7 @@ Structured error codes for mapping diagnostics.
 Result of a mapping execution.
 
 **Fields:**
+
 - `direction: MappingDirection`
 - `output: serde_json::Value`
 - `rules_applied: usize`
@@ -2320,8 +2180,6 @@ Result of a mapping execution.
 - **Clone**
   - `fn clone(self: &Self) -> MappingResult`
 
-
-
 ## formspec_core::runtime_mapping::types::MappingRule
 
 *Struct*
@@ -2329,6 +2187,7 @@ Result of a mapping execution.
 A mapping rule — one transform in the pipeline.
 
 **Fields:**
+
 - `source_path: Option<String>` - Source path (dot notation).
 - `target_path: String` - Target path (dot notation).
 - `transform: TransformType` - Transform type.
@@ -2347,8 +2206,6 @@ A mapping rule — one transform in the pipeline.
 - **Debug**
   - `fn fmt(self: &Self, f: & mut $crate::fmt::Formatter) -> $crate::fmt::Result`
 
-
-
 ## formspec_core::runtime_mapping::types::ReverseOverride
 
 *Struct*
@@ -2356,6 +2213,7 @@ A mapping rule — one transform in the pipeline.
 Reverse-direction transform override.
 
 **Fields:**
+
 - `transform: TransformType`
 
 **Trait Implementations:**
@@ -2365,8 +2223,6 @@ Reverse-direction transform override.
 - **Debug**
   - `fn fmt(self: &Self, f: & mut $crate::fmt::Formatter) -> $crate::fmt::Result`
 
-
-
 ## formspec_core::runtime_mapping::types::TransformType
 
 *Enum*
@@ -2374,6 +2230,7 @@ Reverse-direction transform override.
 Supported transform types.
 
 **Variants:**
+
 - `Preserve` - Copy value as-is.
 - `Drop` - Drop the value (skip this rule).
 - `Constant(serde_json::Value)` - Inject a constant value (no source path required).
@@ -2392,8 +2249,6 @@ Supported transform types.
 - **Clone**
   - `fn clone(self: &Self) -> TransformType`
 
-
-
 ## formspec_core::runtime_mapping::types::UnmappedStrategy
 
 *Enum*
@@ -2404,6 +2259,7 @@ Spec: mapping/mapping-spec.md §4.6 — ValueMap unmapped strategies.
 The spec defines exactly four strategies: "error", "drop", "passthrough", "default".
 
 **Variants:**
+
 - `PassThrough` - `"passthrough"` — copy the source value through unchanged.
 - `Drop` - `"drop"` — omit the target field entirely (returns None from apply_value_map).
 - `Error` - `"error"` — produce a runtime mapping diagnostic.
@@ -2448,8 +2304,6 @@ Serialize [`MappingDirection`] to the wire string (`forward` / `reverse`).
 fn mapping_direction_wire(d: super::types::MappingDirection) -> &'static str
 ```
 
-
-
 ## formspec_core::runtime_mapping::wire_json::mapping_result_to_json_value
 
 *Function*
@@ -2459,8 +2313,6 @@ Mapping execute result (`executeMapping` / `execute_mapping_doc`).
 ```rust
 fn mapping_result_to_json_value(result: &super::types::MappingResult, style: crate::JsonWireStyle) -> serde_json::Value
 ```
-
-
 
 ## formspec_core::runtime_mapping::wire_json::parse_mapping_direction_wire
 
@@ -2513,6 +2365,7 @@ fn parse_mapping_direction_wire(s: &str) -> Result<super::types::MappingDirectio
 A single component subtree node that needs host-side schema execution.
 
 **Fields:**
+
 - `pointer: String` - JSON Pointer to the node root (e.g. `/tree/children/0`).
 - `component: String` - Component type string used to pick the correct schema definition.
 - `node: serde_json::Value` - Raw node value to validate.
@@ -2526,8 +2379,6 @@ A single component subtree node that needs host-side schema execution.
 - **Debug**
   - `fn fmt(self: &Self, f: & mut $crate::fmt::Formatter) -> $crate::fmt::Result`
 
-
-
 ## formspec_core::schema_validator::DocumentType
 
 *Enum*
@@ -2535,6 +2386,7 @@ A single component subtree node that needs host-side schema execution.
 All recognized Formspec document types.
 
 **Variants:**
+
 - `Definition`
 - `Theme`
 - `Mapping`
@@ -2564,8 +2416,6 @@ All recognized Formspec document types.
 - **Debug**
   - `fn fmt(self: &Self, f: & mut $crate::fmt::Formatter) -> $crate::fmt::Result`
 
-
-
 ## formspec_core::schema_validator::JsonSchemaValidator
 
 *Trait*
@@ -2579,8 +2429,6 @@ without coupling `formspec-core` to either.
 
 - `validate`: Validate a document against the schema for the given document type.
 
-
-
 ## formspec_core::schema_validator::SchemaValidationError
 
 *Struct*
@@ -2588,6 +2436,7 @@ without coupling `formspec-core` to either.
 A schema validation error with path and message.
 
 **Fields:**
+
 - `path: String` - JSONPath to the invalid element (e.g., `$.items\[0\].key`).
 - `message: String` - Human-readable error message.
 
@@ -2598,8 +2447,6 @@ A schema validation error with path and message.
 - **Clone**
   - `fn clone(self: &Self) -> SchemaValidationError`
 
-
-
 ## formspec_core::schema_validator::SchemaValidationPlan
 
 *Struct*
@@ -2607,6 +2454,7 @@ A schema validation error with path and message.
 Validation dispatch plan returned to host runtimes that execute JSON Schema locally.
 
 **Fields:**
+
 - `document_type: Option<String>` - Detected or explicitly requested document type.
 - `mode: String` - Strategy discriminator: `unknown`, `document`, or `component`.
 - `component_targets: Vec<ComponentValidationTarget>` - Per-node validation targets for component documents.
@@ -2621,8 +2469,6 @@ Validation dispatch plan returned to host runtimes that execute JSON Schema loca
 - **Clone**
   - `fn clone(self: &Self) -> SchemaValidationPlan`
 
-
-
 ## formspec_core::schema_validator::SchemaValidationResult
 
 *Struct*
@@ -2630,6 +2476,7 @@ Validation dispatch plan returned to host runtimes that execute JSON Schema loca
 Result of schema validation.
 
 **Fields:**
+
 - `document_type: Option<DocumentType>` - Detected document type (None if detection failed).
 - `errors: Vec<SchemaValidationError>` - Validation errors.
 
@@ -2639,8 +2486,6 @@ Result of schema validation.
   - `fn fmt(self: &Self, f: & mut $crate::fmt::Formatter) -> $crate::fmt::Result`
 - **Clone**
   - `fn clone(self: &Self) -> SchemaValidationResult`
-
-
 
 ## formspec_core::schema_validator::detect_document_type
 
@@ -2652,8 +2497,6 @@ Detect the document type from a JSON value by examining marker fields.
 fn detect_document_type(doc: &serde_json::Value) -> Option<DocumentType>
 ```
 
-
-
 ## formspec_core::schema_validator::json_pointer_to_jsonpath
 
 *Function*
@@ -2663,8 +2506,6 @@ Convert a JSON Pointer (e.g., `/items/0/key`) to a JSONPath (e.g., `$.items\[0\]
 ```rust
 fn json_pointer_to_jsonpath(pointer: &str) -> String
 ```
-
-
 
 ## formspec_core::schema_validator::schema_validation_plan
 
@@ -2679,8 +2520,6 @@ whole-tree oneOf backtracking.
 ```rust
 fn schema_validation_plan(doc: &serde_json::Value, document_type_override: Option<DocumentType>) -> SchemaValidationPlan
 ```
-
-
 
 ## formspec_core::schema_validator::validate_document
 
@@ -2727,12 +2566,11 @@ fn validate_document(doc: &serde_json::Value, validator: &dyn JsonSchemaValidato
 Top-level changelog object keys for [`crate::json_artifacts::changelog_to_json_value`].
 
 **Fields:**
+
 - `definition_url: &'static str`
 - `from_version: &'static str`
 - `to_version: &'static str`
 - `semver_impact: &'static str`
-
-
 
 ## formspec_core::wire_keys::assembly_provenance_keys
 
@@ -2744,8 +2582,6 @@ Keys for [`crate::assembler::assembly_result_to_json_value`] provenance rows + r
 fn assembly_provenance_keys(style: fel_core::JsonWireStyle) -> (&'static str, &'static str)
 ```
 
-
-
 ## formspec_core::wire_keys::changelog_change_keys
 
 *Function*
@@ -2755,8 +2591,6 @@ Per-change object keys inside changelog JSON.
 ```rust
 fn changelog_change_keys(style: fel_core::JsonWireStyle) -> (&'static str, &'static str)
 ```
-
-
 
 ## formspec_core::wire_keys::changelog_root_keys
 
@@ -2768,8 +2602,6 @@ Field names for the changelog root object in the given wire style.
 fn changelog_root_keys(style: fel_core::JsonWireStyle) -> ChangelogRootKeys
 ```
 
-
-
 ## formspec_core::wire_keys::evaluation_batch_keys
 
 *Function*
@@ -2779,8 +2611,6 @@ Batch evaluation JSON keys: non-relevant paths, validation `constraintKind`, `sh
 ```rust
 fn evaluation_batch_keys(style: fel_core::JsonWireStyle) -> (&'static str, &'static str, &'static str)
 ```
-
-
 
 ## formspec_core::wire_keys::item_location_parent_key
 
@@ -2792,8 +2622,6 @@ Parent path key for [`crate::path_utils::definition_item_location_to_json_value`
 fn item_location_parent_key(style: fel_core::JsonWireStyle) -> &'static str
 ```
 
-
-
 ## formspec_core::wire_keys::lint_document_type_key
 
 *Function*
@@ -2803,8 +2631,6 @@ Document type field for lint result JSON.
 ```rust
 fn lint_document_type_key(style: fel_core::JsonWireStyle) -> &'static str
 ```
-
-
 
 ## formspec_core::wire_keys::mapping_result_host_keys
 
@@ -2816,8 +2642,6 @@ Keys for [`crate::runtime_mapping::mapping_result_to_json_value`].
 fn mapping_result_host_keys(style: fel_core::JsonWireStyle) -> (&'static str, &'static str, &'static str, &'static str, &'static str)
 ```
 
-
-
 ## formspec_core::wire_keys::registry_entry_keys
 
 *Function*
@@ -2827,8 +2651,6 @@ Keys for [`crate::registry_client::registry_entry_to_json_value`].
 ```rust
 fn registry_entry_keys(style: fel_core::JsonWireStyle) -> (&'static str, &'static str)
 ```
-
-
 
 ## formspec_core::wire_keys::registry_parse_summary_keys
 
@@ -2841,4 +2663,3 @@ fn registry_parse_summary_keys(style: fel_core::JsonWireStyle) -> (&'static str,
 ```
 
 ---
-

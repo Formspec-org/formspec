@@ -7,6 +7,8 @@ export {
     isValidFELIdentifier,
     itemAtPath,
     itemLocationAtPath,
+    lineColumnAtCharOffset,
+    normalizeFelAnalysisError,
     normalizeIndexedPath,
     normalizePathSegment,
     sanitizeFELIdentifier,
@@ -14,6 +16,7 @@ export {
     type FELAnalysis,
     type ItemLocation,
     type TreeItemLike,
+    type WasmFelAnalysisErrorWire,
 } from './fel-api-runtime.js';
 
 export {

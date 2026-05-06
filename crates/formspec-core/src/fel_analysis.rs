@@ -15,6 +15,7 @@ use fel_core::extensions::builtin_function_catalog;
 use fel_core::extensions::FelType;
 use fel_core::{Error, parse};
 use serde_json::{Value, json};
+use std::ops::Range;
 
 /// Callback that rewrites a single string reference, returning `None` to keep the original.
 type RewriteFn = Box<dyn Fn(&str) -> Option<String>>;
@@ -46,6 +47,8 @@ pub struct FelAnalysis {
 pub struct FelAnalysisError {
     /// Error text from the FEL parser or evaluator.
     pub message: String,
+    /// Byte range in the expression when the parser reported a span.
+    pub span: Option<Range<usize>>,
 }
 
 /// A non-fatal analysis warning.
@@ -103,12 +106,11 @@ pub fn analyze_fel(expression: &str) -> FelAnalysis {
                 functions,
             }
         }
-        Err(e) => FelAnalysis {
+        Err(Error::Parse(pe)) => FelAnalysis {
             valid: false,
             errors: vec![FelAnalysisError {
-                message: match e {
-                    Error::Parse(m) => m,
-                },
+                message: pe.message,
+                span: pe.span,
             }],
             warnings: vec![],
             references: HashSet::new(),
@@ -1069,10 +1071,17 @@ fn collect_rewrite_targets(expr: &Expr, targets: &mut FelRewriteTargets) {
 // ── JSON projections + rewrite map parsing (WASM / tooling) ─────
 
 /// Static analysis result as JSON (`valid`, `errors`, `warnings`, `references`, `variables`, `functions`).
+///
+/// Each `errors` element is `{"message": string, "span": object | null}` with `start`/`end` byte offsets when known.
 pub fn fel_analysis_to_json_value(result: &FelAnalysis) -> Value {
     json!({
         "valid": result.valid,
-        "errors": result.errors.iter().map(|e| &e.message).collect::<Vec<_>>(),
+        "errors": result.errors.iter().map(|e| {
+            json!({
+                "message": e.message,
+                "span": e.span.as_ref().map_or(Value::Null, |r| json!({ "start": r.start, "end": r.end }))
+            })
+        }).collect::<Vec<_>>(),
         "warnings": result.warnings.iter().map(|w| &w.message).collect::<Vec<_>>(),
         "references": result.references.iter().collect::<Vec<_>>(),
         "variables": result.variables.iter().collect::<Vec<_>>(),

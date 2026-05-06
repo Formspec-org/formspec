@@ -1,5 +1,21 @@
 /** @filedesc Runtime WASM — init, accessors, and wrappers that use only the runtime `formspec_wasm_runtime` module. */
 
+/** Parsed JSON from `fel_analysis_to_json_value` (Rust) — pass through to {@link normalizeFelAnalysisError}. */
+export type WasmFelAnalysisResultJson = {
+    valid: boolean;
+    errors: Array<
+        | string
+        | {
+              message: string;
+              span?: { start: number; end: number } | null;
+          }
+    >;
+    warnings: string[];
+    references: string[];
+    variables: string[];
+    functions: string[];
+};
+
 import {
     nodeFsModuleName,
     resolveWasmAssetPathForNode,
@@ -322,35 +338,21 @@ export function wasmEvaluateScreenerDocument(
 }
 
 /** Analyze a FEL expression and return structural info. */
-export function wasmAnalyzeFEL(expression: string): {
-    valid: boolean;
-    errors: string[];
-    warnings: string[];
-    references: string[];
-    variables: string[];
-    functions: string[];
-} {
+export function wasmAnalyzeFEL(expression: string): WasmFelAnalysisResultJson {
     const resultJson = wasm().analyzeFEL(expression);
-    return JSON.parse(resultJson);
+    return JSON.parse(resultJson) as WasmFelAnalysisResultJson;
 }
 
 /** Analyze a FEL expression with field data type context for type-mismatch warnings. */
 export function wasmAnalyzeFELWithFieldTypes(
     expression: string,
     fieldTypes: Record<string, string>,
-): {
-    valid: boolean;
-    errors: string[];
-    warnings: string[];
-    references: string[];
-    variables: string[];
-    functions: string[];
-} {
+): WasmFelAnalysisResultJson {
     const resultJson = wasm().analyzeFELWithFieldTypes(
         expression,
         JSON.stringify(fieldTypes),
     );
-    return JSON.parse(resultJson);
+    return JSON.parse(resultJson) as WasmFelAnalysisResultJson;
 }
 
 /** Check if a string is a valid FEL identifier. */

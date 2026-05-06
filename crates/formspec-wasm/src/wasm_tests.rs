@@ -65,6 +65,18 @@ mod tests {
         assert_eq!(val, json!(3));
     }
 
+    /// `analyzeFEL` JSON mirrors `fel_analysis_to_json_value` — errors are structured objects.
+    #[test]
+    fn analyze_fel_wasm_invalid_expression_errors_are_objects() {
+        use crate::fel::analyze_fel_wasm;
+
+        let raw = analyze_fel_wasm("$a +").expect("analyzeFEL");
+        let v: Value = serde_json::from_str(&raw).expect("JSON");
+        assert_eq!(v["valid"], false);
+        let err0 = &v["errors"][0];
+        assert!(err0["message"].as_str().is_some());
+    }
+
     /// Spec: specs/core/spec.md §3.2 — FEL field references resolve against injected fields.
     #[test]
     fn eval_fel_inner_with_field_injection() {

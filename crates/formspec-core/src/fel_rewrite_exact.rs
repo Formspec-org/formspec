@@ -5,7 +5,7 @@
 #![allow(clippy::missing_docs_in_private_items)]
 
 use fel_core::lexer::{Lexer, SpannedToken, Token};
-use fel_core::{Error, parse};
+use fel_core::{Error, ParseError, parse};
 
 use crate::fel_analysis::RewriteOptions;
 
@@ -93,6 +93,14 @@ impl<'a> ExactRewriteParser<'a> {
         }
     }
 
+    fn parse_err_current(&self, message: impl Into<String>) -> Error {
+        let tok = self.current();
+        Error::Parse(ParseError::with_span(
+            tok.span.start..tok.span.end,
+            message.into(),
+        ))
+    }
+
     fn current(&self) -> &SpannedToken {
         &self.tokens[self.pos.min(self.tokens.len().saturating_sub(1))]
     }
@@ -118,7 +126,7 @@ impl<'a> ExactRewriteParser<'a> {
             self.advance();
             Ok(())
         } else {
-            Err(Error::Parse(format!(
+            Err(self.parse_err_current(format!(
                 "expected {expected:?}, got {:?}",
                 self.peek()
             )))
@@ -131,7 +139,7 @@ impl<'a> ExactRewriteParser<'a> {
                 let token = self.advance().clone();
                 Ok((name, token))
             }
-            _ => Err(Error::Parse(format!(
+            _ => Err(self.parse_err_current(format!(
                 "expected identifier, got {:?}",
                 self.peek()
             ))),
@@ -321,7 +329,7 @@ impl<'a> ExactRewriteParser<'a> {
                             self.advance();
                         }
                         _ => {
-                            return Err(Error::Parse(format!(
+                            return Err(self.parse_err_current(format!(
                                 "expected number or * in brackets, got {:?}",
                                 self.peek()
                             )));
@@ -379,12 +387,12 @@ impl<'a> ExactRewriteParser<'a> {
                 if matches!(self.peek(), Token::LParen) {
                     self.parse_function_call("if".to_string())
                 } else {
-                    Err(Error::Parse(
-                        "unexpected 'if' — use if...then...else or if(...)".into(),
+                    Err(self.parse_err_current(
+                        "unexpected 'if' — use if...then...else or if(...)",
                     ))
                 }
             }
-            _ => Err(Error::Parse(format!(
+            _ => Err(self.parse_err_current(format!(
                 "unexpected token {:?}",
                 self.peek()
             ))),
@@ -422,7 +430,7 @@ impl<'a> ExactRewriteParser<'a> {
                             format!("[{n}]")
                         }
                         _ => {
-                            return Err(Error::Parse(format!(
+                            return Err(self.parse_err_current(format!(
                                 "expected number or * in field ref brackets, got {:?}",
                                 self.peek()
                             )));
@@ -468,7 +476,7 @@ impl<'a> ExactRewriteParser<'a> {
                     arg_token = Some(self.advance().clone());
                 }
                 _ => {
-                    return Err(Error::Parse(format!(
+                    return Err(self.parse_err_current(format!(
                         "expected string literal, got {:?}",
                         self.peek()
                     )));
@@ -645,7 +653,7 @@ impl<'a> ExactRewriteParser<'a> {
                 self.advance();
             }
             _ => {
-                return Err(Error::Parse(format!(
+                return Err(self.parse_err_current(format!(
                     "expected object key, got {:?}",
                     self.peek()
                 )));

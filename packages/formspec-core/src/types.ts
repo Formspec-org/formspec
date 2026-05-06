@@ -622,6 +622,8 @@ export interface Diagnostic {
   line?: number;
   /** 1-based column number within the expression, when available (FEL parse errors). */
   column?: number;
+  /** Character span in source when provided by the analyzer (Rust lexer indices). */
+  span?: { start: number; end: number };
 }
 
 // ── Diagnostics types ───────────────────────────────────────────────
